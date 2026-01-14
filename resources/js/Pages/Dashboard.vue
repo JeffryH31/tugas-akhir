@@ -9,10 +9,14 @@
  */
 import { Head } from '@inertiajs/vue3';
 import { ref, computed } from 'vue';
+import { useDisplay } from 'vuetify';
 import draggable from 'vuedraggable';
 
-// Sidebar state
-const isSidebarOpen = ref(true);
+// Vuetify display composable for responsive
+const { mobile, smAndDown, mdAndDown } = useDisplay();
+
+// Sidebar state - closed by default on mobile
+const isSidebarOpen = ref(!mobile.value);
 const selectedWorkspace = ref('My Workspace');
 
 // Dummy workspaces data
@@ -330,19 +334,24 @@ const starredBoards = computed(() => {
             </template>
 
             <!-- Logo -->
-            <v-btn variant="text" class="text-none font-weight-bold text-h6 mx-2 text-white">
+            <v-btn variant="text" class="text-none font-weight-bold mx-2 text-white"
+                :class="mobile ? 'text-body-1' : 'text-h6'">
                 <v-icon class="mr-1" color="primary">mdi-view-dashboard-outline</v-icon>
-                Taskboard
+                <span v-if="!smAndDown">Taskboard</span>
             </v-btn>
 
             <v-spacer />
 
-            <!-- Search -->
-            <v-text-field v-model="searchQuery" density="compact" variant="solo-filled" bg-color="surface-variant"
-                placeholder="Search..." prepend-inner-icon="mdi-magnify" hide-details single-line rounded
-                class="mx-4" style="max-width: 400px;" />
+            <!-- Search - hidden on small screens -->
+            <v-text-field v-if="!smAndDown" v-model="searchQuery" density="compact" variant="solo-filled"
+                bg-color="surface-variant" placeholder="Search..." prepend-inner-icon="mdi-magnify" hide-details
+                single-line rounded class="mx-4" style="max-width: 400px;" />
+            <!-- Search icon button on mobile -->
+            <v-btn v-else icon variant="text" size="small" class="mr-1">
+                <v-icon color="grey-lighten-1">mdi-magnify</v-icon>
+            </v-btn>
 
-            <v-spacer />
+            <v-spacer v-if="!smAndDown" />
 
             <!-- Right actions -->
             <v-btn icon variant="text" size="small" class="mr-1">
@@ -373,9 +382,9 @@ const starredBoards = computed(() => {
         <!-- Main Content Area -->
         <v-main class="board-main" :style="{ background: activeBoard.background }">
             <div class="d-flex fill-height">
-                <!-- Sidebar -->
-                <v-navigation-drawer v-model="isSidebarOpen" :rail="!isSidebarOpen" permanent color="surface"
-                    border width="260">
+                <!-- Sidebar - temporary on mobile, permanent on desktop -->
+                <v-navigation-drawer v-model="isSidebarOpen" :temporary="mobile" :permanent="!mobile"
+                    :rail="!mobile && !isSidebarOpen" color="surface" border width="260">
                     <v-list density="compact" nav class="pa-2">
                         <!-- Boards -->
                         <v-list-item prepend-icon="mdi-view-dashboard-outline" title="Boards" rounded="lg"
@@ -401,7 +410,7 @@ const starredBoards = computed(() => {
                             <v-list-item-title>{{ board.name }}</v-list-item-title>
                         </v-list-item>
 
-                        <v-divider class="my-3 border-opacity-25" />
+                        <v-divider class="my-3" />
 
                         <!-- Workspaces -->
                         <v-list-subheader class="text-medium-emphasis">
@@ -420,8 +429,7 @@ const starredBoards = computed(() => {
                                         <v-list-item-title>{{ workspace.name }}</v-list-item-title>
                                     </v-list-item>
                                 </template>
-                                <v-list-item v-for="board in workspace.boards" :key="board.id" rounded="lg"
-                                    class="ml-4">
+                                <v-list-item v-for="board in workspace.boards" :key="board.id" rounded="lg">
                                     <template #prepend>
                                         <div class="board-color-dot mr-3" :style="{ backgroundColor: board.color }" />
                                     </template>
@@ -435,48 +443,58 @@ const starredBoards = computed(() => {
                             </v-list-group>
                         </template>
 
-                        <v-divider class="my-3 border-opacity-25" />
+                        <v-divider class="my-3" />
 
                         <!-- Create Board Button -->
-                        <v-list-item prepend-icon="mdi-plus" title="Create new board" rounded="lg"
-                            base-color="surface-variant" />
+                        <v-list-item prepend-icon="mdi-plus" title="Create new board" rounded="lg" />
                     </v-list>
                 </v-navigation-drawer>
 
                 <!-- Board Area -->
                 <div class="board-area flex-grow-1">
                     <!-- Board Header -->
-                    <v-sheet color="surface" class="d-flex align-center pa-3 board-header">
-                        <h1 class="text-h5 font-weight-bold text-white mr-3">
+                    <v-sheet color="surface" class="d-flex align-center flex-wrap pa-2 pa-sm-3 board-header">
+                        <h1 :class="mobile ? 'text-h6' : 'text-h5'" class="font-weight-bold text-white mr-2 mr-sm-3">
                             {{ activeBoard.name }}
                         </h1>
                         <v-btn icon variant="text" size="small" class="mr-2">
                             <v-icon color="grey-lighten-1">mdi-star-outline</v-icon>
                         </v-btn>
-                        <v-divider vertical class="mx-2 border-opacity-25" style="height: 24px;" />
 
-                        <!-- Members -->
-                        <div class="d-flex align-center mx-2">
-                            <v-avatar v-for="member in activeBoard.members" :key="member.id" size="32"
-                                :color="member.color" class="member-avatar">
-                                <span class="text-caption font-weight-bold">{{ member.avatar }}</span>
-                            </v-avatar>
-                            <v-btn icon variant="text" size="small" class="ml-1">
-                                <v-icon color="grey-lighten-1" size="20">mdi-plus</v-icon>
-                            </v-btn>
+                        <!-- Members - show less on mobile -->
+                        <div v-if="!smAndDown" class="d-flex align-center">
+                            <v-divider vertical class="mx-2 border-opacity-25" style="height: 24px;" />
+                            <div class="d-flex align-center mx-2">
+                                <v-avatar v-for="member in activeBoard.members.slice(0, mobile ? 2 : 3)"
+                                    :key="member.id" :size="mobile ? 28 : 32" :color="member.color"
+                                    class="member-avatar">
+                                    <span class="text-caption font-weight-bold">{{ member.avatar }}</span>
+                                </v-avatar>
+                                <v-btn icon variant="text" size="small" class="ml-1">
+                                    <v-icon color="grey-lighten-1" size="20">mdi-plus</v-icon>
+                                </v-btn>
+                            </div>
                         </div>
 
                         <v-spacer />
 
-                        <!-- Board Actions -->
-                        <v-btn variant="tonal" size="small" class="mr-2 text-none">
-                            <v-icon start size="18">mdi-filter-variant</v-icon>
-                            Filters
+                        <!-- Board Actions - icon only on mobile -->
+                        <v-btn v-if="smAndDown" icon variant="tonal" size="small" class="mr-1">
+                            <v-icon size="18">mdi-filter-variant</v-icon>
                         </v-btn>
-                        <v-btn variant="tonal" size="small" class="text-none">
-                            <v-icon start size="18">mdi-dots-horizontal</v-icon>
-                            Menu
+                        <v-btn v-if="smAndDown" icon variant="tonal" size="small">
+                            <v-icon size="18">mdi-dots-horizontal</v-icon>
                         </v-btn>
+                        <template v-if="!smAndDown">
+                            <v-btn variant="tonal" size="small" class="mr-2 text-none">
+                                <v-icon start size="18">mdi-filter-variant</v-icon>
+                                Filters
+                            </v-btn>
+                            <v-btn variant="tonal" size="small" class="text-none">
+                                <v-icon start size="18">mdi-dots-horizontal</v-icon>
+                                Menu
+                            </v-btn>
+                        </template>
                     </v-sheet>
 
                     <!-- Kanban Board -->
@@ -537,7 +555,8 @@ const starredBoards = computed(() => {
 
                                                         <!-- Description -->
                                                         <v-icon v-if="card.hasDescription" size="16"
-                                                            class="text-medium-emphasis" title="This card has a description">
+                                                            class="text-medium-emphasis"
+                                                            title="This card has a description">
                                                             mdi-text-subject
                                                         </v-icon>
 
@@ -553,7 +572,7 @@ const starredBoards = computed(() => {
                                                             class="d-flex align-center text-medium-emphasis">
                                                             <v-icon size="14" class="mr-1">mdi-paperclip</v-icon>
                                                             <span class="text-caption">{{ card.attachmentsCount
-                                                                }}</span>
+                                                            }}</span>
                                                         </div>
 
                                                         <!-- Checklist -->
@@ -622,8 +641,9 @@ const starredBoards = computed(() => {
                             </v-btn>
                             <v-sheet v-else color="surface" rounded="xl" class="pa-2 add-list-form">
                                 <v-text-field v-model="newListTitle" placeholder="Enter list title..."
-                                    variant="outlined" density="compact" hide-details autofocus bg-color="surface-variant"
-                                    class="mb-2" @keydown.enter.prevent="addList" @keydown.esc="cancelAddingList" />
+                                    variant="outlined" density="compact" hide-details autofocus
+                                    bg-color="surface-variant" class="mb-2" @keydown.enter.prevent="addList"
+                                    @keydown.esc="cancelAddingList" />
                                 <div class="d-flex align-center ga-2">
                                     <v-btn color="primary" size="small" class="text-none" @click="addList">
                                         Add list
@@ -639,14 +659,14 @@ const starredBoards = computed(() => {
             </div>
         </v-main>
 
-        <!-- Card Detail Modal -->
-        <v-dialog v-model="isCardModalOpen" max-width="800" scrollable>
+        <!-- Card Detail Modal - fullscreen on mobile -->
+        <v-dialog v-model="isCardModalOpen" :max-width="smAndDown ? '100%' : 800" :fullscreen="mobile" scrollable>
             <v-card v-if="selectedCard" rounded="lg">
-                <v-card-title class="d-flex align-start pa-4 pb-2">
-                    <v-icon class="mr-3 mt-1 text-medium-emphasis">mdi-card-text-outline</v-icon>
+                <v-card-title class="d-flex align-start pa-3 pa-sm-4 pb-2">
+                    <v-icon class="mr-2 mr-sm-3 mt-1 text-medium-emphasis">mdi-card-text-outline</v-icon>
                     <div class="flex-grow-1">
                         <v-text-field v-model="selectedCard.title" variant="plain" density="compact" hide-details
-                            class="card-title-input text-h6 font-weight-medium" />
+                            :class="mobile ? 'text-body-1 font-weight-bold' : 'card-title-input text-h6 font-weight-medium'" />
                         <p class="text-body-2 text-grey mt-1">
                             in list <span class="text-decoration-underline">{{ selectedList?.title }}</span>
                         </p>
@@ -656,10 +676,10 @@ const starredBoards = computed(() => {
                     </v-btn>
                 </v-card-title>
 
-                <v-card-text class="pa-4">
+                <v-card-text class="pa-3 pa-sm-4">
                     <v-row>
                         <!-- Main Content -->
-                        <v-col cols="12" md="9">
+                        <v-col cols="12" md="9" :order="mobile ? 2 : 1">
                             <!-- Labels -->
                             <div v-if="selectedCard.labels.length" class="mb-4">
                                 <h4 class="text-caption font-weight-bold text-medium-emphasis mb-2">Labels</h4>
@@ -737,47 +757,73 @@ const starredBoards = computed(() => {
                             </div>
                         </v-col>
 
-                        <!-- Sidebar Actions -->
-                        <v-col cols="12" md="3">
-                            <h4 class="text-caption font-weight-bold text-medium-emphasis mb-2">Add to card</h4>
-                            <v-btn block variant="tonal" size="small" class="mb-2 justify-start text-none">
-                                <v-icon start size="18">mdi-account-outline</v-icon>
-                                Members
-                            </v-btn>
-                            <v-btn block variant="tonal" size="small" class="mb-2 justify-start text-none">
-                                <v-icon start size="18">mdi-label-outline</v-icon>
-                                Labels
-                            </v-btn>
-                            <v-btn block variant="tonal" size="small" class="mb-2 justify-start text-none">
-                                <v-icon start size="18">mdi-checkbox-marked-outline</v-icon>
-                                Checklist
-                            </v-btn>
-                            <v-btn block variant="tonal" size="small" class="mb-2 justify-start text-none">
-                                <v-icon start size="18">mdi-clock-outline</v-icon>
-                                Dates
-                            </v-btn>
-                            <v-btn block variant="tonal" size="small" class="mb-2 justify-start text-none">
-                                <v-icon start size="18">mdi-paperclip</v-icon>
-                                Attachment
-                            </v-btn>
+                        <!-- Sidebar Actions - first on mobile for easy access -->
+                        <v-col cols="12" md="3" :order="mobile ? 1 : 2">
+                            <!-- On mobile: horizontal scroll buttons -->
+                            <div v-if="mobile" class="d-flex flex-wrap ga-2 mb-4">
+                                <v-btn variant="tonal" size="small" class="text-none">
+                                    <v-icon start size="18">mdi-account-outline</v-icon>
+                                    Members
+                                </v-btn>
+                                <v-btn variant="tonal" size="small" class="text-none">
+                                    <v-icon start size="18">mdi-label-outline</v-icon>
+                                    Labels
+                                </v-btn>
+                                <v-btn variant="tonal" size="small" class="text-none">
+                                    <v-icon start size="18">mdi-checkbox-marked-outline</v-icon>
+                                    Checklist
+                                </v-btn>
+                                <v-btn variant="tonal" size="small" class="text-none">
+                                    <v-icon start size="18">mdi-clock-outline</v-icon>
+                                    Dates
+                                </v-btn>
+                                <v-btn variant="tonal" size="small" class="text-none">
+                                    <v-icon start size="18">mdi-paperclip</v-icon>
+                                    Attachment
+                                </v-btn>
+                            </div>
+                            <!-- On desktop: vertical buttons -->
+                            <template v-else>
+                                <h4 class="text-caption font-weight-bold text-medium-emphasis mb-2">Add to card</h4>
+                                <v-btn block variant="tonal" size="small" class="mb-2 justify-start text-none">
+                                    <v-icon start size="18">mdi-account-outline</v-icon>
+                                    Members
+                                </v-btn>
+                                <v-btn block variant="tonal" size="small" class="mb-2 justify-start text-none">
+                                    <v-icon start size="18">mdi-label-outline</v-icon>
+                                    Labels
+                                </v-btn>
+                                <v-btn block variant="tonal" size="small" class="mb-2 justify-start text-none">
+                                    <v-icon start size="18">mdi-checkbox-marked-outline</v-icon>
+                                    Checklist
+                                </v-btn>
+                                <v-btn block variant="tonal" size="small" class="mb-2 justify-start text-none">
+                                    <v-icon start size="18">mdi-clock-outline</v-icon>
+                                    Dates
+                                </v-btn>
+                                <v-btn block variant="tonal" size="small" class="mb-2 justify-start text-none">
+                                    <v-icon start size="18">mdi-paperclip</v-icon>
+                                    Attachment
+                                </v-btn>
 
-                            <h4 class="text-caption font-weight-bold text-medium-emphasis mb-2 mt-4">Actions</h4>
-                            <v-btn block variant="tonal" size="small" class="mb-2 justify-start text-none">
-                                <v-icon start size="18">mdi-arrow-right</v-icon>
-                                Move
-                            </v-btn>
-                            <v-btn block variant="tonal" size="small" class="mb-2 justify-start text-none">
-                                <v-icon start size="18">mdi-content-copy</v-icon>
-                                Copy
-                            </v-btn>
-                            <v-btn block variant="tonal" size="small" class="mb-2 justify-start text-none">
-                                <v-icon start size="18">mdi-archive-outline</v-icon>
-                                Archive
-                            </v-btn>
-                            <v-btn block variant="tonal" size="small" class="justify-start text-none" color="error">
-                                <v-icon start size="18">mdi-delete-outline</v-icon>
-                                Delete
-                            </v-btn>
+                                <h4 class="text-caption font-weight-bold text-medium-emphasis mb-2 mt-4">Actions</h4>
+                                <v-btn block variant="tonal" size="small" class="mb-2 justify-start text-none">
+                                    <v-icon start size="18">mdi-arrow-right</v-icon>
+                                    Move
+                                </v-btn>
+                                <v-btn block variant="tonal" size="small" class="mb-2 justify-start text-none">
+                                    <v-icon start size="18">mdi-content-copy</v-icon>
+                                    Copy
+                                </v-btn>
+                                <v-btn block variant="tonal" size="small" class="mb-2 justify-start text-none">
+                                    <v-icon start size="18">mdi-archive-outline</v-icon>
+                                    Archive
+                                </v-btn>
+                                <v-btn block variant="tonal" size="small" class="justify-start text-none" color="error">
+                                    <v-icon start size="18">mdi-delete-outline</v-icon>
+                                    Delete
+                                </v-btn>
+                            </template>
                         </v-col>
                     </v-row>
                 </v-card-text>
@@ -791,6 +837,13 @@ const starredBoards = computed(() => {
 .board-color-dot {
     width: 20px;
     height: 16px;
+    border-radius: 4px;
+}
+
+/* Board Thumbnail */
+.board-thumb {
+    width: 32px;
+    height: 24px;
     border-radius: 4px;
 }
 
@@ -824,6 +877,27 @@ const starredBoards = computed(() => {
     flex: 1;
     overflow-x: auto;
     overflow-y: hidden;
+    /* Touch-friendly scrolling */
+    -webkit-overflow-scrolling: touch;
+    scroll-behavior: smooth;
+}
+
+/* Hide scrollbar but keep functionality */
+.kanban-board::-webkit-scrollbar {
+    height: 8px;
+}
+
+.kanban-board::-webkit-scrollbar-track {
+    background: transparent;
+}
+
+.kanban-board::-webkit-scrollbar-thumb {
+    background: rgba(255, 255, 255, 0.2);
+    border-radius: 4px;
+}
+
+.kanban-board::-webkit-scrollbar-thumb:hover {
+    background: rgba(255, 255, 255, 0.3);
 }
 
 .lists-container {
@@ -831,12 +905,22 @@ const starredBoards = computed(() => {
     align-items: flex-start;
 }
 
+/* Kanban List - Responsive */
 .kanban-list {
     width: 272px;
     min-width: 272px;
     max-height: calc(100vh - 180px);
     display: flex;
     flex-direction: column;
+}
+
+/* Smaller lists on mobile */
+@media (max-width: 600px) {
+    .kanban-list {
+        width: 260px;
+        min-width: 260px;
+        max-height: calc(100vh - 160px);
+    }
 }
 
 .list-header {
@@ -847,6 +931,7 @@ const starredBoards = computed(() => {
     flex: 1;
     overflow-y: auto;
     min-height: 20px;
+    -webkit-overflow-scrolling: touch;
 }
 
 /* Card Styles */
@@ -857,6 +942,13 @@ const starredBoards = computed(() => {
 
 .kanban-card:hover {
     transform: translateY(-2px);
+}
+
+/* Disable hover effect on touch devices */
+@media (hover: none) {
+    .kanban-card:hover {
+        transform: none;
+    }
 }
 
 .kanban-card:active {
@@ -902,9 +994,15 @@ const starredBoards = computed(() => {
     color: white !important;
 }
 
-/* Add List */
+/* Add List - Responsive */
 .add-list-container {
     min-width: 272px;
+}
+
+@media (max-width: 600px) {
+    .add-list-container {
+        min-width: 240px;
+    }
 }
 
 .add-list-btn {
@@ -913,6 +1011,12 @@ const starredBoards = computed(() => {
 
 .add-list-form {
     width: 272px;
+}
+
+@media (max-width: 600px) {
+    .add-list-form {
+        width: 240px;
+    }
 }
 
 /* Card Title Input */
@@ -939,5 +1043,20 @@ const starredBoards = computed(() => {
 
 .sortable-chosen {
     box-shadow: 0 8px 24px rgba(0, 0, 0, 0.25) !important;
+}
+
+/* v-list-group child indentation - CSS is the only way */
+:deep(.v-list-group__items .v-list-item) {
+    padding-inline-start: 20px !important;
+}
+
+/* Touch-friendly improvements */
+@media (hover: none) and (pointer: coarse) {
+
+    .kanban-card,
+    .v-btn,
+    .v-list-item {
+        -webkit-tap-highlight-color: transparent;
+    }
 }
 </style>
