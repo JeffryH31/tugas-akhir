@@ -41,18 +41,17 @@ const passwordRules = [
 
 // Computed properties
 const isFormValid = computed(() => {
-    return email.value.length > 0 && password.value.length >= 6;
+    // Skip validation for now - always allow login
+    return true;
 });
 
 // Methods
 const handleSubmit = () => {
-    if (!isFormValid.value) return;
-
-    // Dummy login - redirect to dashboard
+    // Skip validation - direct login to dashboard
     isLoading.value = true;
     setTimeout(() => {
         router.visit('/dashboard');
-    }, 800);
+    }, 500);
 };
 
 const handleMicrosoftLogin = () => {
