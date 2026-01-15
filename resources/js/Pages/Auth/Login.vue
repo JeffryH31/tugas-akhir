@@ -41,18 +41,17 @@ const passwordRules = [
 
 // Computed properties
 const isFormValid = computed(() => {
-    return email.value.length > 0 && password.value.length >= 6;
+    // Skip validation for now - always allow login
+    return true;
 });
 
 // Methods
 const handleSubmit = () => {
-    if (!isFormValid.value) return;
-
-    // Dummy login - redirect to dashboard
+    // Skip validation - direct login to dashboard
     isLoading.value = true;
     setTimeout(() => {
         router.visit('/dashboard');
-    }, 800);
+    }, 500);
 };
 
 const handleMicrosoftLogin = () => {
@@ -68,20 +67,21 @@ const handleMicrosoftLogin = () => {
 
     <Head title="Sign In" />
 
-    <v-app>
-        <v-main class="login-background">
-            <v-container class="fill-height pa-4" fluid>
-                <v-row align="center" justify="center" class="fill-height">
+    <v-app theme="darkTheme">
+        <v-main class="d-flex align-center justify-center" style="min-height: 100vh;">
+            <v-container class="pa-4" fluid>
+                <v-row align="center" justify="center">
                     <v-col cols="12" sm="10" md="6" lg="5" xl="4">
                         <!-- Login Card -->
-                        <v-card class="login-card mx-auto" max-width="440" rounded="xl" elevation="12">
+                        <v-card class="mx-auto" max-width="440" rounded="xl" elevation="12" color="surface">
                             <v-card-text class="pa-8 pa-sm-10">
                                 <!-- Header -->
                                 <div class="text-center mb-8">
-                                    <h1 class="text-h4 font-weight-bold text-grey-darken-4 mb-2">
+                                    <v-icon color="primary" size="48" class="mb-4">mdi-view-dashboard-outline</v-icon>
+                                    <h1 class="text-h4 font-weight-bold mb-2">
                                         Sign In
                                     </h1>
-                                    <p class="text-body-1 text-grey-darken-1">
+                                    <p class="text-body-1 text-medium-emphasis">
                                         Enter your credentials to continue
                                     </p>
                                 </div>
@@ -99,7 +99,7 @@ const handleMicrosoftLogin = () => {
                                         autocomplete="email" prepend-inner-icon="mdi-email-outline"
                                         placeholder="name@example.com" variant="outlined" density="comfortable"
                                         rounded="lg" :rules="emailRules" :disabled="isLoading" autofocus class="mb-4"
-                                        color="primary" base-color="grey-darken-1" />
+                                        color="primary" bg-color="surface-variant" />
 
                                     <!-- Password Field -->
                                     <v-text-field v-model="password" label="Password"
@@ -109,17 +109,7 @@ const handleMicrosoftLogin = () => {
                                         placeholder="Enter your password" variant="outlined" density="comfortable"
                                         rounded="lg" :rules="passwordRules" :disabled="isLoading"
                                         @click:append-inner="isPasswordVisible = !isPasswordVisible" class="mb-4"
-                                        color="primary" base-color="grey-darken-1" />
-
-                                    <!-- Remember Me & Forgot Password -->
-                                    <!-- <div class="d-flex align-center justify-space-between mb-6">
-                                        <v-checkbox v-model="rememberMe" label="Remember me" density="compact"
-                                            hide-details :disabled="isLoading" color="primary" />
-                                        <a href="#"
-                                            class="text-primary text-decoration-none text-body-2 font-weight-medium">
-                                            Forgot password?
-                                        </a>
-                                    </div> -->
+                                        color="primary" bg-color="surface-variant" />
 
                                     <!-- Submit Button -->
                                     <v-btn type="submit" color="primary" size="x-large" block rounded="lg"
@@ -131,13 +121,13 @@ const handleMicrosoftLogin = () => {
                                     <!-- Divider -->
                                     <div class="d-flex align-center my-6">
                                         <v-divider class="flex-grow-1" />
-                                        <span class="mx-4 text-grey text-body-2 text-no-wrap">or continue with</span>
+                                        <span class="mx-4 text-medium-emphasis text-body-2 text-no-wrap">or continue with</span>
                                         <v-divider class="flex-grow-1" />
                                     </div>
 
                                     <!-- Microsoft Teams SSO Button -->
                                     <v-btn variant="outlined" size="x-large" block rounded="lg" :loading="isLoading"
-                                        :disabled="isLoading" class="text-none font-weight-medium teams-btn"
+                                        :disabled="isLoading" class="text-none font-weight-medium"
                                         @click="handleMicrosoftLogin">
                                         <template #prepend>
                                             <svg width="22" height="22" viewBox="0 0 24 24" fill="none" class="mr-2">
@@ -170,39 +160,12 @@ const handleMicrosoftLogin = () => {
 </template>
 
 <style scoped>
-.login-background {
-    background: #ffffff;
-    min-height: 100vh;
-}
-
-.login-card {
-    backdrop-filter: blur(10px);
-    border: 1px solid rgba(255, 255, 255, 0.1);
-}
-
-.teams-btn {
-    border-color: #e0e0e0 !important;
-    color: #424242 !important;
-}
-
-.teams-btn:hover {
-    background-color: #f5f5f5 !important;
-    border-color: #bdbdbd !important;
-}
-
-:deep(.v-field__outline) {
-    --v-field-border-opacity: 0.3;
-}
-
-:deep(.v-field--focused .v-field__outline) {
-    --v-field-border-opacity: 1;
+/* Button letter spacing */
+:deep(.v-btn) {
+    letter-spacing: normal !important;
 }
 
 :deep(.v-btn--loading .v-btn__content) {
     opacity: 0;
-}
-
-:deep(.v-btn) {
-    letter-spacing: normal !important;
 }
 </style>
