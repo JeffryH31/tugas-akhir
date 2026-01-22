@@ -1,0 +1,99 @@
+<?php
+
+namespace App\Models;
+
+use Illuminate\Database\Eloquent\Factories\HasFactory;
+use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Database\Eloquent\SoftDeletes;
+
+class Comment extends Model
+{
+    use HasFactory, SoftDeletes;
+
+    protected $fillable = [
+        'task_id',
+        'user_id',
+        'parent_id',
+        'content',
+        'mentions',
+        'attachments',
+        'is_resolved',
+        'edited_at',
+    ];
+
+    protected $casts = [
+        'mentions' => 'array',
+        'attachments' => 'array',
+        'is_resolved' => 'boolean',
+        'edited_at' => 'datetime',
+    ];
+
+    // ==================== RELATIONSHIPS ====================
+
+    public function task(): BelongsTo
+    {
+        return $this->belongsTo(Task::class);
+    }
+
+    public function user(): BelongsTo
+    {
+        return $this->belongsTo(User::class);
+    }
+
+    public function parent(): BelongsTo
+    {
+        return $this->belongsTo(Comment::class, 'parent_id');
+    }
+
+    public function replies(): HasMany
+    {
+        return $this->hasMany(Comment::class, 'parent_id')->latest();
+    }
+
+    public function reactions(): HasMany
+    {
+        return $this->hasMany(CommentReaction::class);
+    }
+
+    // ==================== HELPER METHODS ====================
+
+    public function edit(string $content): void
+    {
+        $this->update([
+            'content' => $content,
+            'edited_at' => now(),
+        ]);
+    }
+
+    public function resolve(): void
+    {
+        $this->update(['is_resolved' => true]);
+    }
+
+    public function unresolve(): void
+    {
+        $this->update(['is_resolved' => false]);
+    }
+
+    public function react(User $user, string $emoji): void
+    {
+        CommentReaction::updateOrCreate(
+            [
+                'comment_id' => $this->id,
+                'user_id' => $user->id,
+                'emoji' => $emoji,
+            ]
+        );
+    }
+
+    public function unreact(User $user, string $emoji): void
+    {
+        CommentReaction::where([
+            'comment_id' => $this->id,
+            'user_id' => $user->id,
+            'emoji' => $emoji,
+        ])->delete();
+    }
+}

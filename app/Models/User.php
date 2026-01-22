@@ -4,6 +4,8 @@ namespace App\Models;
 
 // use Illuminate\Contracts\Auth\MustVerifyEmail;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
+use Illuminate\Database\Eloquent\Relations\BelongsToMany;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
 use Laravel\Fortify\TwoFactorAuthenticatable;
@@ -50,6 +52,8 @@ class User extends Authenticatable
      */
     protected $appends = [
         'profile_photo_url',
+        'initials',
+        'avatar_color',
     ];
 
     /**
@@ -63,5 +67,117 @@ class User extends Authenticatable
             'email_verified_at' => 'datetime',
             'password' => 'hashed',
         ];
+    }
+
+    // ==================== RELATIONSHIPS ====================
+
+    public function ownedWorkspaces(): HasMany
+    {
+        return $this->hasMany(Workspace::class, 'owner_id');
+    }
+
+    public function workspaces(): BelongsToMany
+    {
+        return $this->belongsToMany(Workspace::class, 'workspace_members')
+            ->withPivot('role', 'joined_at')
+            ->withTimestamps();
+    }
+
+    public function spaces(): BelongsToMany
+    {
+        return $this->belongsToMany(Space::class, 'space_members')
+            ->withPivot('role')
+            ->withTimestamps();
+    }
+
+    public function assignedTasks(): BelongsToMany
+    {
+        return $this->belongsToMany(Task::class, 'task_assignees')
+            ->withPivot('assigned_at', 'assigned_by')
+            ->withTimestamps();
+    }
+
+    public function watchingTasks(): BelongsToMany
+    {
+        return $this->belongsToMany(Task::class, 'task_watchers')
+            ->withTimestamps();
+    }
+
+    public function timeEntries(): HasMany
+    {
+        return $this->hasMany(TimeEntry::class);
+    }
+
+    public function comments(): HasMany
+    {
+        return $this->hasMany(Comment::class);
+    }
+
+    public function activities(): HasMany
+    {
+        return $this->hasMany(Activity::class);
+    }
+
+    // ==================== ACCESSORS ====================
+
+    public function getInitialsAttribute(): string
+    {
+        $words = explode(' ', $this->name);
+        $initials = '';
+        
+        foreach (array_slice($words, 0, 2) as $word) {
+            $initials .= strtoupper(substr($word, 0, 1));
+        }
+        
+        return $initials ?: strtoupper(substr($this->name, 0, 2));
+    }
+
+    public function getAvatarColorAttribute(): string
+    {
+        $colors = [
+            '#6366F1', '#8B5CF6', '#EC4899', '#EF4444',
+            '#F59E0B', '#10B981', '#0EA5E9', '#06B6D4',
+        ];
+        
+        return $colors[$this->id % count($colors)];
+    }
+
+    // ==================== HELPER METHODS ====================
+
+    public function getActiveWorkspace(): ?Workspace
+    {
+        return $this->workspaces()->first();
+    }
+
+    public function getMyTasks()
+    {
+        return $this->assignedTasks()
+            ->whereNull('completed_at')
+            ->with(['taskList.space', 'status', 'priority'])
+            ->orderBy('due_date')
+            ->get();
+    }
+
+    public function getOverdueTasks()
+    {
+        return $this->assignedTasks()
+            ->whereNull('completed_at')
+            ->whereNotNull('due_date')
+            ->where('due_date', '<', now())
+            ->get();
+    }
+
+    public function getTodayTimeSpent(): int
+    {
+        return $this->timeEntries()
+            ->whereDate('started_at', today())
+            ->sum('duration');
+    }
+
+    public function getWeekTimeSpent(): int
+    {
+        return $this->timeEntries()
+            ->whereBetween('started_at', [now()->startOfWeek(), now()->endOfWeek()])
+            ->sum('duration');
     }
 }

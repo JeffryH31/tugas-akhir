@@ -2,11 +2,10 @@
 /**
  * Login Page Component
  *
- * Handles user authentication via email/password or Microsoft Teams SSO.
+ * Handles user authentication via email/password.
  * Uses Vuetify components for consistent Material Design UI.
- * Currently uses dummy authentication for UI development.
  */
-import { Head, router } from '@inertiajs/vue3';
+import { Head, useForm } from '@inertiajs/vue3';
 import { ref, computed } from 'vue';
 
 // Props definition
@@ -21,11 +20,13 @@ defineProps({
     },
 });
 
-// Reactive state
-const email = ref('');
-const password = ref('');
-const rememberMe = ref(false);
-const isLoading = ref(false);
+// Form using Inertia useForm
+const form = useForm({
+    email: '',
+    password: '',
+    remember: false,
+});
+
 const isPasswordVisible = ref(false);
 
 // Form validation rules
@@ -39,27 +40,11 @@ const passwordRules = [
     (v) => v.length >= 6 || 'Password must be at least 6 characters',
 ];
 
-// Computed properties
-const isFormValid = computed(() => {
-    // Skip validation for now - always allow login
-    return true;
-});
-
-// Methods
+// Submit login form
 const handleSubmit = () => {
-    // Skip validation - direct login to dashboard
-    isLoading.value = true;
-    setTimeout(() => {
-        router.visit('/dashboard');
-    }, 500);
-};
-
-const handleMicrosoftLogin = () => {
-    // Dummy Microsoft Teams SSO login
-    isLoading.value = true;
-    setTimeout(() => {
-        router.visit('/dashboard');
-    }, 800);
+    form.post(route('login'), {
+        onFinish: () => form.reset('password'),
+    });
 };
 </script>
 
@@ -92,62 +77,42 @@ const handleMicrosoftLogin = () => {
                                     {{ status }}
                                 </v-alert>
 
+                                <!-- Error Alert -->
+                                <v-alert v-if="form.errors.email" type="error" variant="tonal" class="mb-6" rounded="lg"
+                                    closable>
+                                    {{ form.errors.email }}
+                                </v-alert>
+
                                 <!-- Login Form -->
                                 <v-form @submit.prevent="handleSubmit" validate-on="blur">
                                     <!-- Email Field -->
-                                    <v-text-field v-model="email" label="Email Address" type="email" name="email"
+                                    <v-text-field v-model="form.email" label="Email Address" type="email" name="email"
                                         autocomplete="email" prepend-inner-icon="mdi-email-outline"
                                         placeholder="name@example.com" variant="outlined" density="comfortable"
-                                        rounded="lg" :rules="emailRules" :disabled="isLoading" autofocus class="mb-4"
-                                        color="primary" bg-color="surface-variant" />
+                                        rounded="lg" :rules="emailRules" :disabled="form.processing" autofocus class="mb-4"
+                                        color="primary" bg-color="surface-variant" 
+                                        :error-messages="form.errors.email" />
 
                                     <!-- Password Field -->
-                                    <v-text-field v-model="password" label="Password"
+                                    <v-text-field v-model="form.password" label="Password"
                                         :type="isPasswordVisible ? 'text' : 'password'" name="password"
                                         autocomplete="current-password" prepend-inner-icon="mdi-lock-outline"
                                         :append-inner-icon="isPasswordVisible ? 'mdi-eye-off-outline' : 'mdi-eye-outline'"
                                         placeholder="Enter your password" variant="outlined" density="comfortable"
-                                        rounded="lg" :rules="passwordRules" :disabled="isLoading"
+                                        rounded="lg" :rules="passwordRules" :disabled="form.processing"
                                         @click:append-inner="isPasswordVisible = !isPasswordVisible" class="mb-4"
-                                        color="primary" bg-color="surface-variant" />
+                                        color="primary" bg-color="surface-variant" 
+                                        :error-messages="form.errors.password" />
+
+                                    <!-- Remember Me -->
+                                    <v-checkbox v-model="form.remember" label="Remember me" color="primary" 
+                                        class="mb-4" hide-details />
 
                                     <!-- Submit Button -->
                                     <v-btn type="submit" color="primary" size="x-large" block rounded="lg"
-                                        :loading="isLoading" :disabled="!isFormValid || isLoading"
+                                        :loading="form.processing" :disabled="form.processing"
                                         class="mb-6 text-none font-weight-medium" elevation="2">
                                         Sign In
-                                    </v-btn>
-
-                                    <!-- Divider -->
-                                    <div class="d-flex align-center my-6">
-                                        <v-divider class="flex-grow-1" />
-                                        <span class="mx-4 text-medium-emphasis text-body-2 text-no-wrap">or continue with</span>
-                                        <v-divider class="flex-grow-1" />
-                                    </div>
-
-                                    <!-- Microsoft Teams SSO Button -->
-                                    <v-btn variant="outlined" size="x-large" block rounded="lg" :loading="isLoading"
-                                        :disabled="isLoading" class="text-none font-weight-medium"
-                                        @click="handleMicrosoftLogin">
-                                        <template #prepend>
-                                            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" class="mr-2">
-                                                <path d="M20.625 6.547h-5.187v5.25h5.812v-4.61a.64.64 0 00-.625-.64z"
-                                                    fill="#5059C9" />
-                                                <path
-                                                    d="M15.438 6.547v5.25h-6.75v7.828a.64.64 0 00.625.64h6.062a.64.64 0 00.625-.64V7.187a.64.64 0 00-.562-.64z"
-                                                    fill="#7B83EB" />
-                                                <circle cx="18.094" cy="4.5" r="2.25" fill="#5059C9" />
-                                                <circle cx="12.375" cy="3.75" r="3" fill="#7B83EB" />
-                                                <path
-                                                    d="M8.063 8.297H2.625a.64.64 0 00-.625.64v7.126a4.125 4.125 0 004.125 4.125h.375a4.125 4.125 0 004.125-4.125V8.938a.64.64 0 00-.562-.64z"
-                                                    fill="#4B53BC" />
-                                                <path d="M6.563 11.297v4.5" stroke="white" stroke-width="1.5"
-                                                    stroke-linecap="round" />
-                                                <path d="M4.313 13.547h4.5" stroke="white" stroke-width="1.5"
-                                                    stroke-linecap="round" />
-                                            </svg>
-                                        </template>
-                                        Sign in with Microsoft Teams
                                     </v-btn>
                                 </v-form>
                             </v-card-text>
