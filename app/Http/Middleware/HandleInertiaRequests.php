@@ -35,9 +35,44 @@ class HandleInertiaRequests extends Middleware
      */
     public function share(Request $request): array
     {
+        $activeWorkspaceId = session('active_workspace_id');
+        $activeWorkspace = null;
+        $workspaces = collect([]);
+
+        if ($request->user()) {
+            $workspaces = $request->user()
+                ->workspaces()
+                ->orderBy('created_at', 'desc')
+                ->get();
+
+            // Get active workspace
+            if ($activeWorkspaceId) {
+                $activeWorkspace = $workspaces->firstWhere('id', $activeWorkspaceId);
+            }
+
+            // If no active workspace, use the first one
+            if (!$activeWorkspace && $workspaces->isNotEmpty()) {
+                $activeWorkspace = $workspaces->first();
+                session(['active_workspace_id' => $activeWorkspace->id]);
+            }
+
+            // Load spaces for active workspace
+            if ($activeWorkspace) {
+                $activeWorkspace->load([
+                    'spaces' => function ($query) {
+                        $query->with([
+                            'folders.lists',
+                            'listsWithoutFolder'
+                        ])->orderBy('position');
+                    }
+                ]);
+            }
+        }
+
         return [
             ...parent::share($request),
-            //
+            'activeWorkspace' => $activeWorkspace,
+            'workspaces' => $workspaces,
         ];
     }
 }

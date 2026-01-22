@@ -1,135 +1,172 @@
 <?php
 
-declare(strict_types=1);
-
 namespace App\Http\Controllers;
 
+use App\Http\Requests\ReorderRequest;
+use App\Http\Requests\StoreSpaceRequest;
+use App\Http\Requests\UpdateSpaceRequest;
 use App\Models\Space;
-use App\Models\User;
 use App\Models\Workspace;
 use App\Services\SpaceService;
+use Illuminate\Foundation\Auth\Access\AuthorizesRequests;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Inertia\Inertia;
+use Inertia\Response;
 
-/**
- * SpaceController
- *
- * Handles Space management .
- */
 class SpaceController extends Controller
 {
-    private SpaceService $spaceService;
+    use AuthorizesRequests;
 
-    public function __construct(SpaceService $spaceService)
-    {
-        $this->spaceService = $spaceService;
-    }
+    public function __construct(
+        protected SpaceService $spaceService
+    ) {}
 
     /**
      * Store a newly created space.
      */
-    public function store(Request $request): RedirectResponse
+    public function store(StoreSpaceRequest $request, Workspace $workspace): RedirectResponse
     {
-        $validated = $request->validate([
-            'workspace_id' => 'required|exists:workspaces,id',
-            'name' => 'required|string|max:255',
-            'description' => 'nullable|string',
-            'color' => 'nullable|string|max:20',
-            'is_private' => 'boolean',
+        try {
+            $space = $this->spaceService->create(
+                $request->validated(),
+                $workspace,
+                $request->user()
+            );
+
+            return redirect()->back()->with([
+                'success' => 'Space created successfully.',
+                'space' => $space
+            ]);
+        } catch (\Exception $e) {
+            return redirect()->back()->withErrors(['error' => 'Failed to create space: ' . $e->getMessage()]);
+        }
+    }
+
+    /**
+     * Display the specified space.
+     */
+    public function show(Request $request, Workspace $workspace, Space $space): Response
+    {
+        $space = $this->spaceService->getWithHierarchy($space);
+        $statistics = $this->spaceService->getStatistics($space);
+
+        // Load workspace with all spaces for sidebar
+        $workspace->load([
+            'spaces' => fn($q) => $q->with([
+                'folders.lists',
+                'listsWithoutFolder',
+            ])->orderBy('position'),
+            'members',
+            'priorities',
+            'labels',
         ]);
 
-        $workspace = Workspace::findOrFail($validated['workspace_id']);
-        $this->authorize('update', $workspace);
-
-        $this->spaceService->create($workspace, $validated, $request->user());
-
-        return redirect()->back()
-            ->with('success', 'Space created successfully.');
+        return Inertia::render('Spaces/Show', [
+            'workspace' => $workspace,
+            'space' => $space,
+            'statistics' => $statistics,
+        ]);
     }
 
     /**
      * Update the specified space.
      */
-    public function update(Request $request, Space $space): RedirectResponse
+    public function update(UpdateSpaceRequest $request, Workspace $workspace, Space $space): RedirectResponse
     {
-        $this->authorize('update', $space);
+        try {
+            $updatedSpace = $this->spaceService->update($space, $request->validated(), $request->user());
 
-        $validated = $request->validate([
-            'name' => 'sometimes|string|max:255',
-            'description' => 'nullable|string',
-            'color' => 'nullable|string|max:20',
-            'is_private' => 'boolean',
-        ]);
-
-        $this->spaceService->update($space, $validated);
-
-        return redirect()->back()
-            ->with('success', 'Space updated successfully.');
+            return redirect()->back()->with([
+                'success' => 'Space updated successfully.',
+                'space' => $updatedSpace
+            ]);
+        } catch (\Exception $e) {
+            return redirect()->back()->withErrors(['error' => 'Failed to update space: ' . $e->getMessage()]);
+        }
     }
 
     /**
      * Remove the specified space.
      */
-    public function destroy(Space $space): RedirectResponse
+    public function destroy(Request $request, Workspace $workspace, Space $space): RedirectResponse
     {
-        $this->authorize('delete', $space);
+        try {
+            $this->spaceService->delete($space, $request->user());
 
-        $this->spaceService->delete($space);
-
-        return redirect()->route('dashboard')
-            ->with('success', 'Space deleted successfully.');
-    }
-
-    /**
-     * Toggle space starred status.
-     */
-    public function toggleStar(Request $request, Space $space): RedirectResponse
-    {
-        $this->authorize('view', $space);
-
-        $user = $request->user();
-        $isStarred = $space->starredBy()->where('user_id', $user->id)->exists();
-
-        if ($isStarred) {
-            $space->starredBy()->detach($user->id);
-            $message = 'Space removed from favorites.';
-        } else {
-            $space->starredBy()->attach($user->id);
-            $message = 'Space added to favorites.';
+            return redirect()
+                ->route('workspaces.show', $workspace)
+                ->with('success', 'Space deleted successfully.');
+        } catch (\Exception $e) {
+            return redirect()->back()->withErrors(['error' => 'Failed to delete space: ' . $e->getMessage()]);
         }
-
-        return redirect()->back()->with('success', $message);
     }
 
     /**
-     * Add member to space.
+     * Toggle starred status.
      */
-    public function addMember(Request $request, Space $space): RedirectResponse
+    public function toggleStar(Request $request, Workspace $workspace, Space $space): RedirectResponse
     {
-        $this->authorize('manageMembers', $space);
+        try {
+            $updatedSpace = $this->spaceService->toggleStar($space);
 
+            return redirect()->back()->with([
+                'success' => 'Space starred status updated.',
+                'space' => $updatedSpace
+            ]);
+        } catch (\Exception $e) {
+            return redirect()->back()->withErrors(['error' => 'Failed to update space: ' . $e->getMessage()]);
+        }
+    }
+
+    /**
+     * Reorder spaces.
+     */
+    public function reorder(ReorderRequest $request, Workspace $workspace): RedirectResponse
+    {
+        try {
+            $this->spaceService->reorder($workspace, $request->order);
+
+            return redirect()->back()->with('success', 'Spaces reordered successfully.');
+        } catch (\Exception $e) {
+            return redirect()->back()->withErrors(['error' => 'Failed to reorder spaces: ' . $e->getMessage()]);
+        }
+    }
+
+    /**
+     * Add status to space.
+     */
+    public function addStatus(Request $request, Workspace $workspace, Space $space): RedirectResponse
+    {
         $validated = $request->validate([
-            'user_id' => 'required|exists:users,id',
-            'role' => 'sometimes|string|in:admin,member',
+            'name' => 'required|string|max:255',
+            'color' => 'nullable|string|regex:/^#[0-9A-Fa-f]{6}$/',
+            'is_closed' => 'nullable|boolean',
         ]);
 
-        $user = User::findOrFail($validated['user_id']);
-        $this->spaceService->addMember($space, $user, $validated['role'] ?? 'member');
+        try {
+            $status = $this->spaceService->addStatus($space, $validated);
 
-        return redirect()->back()
-            ->with('success', 'Member added successfully.');
+            return redirect()->back()->with([
+                'success' => 'Status added successfully.',
+                'status' => $status
+            ]);
+        } catch (\Exception $e) {
+            return redirect()->back()->withErrors(['error' => 'Failed to add status: ' . $e->getMessage()]);
+        }
     }
 
     /**
-     * Remove member from space.
+     * Reorder statuses.
      */
-    public function removeMember(Space $space, User $user): RedirectResponse
+    public function reorderStatuses(ReorderRequest $request, Workspace $workspace, Space $space): RedirectResponse
     {
-        $this->authorize('manageMembers', $space);
+        try {
+            $this->spaceService->reorderStatuses($space, $request->order);
 
-        $this->spaceService->removeMember($space, $user);
-
-        return redirect()->back()
-            ->with('success', 'Member deleted successfully.');
+            return redirect()->back()->with('success', 'Statuses reordered successfully.');
+        } catch (\Exception $e) {
+            return redirect()->back()->withErrors(['error' => 'Failed to reorder statuses: ' . $e->getMessage()]);
+        }
     }
 }

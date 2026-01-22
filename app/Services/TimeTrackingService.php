@@ -1,378 +1,282 @@
 <?php
 
-declare(strict_types=1);
-
 namespace App\Services;
 
+use App\Models\Activity;
 use App\Models\Task;
 use App\Models\TimeEntry;
 use App\Models\User;
-use Carbon\Carbon;
+use App\Models\Workspace;
+use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
 
-/**
- * TimeTrackingService
- *
- * Handles all business logic related to time tracking and time entries.
- * Following the Single Responsibility Principle (SRP).
- */
 class TimeTrackingService
 {
     /**
-     * @var ActivityService
+     * Log time entry for a task
      */
-    private ActivityService $activityService;
-
-    /**
-     * Constructor.
-     *
-     * @param ActivityService $activityService
-     */
-    public function __construct(ActivityService $activityService)
+    public function logTime(Task $task, User $user, array $data): TimeEntry
     {
-        $this->activityService = $activityService;
+        return DB::transaction(function () use ($task, $user, $data) {
+            $entry = TimeEntry::create([
+                'task_id' => $task->id,
+                'user_id' => $user->id,
+                'duration' => $data['duration'], // in minutes
+                'description' => $data['description'] ?? null,
+                'started_at' => $data['started_at'] ?? now(),
+                'ended_at' => $data['ended_at'] ?? now()->addMinutes($data['duration']),
+                'is_billable' => $data['is_billable'] ?? false,
+            ]);
+
+            Activity::log($task->taskList->space->workspace, $user, $task, 'time_logged', [
+                'name' => $task->name,
+                'duration' => $entry->duration,
+                'duration_formatted' => $entry->duration_formatted,
+            ]);
+
+            return $entry;
+        });
     }
 
     /**
-     * Start timer for a task.
-     *
-     * @param Task $task
-     * @param User $user
-     * @return TimeEntry
+     * Start timer for a task
      */
-    public function startTimer(Task $task, User $user): TimeEntry
+    public function startTimer(Task $task, User $user, ?string $description = null): TimeEntry
     {
-        // Stop any existing running timer for this user
-        $this->stopAllRunningTimers($user);
+        $entry = TimeEntry::startTimer($task, $user, $description);
 
-        // Create new running timer
-        $timeEntry = TimeEntry::create([
-            'task_id' => $task->id,
-            'user_id' => $user->id,
-            'started_at' => now(),
-            'is_running' => true,
-            'entry_type' => 'timer',
+        Activity::log($task->taskList->space->workspace, $user, $task, 'timer_started', [
+            'name' => $task->name,
         ]);
 
-        // Update task status to working
-        $task->update(['status' => 'working']);
-
-        // Log activity
-        $this->activityService->logTimerStarted($user, $task);
-
-        return $timeEntry;
+        return $entry;
     }
 
     /**
-     * Stop timer for a task.
-     *
-     * @param TimeEntry $timeEntry
-     * @param User $user
-     * @return TimeEntry
+     * Stop running timer
      */
-    public function stopTimer(TimeEntry $timeEntry, User $user): TimeEntry
+    public function stopTimer(TimeEntry $entry, User $user): TimeEntry
     {
-        if (!$timeEntry->is_running) {
-            return $timeEntry;
-        }
+        $entry->stop();
 
-        $startedAt = Carbon::parse($timeEntry->started_at);
-        $stoppedAt = now();
-        $minutes = (int) $startedAt->diffInMinutes($stoppedAt);
-
-        $timeEntry->update([
-            'stopped_at' => $stoppedAt,
-            'duration_minutes' => $minutes,
-            'is_running' => false,
+        Activity::log($entry->task->taskList->space->workspace, $user, $entry->task, 'timer_stopped', [
+            'name' => $entry->task->name,
+            'duration' => $entry->duration,
+            'duration_formatted' => $entry->duration_formatted,
         ]);
 
-        // Update task actual hours
-        $this->syncTaskActualHours($timeEntry->task);
-
-        // Log activity
-        $this->activityService->logTimerStopped($user, $timeEntry->task, $minutes);
-
-        return $timeEntry->fresh();
+        return $entry->fresh();
     }
 
     /**
-     * Pause timer (set task to on hold).
-     *
-     * @param Task $task
-     * @param User $user
-     * @return TimeEntry|null
-     */
-    public function pauseTimer(Task $task, User $user): ?TimeEntry
-    {
-        // Find running timer for this task
-        $runningTimer = TimeEntry::where('task_id', $task->id)
-            ->where('user_id', $user->id)
-            ->where('is_running', true)
-            ->first();
-
-        if ($runningTimer) {
-            $this->stopTimer($runningTimer, $user);
-        }
-
-        // Update task status to on_hold
-        $task->update(['status' => 'on_hold']);
-
-        return $runningTimer;
-    }
-
-    /**
-     * Resume timer (continue from on hold).
-     *
-     * @param Task $task
-     * @param User $user
-     * @return TimeEntry
-     */
-    public function resumeTimer(Task $task, User $user): TimeEntry
-    {
-        return $this->startTimer($task, $user);
-    }
-
-    /**
-     * Complete task and stop any running timers.
-     *
-     * @param Task $task
-     * @param User $user
-     * @return Task
-     */
-    public function completeTask(Task $task, User $user): Task
-    {
-        // Stop any running timer for this task
-        $runningTimer = TimeEntry::where('task_id', $task->id)
-            ->where('user_id', $user->id)
-            ->where('is_running', true)
-            ->first();
-
-        if ($runningTimer) {
-            $this->stopTimer($runningTimer, $user);
-        }
-
-        // Mark task as completed
-        $task->markAsCompleted();
-
-        // Log activity
-        $this->activityService->logTaskCompleted($user, $task);
-
-        return $task->fresh();
-    }
-
-    /**
-     * Log manual time entry.
-     *
-     * @param Task $task
-     * @param User $user
-     * @param array{duration_minutes: int, description?: string, logged_date?: string} $data
-     * @return TimeEntry
-     */
-    public function logManualTime(Task $task, User $user, array $data): TimeEntry
-    {
-        $timeEntry = TimeEntry::create([
-            'task_id' => $task->id,
-            'user_id' => $user->id,
-            'duration_minutes' => $data['duration_minutes'],
-            'description' => $data['description'] ?? null,
-            'entry_type' => 'manual',
-            'logged_date' => $data['logged_date'] ?? now()->toDateString(),
-            'is_running' => false,
-        ]);
-
-        // Update task actual hours
-        $this->syncTaskActualHours($task);
-
-        // Log activity
-        $this->activityService->logManualTimeLogged($user, $task, $data['duration_minutes']);
-
-        return $timeEntry;
-    }
-
-    /**
-     * Update a time entry.
-     *
-     * @param TimeEntry $timeEntry
-     * @param array{duration_minutes?: int, description?: string} $data
-     * @return TimeEntry
-     */
-    public function updateTimeEntry(TimeEntry $timeEntry, array $data): TimeEntry
-    {
-        $timeEntry->update([
-            'duration_minutes' => $data['duration_minutes'] ?? $timeEntry->duration_minutes,
-            'description' => $data['description'] ?? $timeEntry->description,
-        ]);
-
-        // Update task actual hours
-        $this->syncTaskActualHours($timeEntry->task);
-
-        return $timeEntry->fresh();
-    }
-
-    /**
-     * Delete a time entry.
-     *
-     * @param TimeEntry $timeEntry
-     * @return bool
-     */
-    public function deleteTimeEntry(TimeEntry $timeEntry): bool
-    {
-        $task = $timeEntry->task;
-        $result = $timeEntry->delete();
-
-        // Update task actual hours
-        if ($task) {
-            $this->syncTaskActualHours($task);
-        }
-
-        return $result;
-    }
-
-    /**
-     * Stop all running timers for a user.
-     *
-     * @param User $user
-     * @return int Number of timers stopped
-     */
-    public function stopAllRunningTimers(User $user): int
-    {
-        $runningTimers = TimeEntry::where('user_id', $user->id)
-            ->where('is_running', true)
-            ->get();
-
-        foreach ($runningTimers as $timer) {
-            $this->stopTimer($timer, $user);
-        }
-
-        return $runningTimers->count();
-    }
-
-    /**
-     * Get the currently running timer for a user.
-     *
-     * @param User $user
-     * @return TimeEntry|null
+     * Get running timer for user
      */
     public function getRunningTimer(User $user): ?TimeEntry
     {
-        return TimeEntry::with(['task.list.space'])
-            ->where('user_id', $user->id)
+        return TimeEntry::where('user_id', $user->id)
             ->where('is_running', true)
+            ->with('task.taskList.space')
             ->first();
     }
 
     /**
-     * Sync task actual hours from time entries.
-     *
-     * @param Task $task
-     * @return void
+     * Update a time entry
      */
-    private function syncTaskActualHours(Task $task): void
+    public function updateEntry(TimeEntry $entry, array $data, User $user): TimeEntry
     {
-        $totalMinutes = $task->timeEntries()
-            ->where('is_running', false)
-            ->sum('duration_minutes');
+        $oldDuration = $entry->duration;
 
-        $task->update([
-            'actual_hours' => round($totalMinutes / 60, 2),
+        $entry->update([
+            'duration' => $data['duration'] ?? $entry->duration,
+            'description' => $data['description'] ?? $entry->description,
+            'started_at' => $data['started_at'] ?? $entry->started_at,
+            'ended_at' => $data['ended_at'] ?? $entry->ended_at,
+            'is_billable' => $data['is_billable'] ?? $entry->is_billable,
         ]);
+
+        if ($oldDuration !== $entry->duration) {
+            Activity::log($entry->task->taskList->space->workspace, $user, $entry->task, 'time_updated', [
+                'name' => $entry->task->name,
+            ], [
+                'duration' => ['old' => $oldDuration, 'new' => $entry->duration],
+            ]);
+        }
+
+        return $entry->fresh();
     }
 
     /**
-     * Get time entries for a task.
-     *
-     * @param Task $task
-     * @return \Illuminate\Database\Eloquent\Collection<int, TimeEntry>
+     * Delete a time entry
      */
-    public function getTimeEntriesForTask(Task $task)
+    public function deleteEntry(TimeEntry $entry, User $user): void
+    {
+        Activity::log($entry->task->taskList->space->workspace, $user, $entry->task, 'time_deleted', [
+            'name' => $entry->task->name,
+            'duration' => $entry->duration,
+        ]);
+
+        $entry->delete();
+    }
+
+    /**
+     * Get time entries for a task
+     */
+    public function getEntriesForTask(Task $task): Collection
     {
         return $task->timeEntries()
             ->with('user')
-            ->orderByDesc('created_at')
+            ->orderBy('started_at', 'desc')
             ->get();
     }
 
     /**
-     * Get time entries for a user within a date range.
-     *
-     * @param User $user
-     * @param Carbon $startDate
-     * @param Carbon $endDate
-     * @return \Illuminate\Database\Eloquent\Collection<int, TimeEntry>
+     * Get time entries for a user
      */
-    public function getTimeEntriesForUser(User $user, Carbon $startDate, Carbon $endDate)
+    public function getEntriesForUser(User $user, ?string $startDate = null, ?string $endDate = null): Collection
     {
-        return TimeEntry::with(['task.list.space'])
-            ->where('user_id', $user->id)
-            ->where('is_running', false)
-            ->where(function ($query) use ($startDate, $endDate) {
-                $query->whereBetween('logged_date', [$startDate->toDateString(), $endDate->toDateString()])
-                    ->orWhereBetween('started_at', [$startDate, $endDate]);
-            })
-            ->orderByDesc('created_at')
-            ->get();
+        $query = $user->timeEntries()
+            ->with(['task.taskList.space'])
+            ->orderBy('started_at', 'desc');
+
+        if ($startDate) {
+            $query->where('started_at', '>=', $startDate);
+        }
+
+        if ($endDate) {
+            $query->where('started_at', '<=', $endDate);
+        }
+
+        return $query->get();
     }
 
     /**
-     * Get total tracked time for a task.
-     *
-     * @param Task $task
-     * @return array{total_minutes: int, total_hours: float}
+     * Get time summary for a task
      */
-    public function getTaskTrackedTime(Task $task): array
+    public function getTaskTimeSummary(Task $task): array
     {
-        $totalMinutes = $task->timeEntries()
-            ->where('is_running', false)
-            ->sum('duration_minutes');
+        $entries = $task->timeEntries;
 
         return [
-            'total_minutes' => (int) $totalMinutes,
-            'total_hours' => round($totalMinutes / 60, 2),
+            'total_minutes' => $entries->sum('duration'),
+            'total_formatted' => $this->formatMinutes($entries->sum('duration')),
+            'estimated_minutes' => $task->time_estimate,
+            'estimated_formatted' => $task->time_estimate_formatted,
+            'remaining_minutes' => max(0, ($task->time_estimate ?? 0) - $entries->sum('duration')),
+            'progress' => $task->time_estimate > 0
+                ? min(100, round(($entries->sum('duration') / $task->time_estimate) * 100, 1))
+                : 0,
+            'entries_count' => $entries->count(),
+            'billable_minutes' => $entries->where('is_billable', true)->sum('duration'),
         ];
     }
 
     /**
-     * Get time summary for a user.
-     *
-     * @param User $user
-     * @param string $period 'today', 'week', 'month'
-     * @return array{total_minutes: int, total_hours: float, entry_count: int}
+     * Get user time summary
      */
-    public function getUserTimeSummary(User $user, string $period = 'today'): array
+    public function getUserTimeSummary(User $user, string $period = 'week'): array
     {
         $startDate = match ($period) {
             'today' => now()->startOfDay(),
             'week' => now()->startOfWeek(),
             'month' => now()->startOfMonth(),
-            default => now()->startOfDay(),
+            default => now()->startOfWeek(),
         };
 
-        $query = TimeEntry::where('user_id', $user->id)
-            ->where('is_running', false)
-            ->where('created_at', '>=', $startDate);
+        $entries = $user->timeEntries()
+            ->where('started_at', '>=', $startDate)
+            ->with('task')
+            ->get();
 
-        $totalMinutes = $query->sum('duration_minutes');
-        $entryCount = $query->count();
+        $byTask = $entries->groupBy('task_id')->map(fn($taskEntries) => [
+            'task' => $taskEntries->first()->task,
+            'total_minutes' => $taskEntries->sum('duration'),
+        ])->sortByDesc('total_minutes')->values();
+
+        $byDay = $entries->groupBy(fn($e) => $e->started_at->format('Y-m-d'))
+            ->map(fn($dayEntries) => [
+                'date' => $dayEntries->first()->started_at->format('Y-m-d'),
+                'total_minutes' => $dayEntries->sum('duration'),
+            ])->values();
 
         return [
-            'total_minutes' => (int) $totalMinutes,
-            'total_hours' => round($totalMinutes / 60, 2),
-            'entry_count' => $entryCount,
+            'total_minutes' => $entries->sum('duration'),
+            'total_formatted' => $this->formatMinutes($entries->sum('duration')),
+            'billable_minutes' => $entries->where('is_billable', true)->sum('duration'),
+            'entries_count' => $entries->count(),
+            'by_task' => $byTask->take(10),
+            'by_day' => $byDay,
         ];
     }
 
     /**
-     * Get elapsed time for running timer.
-     *
-     * @param TimeEntry $timeEntry
-     * @return int Elapsed time in seconds
+     * Get workspace time report
      */
-    public function getElapsedTime(TimeEntry $timeEntry): int
-    {
-        if (!$timeEntry->is_running || !$timeEntry->started_at) {
-            return 0;
+    public function getWorkspaceTimeReport(
+        Workspace $workspace,
+        ?string $startDate = null,
+        ?string $endDate = null
+    ): array {
+        $query = TimeEntry::query()
+            ->join('tasks', 'time_entries.task_id', '=', 'tasks.id')
+            ->join('task_lists', 'tasks.task_list_id', '=', 'task_lists.id')
+            ->join('spaces', 'task_lists.space_id', '=', 'spaces.id')
+            ->where('spaces.workspace_id', $workspace->id);
+
+        if ($startDate) {
+            $query->where('time_entries.started_at', '>=', $startDate);
         }
 
-        return (int) Carbon::parse($timeEntry->started_at)->diffInSeconds(now());
+        if ($endDate) {
+            $query->where('time_entries.started_at', '<=', $endDate);
+        }
+
+        $byUser = DB::table('time_entries')
+            ->join('tasks', 'time_entries.task_id', '=', 'tasks.id')
+            ->join('task_lists', 'tasks.task_list_id', '=', 'task_lists.id')
+            ->join('spaces', 'task_lists.space_id', '=', 'spaces.id')
+            ->join('users', 'time_entries.user_id', '=', 'users.id')
+            ->where('spaces.workspace_id', $workspace->id)
+            ->when($startDate, fn($q) => $q->where('time_entries.started_at', '>=', $startDate))
+            ->when($endDate, fn($q) => $q->where('time_entries.started_at', '<=', $endDate))
+            ->select('users.id', 'users.name', DB::raw('SUM(time_entries.duration) as total_minutes'))
+            ->groupBy('users.id', 'users.name')
+            ->orderByDesc('total_minutes')
+            ->get();
+
+        $bySpace = DB::table('time_entries')
+            ->join('tasks', 'time_entries.task_id', '=', 'tasks.id')
+            ->join('task_lists', 'tasks.task_list_id', '=', 'task_lists.id')
+            ->join('spaces', 'task_lists.space_id', '=', 'spaces.id')
+            ->where('spaces.workspace_id', $workspace->id)
+            ->when($startDate, fn($q) => $q->where('time_entries.started_at', '>=', $startDate))
+            ->when($endDate, fn($q) => $q->where('time_entries.started_at', '<=', $endDate))
+            ->select('spaces.id', 'spaces.name', DB::raw('SUM(time_entries.duration) as total_minutes'))
+            ->groupBy('spaces.id', 'spaces.name')
+            ->orderByDesc('total_minutes')
+            ->get();
+
+        $totalMinutes = $query->sum('time_entries.duration');
+
+        return [
+            'total_minutes' => $totalMinutes,
+            'total_formatted' => $this->formatMinutes($totalMinutes),
+            'by_user' => $byUser,
+            'by_space' => $bySpace,
+        ];
+    }
+
+    /**
+     * Format minutes to human readable string
+     */
+    protected function formatMinutes(int $minutes): string
+    {
+        $hours = floor($minutes / 60);
+        $mins = $minutes % 60;
+
+        if ($hours > 0) {
+            return $hours . 'h ' . $mins . 'm';
+        }
+
+        return $mins . 'm';
     }
 }

@@ -7,7 +7,7 @@ import { resolvePageComponent } from 'laravel-vite-plugin/inertia-helpers';
 import { ZiggyVue } from '../../vendor/tightenco/ziggy';
 import vuetify from './plugins/vuetify';
 
-const appName = import.meta.env.VITE_APP_NAME || 'Laravel';
+const appName = import.meta.env.VITE_APP_NAME || 'TaskFlow';
 
 createInertiaApp({
     title: (title) => `${title} - ${appName}`,
@@ -21,5 +21,6 @@ createInertiaApp({
     },
     progress: {
         color: '#4F46E5',
+        showSpinner: true,
     },
 });

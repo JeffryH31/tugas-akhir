@@ -1,7 +1,7 @@
 /**
  * Vuetify Plugin Configuration
  * 
- * Configures Vuetify with custom theme and default settings.
+ * ClickUp-style dark theme with custom colors.
  */
 import 'vuetify/styles';
 import '@mdi/font/css/materialdesignicons.css';
@@ -13,35 +13,38 @@ import * as directives from 'vuetify/directives';
 const lightTheme = {
     dark: false,
     colors: {
-        primary: '#4F46E5',      // Indigo-600
-        secondary: '#7C3AED',    // Purple-600
-        accent: '#06B6D4',       // Cyan-500
-        error: '#EF4444',        // Red-500
-        warning: '#F59E0B',      // Amber-500
-        info: '#3B82F6',         // Blue-500
-        success: '#10B981',      // Emerald-500
-        background: '#F9FAFB',   // Gray-50
-        surface: '#FFFFFF',      // White
+        primary: '#7B68EE',      // ClickUp purple
+        'primary-darken-1': '#6366F1',
+        secondary: '#8B5CF6',    
+        accent: '#49CCF9',       // ClickUp blue
+        error: '#FF6B6B',        // Softer red
+        warning: '#FFB84D',      // Amber
+        info: '#49CCF9',         // Cyan
+        success: '#6BC950',      // Green
+        background: '#F9FAFB',   
+        surface: '#FFFFFF',      
     },
 };
 
-// Dark theme configuration for Dashboard
+// ClickUp-style Dark theme 
 const darkTheme = {
     dark: true,
     colors: {
-        primary: '#6366F1',      // Indigo-500
-        secondary: '#8B5CF6',    // Purple-500
-        accent: '#06B6D4',       // Cyan-500
-        error: '#EF4444',        // Red-500
-        warning: '#F59E0B',      // Amber-500
-        info: '#3B82F6',         // Blue-500
-        success: '#10B981',      // Emerald-500
-        background: '#0F172A',   // Slate-900
-        surface: '#1E293B',      // Slate-800
-        'surface-variant': '#334155', // Slate-700
-        'on-background': '#E2E8F0',   // Slate-200
-        'on-surface': '#E2E8F0',      // Slate-200
-        'on-surface-variant': '#94A3B8', // Slate-400
+        primary: '#7B68EE',           // ClickUp signature purple
+        'primary-darken-1': '#6366F1',
+        secondary: '#8B5CF6',         
+        accent: '#49CCF9',            // ClickUp accent blue
+        error: '#FF6B6B',             // Softer error red
+        warning: '#FFB84D',           // Warm amber
+        info: '#49CCF9',              // Info blue
+        success: '#6BC950',           // ClickUp green
+        background: '#121212',        // True dark background
+        surface: '#1e1e1e',           // Card/panel surface
+        'surface-light': '#2d2d30',   // Lighter surface for hover
+        'surface-variant': '#252526', // Variant surface
+        'on-background': '#E4E4E7',   // Text on background
+        'on-surface': '#E4E4E7',      // Text on surface
+        'on-surface-variant': '#9CA3AF', // Muted text
     },
 };
 
@@ -56,7 +59,7 @@ const vuetify = createVuetify({
         },
     },
     typography: {
-        fontFamily: "'Source Sans 3', sans-serif",
+        fontFamily: "'Inter', 'Source Sans 3', sans-serif",
     },
     defaults: {
         VBtn: {
@@ -67,13 +70,27 @@ const vuetify = createVuetify({
             variant: 'outlined',
             density: 'comfortable',
             rounded: 'lg',
+            color: 'primary',
         },
         VCard: {
-            rounded: 'xl',
-            elevation: 2,
+            rounded: 'lg',
+            elevation: 0,
         },
         VCheckbox: {
             color: 'primary',
+        },
+        VList: {
+            bgColor: 'transparent',
+        },
+        VListItem: {
+            rounded: 'lg',
+        },
+        VChip: {
+            size: 'small',
+        },
+        VTabs: {
+            color: 'primary',
+            sliderColor: 'primary',
         },
     },
 });

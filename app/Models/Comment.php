@@ -1,145 +1,99 @@
 <?php
 
-declare(strict_types=1);
-
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
-use Illuminate\Database\Eloquent\Relations\MorphTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\SoftDeletes;
 
-/**
- * Comment Model 
- *
- * @property int $id
- * @property string $commentable_type
- * @property int $commentable_id
- * @property int $user_id
- * @property string $content
- * @property int|null $parent_id
- * @property array|null $mentions
- * @property array|null $attachments
- * @property bool $is_resolved
- * @property \Illuminate\Support\Carbon|null $created_at
- * @property \Illuminate\Support\Carbon|null $updated_at
- * @property \Illuminate\Support\Carbon|null $deleted_at
- */
 class Comment extends Model
 {
     use HasFactory, SoftDeletes;
 
     protected $fillable = [
-        'commentable_type',
-        'commentable_id',
+        'task_id',
         'user_id',
-        'content',
         'parent_id',
+        'content',
         'mentions',
         'attachments',
         'is_resolved',
+        'edited_at',
     ];
 
     protected $casts = [
         'mentions' => 'array',
         'attachments' => 'array',
         'is_resolved' => 'boolean',
+        'edited_at' => 'datetime',
     ];
 
-    protected $attributes = [
-        'is_resolved' => false,
-    ];
+    // ==================== RELATIONSHIPS ====================
 
-    /**
-     * Get the commentable model (Task, List, etc.).
-     */
-    public function commentable(): MorphTo
+    public function task(): BelongsTo
     {
-        return $this->morphTo();
+        return $this->belongsTo(Task::class);
     }
 
-    /**
-     * Get the user who wrote the comment.
-     */
     public function user(): BelongsTo
     {
         return $this->belongsTo(User::class);
     }
 
-    /**
-     * Get the parent comment (for replies).
-     */
     public function parent(): BelongsTo
     {
         return $this->belongsTo(Comment::class, 'parent_id');
     }
 
-    /**
-     * Get all replies to this comment.
-     */
     public function replies(): HasMany
     {
-        return $this->hasMany(Comment::class, 'parent_id')->orderBy('created_at');
+        return $this->hasMany(Comment::class, 'parent_id')->latest();
     }
 
-    /**
-     * Get mentioned users.
-     */
-    public function mentionedUsers()
+    public function reactions(): HasMany
     {
-        if (empty($this->mentions)) {
-            return collect();
-        }
-        return User::whereIn('id', $this->mentions)->get();
+        return $this->hasMany(CommentReaction::class);
     }
 
-    /**
-     * Check if this is a reply.
-     */
-    public function isReply(): bool
+    // ==================== HELPER METHODS ====================
+
+    public function edit(string $content): void
     {
-        return $this->parent_id !== null;
+        $this->update([
+            'content' => $content,
+            'edited_at' => now(),
+        ]);
     }
 
-    /**
-     * Mark comment as resolved.
-     */
     public function resolve(): void
     {
         $this->update(['is_resolved' => true]);
     }
 
-    /**
-     * Mark comment as unresolved.
-     */
     public function unresolve(): void
     {
         $this->update(['is_resolved' => false]);
     }
 
-    /**
-     * Scope to get only top-level comments.
-     */
-    public function scopeTopLevel($query)
+    public function react(User $user, string $emoji): void
     {
-        return $query->whereNull('parent_id');
+        CommentReaction::updateOrCreate(
+            [
+                'comment_id' => $this->id,
+                'user_id' => $user->id,
+                'emoji' => $emoji,
+            ]
+        );
     }
 
-    /**
-     * Scope resolved comments.
-     */
-    public function scopeResolved($query)
+    public function unreact(User $user, string $emoji): void
     {
-        return $query->where('is_resolved', true);
-    }
-
-    /**
-     * Scope unresolved comments.
-     */
-    public function scopeUnresolved($query)
-    {
-        return $query->where('is_resolved', false);
+        CommentReaction::where([
+            'comment_id' => $this->id,
+            'user_id' => $user->id,
+            'emoji' => $emoji,
+        ])->delete();
     }
 }

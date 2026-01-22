@@ -1,131 +1,124 @@
 <?php
 
-declare(strict_types=1);
-
 namespace App\Services;
 
+use App\Models\Activity;
 use App\Models\Folder;
 use App\Models\Space;
 use App\Models\User;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Str;
 
-/**
- * FolderService
- *
- * Handles Folder-related business logic .
- */
 class FolderService
 {
     /**
-     * Create a new folder within a space.
+     * Get folders for a space
      */
-    public function create(Space $space, array $data): Folder
+    public function getFoldersForSpace(Space $space)
     {
-        return DB::transaction(function () use ($space, $data) {
-            $maxPosition = $space->folders()->max('position') ?? -1;
+        return $space->folders()
+            ->with(['children', 'lists'])
+            ->orderBy('position')
+            ->get();
+    }
 
-            return Folder::create([
-                'name' => $data['name'],
+    /**
+     * Create a new folder
+     */
+    public function create(array $data, Space $space, User $user, ?Folder $parent = null): Folder
+    {
+        return DB::transaction(function () use ($data, $space, $user, $parent) {
+            $folder = Folder::create([
                 'space_id' => $space->id,
-                'position' => $maxPosition + 1,
+                'parent_id' => $parent?->id,
+                'name' => $data['name'],
+                'slug' => Str::slug($data['name']),
+                'description' => $data['description'] ?? null,
                 'color' => $data['color'] ?? null,
-                'hidden' => $data['hidden'] ?? false,
+                'created_by' => $user->id,
             ]);
+
+            Activity::log($space->workspace, $user, $folder, 'created', [
+                'name' => $folder->name,
+                'space_name' => $space->name,
+            ]);
+
+            return $folder;
         });
     }
 
     /**
-     * Update a folder.
+     * Update a folder
      */
-    public function update(Folder $folder, array $data): Folder
+    public function update(Folder $folder, array $data, User $user): Folder
     {
+        $oldName = $folder->name;
+
         $folder->update([
             'name' => $data['name'] ?? $folder->name,
+            'description' => $data['description'] ?? $folder->description,
             'color' => $data['color'] ?? $folder->color,
-            'hidden' => $data['hidden'] ?? $folder->hidden,
+            'is_hidden' => $data['is_hidden'] ?? $folder->is_hidden,
+        ]);
+
+        if ($oldName !== $folder->name) {
+            Activity::log($folder->space->workspace, $user, $folder, 'updated', [
+                'name' => $folder->name,
+            ], [
+                'name' => ['old' => $oldName, 'new' => $folder->name],
+            ]);
+        }
+
+        return $folder->fresh();
+    }
+
+    /**
+     * Delete a folder
+     */
+    public function delete(Folder $folder, User $user): void
+    {
+        DB::transaction(function () use ($folder, $user) {
+            Activity::log($folder->space->workspace, $user, $folder, 'deleted', [
+                'name' => $folder->name,
+            ]);
+
+            $folder->delete();
+        });
+    }
+
+    /**
+     * Move folder to new parent
+     */
+    public function move(Folder $folder, ?Folder $newParent, User $user): Folder
+    {
+        $oldParentName = $folder->parent?->name ?? 'Root';
+        $newParentName = $newParent?->name ?? 'Root';
+
+        $folder->update([
+            'parent_id' => $newParent?->id,
+            'position' => Folder::where('space_id', $folder->space_id)
+                ->where('parent_id', $newParent?->id)
+                ->max('position') + 1,
+        ]);
+
+        Activity::log($folder->space->workspace, $user, $folder, 'moved', [
+            'name' => $folder->name,
+        ], [
+            'parent' => ['old' => $oldParentName, 'new' => $newParentName],
         ]);
 
         return $folder->fresh();
     }
 
     /**
-     * Delete (soft delete) a folder.
-     * Lists inside will be moved to space root.
+     * Reorder folders
      */
-    public function delete(Folder $folder, bool $moveLists = true): bool
+    public function reorder(array $order): void
     {
-        return DB::transaction(function () use ($folder, $moveLists) {
-            if ($moveLists) {
-                // Move all lists to space root
-                $folder->lists()->update(['folder_id' => null]);
+        DB::transaction(function () use ($order) {
+            foreach ($order as $position => $folderId) {
+                Folder::where('id', $folderId)->update(['position' => $position]);
             }
-
-            return $folder->delete();
-        });
-    }
-
-    /**
-     * Toggle folder visibility (hidden).
-     */
-    public function toggleHidden(Folder $folder): Folder
-    {
-        $folder->update(['hidden' => !$folder->hidden]);
-        return $folder->fresh();
-    }
-
-    /**
-     * Move a folder to a different space.
-     */
-    public function move(Folder $folder, Space $newSpace): Folder
-    {
-        return DB::transaction(function () use ($folder, $newSpace) {
-            $maxPosition = $newSpace->folders()->max('position') ?? -1;
-
-            $folder->update([
-                'space_id' => $newSpace->id,
-                'position' => $maxPosition + 1,
-            ]);
-
-            // Update all lists inside the folder
-            $folder->lists()->update(['space_id' => $newSpace->id]);
-
-            return $folder->fresh();
-        });
-    }
-
-    /**
-     * Reorder folders within a space.
-     */
-    public function reorder(Space $space, array $folderIds): void
-    {
-        DB::transaction(function () use ($space, $folderIds) {
-            foreach ($folderIds as $position => $folderId) {
-                $space->folders()
-                    ->where('id', $folderId)
-                    ->update(['position' => $position]);
-            }
-        });
-    }
-
-    /**
-     * Duplicate a folder with all its content.
-     */
-    public function duplicate(Folder $folder, string $newName = null): Folder
-    {
-        return DB::transaction(function () use ($folder, $newName) {
-            $newFolder = $folder->replicate();
-            $newFolder->name = $newName ?? $folder->name . ' (Copy)';
-            $newFolder->position = $folder->space->folders()->max('position') + 1;
-            $newFolder->save();
-
-            // Copy lists (simplified - would need ListService for full copy)
-            foreach ($folder->lists as $list) {
-                $newList = $list->replicate();
-                $newList->folder_id = $newFolder->id;
-                $newList->save();
-            }
-
-            return $newFolder;
         });
     }
 }

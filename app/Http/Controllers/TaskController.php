@@ -1,227 +1,412 @@
 <?php
 
-declare(strict_types=1);
-
 namespace App\Http\Controllers;
 
-use App\Models\TaskList;
+use App\Http\Requests\ReorderRequest;
+use App\Http\Requests\StoreTaskRequest;
+use App\Http\Requests\UpdateTaskRequest;
+use App\Http\Resources\TaskResource;
 use App\Models\Label;
+use App\Models\Priority;
+use App\Models\Space;
+use App\Models\Status;
 use App\Models\Task;
+use App\Models\TaskList;
 use App\Models\User;
+use App\Models\Workspace;
 use App\Services\TaskService;
+use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
 use Inertia\Response;
 
-/**
- * TaskController 
- *
- * Handles tasks and subtasks using Inertia.js.
- * Updated for Hierarchy: Workspace -> Space -> Folder -> List -> Task -> Subtask
- */
 class TaskController extends Controller
 {
-    private TaskService $taskService;
-
-    public function __construct(TaskService $taskService)
-    {
-        $this->taskService = $taskService;
-    }
-
-    /**
-     * Display the specified task.
-     */
-    public function show(Task $task): Response
-    {
-        $this->authorize('view', $task->list->space);
-
-        $task->load([
-            'subtasks.assignee',
-            'subtasks.status',
-            'assignees',
-            'labels',
-            'status',
-            'creator',
-            'list.space.workspace',
-            'comments.user',
-            'attachments',
-            'checklists.items',
-            'timeEntries.user',
-        ]);
-
-        return Inertia::render('Tasks/Show', [
-            'task' => $task,
-            'list' => $task->list,
-            'space' => $task->list->space,
-            'workspace' => $task->list->space->workspace,
-        ]);
-    }
+    public function __construct(
+        protected TaskService $taskService
+    ) {}
 
     /**
      * Store a newly created task.
      */
-    public function store(Request $request): RedirectResponse
+    public function store(StoreTaskRequest $request, Workspace $workspace, Space $space, TaskList $list): RedirectResponse
     {
-        $validated = $request->validate([
-            'list_id' => ['required', 'exists:task_lists,id'],
-            'title' => ['required', 'string', 'max:255'],
-            'description' => ['nullable', 'string'],
-            'priority' => ['nullable', 'string', 'in:urgent,high,normal,low'],
-            'assignee_id' => ['nullable', 'exists:users,id'],
-            'due_date' => ['nullable', 'date'],
-            'estimated_hours' => ['nullable', 'numeric', 'min:0'],
-        ]);
+        try {
+            $parent = $request->parent_id ? Task::findOrFail($request->parent_id) : null;
 
-        $list = TaskList::findOrFail($validated['list_id']);
-        $this->authorize('update', $list->space);
+            $task = $this->taskService->create(
+                $request->validated(),
+                $list,
+                $request->user(),
+                $parent
+            );
 
-        $this->taskService->createTask($list, $request->user(), $validated);
-
-        return back()->with('success', 'Task created successfully.');
+            return redirect()->back()->with([
+                'success' => 'Task created successfully.',
+                'task' => new TaskResource($task->load(['status', 'priority', 'assignees', 'labels']))
+            ]);
+        } catch (\Exception $e) {
+            return redirect()->back()->withErrors(['error' => 'Failed to create task: ' . $e->getMessage()]);
+        }
     }
 
     /**
-     * Store a subtask.
+     * Display the specified task (Full detail view).
      */
-    public function storeSubtask(Request $request, Task $task): RedirectResponse
+    public function show(Request $request, Workspace $workspace, Space $space, TaskList $list, Task $task): Response
     {
-        $validated = $request->validate([
-            'title' => ['required', 'string', 'max:255'],
-            'description' => ['nullable', 'string'],
-            'priority' => ['nullable', 'string', 'in:urgent,high,normal,low'],
-            'assignee_id' => ['nullable', 'exists:users,id'],
+        $task = $this->taskService->getTaskWithRelations($task);
+
+        // Load workspace with sidebar data - optimized with eager loading
+        $workspace->load([
+            'spaces' => fn($q) => $q->with([
+                'folders.lists',
+                'listsWithoutFolder',
+            ])->orderBy('position'),
+            'members' => fn($q) => $q->select('users.id', 'users.name', 'users.email', 'users.profile_photo_path'),
+            'priorities' => fn($q) => $q->orderBy('level'),
+            'labels' => fn($q) => $q->orderBy('name'),
         ]);
 
-        $this->authorize('update', $task->list->space);
-
-        $this->taskService->createSubtask($task, $request->user(), $validated);
-
-        return back()->with('success', 'Subtask created successfully.');
+        return Inertia::render('Tasks/Show', [
+            'workspace' => $workspace,
+            'space' => $space,
+            'list' => $list,
+            'task' => new TaskResource($task),
+            'statuses' => $space->statuses()->orderBy('position')->get(),
+        ]);
     }
 
     /**
      * Update the specified task.
      */
-    public function update(Request $request, Task $task): RedirectResponse
+    public function update(UpdateTaskRequest $request, Workspace $workspace, Space $space, TaskList $list, Task $task): RedirectResponse
     {
-        $validated = $request->validate([
-            'title' => ['sometimes', 'required', 'string', 'max:255'],
-            'description' => ['nullable', 'string'],
-            'priority' => ['nullable', 'string', 'in:urgent,high,normal,low'],
-            'status_id' => ['nullable', 'exists:statuses,id'],
-            'assignee_id' => ['nullable', 'exists:users,id'],
-            'start_date' => ['nullable', 'date'],
-            'due_date' => ['nullable', 'date'],
-            'estimated_hours' => ['nullable', 'numeric', 'min:0'],
-        ]);
+        try {
+            $updatedTask = $this->taskService->update($task, $request->validated(), $request->user());
 
-        $this->authorize('update', $task->list->space);
-
-        $this->taskService->updateTask($task, $validated);
-
-        return back()->with('success', 'Task updated successfully.');
+            return redirect()->back()->with([
+                'success' => 'Task updated successfully.',
+                'task' => new TaskResource($updatedTask->load(['status', 'priority', 'assignees', 'labels']))
+            ]);
+        } catch (\Exception $e) {
+            return redirect()->back()->withErrors(['error' => 'Failed to update task: ' . $e->getMessage()]);
+        }
     }
 
     /**
      * Remove the specified task.
      */
-    public function destroy(Task $task): RedirectResponse
+    public function destroy(Request $request, Workspace $workspace, Space $space, TaskList $list, Task $task): RedirectResponse
     {
-        $this->authorize('update', $task->list->space);
+        try {
+            $this->taskService->delete($task, $request->user());
 
-        $this->taskService->deleteTask($task);
-
-        return back()->with('success', 'Task deleted successfully.');
+            return redirect()->route('lists.show', [$workspace->id, $space->id, $list->id])
+                ->with('success', 'Task deleted successfully.');
+        } catch (\Exception $e) {
+            return redirect()->back()->withErrors(['error' => 'Failed to delete task: ' . $e->getMessage()]);
+        }
     }
 
     /**
-     * Update task status.
+     * Complete the task.
      */
-    public function updateStatus(Request $request, Task $task): RedirectResponse
+    public function complete(Request $request, Workspace $workspace, Space $space, TaskList $list, Task $task): RedirectResponse
     {
-        $validated = $request->validate([
-            'status_id' => ['required', 'exists:statuses,id'],
-        ]);
+        try {
+            $completedTask = $this->taskService->complete($task, $request->user());
 
-        $this->authorize('update', $task->list->space);
-
-        $this->taskService->changeStatus($task, $validated['status_id'], $request->user());
-
-        return back()->with('success', 'Task status updated.');
+            return redirect()->back()->with([
+                'success' => 'Task completed successfully.',
+                'task' => new TaskResource($completedTask->load(['status', 'priority', 'assignees', 'labels']))
+            ]);
+        } catch (\Exception $e) {
+            return redirect()->back()->withErrors(['error' => 'Failed to complete task: ' . $e->getMessage()]);
+        }
     }
 
     /**
-     * Move a task to another list.
+     * Reopen the task.
      */
-    public function move(Request $request, Task $task): RedirectResponse
+    public function reopen(Request $request, Workspace $workspace, Space $space, TaskList $list, Task $task): RedirectResponse
     {
-        $validated = $request->validate([
-            'list_id' => ['required', 'exists:task_lists,id'],
-            'position' => ['nullable', 'integer', 'min:0'],
+        try {
+            $reopenedTask = $this->taskService->reopen($task, $request->user());
 
-        ]);
-
-        $this->authorize('update', $task->list->space);
-
-        $targetList = TaskList::findOrFail($validated['list_id']);
-        $this->authorize('update', $targetList->space);
-
-        $this->taskService->moveToList($task, $targetList, $request->user(), $validated['position'] ?? null);
-
-        return back()->with('success', 'Task moved successfully.');
+            return redirect()->back()->with([
+                'success' => 'Task reopened successfully.',
+                'task' => new TaskResource($reopenedTask->load(['status', 'priority', 'assignees', 'labels']))
+            ]);
+        } catch (\Exception $e) {
+            return redirect()->back()->withErrors(['error' => 'Failed to reopen task: ' . $e->getMessage()]);
+        }
     }
 
     /**
-     * Sync task assignees.
+     * Change task status.
      */
-    public function syncAssignees(Request $request, Task $task): RedirectResponse
+    public function changeStatus(Request $request, Workspace $workspace, Space $space, TaskList $list, Task $task): RedirectResponse
     {
         $validated = $request->validate([
-            'assignee_ids' => ['array'],
-            'assignee_ids.*' => ['exists:users,id'],
+            'status_id' => 'required|exists:statuses,id',
         ]);
 
-        $this->authorize('update', $task->list->space);
+        try {
+            $status = Status::findOrFail($validated['status_id']);
+            $updatedTask = $this->taskService->changeStatus($task, $status, $request->user());
 
-        $task->assignees()->sync($validated['assignee_ids'] ?? []);
-
-        return back()->with('success', 'Assignees updated successfully.');
+            return redirect()->back()->with([
+                'success' => 'Task status updated successfully.',
+                'task' => new TaskResource($updatedTask->load(['status', 'priority', 'assignees', 'labels']))
+            ]);
+        } catch (\Exception $e) {
+            return redirect()->back()->withErrors(['error' => 'Failed to change status: ' . $e->getMessage()]);
+        }
     }
 
     /**
-     * Sync task labels.
+     * Change task priority.
      */
-    public function syncLabels(Request $request, Task $task): RedirectResponse
+    public function changePriority(Request $request, Workspace $workspace, Space $space, TaskList $list, Task $task): RedirectResponse
     {
         $validated = $request->validate([
-            'label_ids' => ['array'],
-            'label_ids.*' => ['exists:labels,id'],
+            'priority_id' => 'nullable|exists:priorities,id',
         ]);
 
-        $this->authorize('update', $task->list->space);
+        try {
+            $priority = $validated['priority_id'] ? Priority::findOrFail($validated['priority_id']) : null;
+            $updatedTask = $this->taskService->changePriority($task, $priority, $request->user());
 
-        $task->labels()->sync($validated['label_ids'] ?? []);
-
-        return back()->with('success', 'Labels updated successfully.');
+            return redirect()->back()->with([
+                'success' => 'Task priority updated successfully.',
+                'task' => new TaskResource($updatedTask->load(['status', 'priority', 'assignees', 'labels']))
+            ]);
+        } catch (\Exception $e) {
+            return redirect()->back()->withErrors(['error' => 'Failed to change priority: ' . $e->getMessage()]);
+        }
     }
 
     /**
-     * Reorder tasks within a list.
+     * Assign user to task.
      */
-    public function reorder(Request $request): RedirectResponse
+    public function assign(Request $request, Workspace $workspace, Space $space, TaskList $list, Task $task): RedirectResponse
     {
         $validated = $request->validate([
-            'list_id' => ['required', 'exists:task_lists,id'],
-            'task_ids' => ['required', 'array'],
-            'task_ids.*' => ['exists:tasks,id'],
+            'user_id' => 'required|exists:users,id',
         ]);
 
-        $list = TaskList::findOrFail($validated['list_id']);
-        $this->authorize('update', $list->space);
+        try {
+            $user = User::findOrFail($validated['user_id']);
+            $updatedTask = $this->taskService->assign($task, $user, $request->user());
 
-        $this->taskService->reorderTasks($list, $validated['task_ids']);
+            return redirect()->back()->with([
+                'success' => 'User assigned successfully.',
+                'task' => new TaskResource($updatedTask->load(['status', 'priority', 'assignees', 'labels']))
+            ]);
+        } catch (\Exception $e) {
+            return redirect()->back()->withErrors(['error' => 'Failed to assign user: ' . $e->getMessage()]);
+        }
+    }
 
-        return back()->with('success', 'Task order updated.');
+    /**
+     * Unassign user from task.
+     */
+    public function unassign(Request $request, Workspace $workspace, Space $space, TaskList $list, Task $task): RedirectResponse
+    {
+        $validated = $request->validate([
+            'user_id' => 'required|exists:users,id',
+        ]);
+
+        try {
+            $user = User::findOrFail($validated['user_id']);
+            $updatedTask = $this->taskService->unassign($task, $user, $request->user());
+
+            return redirect()->back()->with([
+                'success' => 'User unassigned successfully.',
+                'task' => new TaskResource($updatedTask->load(['status', 'priority', 'assignees', 'labels']))
+            ]);
+        } catch (\Exception $e) {
+            return redirect()->back()->withErrors(['error' => 'Failed to unassign user: ' . $e->getMessage()]);
+        }
+    }
+
+    /**
+     * Move task to different list.
+     */
+    public function move(Request $request, Workspace $workspace, Space $space, TaskList $list, Task $task): RedirectResponse
+    {
+        $validated = $request->validate([
+            'list_id' => 'required|exists:task_lists,id',
+            'position' => 'nullable|integer|min:0',
+        ]);
+
+        try {
+            $newList = TaskList::findOrFail($validated['list_id']);
+            $updatedTask = $this->taskService->move($task, $newList, $request->user(), $validated['position'] ?? null);
+
+            return redirect()->back()->with([
+                'success' => 'Task moved successfully.',
+                'task' => new TaskResource($updatedTask->load(['status', 'priority', 'assignees', 'labels']))
+            ]);
+        } catch (\Exception $e) {
+            return redirect()->back()->withErrors(['error' => 'Failed to move task: ' . $e->getMessage()]);
+        }
+    }
+
+    /**
+     * Reorder tasks.
+     */
+    public function reorder(ReorderRequest $request, Workspace $workspace, Space $space, TaskList $list): RedirectResponse
+    {
+        try {
+            $this->taskService->reorder($list, $request->validated('order'));
+
+            return redirect()->back()->with('success', 'Tasks reordered successfully.');
+        } catch (\Exception $e) {
+            return redirect()->back()->withErrors(['error' => 'Failed to reorder tasks: ' . $e->getMessage()]);
+        }
+    }
+
+    /**
+     * Add label to task.
+     */
+    public function addLabel(Request $request, Workspace $workspace, Space $space, TaskList $list, Task $task): RedirectResponse
+    {
+        $validated = $request->validate([
+            'label_id' => 'required|exists:labels,id',
+        ]);
+
+        try {
+            $label = Label::findOrFail($validated['label_id']);
+            $updatedTask = $this->taskService->addLabel($task, $label, $request->user());
+
+            return redirect()->back()->with([
+                'success' => 'Label added successfully.',
+                'task' => new TaskResource($updatedTask->load(['status', 'priority', 'assignees', 'labels']))
+            ]);
+        } catch (\Exception $e) {
+            return redirect()->back()->withErrors(['error' => 'Failed to add label: ' . $e->getMessage()]);
+        }
+    }
+
+    /**
+     * Remove label from task.
+     */
+    public function removeLabel(Request $request, Workspace $workspace, Space $space, TaskList $list, Task $task): RedirectResponse
+    {
+        $validated = $request->validate([
+            'label_id' => 'required|exists:labels,id',
+        ]);
+
+        try {
+            $label = Label::findOrFail($validated['label_id']);
+            $updatedTask = $this->taskService->removeLabel($task, $label, $request->user());
+
+            return redirect()->back()->with([
+                'success' => 'Label removed successfully.',
+                'task' => new TaskResource($updatedTask->load(['status', 'priority', 'assignees', 'labels']))
+            ]);
+        } catch (\Exception $e) {
+            return redirect()->back()->withErrors(['error' => 'Failed to remove label: ' . $e->getMessage()]);
+        }
+    }
+
+    /**
+     * Duplicate the task.
+     */
+    public function duplicate(Request $request, Workspace $workspace, Space $space, TaskList $list, Task $task): RedirectResponse
+    {
+        try {
+            $newTask = $this->taskService->duplicate($task, $request->user());
+
+            return redirect()->back()->with([
+                'success' => 'Task duplicated successfully.',
+                'task' => new TaskResource($newTask->load(['status', 'priority', 'assignees', 'labels']))
+            ]);
+        } catch (\Exception $e) {
+            return redirect()->back()->withErrors(['error' => 'Failed to duplicate task: ' . $e->getMessage()]);
+        }
+    }
+
+    /**
+     * Get user's assigned tasks.
+     */
+    public function myTasks(Request $request): Response
+    {
+        $filters = $request->only([
+            'status_ids',
+            'priority_ids',
+            'due_date_from',
+            'due_date_to',
+            'search'
+        ]);
+
+        $tasks = $this->taskService->getMyTasks($request->user(), $filters);
+
+        return Inertia::render('Tasks/MyTasks', [
+            'tasks' => TaskResource::collection($tasks),
+            'filters' => $filters,
+        ]);
+    }
+
+    /**
+     * Global search for tasks.
+     */
+    public function search(Request $request): \Illuminate\Http\JsonResponse
+    {
+        $query = $request->input('q', '');
+        
+        if (strlen($query) < 2) {
+            return response()->json(['tasks' => [], 'lists' => [], 'spaces' => []]);
+        }
+
+        $user = $request->user();
+        
+        // Search tasks
+        $tasks = Task::whereHas('taskList.space.workspace', function ($q) use ($user) {
+                $q->where('created_by', $user->id)
+                  ->orWhereHas('members', function ($q2) use ($user) {
+                      $q2->where('users.id', $user->id);
+                  });
+            })
+            ->where(function ($q) use ($query) {
+                $q->where('name', 'like', "%{$query}%")
+                  ->orWhere('description', 'like', "%{$query}%");
+            })
+            ->with(['taskList.space', 'status', 'priority', 'assignees'])
+            ->limit(20)
+            ->get();
+
+        // Search lists
+        $lists = TaskList::whereHas('space.workspace', function ($q) use ($user) {
+                $q->where('created_by', $user->id)
+                  ->orWhereHas('members', function ($q2) use ($user) {
+                      $q2->where('users.id', $user->id);
+                  });
+            })
+            ->where('name', 'like', "%{$query}%")
+            ->with('space')
+            ->limit(10)
+            ->get();
+
+        // Search spaces
+        $spaces = Space::whereHas('workspace', function ($q) use ($user) {
+                $q->where('created_by', $user->id)
+                  ->orWhereHas('members', function ($q2) use ($user) {
+                      $q2->where('users.id', $user->id);
+                  });
+            })
+            ->where('name', 'like', "%{$query}%")
+            ->with('workspace')
+            ->limit(10)
+            ->get();
+
+        return response()->json([
+            'tasks' => TaskResource::collection($tasks),
+            'lists' => $lists,
+            'spaces' => $spaces,
+        ]);
     }
 }

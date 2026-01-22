@@ -1,148 +1,68 @@
 <?php
 
-declare(strict_types=1);
-
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
-/**
- * View Model 
- *
- * Supports: List, Board, Calendar, Gantt, Timeline, Table, Mindmap, Workload
- *
- * @property int $id
- * @property string $name
- * @property int|null $space_id
- * @property int|null $folder_id
- * @property int|null $list_id
- * @property int $created_by
- * @property string $type
- * @property array|null $filters
- * @property array|null $sorts
- * @property array|null $grouping
- * @property array|null $columns
- * @property bool $is_private
- * @property bool $is_pinned
- * @property int $position
- * @property \Illuminate\Support\Carbon|null $created_at
- * @property \Illuminate\Support\Carbon|null $updated_at
- */
 class View extends Model
 {
     use HasFactory;
 
     protected $fillable = [
-        'name',
+        'task_list_id',
         'space_id',
-        'folder_id',
-        'list_id',
-        'created_by',
+        'user_id',
+        'name',
         'type',
         'filters',
         'sorts',
-        'grouping',
         'columns',
+        'settings',
+        'is_default',
         'is_private',
-        'is_pinned',
         'position',
     ];
 
     protected $casts = [
         'filters' => 'array',
         'sorts' => 'array',
-        'grouping' => 'array',
         'columns' => 'array',
+        'settings' => 'array',
+        'is_default' => 'boolean',
         'is_private' => 'boolean',
-        'is_pinned' => 'boolean',
-        'position' => 'integer',
     ];
 
-    protected $attributes = [
-        'type' => 'list',
-        'is_private' => false,
-        'is_pinned' => false,
-        'position' => 0,
-    ];
+    // ==================== RELATIONSHIPS ====================
 
-    /**
-     * View types.
-     */
-    public const TYPE_LIST = 'list';
-    public const TYPE_BOARD = 'board';
-    public const TYPE_CALENDAR = 'calendar';
-    public const TYPE_GANTT = 'gantt';
-    public const TYPE_TIMELINE = 'timeline';
-    public const TYPE_TABLE = 'table';
-    public const TYPE_MINDMAP = 'mindmap';
-    public const TYPE_WORKLOAD = 'workload';
+    public function taskList(): BelongsTo
+    {
+        return $this->belongsTo(TaskList::class);
+    }
 
-    public const TYPES = [
-        self::TYPE_LIST,
-        self::TYPE_BOARD,
-        self::TYPE_CALENDAR,
-        self::TYPE_GANTT,
-        self::TYPE_TIMELINE,
-        self::TYPE_TABLE,
-        self::TYPE_MINDMAP,
-        self::TYPE_WORKLOAD,
-    ];
-
-    /**
-     * Get the space that owns the view.
-     */
     public function space(): BelongsTo
     {
         return $this->belongsTo(Space::class);
     }
 
-    /**
-     * Get the folder that owns the view.
-     */
-    public function folder(): BelongsTo
+    public function user(): BelongsTo
     {
-        return $this->belongsTo(Folder::class);
+        return $this->belongsTo(User::class);
     }
 
-    /**
-     * Get the list that owns the view.
-     */
-    public function list(): BelongsTo
+    // ==================== SCOPES ====================
+
+    public function scopeForUser($query, User $user)
     {
-        return $this->belongsTo(TaskList::class, 'list_id');
+        return $query->where(function ($q) use ($user) {
+            $q->where('user_id', $user->id)
+                ->orWhere('is_private', false);
+        });
     }
 
-    /**
-     * Get the creator of the view.
-     */
-    public function creator(): BelongsTo
-    {
-        return $this->belongsTo(User::class, 'created_by');
-    }
-
-    /**
-     * Scope by type.
-     */
     public function scopeOfType($query, string $type)
     {
         return $query->where('type', $type);
-    }
-
-    /**
-     * Scope public views.
-     */
-    public function scopePublic($query)
-    {
-        return $query->where('is_private', false);
-    }
-
-    /**
-     * Scope pinned views.
-     */
-    public function scopePinned($query)
-    {
-        return $query->where('is_pinned', true);
     }
 }

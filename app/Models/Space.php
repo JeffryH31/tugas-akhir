@@ -1,7 +1,5 @@
 <?php
 
-declare(strict_types=1);
-
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Factories\HasFactory;
@@ -9,170 +7,157 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Database\Eloquent\Relations\HasMany;
-use Illuminate\Database\Eloquent\Relations\HasManyThrough;
 use Illuminate\Database\Eloquent\SoftDeletes;
+use Illuminate\Support\Str;
 
-/**
- * Space Model 
- *
- * Represents a Space within a Workspace.
- * Spaces contain Folders and Lists for organizing work.
- *
- * Hierarchy: Workspace -> Space -> Folder -> List -> Task -> Subtask
- *
- * @property int $id
- * @property string $name
- * @property string|null $description
- * @property int $workspace_id
- * @property int $created_by
- * @property string $color
- * @property string $avatar
- * @property bool $is_private
- * @property bool $is_starred
- * @property bool $is_active
- * @property int $position
- * @property array|null $features
- * @property \Illuminate\Support\Carbon|null $created_at
- * @property \Illuminate\Support\Carbon|null $updated_at
- * @property \Illuminate\Support\Carbon|null $deleted_at
- */
 class Space extends Model
 {
     use HasFactory, SoftDeletes;
 
     protected $fillable = [
-        'name',
-        'description',
         'workspace_id',
-        'created_by',
+        'name',
+        'slug',
+        'description',
         'color',
-        'avatar',
+        'icon',
         'is_private',
         'is_starred',
-        'is_active',
         'position',
-        'features',
+        'settings',
+        'created_by',
     ];
 
     protected $casts = [
         'is_private' => 'boolean',
         'is_starred' => 'boolean',
-        'is_active' => 'boolean',
-        'position' => 'integer',
-        'features' => 'array',
+        'settings' => 'array',
     ];
 
-    protected $attributes = [
-        'color' => '#6366F1',
-        'is_private' => false,
-        'is_starred' => false,
-        'is_active' => true,
-        'position' => 0,
-    ];
+    protected static function boot(): void
+    {
+        parent::boot();
 
-    /**
-     * Get the workspace that owns the space.
-     */
+        static::creating(function ($space) {
+            if (empty($space->slug)) {
+                $space->slug = Str::slug($space->name);
+            }
+            
+            // Ensure unique slug within workspace
+            $originalSlug = $space->slug;
+            $count = 1;
+            while (static::where('workspace_id', $space->workspace_id)
+                ->where('slug', $space->slug)->exists()) {
+                $space->slug = $originalSlug . '-' . $count++;
+            }
+
+            // Set position
+            if (empty($space->position)) {
+                $space->position = static::where('workspace_id', $space->workspace_id)->max('position') + 1;
+            }
+        });
+
+        static::created(function ($space) {
+            // Create default statuses
+            $defaultStatuses = [
+                ['name' => 'Open', 'color' => '#6B7280', 'type' => 'open', 'position' => 0, 'is_default' => true],
+                ['name' => 'In Progress', 'color' => '#3B82F6', 'type' => 'in_progress', 'position' => 1],
+                ['name' => 'Review', 'color' => '#F59E0B', 'type' => 'review', 'position' => 2],
+                ['name' => 'Completed', 'color' => '#10B981', 'type' => 'closed', 'position' => 3, 'is_closed' => true],
+            ];
+
+            foreach ($defaultStatuses as $status) {
+                $space->statuses()->create([
+                    ...$status,
+                    'slug' => Str::slug($status['name']),
+                ]);
+            }
+        });
+    }
+
+    // ==================== RELATIONSHIPS ====================
+
     public function workspace(): BelongsTo
     {
         return $this->belongsTo(Workspace::class);
     }
 
-    /**
-     * Get the user who created the space.
-     */
     public function creator(): BelongsTo
     {
         return $this->belongsTo(User::class, 'created_by');
     }
 
-    /**
-     * Get all members of the space.
-     */
     public function members(): BelongsToMany
     {
-        return $this->belongsToMany(User::class, 'space_user')
+        return $this->belongsToMany(User::class, 'space_members')
             ->withPivot('role')
             ->withTimestamps();
     }
 
-    /**
-     * Get all folders in the space.
-     */
     public function folders(): HasMany
+    {
+        return $this->hasMany(Folder::class)->whereNull('parent_id')->orderBy('position');
+    }
+
+    public function allFolders(): HasMany
     {
         return $this->hasMany(Folder::class)->orderBy('position');
     }
 
-    /**
-     * Get all lists directly in the space (without folder).
-     */
     public function lists(): HasMany
-    {
-        return $this->hasMany(TaskList::class)->whereNull('folder_id')->orderBy('position');
-    }
-
-    /**
-     * Get all lists in the space (including those in folders).
-     */
-    public function allLists(): HasMany
     {
         return $this->hasMany(TaskList::class)->orderBy('position');
     }
 
-    /**
-     * Get all labels in the space.
-     */
+    public function listsWithoutFolder(): HasMany
+    {
+        return $this->hasMany(TaskList::class)->whereNull('folder_id')->orderBy('position');
+    }
+
+    public function tasks(): \Illuminate\Database\Eloquent\Relations\HasManyThrough
+    {
+        return $this->hasManyThrough(Task::class, TaskList::class);
+    }
+
+    public function statuses(): HasMany
+    {
+        return $this->hasMany(Status::class)->orderBy('position');
+    }
+
     public function labels(): HasMany
     {
         return $this->hasMany(Label::class);
     }
 
-    /**
-     * Get all custom fields in the space.
-     */
-    public function customFields(): HasMany
+    // ==================== ACCESSORS ====================
+
+    public function getInitialsAttribute(): string
     {
-        return $this->hasMany(CustomField::class);
+        return strtoupper(substr($this->name, 0, 1));
     }
 
-    /**
-     * Get all views in the space.
-     */
-    public function views(): HasMany
-    {
-        return $this->hasMany(View::class);
-    }
+    // ==================== SCOPES ====================
 
-    /**
-     * Get all automations in the space.
-     */
-    public function automations(): HasMany
-    {
-        return $this->hasMany(Automation::class);
-    }
-
-    /**
-     * Get tasks through lists.
-     */
-    public function tasks(): HasManyThrough
-    {
-        return $this->hasManyThrough(Task::class, TaskList::class, 'space_id', 'list_id');
-    }
-
-    /**
-     * Scope active spaces.
-     */
-    public function scopeActive($query)
-    {
-        return $query->where('is_active', true);
-    }
-
-    /**
-     * Scope starred spaces.
-     */
     public function scopeStarred($query)
     {
         return $query->where('is_starred', true);
+    }
+
+    public function scopePublic($query)
+    {
+        return $query->where('is_private', false);
+    }
+
+    // ==================== HELPER METHODS ====================
+
+    public function toggleStar(): void
+    {
+        $this->update(['is_starred' => !$this->is_starred]);
+    }
+
+    public function getDefaultStatus(): ?Status
+    {
+        return $this->statuses()->where('is_default', true)->first()
+            ?? $this->statuses()->first();
     }
 }

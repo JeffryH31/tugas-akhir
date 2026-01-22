@@ -1,7 +1,5 @@
 <?php
 
-declare(strict_types=1);
-
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Factories\HasFactory;
@@ -9,456 +7,344 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Database\Eloquent\Relations\HasMany;
-use Illuminate\Database\Eloquent\Relations\MorphMany;
 use Illuminate\Database\Eloquent\SoftDeletes;
 
-/**
- * Task Model 
- *
- * Represents a task within a List. Tasks can have subtasks (parent_id).
- * 
- * Hierarchy: Workspace -> Space -> Folder -> List -> Task -> Subtask
- *
- * @property int $id
- * @property int|null $parent_id
- * @property string $title
- * @property string|null $description
- * @property int $list_id
- * @property int|null $status_id
- * @property string $status
- * @property string $priority
- * @property int|null $assignee_id
- * @property int $created_by
- * @property \Illuminate\Support\Carbon|null $start_date
- * @property \Illuminate\Support\Carbon|null $due_date
- * @property bool $is_completed
- * @property \Illuminate\Support\Carbon|null $completed_at
- * @property int $position
- * @property float $estimated_hours
- * @property float $actual_hours
- * @property array|null $custom_fields
- * @property bool $is_active
- * @property \Illuminate\Support\Carbon|null $created_at
- * @property \Illuminate\Support\Carbon|null $updated_at
- * @property \Illuminate\Support\Carbon|null $deleted_at
- */
 class Task extends Model
 {
     use HasFactory, SoftDeletes;
 
     protected $fillable = [
+        'task_id',
+        'task_list_id',
         'parent_id',
-        'title',
-        'description',
-        'list_id',
         'status_id',
-        'priority',
-        'created_by',
+        'priority_id',
+        'name',
+        'description',
         'start_date',
         'due_date',
-        'is_completed',
         'completed_at',
+        'time_estimate',
+        'time_spent',
         'position',
-        'estimated_hours',
-        'actual_hours',
+        'is_archived',
+        'is_template',
         'custom_fields',
-        'is_active',
+        'created_by',
+        'completed_by',
     ];
 
     protected $casts = [
-        'start_date' => 'date',
-        'due_date' => 'date',
-        'is_completed' => 'boolean',
+        'start_date' => 'datetime',
+        'due_date' => 'datetime',
         'completed_at' => 'datetime',
-        'position' => 'integer',
-        'estimated_hours' => 'decimal:2',
-        'actual_hours' => 'decimal:2',
+        'is_archived' => 'boolean',
+        'is_template' => 'boolean',
         'custom_fields' => 'array',
-        'is_active' => 'boolean',
     ];
 
-    protected $attributes = [
-        'priority' => 'normal',
-        'is_completed' => false,
-        'is_active' => true,
-        'estimated_hours' => 0,
-        'actual_hours' => 0,
+    protected $appends = [
+        'is_completed',
+        'is_overdue',
+        'progress',
     ];
 
     /**
-     * Priority levels (standard).
+     * Default eager loading relationships
      */
-    public const PRIORITY_URGENT = 'urgent';
-    public const PRIORITY_HIGH = 'high';
-    public const PRIORITY_NORMAL = 'normal';
-    public const PRIORITY_LOW = 'low';
+    protected $with = [];
 
-    public const PRIORITIES = [
-        self::PRIORITY_URGENT,
-        self::PRIORITY_HIGH,
-        self::PRIORITY_NORMAL,
-        self::PRIORITY_LOW,
-    ];
+    protected static function boot(): void
+    {
+        parent::boot();
 
-    /**
-     * Legacy status options.
-     */
-    public const STATUSES = ['todo', 'in-progress', 'review', 'done'];
+        static::creating(function ($task) {
+            // Generate human-readable task ID
+            if (empty($task->task_id)) {
+                $list = TaskList::with('space.workspace')->find($task->task_list_id);
+                $prefix = strtoupper(substr($list->space->workspace->name, 0, 3));
+                $count = Task::whereHas('taskList.space', function ($q) use ($list) {
+                    $q->where('workspace_id', $list->space->workspace_id);
+                })->count() + 1;
+                $task->task_id = $prefix . '-' . $count;
+            }
 
-    // ==========================================
-    // Relationships
-    // ==========================================
+            // Set position
+            if (empty($task->position)) {
+                $task->position = static::where('task_list_id', $task->task_list_id)
+                    ->where('parent_id', $task->parent_id)
+                    ->max('position') + 1;
+            }
 
-    /**
-     * Get the parent task (if this is a subtask).
-     */
+            // Set default status
+            if (empty($task->status_id)) {
+                $list = TaskList::with('space')->find($task->task_list_id);
+                $defaultStatus = $list->space->getDefaultStatus();
+                $task->status_id = $defaultStatus?->id;
+            }
+        });
+
+        // Update time_spent when time entries change
+        static::saved(function ($task) {
+            if ($task->wasChanged('completed_at') && $task->completed_at) {
+                // Update parent progress if this is a subtask
+                if ($task->parent) {
+                    $task->parent->updateProgress();
+                }
+            }
+        });
+    }
+
+    // ==================== RELATIONSHIPS ====================
+
+    public function taskList(): BelongsTo
+    {
+        return $this->belongsTo(TaskList::class);
+    }
+
     public function parent(): BelongsTo
     {
         return $this->belongsTo(Task::class, 'parent_id');
     }
 
-    /**
-     * Get all subtasks.
-     */
     public function subtasks(): HasMany
     {
         return $this->hasMany(Task::class, 'parent_id')->orderBy('position');
     }
 
-    /**
-     * Get the list that contains this task.
-     */
-    public function list(): BelongsTo
+    public function status(): BelongsTo
     {
-        return $this->belongsTo(TaskList::class, 'list_id');
+        return $this->belongsTo(Status::class);
     }
 
-    /**
-     * Get the custom status for this task.
-     */
-    public function statusModel(): BelongsTo
+    public function priority(): BelongsTo
     {
-        return $this->belongsTo(Status::class, 'status_id');
+        return $this->belongsTo(Priority::class);
     }
 
-    /**
-     * Get all assignees (multiple assignees support).
-     */
-    public function assignees(): BelongsToMany
-    {
-        return $this->belongsToMany(User::class, 'task_assignees')
-            ->withTimestamps();
-    }
-
-    /**
-     * Get the primary assignee (first assignee).
-     */
-    public function assignee(): BelongsTo
-    {
-        // Return first assignee as primary - this is a virtual relationship
-        return $this->belongsTo(User::class, 'created_by')->withDefault();
-    }
-
-    /**
-     * Get primary assignee from the pivot table.
-     */
-    public function getPrimaryAssigneeAttribute(): ?User
-    {
-        return $this->assignees->first();
-    }
-
-    /**
-     * Get the user who created this task.
-     */
     public function creator(): BelongsTo
     {
         return $this->belongsTo(User::class, 'created_by');
     }
 
-    /**
-     * Get all time entries for this task.
-     */
-    public function timeEntries(): HasMany
+    public function completedBy(): BelongsTo
     {
-        return $this->hasMany(TimeEntry::class)->orderByDesc('work_date');
+        return $this->belongsTo(User::class, 'completed_by');
     }
 
-    /**
-     * Get all checklists in this task.
-     */
-    public function checklists(): HasMany
+    public function assignees(): BelongsToMany
     {
-        return $this->hasMany(Checklist::class)->orderBy('position');
+        return $this->belongsToMany(User::class, 'task_assignees')
+            ->withPivot('assigned_at', 'assigned_by')
+            ->withTimestamps();
     }
 
-    /**
-     * Get all comments on this task.
-     */
-    public function comments(): MorphMany
-    {
-        return $this->morphMany(Comment::class, 'commentable')->orderBy('created_at');
-    }
-
-    /**
-     * Get all attachments on this task.
-     */
-    public function attachments(): MorphMany
-    {
-        return $this->morphMany(Attachment::class, 'attachable');
-    }
-
-    /**
-     * Get all labels attached to this task.
-     */
     public function labels(): BelongsToMany
     {
-        return $this->belongsToMany(Label::class, 'task_label')
-            ->withTimestamps();
+        return $this->belongsToMany(Label::class, 'task_labels')->withTimestamps();
     }
 
-    /**
-     * Get all watchers of this task.
-     */
     public function watchers(): BelongsToMany
     {
-        return $this->belongsToMany(User::class, 'task_watchers')
+        return $this->belongsToMany(User::class, 'task_watchers')->withTimestamps();
+    }
+
+    public function dependencies(): BelongsToMany
+    {
+        return $this->belongsToMany(Task::class, 'task_dependencies', 'task_id', 'depends_on_task_id')
+            ->withPivot('type')
             ->withTimestamps();
     }
 
-    /**
-     * Get tasks that this task depends on.
-     */
-    public function dependencies(): HasMany
+    public function dependents(): BelongsToMany
     {
-        return $this->hasMany(TaskDependency::class);
+        return $this->belongsToMany(Task::class, 'task_dependencies', 'depends_on_task_id', 'task_id')
+            ->withPivot('type')
+            ->withTimestamps();
     }
 
-    /**
-     * Get tasks that are waiting on this task.
-     */
-    public function dependents(): HasMany
+    public function timeEntries(): HasMany
     {
-        return $this->hasMany(TaskDependency::class, 'depends_on_id');
+        return $this->hasMany(TimeEntry::class);
     }
 
-    /**
-     * Get custom field values.
-     */
-    public function customFieldValues(): HasMany
+    public function comments(): HasMany
     {
-        return $this->hasMany(TaskCustomFieldValue::class);
+        return $this->hasMany(Comment::class)->whereNull('parent_id')->latest();
     }
 
-    // ==========================================
-    // Scopes
-    // ==========================================
-
-    public function scopeActive($query)
+    public function allComments(): HasMany
     {
-        return $query->where('is_active', true);
+        return $this->hasMany(Comment::class)->latest();
     }
 
-    public function scopeCompleted($query)
+    public function attachments(): HasMany
     {
-        return $query->where('is_completed', true);
+        return $this->hasMany(Attachment::class);
     }
 
-    public function scopeIncomplete($query)
+    // ==================== ACCESSORS ====================
+
+    public function getIsCompletedAttribute(): bool
     {
-        return $query->where('is_completed', false);
+        return $this->completed_at !== null;
     }
 
-    public function scopeAssignedTo($query, int $userId)
+    public function getIsOverdueAttribute(): bool
     {
-        return $query->whereHas('assignees', fn($q) => $q->where('users.id', $userId));
+        if (!$this->due_date || $this->is_completed) {
+            return false;
+        }
+        return $this->due_date->isPast();
     }
 
-    public function scopeOverdue($query)
+    public function getProgressAttribute(): float
     {
-        return $query->whereNotNull('due_date')
-            ->where('is_completed', false)
-            ->where('due_date', '<', now()->startOfDay());
+        $subtasks = $this->subtasks;
+        if ($subtasks->isEmpty()) {
+            return $this->is_completed ? 100 : 0;
+        }
+
+        $completed = $subtasks->filter(fn($t) => $t->is_completed)->count();
+        return round(($completed / $subtasks->count()) * 100, 1);
     }
 
-    public function scopeParentTasks($query)
+    public function getTimeSpentFormattedAttribute(): string
+    {
+        $hours = floor($this->time_spent / 60);
+        $minutes = $this->time_spent % 60;
+        
+        if ($hours > 0) {
+            return $hours . 'h ' . $minutes . 'm';
+        }
+        return $minutes . 'm';
+    }
+
+    public function getTimeEstimateFormattedAttribute(): string
+    {
+        if (!$this->time_estimate) return '-';
+        
+        $hours = floor($this->time_estimate / 60);
+        $minutes = $this->time_estimate % 60;
+        
+        if ($hours > 0) {
+            return $hours . 'h ' . $minutes . 'm';
+        }
+        return $minutes . 'm';
+    }
+
+    // ==================== SCOPES ====================
+
+    public function scopeRoot($query)
     {
         return $query->whereNull('parent_id');
     }
 
-    public function scopeSubtasks($query)
+    public function scopeCompleted($query)
     {
-        return $query->whereNotNull('parent_id');
+        return $query->whereNotNull('completed_at');
     }
 
-    public function scopeByPriority($query, string $priority)
+    public function scopeIncomplete($query)
     {
-        return $query->where('priority', $priority);
+        return $query->whereNull('completed_at');
     }
 
-    // ==========================================
-    // Methods
-    // ==========================================
-
-    /**
-     * Check if this is a subtask.
-     */
-    public function isSubtask(): bool
+    public function scopeOverdue($query)
     {
-        return $this->parent_id !== null;
+        return $query->whereNull('completed_at')
+            ->whereNotNull('due_date')
+            ->where('due_date', '<', now());
     }
 
-    /**
-     * Check if the task has subtasks.
-     */
-    public function hasSubtasks(): bool
+    public function scopeDueSoon($query, int $days = 3)
     {
-        return $this->subtasks()->exists();
+        return $query->whereNull('completed_at')
+            ->whereNotNull('due_date')
+            ->whereBetween('due_date', [now(), now()->addDays($days)]);
     }
 
-    /**
-     * Mark the task as completed.
-     */
-    public function markAsCompleted(): void
+    public function scopeActive($query)
+    {
+        return $query->where('is_archived', false);
+    }
+
+    // ==================== HELPER METHODS ====================
+
+    public function complete(?User $user = null): void
     {
         $this->update([
-            'is_completed' => true,
             'completed_at' => now(),
-            'status' => 'done',
+            'completed_by' => $user?->id,
         ]);
     }
 
-    /**
-     * Mark the task as incomplete.
-     */
-    public function markAsIncomplete(): void
+    public function reopen(): void
     {
         $this->update([
-            'is_completed' => false,
             'completed_at' => null,
-            'status' => 'todo',
+            'completed_by' => null,
         ]);
     }
 
-    /**
-     * Check if the task is overdue.
-     */
-    public function isOverdue(): bool
+    public function updateTimeSpent(): void
     {
-        return $this->due_date !== null
-            && !$this->is_completed
-            && $this->due_date->isPast();
+        $totalMinutes = $this->timeEntries()->sum('duration');
+        $this->update(['time_spent' => $totalMinutes]);
     }
 
-    /**
-     * Calculate subtasks progress.
-     */
-    public function getSubtasksProgressAttribute(): int
+    public function updateProgress(): void
     {
-        $total = $this->subtasks()->count();
-        if ($total === 0) {
-            return 0;
+        // This method is called when subtask completion status changes
+        // Progress is calculated dynamically via accessor
+    }
+
+    public function assign(User $user, ?User $assignedBy = null): void
+    {
+        $this->assignees()->syncWithoutDetaching([
+            $user->id => [
+                'assigned_at' => now(),
+                'assigned_by' => $assignedBy?->id,
+            ]
+        ]);
+    }
+
+    public function unassign(User $user): void
+    {
+        $this->assignees()->detach($user->id);
+    }
+
+    public function addLabel(Label $label): void
+    {
+        $this->labels()->syncWithoutDetaching($label->id);
+    }
+
+    public function removeLabel(Label $label): void
+    {
+        $this->labels()->detach($label->id);
+    }
+
+    public function move(TaskList $newList, ?int $position = null): void
+    {
+        $this->update([
+            'task_list_id' => $newList->id,
+            'position' => $position ?? Task::where('task_list_id', $newList->id)
+                ->whereNull('parent_id')
+                ->max('position') + 1,
+        ]);
+    }
+
+    public function changeStatus(Status $status): void
+    {
+        $wasCompleted = $this->is_completed;
+        
+        $this->update(['status_id' => $status->id]);
+
+        // Auto-complete if status is closed
+        if ($status->is_closed && !$wasCompleted) {
+            $this->complete();
+        } elseif (!$status->is_closed && $wasCompleted) {
+            $this->reopen();
         }
-        $completed = $this->subtasks()->where('is_completed', true)->count();
-        return (int) round(($completed / $total) * 100);
-    }
-
-    /**
-     * Calculate checklists progress.
-     */
-    public function getChecklistsProgressAttribute(): int
-    {
-        $checklists = $this->checklists()->with('items')->get();
-        $totalItems = 0;
-        $completedItems = 0;
-
-        foreach ($checklists as $checklist) {
-            $totalItems += $checklist->items->count();
-            $completedItems += $checklist->items->where('is_completed', true)->count();
-        }
-
-        if ($totalItems === 0) {
-            return 0;
-        }
-
-        return (int) round(($completedItems / $totalItems) * 100);
-    }
-
-    /**
-     * Get time progress percentage.
-     */
-    public function getTimeProgressPercentage(): int
-    {
-        if ($this->estimated_hours <= 0) {
-            return 0;
-        }
-        return min(100, (int) round(($this->actual_hours / $this->estimated_hours) * 100));
-    }
-
-    /**
-     * Check if actual hours exceed estimated hours.
-     */
-    public function isOverBudget(): bool
-    {
-        return $this->estimated_hours > 0 && $this->actual_hours > $this->estimated_hours;
-    }
-
-    /**
-     * Get remaining hours.
-     */
-    public function getRemainingHours(): float
-    {
-        return max(0, $this->estimated_hours - $this->actual_hours);
-    }
-
-    /**
-     * Add logged hours to the task.
-     */
-    public function addActualHours(float $hours): void
-    {
-        $this->increment('actual_hours', $hours);
-    }
-
-    /**
-     * Get the space this task belongs to.
-     */
-    public function getSpace(): ?Space
-    {
-        return $this->list?->space;
-    }
-
-    /**
-     * Get the workspace this task belongs to.
-     */
-    public function getWorkspace(): ?Workspace
-    {
-        return $this->getSpace()?->workspace;
-    }
-
-    // ==========================================
-    // Legacy aliases for backward compatibility
-    // ==========================================
-
-    /**
-     * @deprecated Use list() instead
-     */
-    public function taskList(): BelongsTo
-    {
-        return $this->list();
-    }
-
-    /**
-     * @deprecated Use getSpace() instead
-     */
-    public function getBoard(): ?Space
-    {
-        return $this->getSpace();
-    }
-
-    /**
-     * @deprecated Use list->folder->... instead
-     */
-    public function getFeature()
-    {
-        return $this->list;
     }
 }

@@ -1,129 +1,116 @@
 <?php
 
-declare(strict_types=1);
-
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
-use Illuminate\Database\Eloquent\Relations\HasManyThrough;
 use Illuminate\Database\Eloquent\SoftDeletes;
+use Illuminate\Support\Str;
 
-/**
- * Folder Model 
- *
- * Represents a Folder within a Space.
- * Folders are optional and contain Lists for organizing work.
- *
- * Hierarchy: Workspace -> Space -> Folder -> List -> Task -> Subtask
- *
- * @property int $id
- * @property string $name
- * @property int $space_id
- * @property int $position
- * @property string|null $color
- * @property bool $hidden
- * @property bool $is_active
- * @property \Illuminate\Support\Carbon|null $created_at
- * @property \Illuminate\Support\Carbon|null $updated_at
- * @property \Illuminate\Support\Carbon|null $deleted_at
- */
 class Folder extends Model
 {
     use HasFactory, SoftDeletes;
 
     protected $fillable = [
-        'name',
         'space_id',
-        'position',
+        'parent_id',
+        'name',
+        'slug',
+        'description',
         'color',
-        'hidden',
-        'is_active',
+        'is_hidden',
+        'position',
+        'created_by',
     ];
 
     protected $casts = [
-        'position' => 'integer',
-        'hidden' => 'boolean',
-        'is_active' => 'boolean',
+        'is_hidden' => 'boolean',
     ];
 
-    protected $attributes = [
-        'position' => 0,
-        'hidden' => false,
-        'is_active' => true,
-    ];
+    protected static function boot(): void
+    {
+        parent::boot();
 
-    /**
-     * Get the space that owns the folder.
-     */
+        static::creating(function ($folder) {
+            if (empty($folder->slug)) {
+                $folder->slug = Str::slug($folder->name);
+            }
+
+            // Set position
+            if (empty($folder->position)) {
+                $folder->position = static::where('space_id', $folder->space_id)
+                    ->where('parent_id', $folder->parent_id)
+                    ->max('position') + 1;
+            }
+        });
+    }
+
+    // ==================== RELATIONSHIPS ====================
+
     public function space(): BelongsTo
     {
         return $this->belongsTo(Space::class);
     }
 
-    /**
-     * Get the workspace through space.
-     */
-    public function workspace()
+    public function parent(): BelongsTo
     {
-        return $this->space->workspace;
+        return $this->belongsTo(Folder::class, 'parent_id');
     }
 
-    /**
-     * Get all lists in the folder.
-     */
+    public function children(): HasMany
+    {
+        return $this->hasMany(Folder::class, 'parent_id')->orderBy('position');
+    }
+
     public function lists(): HasMany
     {
         return $this->hasMany(TaskList::class)->orderBy('position');
     }
 
-    /**
-     * Get all active lists in the folder.
-     */
-    public function activeLists(): HasMany
+    public function creator(): BelongsTo
     {
-        return $this->lists()->where('is_active', true);
+        return $this->belongsTo(User::class, 'created_by');
     }
 
-    /**
-     * Get all tasks through lists.
-     */
-    public function tasks(): HasManyThrough
+    // ==================== RECURSIVE RELATIONSHIPS ====================
+
+    public function allChildren(): HasMany
     {
-        return $this->hasManyThrough(Task::class, TaskList::class, 'folder_id', 'list_id');
+        return $this->children()->with('allChildren');
     }
 
-    /**
-     * Get all views for this folder.
-     */
-    public function views(): HasMany
+    public function allLists(): HasMany
     {
-        return $this->hasMany(View::class);
+        return $this->lists()->with('tasks');
     }
 
-    /**
-     * Get all automations for this folder.
-     */
-    public function automations(): HasMany
+    // ==================== HELPER METHODS ====================
+
+    public function getDepth(): int
     {
-        return $this->hasMany(Automation::class);
+        $depth = 0;
+        $parent = $this->parent;
+        
+        while ($parent) {
+            $depth++;
+            $parent = $parent->parent;
+        }
+        
+        return $depth;
     }
 
-    /**
-     * Scope active folders.
-     */
-    public function scopeActive($query)
+    public function getBreadcrumbs(): array
     {
-        return $query->where('is_active', true);
-    }
-
-    /**
-     * Scope visible folders (not hidden).
-     */
-    public function scopeVisible($query)
-    {
-        return $query->where('hidden', false);
+        $breadcrumbs = [$this];
+        $parent = $this->parent;
+        
+        while ($parent) {
+            array_unshift($breadcrumbs, $parent);
+            $parent = $parent->parent;
+        }
+        
+        return $breadcrumbs;
     }
 }

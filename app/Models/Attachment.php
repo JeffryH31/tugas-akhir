@@ -1,106 +1,84 @@
 <?php
 
-declare(strict_types=1);
-
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
-use Illuminate\Database\Eloquent\Relations\MorphTo;
-use Illuminate\Database\Eloquent\SoftDeletes;
+use Illuminate\Support\Facades\Storage;
 
-/**
- * Attachment Model 
- *
- * @property int $id
- * @property string $attachable_type
- * @property int $attachable_id
- * @property int $user_id
- * @property string $name
- * @property string $file_path
- * @property string|null $file_type
- * @property int $file_size
- * @property \Illuminate\Support\Carbon|null $created_at
- * @property \Illuminate\Support\Carbon|null $updated_at
- * @property \Illuminate\Support\Carbon|null $deleted_at
- */
 class Attachment extends Model
 {
-    use HasFactory, SoftDeletes;
+    use HasFactory;
 
     protected $fillable = [
-        'attachable_type',
-        'attachable_id',
+        'task_id',
         'user_id',
         'name',
-        'file_path',
-        'file_type',
-        'file_size',
+        'original_name',
+        'path',
+        'disk',
+        'mime_type',
+        'size',
     ];
 
-    protected $casts = [
-        'file_size' => 'integer',
-    ];
+    protected $appends = ['url', 'size_formatted'];
 
-    /**
-     * Get the attachable model (Task, Comment, etc.).
-     */
-    public function attachable(): MorphTo
+    // ==================== RELATIONSHIPS ====================
+
+    public function task(): BelongsTo
     {
-        return $this->morphTo();
+        return $this->belongsTo(Task::class);
     }
 
-    /**
-     * Get the user who uploaded the attachment.
-     */
     public function user(): BelongsTo
     {
         return $this->belongsTo(User::class);
     }
 
-    /**
-     * Get the formatted file size.
-     */
-    public function getFormattedSizeAttribute(): string
+    // ==================== ACCESSORS ====================
+
+    public function getUrlAttribute(): string
     {
-        $bytes = $this->file_size;
-        $units = ['B', 'KB', 'MB', 'GB', 'TB'];
+        return Storage::disk($this->disk)->url($this->path);
+    }
+
+    public function getSizeFormattedAttribute(): string
+    {
+        $bytes = $this->size;
+        $units = ['B', 'KB', 'MB', 'GB'];
         
-        for ($i = 0; $bytes > 1024 && $i < count($units) - 1; $i++) {
+        for ($i = 0; $bytes >= 1024 && $i < count($units) - 1; $i++) {
             $bytes /= 1024;
         }
         
         return round($bytes, 2) . ' ' . $units[$i];
     }
 
-    /**
-     * Check if the attachment is an image.
-     */
-    public function isImage(): bool
+    public function getIsImageAttribute(): bool
     {
-        return in_array($this->file_type, ['image/jpeg', 'image/png', 'image/gif', 'image/webp', 'image/svg+xml']);
+        return str_starts_with($this->mime_type, 'image/');
     }
 
-    /**
-     * Check if the attachment is a document.
-     */
-    public function isDocument(): bool
+    public function getIconAttribute(): string
     {
-        return in_array($this->file_type, [
-            'application/pdf',
-            'application/msword',
-            'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
-            'application/vnd.ms-excel',
-            'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
-        ]);
+        return match (true) {
+            str_starts_with($this->mime_type, 'image/') => 'mdi-file-image',
+            str_starts_with($this->mime_type, 'video/') => 'mdi-file-video',
+            str_starts_with($this->mime_type, 'audio/') => 'mdi-file-music',
+            str_contains($this->mime_type, 'pdf') => 'mdi-file-pdf-box',
+            str_contains($this->mime_type, 'word') => 'mdi-file-word',
+            str_contains($this->mime_type, 'excel') || str_contains($this->mime_type, 'spreadsheet') => 'mdi-file-excel',
+            str_contains($this->mime_type, 'zip') || str_contains($this->mime_type, 'archive') => 'mdi-folder-zip',
+            default => 'mdi-file-document',
+        };
     }
 
-    /**
-     * Get the file extension.
-     */
-    public function getExtensionAttribute(): string
+    // ==================== HELPER METHODS ====================
+
+    public function delete(): bool
     {
-        return pathinfo($this->name, PATHINFO_EXTENSION);
+        Storage::disk($this->disk)->delete($this->path);
+        return parent::delete();
     }
 }

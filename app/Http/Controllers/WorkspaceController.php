@@ -1,144 +1,198 @@
 <?php
 
-declare(strict_types=1);
-
 namespace App\Http\Controllers;
 
-use App\Http\Requests\Workspace\AddWorkspaceMemberRequest;
-use App\Http\Requests\Workspace\StoreWorkspaceRequest;
-use App\Http\Requests\Workspace\UpdateWorkspaceRequest;
+use App\Http\Requests\ReorderRequest;
+use App\Http\Requests\StoreWorkspaceRequest;
+use App\Http\Requests\UpdateWorkspaceRequest;
 use App\Models\User;
 use App\Models\Workspace;
 use App\Services\WorkspaceService;
+use Illuminate\Foundation\Auth\Access\AuthorizesRequests;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
 use Inertia\Response;
 
-/**
- * WorkspaceController
- *
- * Handles workspace management using Inertia.js (monolith).
- */
 class WorkspaceController extends Controller
 {
-    /**
-     * @var WorkspaceService
-     */
-    private WorkspaceService $workspaceService;
+    use AuthorizesRequests;
+
+    public function __construct(
+        protected WorkspaceService $workspaceService
+    ) {}
 
     /**
-     * Constructor.
-     *
-     * @param WorkspaceService $workspaceService
+     * Display a listing of workspaces.
      */
-    public function __construct(WorkspaceService $workspaceService)
+    public function index(Request $request): Response
     {
-        $this->workspaceService = $workspaceService;
+        $workspaces = $this->workspaceService->getWorkspacesForUser($request->user());
+
+        return Inertia::render('Workspaces/Index', [
+            'workspaces' => $workspaces,
+        ]);
     }
 
     /**
      * Store a newly created workspace.
-     *
-     * @param StoreWorkspaceRequest $request
-     * @return RedirectResponse
      */
     public function store(StoreWorkspaceRequest $request): RedirectResponse
     {
-        $workspace = $this->workspaceService->createWorkspace(
-            $request->user(),
-            $request->validated()
+        $workspace = $this->workspaceService->create(
+            $request->validated(),
+            $request->user()
         );
 
-        return redirect()->route('dashboard')
-            ->with('success', 'Workspace created successfully.');
+        return back()->with('success', 'Workspace created successfully.');
+    }
+
+    /**
+     * Display workspace settings.
+     */
+    public function settings(Request $request, Workspace $workspace): Response
+    {
+        $workspace->load('members');
+
+        $members = $workspace->members;
+
+        // Get users not in workspace
+        $availableUsers = User::whereNotIn('id', $members->pluck('id'))
+            ->get();
+
+        return Inertia::render('Workspaces/Settings', [
+            'workspace' => $workspace,
+            'members' => $members,
+            'availableUsers' => $availableUsers,
+        ]);
+    }
+
+    /**
+     * Display the specified workspace.
+     */
+    public function show(Request $request, Workspace $workspace): Response
+    {
+        $workspace->load([
+            'spaces' => fn($q) => $q->withCount(['lists', 'tasks'])
+                ->orderBy('position'),
+        ]);
+
+        return Inertia::render('Workspaces/Show', [
+            'workspace' => $workspace,
+        ]);
     }
 
     /**
      * Update the specified workspace.
-     *
-     * @param UpdateWorkspaceRequest $request
-     * @param Workspace $workspace
-     * @return RedirectResponse
      */
     public function update(UpdateWorkspaceRequest $request, Workspace $workspace): RedirectResponse
     {
-        $this->authorize('update', $workspace);
+        try {
+            $this->authorize('update', $workspace);
 
-        $this->workspaceService->updateWorkspace($workspace, $request->validated());
+            $this->workspaceService->update(
+                $workspace,
+                $request->validated(),
+                $request->user()
+            );
 
-        return back()->with('success', 'Workspace updated successfully.');
+            return redirect()->back()->with('success', 'Workspace updated successfully.');
+        } catch (\Exception $e) {
+            return redirect()->back()->withErrors(['error' => 'Failed to update workspace: ' . $e->getMessage()]);
+        }
     }
 
     /**
      * Remove the specified workspace.
-     *
-     * @param Workspace $workspace
-     * @return RedirectResponse
      */
-    public function destroy(Workspace $workspace): RedirectResponse
+    public function destroy(Request $request, Workspace $workspace): RedirectResponse
     {
-        $this->authorize('delete', $workspace);
+        try {
+            $this->workspaceService->delete($workspace, $request->user());
 
-        $this->workspaceService->deleteWorkspace($workspace);
-
-        return redirect()->route('dashboard')
-            ->with('success', 'Workspace deleted successfully.');
+            return redirect()
+                ->route('dashboard')
+                ->with('success', 'Workspace deleted successfully.');
+        } catch (\Exception $e) {
+            return redirect()->back()->withErrors(['error' => 'Failed to delete workspace: ' . $e->getMessage()]);
+        }
     }
 
     /**
-     * Add a member to the workspace.
-     *
-     * @param AddWorkspaceMemberRequest $request
-     * @param Workspace $workspace
-     * @return RedirectResponse
+     * Add member to workspace.
      */
-    public function addMember(AddWorkspaceMemberRequest $request, Workspace $workspace): RedirectResponse
+    public function addMember(Request $request, Workspace $workspace): RedirectResponse
     {
-        $this->authorize('update', $workspace);
-
-        $user = User::where('email', $request->email)->firstOrFail();
-        $role = $request->input('role', 'member');
-
-        $this->workspaceService->addMember($workspace, $user, $role);
-
-        return back()->with('success', 'Member added successfully.');
-    }
-
-    /**
-     * Remove a member from the workspace.
-     *
-     * @param Workspace $workspace
-     * @param User $user
-     * @return RedirectResponse
-     */
-    public function removeMember(Workspace $workspace, User $user): RedirectResponse
-    {
-        $this->authorize('update', $workspace);
-
-        $this->workspaceService->removeMember($workspace, $user);
-
-        return back()->with('success', 'Member deleted successfully.');
-    }
-
-    /**
-     * Update member role in the workspace.
-     *
-     * @param Request $request
-     * @param Workspace $workspace
-     * @param User $user
-     * @return RedirectResponse
-     */
-    public function updateMemberRole(Request $request, Workspace $workspace, User $user): RedirectResponse
-    {
-        $this->authorize('update', $workspace);
-
-        $request->validate([
-            'role' => ['required', 'string', 'in:admin,member'],
+        $validated = $request->validate([
+            'user_id' => 'required|exists:users,id',
+            'role' => 'nullable|in:admin,member,guest',
         ]);
 
-        $this->workspaceService->updateMemberRole($workspace, $user, $request->role);
+        try {
+            $this->authorize('update', $workspace);
 
-        return back()->with('success', 'Role member updated successfully.');
+            $user = User::findOrFail($validated['user_id']);
+
+            $this->workspaceService->addMember(
+                $workspace,
+                $user,
+                $validated['role'] ?? 'member',
+                $request->user()
+            );
+
+            return redirect()->back()->with('success', 'Member added successfully.');
+        } catch (\Exception $e) {
+            return redirect()->back()->withErrors(['error' => 'Failed to add member: ' . $e->getMessage()]);
+        }
+    }
+
+    /**
+     * Remove member from workspace.
+     */
+    public function removeMember(Request $request, Workspace $workspace): RedirectResponse
+    {
+        $validated = $request->validate([
+            'user_id' => 'required|exists:users,id',
+        ]);
+
+        try {
+            $this->authorize('update', $workspace);
+
+            $user = User::findOrFail($validated['user_id']);
+
+            $this->workspaceService->removeMember($workspace, $user, $request->user());
+
+            return redirect()->back()->with('success', 'Member removed successfully.');
+        } catch (\Exception $e) {
+            return redirect()->back()->withErrors(['error' => 'Failed to remove member: ' . $e->getMessage()]);
+        }
+    }
+
+    /**
+     * Update member role.
+     */
+    public function updateMemberRole(Request $request, Workspace $workspace): RedirectResponse
+    {
+        $validated = $request->validate([
+            'user_id' => 'required|exists:users,id',
+            'role' => 'required|in:admin,member,guest',
+        ]);
+
+        try {
+            $this->authorize('update', $workspace);
+
+            $user = User::findOrFail($validated['user_id']);
+
+            $this->workspaceService->updateMemberRole(
+                $workspace,
+                $user,
+                $validated['role'],
+                $request->user()
+            );
+
+            return redirect()->back()->with('success', 'Member role updated successfully.');
+        } catch (\Exception $e) {
+            return redirect()->back()->withErrors(['error' => 'Failed to update member role: ' . $e->getMessage()]);
+        }
     }
 }

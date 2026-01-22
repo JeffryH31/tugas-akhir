@@ -1,763 +1,478 @@
 <script setup>
 /**
- * Dashboard Page - Nested Kanban Board (Refactored)
+ * Dashboard Page - ClickUp Style Home
  * 
- * This is the main orchestrator component that uses smaller, focused components.
- * 
- * Structure:
- * Workspace > Board > FeatureList > Feature > TaskList > Task
+ * Features:
+ * - My Tasks overview
+ * - Overdue tasks alert
+ * - Recent activity
+ * - Time tracking summary
+ * - Quick actions
  */
-import { Head, router, usePage } from '@inertiajs/vue3';
-import { ref, computed, onMounted, onUnmounted, watch } from 'vue';
-import { useDisplay } from 'vuetify';
+import { ref, computed } from 'vue';
+import { Head, router } from '@inertiajs/vue3';
+import MainLayout from '@/Layouts/MainLayout.vue';
+import TaskCard from '@/Components/Tasks/TaskCard.vue';
 
-// Import Composables
-import { useTimer } from '@/Composables/useTimer';
-import { useNotification } from '@/Composables/useNotification';
-import { useFilters } from '@/Composables/useFilters';
-import { useActivity } from '@/Composables/useActivity';
-
-// Import Components
-import {
-    NoWorkspace,
-    NoBoard,
-    SidebarContent,
-    BoardHeader,
-    KanbanBoard,
-    FeatureModal,
-    WorkspaceModal,
-    BoardModal,
-    DeleteConfirmModal,
-    ActivityLogModal,
-    TimeTrackingModal,
-    MemberModal,
-    LabelModal,
-    AddTimeModal,
-    TaskEditModal
-} from '@/Components/Dashboard';
-
-// Props from backend
 const props = defineProps({
-    workspaces: { type: Array, default: () => [] },
-    activeBoard: { type: Object, default: null },
-    teamMembers: { type: Array, default: () => [] },
-    runningTimer: { type: Object, default: null },
-    recentActivities: { type: Array, default: () => [] },
-    myTasks: { type: Array, default: () => [] },
-    timeSummary: { type: Object, default: () => ({ today: 0, week: 0 }) },
-    currentUser: { type: Object, default: null },
+    workspaces: Array,
+    activeWorkspace: Object,
+    myTasks: Array,
+    overdueTasks: Array,
+    runningTimer: Object,
+    timeStats: Object,
 });
 
-// ==================== COMPOSABLES ====================
-const { snackbar, showNotification, hideNotification } = useNotification();
-const {
-    activeTimers, timerDisplays, hasActiveTimer,
-    startWorkingOn, pauseTimer, stopTimerAndLog, discardTimer,
-    formatElapsedTime, getTimerDisplay, getTimerStatus,
-    startTimerLoop, stopTimerLoop
-} = useTimer(showNotification);
-const {
-    searchQuery, activeFilters, hasActiveFilters,
-    clearFilters, filterFeatureLists
-} = useFilters();
-const {
-    addActivityLog, getActivityDescription, formatActivityTime,
-    calculateTeamTimeStats
-} = useActivity();
+// Active tab for tasks
+const activeTaskTab = ref('my-tasks');
 
-// ==================== VUETIFY & LAYOUT ====================
-const { mobile, smAndDown } = useDisplay();
-const isSidebarOpen = ref(!mobile.value);
-const toggleSidebar = () => { isSidebarOpen.value = !isSidebarOpen.value; };
-
-// ==================== LOGOUT ====================
-const logout = () => {
-    router.post(route('logout'));
+// Format duration
+const formatDuration = (seconds) => {
+    if (!seconds) return '0h 0m';
+    const hours = Math.floor(seconds / 3600);
+    const minutes = Math.floor((seconds % 3600) / 60);
+    return `${hours}h ${minutes}m`;
 };
 
-// ==================== REACTIVE STATE ====================
-const workspaces = ref(props.workspaces || []);
-const teamMembers = ref(props.teamMembers || []);
-const activityLog = ref(props.recentActivities || []);
-const activeBoard = ref(props.activeBoard || null);
-const featureLists = ref(props.activeBoard?.featureLists || []);
-const availableLabels = ref(props.activeBoard?.labels || []);
+// Quick create
+const showQuickCreate = ref(false);
+const quickTaskName = ref('');
+const quickTaskList = ref(null);
 
-// ==================== WATCHERS ====================
-watch(() => props.workspaces, (val) => { workspaces.value = val || []; }, { deep: true });
-watch(() => props.activeBoard, (val) => {
-    activeBoard.value = val || null;
-    featureLists.value = val?.featureLists || [];
-    availableLabels.value = val?.labels || [];
+// Get all lists from active workspace
+const availableLists = computed(() => {
+    if (!props.activeWorkspace?.spaces) return [];
 
-    // Sync selectedFeature and selectedFeatureList with updated data if modal is open
-    if (selectedFeature.value) {
-        // Find the updated feature from the new props
-        for (const list of featureLists.value) {
-            const updatedFeature = list.features?.find(f => f.id === selectedFeature.value.id);
-            if (updatedFeature) {
-                // Deep clone to avoid reactivity issues
-                selectedFeature.value = JSON.parse(JSON.stringify(updatedFeature));
-                selectedFeatureList.value = JSON.parse(JSON.stringify(list));
-                break;
-            }
-        }
-    }
-}, { deep: true });
-watch(() => props.teamMembers, (val) => { teamMembers.value = val || []; }, { deep: true });
-watch(() => props.recentActivities, (val) => { activityLog.value = val || []; }, { deep: true });
-
-// ==================== COMPUTED ====================
-const hasWorkspaces = computed(() => workspaces.value.length > 0);
-const hasActiveBoard = computed(() => activeBoard.value !== null && activeBoard.value?.id !== undefined);
-const canPerformBoardActions = computed(() => hasWorkspaces.value && hasActiveBoard.value);
-const starredBoards = computed(() => workspaces.value.flatMap(w => w.boards?.filter(b => b.starred) || []));
-
-const filteredFeatureLists = computed(() => {
-    return filterFeatureLists(featureLists.value);
-});
-
-const getBoardMembers = computed(() => {
-    if (!activeBoard.value?.members) return [];
-    return activeBoard.value.members.map(id => teamMembers.value.find(m => m.id === id)).filter(Boolean);
-});
-
-// ==================== MODAL STATES ====================
-const modals = ref({
-    feature: false,
-    workspace: false,
-    board: false,
-    delete: false,
-    activity: false,
-    timeTracking: false,
-    member: false,
-    label: false,
-    addTime: false,
-    taskEdit: false
-});
-
-// Modal Data
-const selectedFeature = ref(null);
-const selectedFeatureList = ref(null);
-const editingWorkspace = ref(null);
-const editingBoard = ref(null);
-const deleteTarget = ref({ type: '', item: null, parent: null });
-const activityFilterUser = ref(null);
-const selectedTaskForTime = ref(null);
-const editingTask = ref(null);
-
-// ==================== LOADING STATE ====================
-const isLoading = ref(false);
-
-// ==================== WORKSPACE HANDLERS ====================
-const handleCreateWorkspace = () => {
-    editingWorkspace.value = null;
-    modals.value.workspace = true;
-};
-
-const handleEditWorkspace = (workspace) => {
-    editingWorkspace.value = workspace;
-    modals.value.workspace = true;
-};
-
-const handleSaveWorkspace = (data) => {
-    isLoading.value = true;
-    if (data.id) {
-        router.put(route('workspaces.update', data.id), { name: data.name }, {
-            preserveScroll: true,
-            preserveState: false,
-            onSuccess: () => showNotification('Workspace updated'),
-            onError: (errors) => showNotification(Object.values(errors)[0] || 'Failed to update workspace', 'error'),
-            onFinish: () => isLoading.value = false
-        });
-    } else {
-        router.post(route('workspaces.store'), { name: data.name }, {
-            preserveScroll: true,
-            preserveState: false,
-            onSuccess: () => showNotification('Workspace created'),
-            onError: (errors) => showNotification(Object.values(errors)[0] || 'Failed to create workspace', 'error'),
-            onFinish: () => isLoading.value = false
-        });
-    }
-};
-
-const handleDeleteWorkspace = (workspace) => {
-    deleteTarget.value = { type: 'workspace', item: workspace, itemName: workspace.name };
-    modals.value.delete = true;
-};
-
-// ==================== BOARD HANDLERS ====================
-const handleCreateBoard = (workspaceId = null) => {
-    editingBoard.value = null;
-    modals.value.board = true;
-};
-
-const handleEditBoard = (board) => {
-    editingBoard.value = board;
-    modals.value.board = true;
-};
-
-const handleSaveBoard = (data) => {
-    isLoading.value = true;
-    if (data.id) {
-        router.put(route('boards.update', data.id), {
-            name: data.name,
-            color: data.color
-        }, {
-            preserveScroll: true,
-            preserveState: false,
-            onSuccess: () => showNotification('Board updated'),
-            onError: (errors) => showNotification(Object.values(errors)[0] || 'Failed to update board', 'error'),
-            onFinish: () => isLoading.value = false
-        });
-    } else {
-        router.post(route('boards.store'), {
-            workspace_id: data.workspaceId,
-            name: data.name,
-            color: data.color
-        }, {
-            preserveScroll: true,
-            preserveState: false,
-            onSuccess: () => showNotification('Board created'),
-            onError: (errors) => showNotification(Object.values(errors)[0] || 'Failed to create board', 'error'),
-            onFinish: () => isLoading.value = false
-        });
-    }
-};
-
-const handleSelectBoard = (board) => {
-    router.visit(route('boards.show', board.id));
-};
-
-const handleToggleBoardStar = (board) => {
-    router.post(route('boards.star', board.id), {}, {
-        preserveScroll: true,
-        preserveState: false,
-        onSuccess: () => showNotification(board.starred ? 'Board unstarred' : 'Board starred'),
-        onError: () => showNotification('Failed to update star', 'error')
-    });
-};
-
-const handleDeleteBoard = (board) => {
-    deleteTarget.value = { type: 'board', item: board, itemName: board.name };
-    modals.value.delete = true;
-};
-
-// ==================== FEATURE LIST HANDLERS ====================
-const handleAddFeatureList = (name) => {
-    if (!canPerformBoardActions.value) {
-        showNotification('Please select a board first', 'warning');
-        return;
-    }
-    isLoading.value = true;
-    router.post(route('feature-lists.store'), {
-        board_id: activeBoard.value.id,
-        title: name
-    }, {
-        preserveScroll: true,
-        preserveState: false,
-        onSuccess: () => showNotification('List added'),
-        onError: (errors) => showNotification(Object.values(errors)[0] || 'Failed to add list', 'error'),
-        onFinish: () => isLoading.value = false
-    });
-};
-
-const handleRenameFeatureList = ({ listId, name }) => {
-    router.put(route('feature-lists.update', listId), { title: name }, {
-        preserveScroll: true,
-        preserveState: false,
-        onError: (errors) => showNotification(Object.values(errors)[0] || 'Failed to rename list', 'error')
-    });
-};
-
-const handleDeleteFeatureList = (list) => {
-    deleteTarget.value = { type: 'list', item: list, itemName: list.title };
-    modals.value.delete = true;
-};
-
-// ==================== FEATURE HANDLERS ====================
-const handleAddFeature = ({ listId, title }) => {
-    if (!canPerformBoardActions.value) {
-        showNotification('Please select a board first', 'warning');
-        return;
-    }
-    isLoading.value = true;
-    router.post(route('features.store'), {
-        feature_list_id: listId,
-        title: title,
-        priority: 'medium'
-    }, {
-        preserveScroll: true,
-        preserveState: false,
-        onSuccess: () => showNotification('Feature added'),
-        onError: (errors) => showNotification(Object.values(errors)[0] || 'Failed to add feature', 'error'),
-        onFinish: () => isLoading.value = false
-    });
-};
-
-const handleOpenFeature = (feature, list) => {
-    if (!canPerformBoardActions.value) {
-        showNotification('Please select a board first', 'warning');
-        return;
-    }
-    selectedFeature.value = JSON.parse(JSON.stringify(feature));
-    selectedFeatureList.value = list;
-    modals.value.feature = true;
-};
-
-const handleUpdateFeature = (updatedFeature) => {
-    if (!selectedFeatureList.value) return;
-    router.put(route('features.update', updatedFeature.id), {
-        title: updatedFeature.title,
-        description: updatedFeature.description,
-        priority: updatedFeature.priority,
-        due_date: updatedFeature.dueDate
-    }, {
-        preserveScroll: true,
-        preserveState: false,
-        onSuccess: () => showNotification('Feature updated'),
-        onError: (errors) => showNotification(Object.values(errors)[0] || 'Failed to update feature', 'error')
-    });
-};
-
-const handleDeleteFeature = (feature) => {
-    deleteTarget.value = { type: 'feature', item: feature, itemName: feature.title };
-    modals.value.delete = true;
-};
-
-const handleMoveFeature = ({ feature, toListId, newIndex }) => {
-    router.post(route('features.move', feature.id), {
-        feature_list_id: toListId,
-        position: newIndex
-    }, {
-        preserveScroll: true,
-        preserveState: false,
-        onError: (errors) => showNotification(Object.values(errors)[0] || 'Failed to move feature', 'error')
-    });
-};
-
-// ==================== TASK HANDLERS (Inside Feature Modal) ====================
-const handleAddTaskList = ({ featureId, name }) => {
-    if (!selectedFeature.value) return;
-    isLoading.value = true;
-    router.post(route('task-lists.store'), {
-        feature_id: featureId,
-        title: name
-    }, {
-        preserveScroll: true,
-        preserveState: false,
-        onSuccess: () => showNotification('Task list added'),
-        onError: (errors) => showNotification(Object.values(errors)[0] || 'Failed to add task list', 'error'),
-        onFinish: () => isLoading.value = false
-    });
-};
-
-const handleRenameTaskList = ({ featureId, listId, name }) => {
-    router.put(route('task-lists.update', listId), { title: name }, {
-        preserveScroll: true,
-        preserveState: false,
-        onError: (errors) => showNotification(Object.values(errors)[0] || 'Failed to rename task list', 'error')
-    });
-};
-
-const handleDeleteTaskList = ({ featureId, listId }) => {
-    router.delete(route('task-lists.destroy', listId), {
-        preserveScroll: true,
-        preserveState: false,
-        onSuccess: () => showNotification('Task list deleted'),
-        onError: (errors) => showNotification(Object.values(errors)[0] || 'Failed to delete task list', 'error')
-    });
-};
-
-const handleAddTask = ({ featureId, listId, title }) => {
-    if (!selectedFeature.value) return;
-    isLoading.value = true;
-    router.post(route('tasks.store'), {
-        task_list_id: listId,
-        title: title
-    }, {
-        preserveScroll: true,
-        preserveState: false,
-        onSuccess: () => {
-            showNotification('Task added');
-        },
-        onError: (errors) => showNotification(Object.values(errors)[0] || 'Failed to add task', 'error'),
-        onFinish: () => isLoading.value = false
-    });
-};
-
-const handleEditTask = ({ featureId, task }) => {
-    editingTask.value = task;
-    modals.value.taskEdit = true;
-};
-
-const handleSaveTask = (updatedTask) => {
-    if (!selectedFeature.value) return;
-    router.put(route('tasks.update', updatedTask.id), {
-        title: updatedTask.title,
-        description: updatedTask.description,
-        priority: updatedTask.priority,
-        due_date: updatedTask.dueDate,
-        estimated_hours: updatedTask.estimatedHours
-    }, {
-        preserveScroll: true,
-        preserveState: false,
-        onSuccess: () => showNotification('Task updated'),
-        onError: (errors) => showNotification(Object.values(errors)[0] || 'Failed to update task', 'error')
-    });
-};
-
-const handleDeleteTask = ({ featureId, task }) => {
-    deleteTarget.value = { type: 'task', item: task, itemName: task.title };
-    modals.value.delete = true;
-};
-
-const handleToggleTaskComplete = ({ featureId, task }) => {
-    router.post(route('tasks.toggle', task.id), {}, {
-        preserveScroll: true,
-        preserveState: false,
-        onSuccess: () => {
-            if (!task.completed) {
-                addActivityLog('task_completed', {
-                    taskId: task.id,
-                    taskTitle: task.title,
-                    featureTitle: selectedFeature.value?.title
+    const lists = [];
+    props.activeWorkspace.spaces.forEach(space => {
+        // Lists without folder
+        if (space.lists_without_folder) {
+            space.lists_without_folder.forEach(list => {
+                lists.push({
+                    id: list.id,
+                    name: list.name,
+                    space_id: space.id,
+                    space_name: space.name,
+                    workspace_id: props.activeWorkspace.id,
+                    display: `${space.name} / ${list.name}`
                 });
-            }
-        },
-        onError: (errors) => showNotification(Object.values(errors)[0] || 'Failed to toggle task', 'error')
-    });
-};
-
-const handleMoveTask = ({ featureId, task, toListId, newIndex }) => {
-    router.post(route('tasks.move', task.id), {
-        task_list_id: toListId,
-        position: newIndex
-    }, {
-        preserveScroll: true,
-        preserveState: false,
-        onError: (errors) => showNotification(Object.values(errors)[0] || 'Failed to move task', 'error')
-    });
-};
-
-// ==================== TIMER HANDLERS ====================
-const handleStartTimer = (task) => {
-    router.post(route('time-tracking.start', task.id), {}, {
-        preserveScroll: true,
-        preserveState: false,
-        onSuccess: () => {
-            startWorkingOn(task, selectedFeature.value);
-        },
-        onError: (errors) => showNotification(Object.values(errors)[0] || 'Failed to start timer', 'error')
-    });
-};
-
-const handlePauseTimer = (task) => {
-    router.post(route('time-tracking.pause', task.id), {}, {
-        preserveScroll: true,
-        preserveState: false,
-        onSuccess: () => {
-            pauseTimer(task.id);
-        },
-        onError: (errors) => showNotification(Object.values(errors)[0] || 'Failed to pause timer', 'error')
-    });
-};
-
-const handleStopTimer = (task) => {
-    const timer = activeTimers.value[task.id];
-    const elapsed = timer ? timer.elapsed : 0;
-    const hours = elapsed / 3600;
-
-    // Use complete endpoint which stops timer and logs time
-    router.post(route('time-tracking.complete', task.id), {}, {
-        preserveScroll: true,
-        preserveState: false,
-        onSuccess: () => {
-            stopTimerAndLog(task, selectedFeature.value, '', () => { });
-            showNotification(`${hours.toFixed(2)} hours logged`);
-        },
-        onError: (errors) => showNotification(Object.values(errors)[0] || 'Failed to stop timer', 'error')
-    });
-};
-
-const handleDiscardTimer = (task) => {
-    discardTimer(task.id);
-};
-
-const handleAddTime = (task) => {
-    selectedTaskForTime.value = task;
-    modals.value.addTime = true;
-};
-
-const handleSaveTimeEntry = ({ taskId, hours, description }) => {
-    if (!selectedFeature.value) return;
-    router.post(route('time-tracking.log'), {
-        task_id: taskId,
-        hours: hours,
-        description: description
-    }, {
-        preserveScroll: true,
-        preserveState: false,
-        onSuccess: () => {
-            addActivityLog('time_logged', {
-                taskId: taskId,
-                hours: hours
             });
-            showNotification(`${hours.toFixed(2)} hours logged`);
-        },
-        onError: (errors) => showNotification(Object.values(errors)[0] || 'Failed to log time', 'error')
-    });
-};
-
-// ==================== DELETE HANDLER ====================
-const handleConfirmDelete = () => {
-    const { type, item } = deleteTarget.value;
-    let routeName = '';
-    let routeParam = item.id;
-
-    switch (type) {
-        case 'workspace':
-            routeName = 'workspaces.destroy';
-            break;
-        case 'board':
-            routeName = 'boards.destroy';
-            break;
-        case 'list':
-            routeName = 'feature-lists.destroy';
-            break;
-        case 'feature':
-            routeName = 'features.destroy';
-            break;
-        case 'task':
-            routeName = 'tasks.destroy';
-            break;
-        case 'taskList':
-            routeName = 'task-lists.destroy';
-            break;
-        default:
-            showNotification('Unknown delete type', 'error');
-            return;
-    }
-
-    router.delete(route(routeName, routeParam), {
-        preserveScroll: true,
-        preserveState: false,
-        onSuccess: () => {
-            if (type === 'feature') {
-                modals.value.feature = false;
-            }
-            showNotification(`${type.charAt(0).toUpperCase() + type.slice(1)} deleted`);
-        },
-        onError: (errors) => showNotification(Object.values(errors)[0] || `Failed to delete ${type}`, 'error')
-    });
-};
-
-// ==================== HELPER FUNCTIONS ====================
-const syncFeatureToList = () => {
-    if (!selectedFeature.value || !selectedFeatureList.value) return;
-    const list = featureLists.value.find(l => l.id === selectedFeatureList.value.id);
-    if (list) {
-        const idx = list.features.findIndex(f => f.id === selectedFeature.value.id);
-        if (idx > -1) {
-            list.features[idx] = JSON.parse(JSON.stringify(selectedFeature.value));
         }
+        // Lists in folders
+        if (space.folders) {
+            space.folders.forEach(folder => {
+                if (folder.lists) {
+                    folder.lists.forEach(list => {
+                        lists.push({
+                            id: list.id,
+                            name: list.name,
+                            space_id: space.id,
+                            space_name: space.name,
+                            workspace_id: props.activeWorkspace.id,
+                            display: `${space.name} / ${folder.name} / ${list.name}`
+                        });
+                    });
+                }
+            });
+        }
+    });
+    return lists;
+});
+
+// Check if workspace has spaces
+const hasSpaces = computed(() => {
+    return props.activeWorkspace?.spaces && props.activeWorkspace.spaces.length > 0;
+});
+
+const createQuickTask = () => {
+    if (!quickTaskName.value.trim() || !quickTaskList.value) return;
+
+    router.post(
+        route('tasks.store', [
+            quickTaskList.value.workspace_id,
+            quickTaskList.value.space_id,
+            quickTaskList.value.id
+        ]),
+        { name: quickTaskName.value.trim() },
+        {
+            preserveScroll: true,
+            onSuccess: () => {
+                quickTaskName.value = '';
+                quickTaskList.value = null;
+                showQuickCreate.value = false;
+            }
+        }
+    );
+};
+
+// Recent tasks (limit to 10)
+const recentTasks = computed(() => props.myTasks?.slice(0, 10) || []);
+
+// Handle task complete
+const handleTaskComplete = (task) => {
+    router.post(
+        route('tasks.complete', [
+            props.activeWorkspace.id,
+            task.task_list.space_id,
+            task.task_list_id,
+            task.id,
+        ]),
+        {},
+        { preserveScroll: true }
+    );
+};
+
+// Handle task open
+const handleTaskOpen = (task) => {
+    router.visit(route('tasks.show', [
+        props.activeWorkspace.id,
+        task.task_list.space_id,
+        task.task_list_id,
+        task.id,
+    ]));
+};
+
+// Create workspace dialog
+const showCreateWorkspace = ref(false);
+const newWorkspaceName = ref('');
+
+const createWorkspace = () => {
+    if (!newWorkspaceName.value.trim()) return;
+    router.post(route('workspaces.store'), {
+        name: newWorkspaceName.value.trim(),
+    }, {
+        preserveScroll: true,
+        onSuccess: () => {
+            newWorkspaceName.value = '';
+            showCreateWorkspace.value = false;
+            if (window.showSnackbar) {
+                window.showSnackbar('Workspace created successfully!', 'success');
+            }
+            router.reload({ only: ['workspaces', 'activeWorkspace'] });
+        }
+    });
+};
+
+// Navigate to first space or workspaces page
+const goToFirstSpaceOrWorkspaces = () => {
+    if (!props.activeWorkspace) {
+        router.visit(route('dashboard'));
+        return;
+    }
+
+    const spaces = props.activeWorkspace?.spaces || [];
+    if (spaces.length > 0) {
+        // Navigate to the first space
+        router.visit(route('spaces.show', [props.activeWorkspace.id, spaces[0].id]));
+    } else {
+        // No spaces exist, create a space
+        if (window.showSnackbar) {
+            window.showSnackbar('Create a space first to start organizing your work', 'info');
+        }
+        // Redirect to workspace to create spaces
+        router.visit(route('workspaces.show', props.activeWorkspace.id));
     }
 };
 
-const updateFeatureProgress = () => {
-    if (!selectedFeature.value) return;
-    const total = selectedFeature.value.taskLists.reduce((sum, l) => sum + l.tasks.length, 0);
-    const completed = selectedFeature.value.taskLists.reduce((sum, l) =>
-        sum + l.tasks.filter(t => t.completed).length, 0);
-    selectedFeature.value.progress = total > 0 ? Math.round((completed / total) * 100) : 0;
-};
-
-const handleCloseFeatureModal = () => {
-    syncFeatureToList();
-    modals.value.feature = false;
-    selectedFeature.value = null;
-    selectedFeatureList.value = null;
-};
-
-// ==================== LIFECYCLE ====================
-onMounted(() => {
-    if (Object.keys(activeTimers.value).length > 0) {
-        startTimerLoop();
+// Open create space dialog
+const openCreateSpace = () => {
+    if (typeof window !== 'undefined' && window.openCreateSpaceDialog) {
+        window.openCreateSpaceDialog();
     }
-});
-
-onUnmounted(() => {
-    stopTimerLoop();
-});
+};
 </script>
 
 <template>
+    <MainLayout title="Home">
+        <div class="dashboard-page">
+            <!-- Breadcrumb / Context Header -->
+            <div class="context-header">
+                <div class="flex items-center gap-2 text-sm text-gray-400 mb-2">
+                    <v-icon size="16">mdi-view-dashboard</v-icon>
+                    <span>Dashboard</span>
+                    <v-icon size="16">mdi-chevron-right</v-icon>
+                    <div v-if="activeWorkspace" class="flex items-center gap-2">
+                        <div class="w-4 h-4 rounded flex items-center justify-center text-white text-xs"
+                            :style="{ backgroundColor: activeWorkspace.color || '#6366F1' }">
+                            {{ activeWorkspace.name?.charAt(0)?.toUpperCase() }}
+                        </div>
+                        <span class="font-medium text-white">{{ activeWorkspace.name }}</span>
+                    </div>
+                    <span v-else class="text-gray-500 italic">No workspace selected</span>
+                </div>
+            </div>
 
-    <Head title="Dashboard" />
+            <div class="dashboard-grid">
+                <!-- Left Column -->
+                <div class="dashboard-main">
+                    <!-- Overdue Alert -->
+                    <v-alert v-if="overdueTasks?.length" type="warning" variant="tonal" class="mb-4" closable>
+                        <v-alert-title>{{ overdueTasks.length }} Overdue Task{{ overdueTasks.length > 1 ? 's' : ''
+                        }}</v-alert-title>
+                        You have tasks that need your attention.
+                    </v-alert>
 
-    <v-app>
-        <!-- Top Navigation Bar -->
-        <v-app-bar color="surface" density="compact" flat>
-            <v-btn icon variant="text" @click="toggleSidebar">
-                <v-icon>mdi-menu</v-icon>
-            </v-btn>
+                    <!-- Quick Create -->
+                    <v-card class="mb-4" variant="outlined" rounded="lg">
+                        <v-card-text>
+                            <div v-if="!showQuickCreate"
+                                class="flex items-center gap-2 cursor-pointer hover:bg-[#2d2d30] rounded-lg p-2 -m-2"
+                                @click="showQuickCreate = true">
+                                <v-icon color="primary">mdi-plus-circle</v-icon>
+                                <span class="text-gray-400">Create a task...</span>
+                            </div>
+                            <div v-else class="space-y-2">
+                                <v-text-field v-model="quickTaskName" placeholder="What needs to be done?"
+                                    variant="outlined" density="compact" hide-details autofocus
+                                    @keydown.enter="createQuickTask" @keydown.escape="showQuickCreate = false" />
+                                <v-alert v-if="!availableLists.length" type="info" variant="tonal" density="compact"
+                                    class="text-sm">
+                                    <div class="flex items-center justify-between">
+                                        <span v-if="!hasSpaces">No spaces available. Create a space first.</span>
+                                        <span v-else>No lists available. Go to a space to create a list.</span>
+                                        <v-btn v-if="!hasSpaces" size="small" variant="text" color="primary"
+                                            @click="openCreateSpace">
+                                            Create a Space
+                                        </v-btn>
+                                        <v-btn v-else size="small" variant="text" color="primary"
+                                            @click="router.visit(route('spaces.show', [activeWorkspace.id, activeWorkspace.spaces[0].id]))">
+                                            Go to Spaces
+                                        </v-btn>
+                                    </div>
+                                </v-alert>
 
-            <v-toolbar-title class="d-flex align-center">
-                <v-icon color="primary" class="mr-2">mdi-view-dashboard-variant</v-icon>
-                <span class="font-weight-bold">Kanban</span>
-            </v-toolbar-title>
+                                <v-select v-model="quickTaskList" :items="availableLists" item-title="display"
+                                    item-value="id" return-object label="Select List" variant="outlined"
+                                    density="compact" hide-details :disabled="!availableLists.length"
+                                    placeholder="Choose a list..." bg-color="#1e1e1e" base-color="white" color="primary"
+                                    :menu-props="{ contentClass: 'bg-[#1e1e1e]' }" />
+                                <div class="flex gap-2">
+                                    <v-btn color="primary" size="small" @click="createQuickTask"
+                                        :disabled="!quickTaskName.trim() || !quickTaskList">
+                                        Create Task
+                                    </v-btn>
+                                    <v-btn variant="text" size="small" @click="showQuickCreate = false">
+                                        Cancel
+                                    </v-btn>
+                                </div>
+                            </div>
+                        </v-card-text>
+                    </v-card>
 
-            <v-spacer />
+                    <!-- My Tasks -->
+                    <v-card variant="outlined" rounded="lg">
+                        <v-card-title class="flex items-center justify-between">
+                            <span>My Tasks</span>
+                            <v-btn variant="text" size="small" :href="route('my-tasks')">
+                                View All
+                                <v-icon end>mdi-arrow-right</v-icon>
+                            </v-btn>
+                        </v-card-title>
+                        <v-divider />
 
-            <!-- Search -->
-            <v-text-field v-if="!smAndDown" v-model="searchQuery" placeholder="Search features, tasks..."
-                variant="outlined" density="compact" hide-details prepend-inner-icon="mdi-magnify"
-                style="max-width: 300px;" bg-color="surface-variant" class="mr-2" />
+                        <v-tabs v-model="activeTaskTab" color="primary">
+                            <v-tab value="my-tasks">Assigned to me</v-tab>
+                            <v-tab value="overdue">
+                                Overdue
+                                <v-badge v-if="overdueTasks?.length" :content="overdueTasks.length" color="error" inline
+                                    class="ml-1" />
+                            </v-tab>
+                        </v-tabs>
 
-            <!-- Active Timer Indicator -->
-            <v-chip v-if="hasActiveTimer" color="success" size="small" variant="tonal" class="mr-2">
-                <v-icon start size="small">mdi-timer</v-icon>
-                Timer Active
-            </v-chip>
+                        <v-tabs-window v-model="activeTaskTab">
+                            <v-tabs-window-item value="my-tasks">
+                                <div v-if="!recentTasks.length" class="pa-8 text-center text-gray-500">
+                                    <v-icon size="48" class="mb-2">mdi-checkbox-marked-circle-outline</v-icon>
+                                    <div>No tasks assigned to you</div>
+                                </div>
+                                <div v-else class="pa-2">
+                                    <div class="space-y-2">
+                                        <TaskCard v-for="task in recentTasks" :key="task.id" :task="task" show-list
+                                            @complete="handleTaskComplete" @open-detail="handleTaskOpen" />
+                                    </div>
+                                </div>
+                            </v-tabs-window-item>
 
-            <!-- Activity Log Button -->
-            <v-btn icon variant="text" @click="modals.activity = true">
-                <v-badge :content="activityLog.length" color="primary" :max="99">
-                    <v-icon>mdi-bell-outline</v-icon>
-                </v-badge>
-            </v-btn>
+                            <v-tabs-window-item value="overdue">
+                                <div v-if="!overdueTasks?.length" class="pa-8 text-center text-gray-500">
+                                    <v-icon size="48" class="mb-2">mdi-check-circle</v-icon>
+                                    <div>No overdue tasks!</div>
+                                </div>
+                                <div v-else class="pa-2">
+                                    <div class="space-y-2">
+                                        <TaskCard v-for="task in overdueTasks" :key="task.id" :task="task" show-list
+                                            @complete="handleTaskComplete" @open-detail="handleTaskOpen" />
+                                    </div>
+                                </div>
+                            </v-tabs-window-item>
+                        </v-tabs-window>
+                    </v-card>
+                </div>
 
-            <!-- Time Tracking Overview -->
-            <v-btn icon variant="text" @click="modals.timeTracking = true">
-                <v-icon>mdi-chart-timeline-variant</v-icon>
-            </v-btn>
+                <!-- Right Sidebar -->
+                <div class="dashboard-sidebar">
+                    <!-- Spaces Overview Card -->
+                    <v-card v-if="activeWorkspace" variant="outlined" rounded="lg" class="mb-4" hover
+                        :href="route('workspaces.show', activeWorkspace.id)">
+                        <v-card-title class="flex items-center gap-2">
+                            <v-icon size="20" color="purple">mdi-view-grid</v-icon>
+                            Spaces Overview
+                        </v-card-title>
+                        <v-card-text>
+                            <div class="text-center py-4">
+                                <div class="text-4xl font-bold text-purple-500 mb-2">
+                                    {{ activeWorkspace?.spaces?.length || 0 }}
+                                </div>
+                                <div class="text-sm text-gray-500 mb-3">
+                                    {{ activeWorkspace?.spaces?.length === 1 ? 'Space' : 'Spaces' }} in workspace
+                                </div>
+                                <v-btn color="purple" variant="tonal" size="small" block
+                                    :href="route('workspaces.show', activeWorkspace.id)">
+                                    <v-icon start size="16">mdi-view-grid-outline</v-icon>
+                                    View All Spaces
+                                </v-btn>
+                            </div>
+                        </v-card-text>
+                    </v-card>
 
-            <!-- User Menu -->
-            <v-menu>
-                <template #activator="{ props: menuProps }">
-                    <v-btn icon variant="text" v-bind="menuProps">
-                        <v-avatar size="32" color="primary">
-                            <span>{{ props.currentUser?.name?.charAt(0) || 'U' }}</span>
-                        </v-avatar>
-                    </v-btn>
-                </template>
-                <v-list density="compact" nav>
-                    <v-list-item :title="props.currentUser?.name || 'User'" :subtitle="props.currentUser?.email" />
-                    <v-divider />
-                    <v-list-item prepend-icon="mdi-account" title="Profile" :href="route('profile.show')" />
-                    <v-list-item prepend-icon="mdi-cog" title="Settings" />
-                    <v-divider />
-                    <v-list-item prepend-icon="mdi-logout" title="Logout" class="text-error" @click="logout" />
-                </v-list>
-            </v-menu>
-        </v-app-bar>
+                    <!-- Time Tracking Widget -->
+                    <v-card variant="outlined" rounded="lg" class="mb-4">
+                        <v-card-title class="flex items-center gap-2">
+                            <v-icon size="20">mdi-timer-outline</v-icon>
+                            Time Tracked
+                        </v-card-title>
+                        <v-card-text>
+                            <div class="grid grid-cols-2 gap-4">
+                                <div>
+                                    <div class="text-2xl font-bold">{{ formatDuration(timeStats?.today) }}</div>
+                                    <div class="text-xs text-gray-500">Today</div>
+                                </div>
+                                <div>
+                                    <div class="text-2xl font-bold">{{ formatDuration(timeStats?.week) }}</div>
+                                    <div class="text-xs text-gray-500">This Week</div>
+                                </div>
+                            </div>
 
-        <!-- Sidebar Navigation -->
-        <v-navigation-drawer v-model="isSidebarOpen" :temporary="smAndDown" :permanent="!smAndDown" width="280"
-            color="surface">
-            <SidebarContent :workspaces="workspaces" :starred-boards="starredBoards" :active-board-id="activeBoard?.id"
-                :time-summary="props.timeSummary" @create-workspace="handleCreateWorkspace"
-                @edit-workspace="handleEditWorkspace" @delete-workspace="handleDeleteWorkspace"
-                @create-board="handleCreateBoard" @edit-board="handleEditBoard" @delete-board="handleDeleteBoard"
-                @select-board="handleSelectBoard" @toggle-star="handleToggleBoardStar" />
-        </v-navigation-drawer>
+                            <!-- Running Timer -->
+                            <div v-if="runningTimer" class="mt-4 p-3 bg-success/10 rounded-lg">
+                                <div class="flex items-center gap-2 mb-2">
+                                    <v-icon color="success" size="16">mdi-timer-outline</v-icon>
+                                    <span class="text-sm font-medium text-success">Timer Running</span>
+                                </div>
+                                <div class="text-sm truncate">{{ runningTimer.task?.name }}</div>
+                                <div class="text-xs text-gray-500">{{ runningTimer.task?.task_list?.space?.name }}</div>
+                            </div>
+                        </v-card-text>
+                    </v-card>
 
-        <!-- Main Content -->
-        <v-main class="bg-background">
-            <!-- No Workspaces State -->
-            <NoWorkspace v-if="!hasWorkspaces" @create-workspace="handleCreateWorkspace" />
+                    <!-- Workspaces -->
+                    <v-card variant="outlined" rounded="lg" class="mb-4">
+                        <v-card-title class="flex items-center justify-between">
+                            <span>Workspaces</span>
+                            <v-btn icon variant="text" size="x-small" @click="showCreateWorkspace = true">
+                                <v-icon size="18">mdi-plus</v-icon>
+                            </v-btn>
+                        </v-card-title>
+                        <v-card-text class="pa-2">
+                            <v-list density="compact" nav>
+                                <v-list-item v-for="workspace in workspaces" :key="workspace.id"
+                                    :active="workspace.id === activeWorkspace?.id" rounded="lg"
+                                    @click="router.post(route('workspaces.switch', workspace.id))">
+                                    <template v-slot:prepend>
+                                        <div class="w-8 h-8 rounded-lg flex items-center justify-center text-white font-bold text-sm mr-3"
+                                            :style="{ backgroundColor: workspace.color || '#6366F1' }">
+                                            {{ workspace.name?.charAt(0)?.toUpperCase() }}
+                                        </div>
+                                    </template>
+                                    <v-list-item-title>{{ workspace.name }}</v-list-item-title>
+                                    <v-list-item-subtitle>{{ workspace.spaces_count || 0 }}
+                                        spaces</v-list-item-subtitle>
+                                </v-list-item>
+                            </v-list>
+                        </v-card-text>
+                    </v-card>
 
-            <!-- No Board Selected State -->
-            <NoBoard v-else-if="!hasActiveBoard" @create-board="handleCreateBoard" />
+                    <!-- Quick Links -->
+                    <v-card variant="outlined" rounded="lg">
+                        <v-card-title>Quick Links</v-card-title>
+                        <v-list density="compact" nav>
+                            <v-list-item prepend-icon="mdi-checkbox-marked-circle-outline" title="My Tasks"
+                                :href="route('my-tasks')" rounded="lg" />
+                            <v-list-item prepend-icon="mdi-timer-outline" title="Time Tracking"
+                                :href="route('time-tracking.index')" rounded="lg" />
+                            <v-list-item prepend-icon="mdi-cog-outline" title="Settings"
+                                :href="activeWorkspace ? route('workspaces.settings', activeWorkspace.id) : undefined"
+                                rounded="lg" />
+                        </v-list>
+                    </v-card>
+                </div>
+            </div>
+        </div>
 
-            <!-- Board Content -->
-            <template v-else>
-                <!-- Board Header -->
-                <BoardHeader :active-board="activeBoard" :board-members="getBoardMembers"
-                    :available-labels="availableLabels" :active-filters="activeFilters"
-                    :has-active-filters="hasActiveFilters" @toggle-filter-label="(id) => {
-                        const idx = activeFilters.labels.indexOf(id);
-                        if (idx > -1) activeFilters.labels.splice(idx, 1);
-                        else activeFilters.labels.push(id);
-                    }" @toggle-filter-member="(id) => {
-                        const idx = activeFilters.members.indexOf(id);
-                        if (idx > -1) activeFilters.members.splice(idx, 1);
-                        else activeFilters.members.push(id);
-                    }" @set-filter-priority="(p) => activeFilters.priority = p"
-                    @set-filter-due-date="(d) => activeFilters.dueDate = d" @clear-filters="clearFilters"
-                    @manage-members="modals.member = true" @manage-labels="modals.label = true" />
-
-                <!-- Kanban Board -->
-                <KanbanBoard :feature-lists="filteredFeatureLists" :team-members="teamMembers"
-                    :available-labels="availableLabels" @add-list="handleAddFeatureList"
-                    @rename-list="handleRenameFeatureList" @delete-list="handleDeleteFeatureList"
-                    @add-feature="handleAddFeature" @open-feature="handleOpenFeature"
-                    @move-feature="handleMoveFeature" />
-            </template>
-        </v-main>
-
-        <!-- ==================== MODALS ==================== -->
-
-        <!-- Feature Modal -->
-        <FeatureModal v-model="modals.feature" :feature="selectedFeature" :team-members="teamMembers"
-            :available-labels="availableLabels" :active-timers="activeTimers" :timer-displays="timerDisplays"
-            @update-feature="handleUpdateFeature" @delete-feature="handleDeleteFeature"
-            @add-task-list="handleAddTaskList" @rename-task-list="handleRenameTaskList"
-            @delete-task-list="handleDeleteTaskList" @add-task="handleAddTask" @edit-task="handleEditTask"
-            @delete-task="handleDeleteTask" @toggle-task-complete="handleToggleTaskComplete" @move-task="handleMoveTask"
-            @start-timer="handleStartTimer" @pause-timer="handlePauseTimer" @stop-timer="handleStopTimer"
-            @discard-timer="handleDiscardTimer" @add-time="handleAddTime"
-            @update:model-value="(v) => { if (!v) handleCloseFeatureModal(); }" />
-
-        <!-- Workspace Modal -->
-        <WorkspaceModal v-model="modals.workspace" :workspace="editingWorkspace" @save="handleSaveWorkspace" />
-
-        <!-- Board Modal -->
-        <BoardModal v-model="modals.board" :board="editingBoard" :workspaces="workspaces"
-            :default-workspace-id="workspaces[0]?.id" @save="handleSaveBoard" />
-
-        <!-- Delete Confirmation Modal -->
-        <DeleteConfirmModal v-model="modals.delete" :item-type="deleteTarget.type" :item-name="deleteTarget.itemName"
-            @confirm="handleConfirmDelete" />
-
-        <!-- Activity Log Modal -->
-        <ActivityLogModal v-model="modals.activity" :activities="activityLog" :team-members="teamMembers"
-            :filter-user-id="activityFilterUser" @update:filter-user-id="activityFilterUser = $event" />
-
-        <!-- Time Tracking Modal -->
-        <TimeTrackingModal v-model="modals.timeTracking" :team-members="teamMembers" :time-stats="getTeamTimeStats"
-            :active-timers="activeTimers" />
-
-        <!-- Member Modal -->
-        <MemberModal v-model="modals.member" :members="getBoardMembers" :all-users="teamMembers"
-            @add-member="(user) => { if (activeBoard) { if (!activeBoard.members) activeBoard.members = []; activeBoard.members.push(user.id); } }"
-            @remove-member="(member) => { if (activeBoard?.members) { const idx = activeBoard.members.indexOf(member.id); if (idx > -1) activeBoard.members.splice(idx, 1); } }" />
-
-        <!-- Label Modal -->
-        <LabelModal v-model="modals.label" :labels="availableLabels"
-            @create="(label) => { const id = Math.max(...availableLabels.map(l => l.id), 0) + 1; availableLabels.push({ ...label, id }); }"
-            @update="(label) => { const idx = availableLabels.findIndex(l => l.id === label.id); if (idx > -1) availableLabels[idx] = label; }"
-            @delete="(label) => { const idx = availableLabels.findIndex(l => l.id === label.id); if (idx > -1) availableLabels.splice(idx, 1); }" />
-
-        <!-- Add Time Modal -->
-        <AddTimeModal v-model="modals.addTime" :task="selectedTaskForTime" @save="handleSaveTimeEntry" />
-
-        <!-- Task Edit Modal -->
-        <TaskEditModal v-model="modals.taskEdit" :task="editingTask" :team-members="teamMembers"
-            @save="handleSaveTask" />
-
-        <!-- Snackbar for notifications -->
-        <v-snackbar v-model="snackbar.show" :color="snackbar.color" :timeout="3000" location="bottom right">
-            {{ snackbar.text }}
-            <template #actions>
-                <v-btn variant="text" @click="hideNotification">Close</v-btn>
-            </template>
-        </v-snackbar>
-    </v-app>
+        <!-- Create Workspace Dialog -->
+        <v-dialog v-model="showCreateWorkspace" max-width="400">
+            <v-card>
+                <v-card-title>Create Workspace</v-card-title>
+                <v-card-text>
+                    <v-text-field v-model="newWorkspaceName" label="Workspace Name" placeholder="e.g., My Company"
+                        variant="outlined" autofocus @keydown.enter="createWorkspace" />
+                </v-card-text>
+                <v-card-actions>
+                    <v-spacer />
+                    <v-btn variant="text" @click="showCreateWorkspace = false">Cancel</v-btn>
+                    <v-btn color="primary" @click="createWorkspace">Create</v-btn>
+                </v-card-actions>
+            </v-card>
+        </v-dialog>
+    </MainLayout>
 </template>
 
 <style scoped>
-.bg-background {
-    background-color: rgb(var(--v-theme-background));
+.dashboard-page {
+    padding: 24px;
+    max-width: 1400px;
+    margin: 0 auto;
+}
+
+.welcome-section {
+    margin-bottom: 24px;
+}
+
+.context-header {
+    margin-bottom: 16px;
+    padding-bottom: 12px;
+    border-bottom: 1px solid #2d2d30;
+}
+
+.dashboard-grid {
+    display: grid;
+    grid-template-columns: 1fr 320px;
+    gap: 24px;
+}
+
+@media (max-width: 1024px) {
+    .dashboard-grid {
+        grid-template-columns: 1fr;
+    }
+
+    .dashboard-sidebar {
+        order: -1;
+    }
+}
+
+.space-y-2>*+* {
+    margin-top: 8px;
+}
+
+.grid {
+    display: grid;
+}
+
+.grid-cols-2 {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.gap-4 {
+    gap: 16px;
 }
 </style>

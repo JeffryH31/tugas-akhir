@@ -1,161 +1,198 @@
 <?php
 
-declare(strict_types=1);
-
 namespace App\Services;
 
+use App\Models\Activity;
 use App\Models\Space;
+use App\Models\Status;
 use App\Models\User;
 use App\Models\Workspace;
-use Illuminate\Database\Eloquent\Collection;
+use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Str;
 
-/**
- * SpaceService
- *
- * Handles Space-related business logic .
- */
 class SpaceService
 {
     /**
-     * Create a new space within a workspace.
+     * Get all spaces for a workspace
      */
-    public function create(Workspace $workspace, array $data, User $creator): Space
+    public function getSpacesForWorkspace(Workspace $workspace): Collection
     {
-        return DB::transaction(function () use ($workspace, $data, $creator) {
-            $maxPosition = $workspace->spaces()->max('position') ?? -1;
+        return $workspace->spaces()
+            ->with([
+                'folders.lists',
+                'listsWithoutFolder',
+                'statuses',
+            ])
+            ->withCount(['allFolders', 'lists'])
+            ->orderBy('position')
+            ->get();
+    }
 
+    /**
+     * Get a space with full hierarchy
+     */
+    public function getWithHierarchy(Space $space): Space
+    {
+        return $space->load([
+            'workspace',
+            'folders' => fn($q) => $q->with(['children', 'lists'])->orderBy('position'),
+            'listsWithoutFolder' => fn($q) => $q->orderBy('position'),
+            'statuses' => fn($q) => $q->orderBy('position'),
+            'labels',
+        ]);
+    }
+
+    /**
+     * Create a new space
+     */
+    public function create(array $data, Workspace $workspace, User $user): Space
+    {
+        return DB::transaction(function () use ($data, $workspace, $user) {
             $space = Space::create([
-                'name' => $data['name'],
-                'description' => $data['description'] ?? null,
                 'workspace_id' => $workspace->id,
-                'created_by' => $creator->id,
+                'name' => $data['name'],
+                'slug' => Str::slug($data['name']),
+                'description' => $data['description'] ?? null,
                 'color' => $data['color'] ?? '#6366F1',
+                'icon' => $data['icon'] ?? null,
                 'is_private' => $data['is_private'] ?? false,
-                'position' => $maxPosition + 1,
-                'features' => $data['features'] ?? null,
+                'created_by' => $user->id,
             ]);
 
-            // Add creator as member
-            $space->members()->attach($creator->id, ['role' => 'admin']);
+            // Log activity
+            Activity::log($workspace, $user, $space, 'created', [
+                'name' => $space->name,
+            ]);
 
             return $space;
         });
     }
 
     /**
-     * Update a space.
+     * Update a space
      */
-    public function update(Space $space, array $data): Space
+    public function update(Space $space, array $data, User $user): Space
     {
+        $changes = [];
+        $oldValues = $space->only(['name', 'description', 'color', 'is_private']);
+
         $space->update([
             'name' => $data['name'] ?? $space->name,
             'description' => $data['description'] ?? $space->description,
             'color' => $data['color'] ?? $space->color,
+            'icon' => $data['icon'] ?? $space->icon,
             'is_private' => $data['is_private'] ?? $space->is_private,
-            'features' => $data['features'] ?? $space->features,
         ]);
+
+        // Track changes
+        foreach ($oldValues as $key => $oldValue) {
+            if (isset($data[$key]) && $data[$key] !== $oldValue) {
+                $changes[$key] = ['old' => $oldValue, 'new' => $data[$key]];
+            }
+        }
+
+        if (!empty($changes)) {
+            Activity::log($space->workspace, $user, $space, 'updated', [
+                'name' => $space->name,
+            ], $changes);
+        }
 
         return $space->fresh();
     }
 
     /**
-     * Delete (soft delete) a space.
+     * Delete a space
      */
-    public function delete(Space $space): bool
+    public function delete(Space $space, User $user): void
     {
-        return $space->delete();
+        DB::transaction(function () use ($space, $user) {
+            Activity::log($space->workspace, $user, $space, 'deleted', [
+                'name' => $space->name,
+            ]);
+
+            $space->delete();
+        });
     }
 
     /**
-     * Get all spaces accessible by a user within a workspace.
-     */
-    public function getAccessibleSpaces(Workspace $workspace, User $user): Collection
-    {
-        return $workspace->spaces()
-            ->where(function ($query) use ($user) {
-                $query->where('is_private', false)
-                    ->orWhereHas('members', function ($q) use ($user) {
-                        $q->where('user_id', $user->id);
-                    })
-                    ->orWhere('created_by', $user->id);
-            })
-            ->active()
-            ->orderBy('position')
-            ->get();
-    }
-
-    /**
-     * Add a member to a space.
-     */
-    public function addMember(Space $space, User $user, string $role = 'member'): void
-    {
-        if (!$space->members()->where('user_id', $user->id)->exists()) {
-            $space->members()->attach($user->id, ['role' => $role]);
-        }
-    }
-
-    /**
-     * Remove a member from a space.
-     */
-    public function removeMember(Space $space, User $user): void
-    {
-        $space->members()->detach($user->id);
-    }
-
-    /**
-     * Update member role in a space.
-     */
-    public function updateMemberRole(Space $space, User $user, string $role): void
-    {
-        $space->members()->updateExistingPivot($user->id, ['role' => $role]);
-    }
-
-    /**
-     * Toggle star status for a space.
+     * Toggle starred status
      */
     public function toggleStar(Space $space): Space
     {
-        $space->update(['is_starred' => !$space->is_starred]);
+        $space->toggleStar();
         return $space->fresh();
     }
 
     /**
-     * Reorder spaces within a workspace.
+     * Reorder spaces
      */
-    public function reorder(Workspace $workspace, array $spaceIds): void
+    public function reorder(Workspace $workspace, array $order): void
     {
-        DB::transaction(function () use ($workspace, $spaceIds) {
-            foreach ($spaceIds as $position => $spaceId) {
-                $workspace->spaces()
-                    ->where('id', $spaceId)
-                    ->update(['position' => $position]);
+        DB::transaction(function () use ($order) {
+            foreach ($order as $position => $spaceId) {
+                Space::where('id', $spaceId)->update(['position' => $position]);
             }
         });
     }
 
     /**
-     * Duplicate a space with all its content.
+     * Get space statistics
      */
-    public function duplicate(Space $space, string $newName = null): Space
+    public function getStatistics(Space $space): array
     {
-        return DB::transaction(function () use ($space, $newName) {
-            $newSpace = $space->replicate();
-            $newSpace->name = $newName ?? $space->name . ' (Copy)';
-            $newSpace->position = $space->workspace->spaces()->max('position') + 1;
-            $newSpace->save();
+        $taskCounts = DB::table('tasks')
+            ->join('task_lists', 'tasks.task_list_id', '=', 'task_lists.id')
+            ->join('statuses', 'tasks.status_id', '=', 'statuses.id')
+            ->where('task_lists.space_id', $space->id)
+            ->whereNull('tasks.deleted_at')
+            ->selectRaw('
+                COUNT(*) as total,
+                SUM(CASE WHEN statuses.is_closed = 1 THEN 1 ELSE 0 END) as completed,
+                SUM(CASE WHEN statuses.is_closed = 0 AND statuses.type IN ("in_progress", "review") THEN 1 ELSE 0 END) as in_progress,
+                SUM(CASE WHEN statuses.is_closed = 0 AND tasks.due_date IS NOT NULL AND tasks.due_date < NOW() THEN 1 ELSE 0 END) as overdue
+            ')
+            ->first();
 
-            // Copy members
-            foreach ($space->members as $member) {
-                $newSpace->members()->attach($member->id, [
-                    'role' => $member->pivot->role,
-                ]);
+        return [
+            'total_tasks' => $taskCounts->total ?? 0,
+            'completed_tasks' => $taskCounts->completed ?? 0,
+            'in_progress_tasks' => $taskCounts->in_progress ?? 0,
+            'overdue_tasks' => $taskCounts->overdue ?? 0,
+            'folders_count' => $space->allFolders()->count(),
+            'lists_count' => $space->lists()->count(),
+            'progress' => $taskCounts->total > 0
+                ? round(($taskCounts->completed / $taskCounts->total) * 100, 1)
+                : 0,
+        ];
+    }
+
+    /**
+     * Add custom status to space
+     */
+    public function addStatus(Space $space, array $data)
+    {
+        $maxPosition = $space->statuses()->max('position') ?? -1;
+
+        return $space->statuses()->create([
+            'name' => $data['name'],
+            'slug' => Str::slug($data['name']),
+            'color' => $data['color'] ?? '#6B7280',
+            'type' => 'custom',
+            'position' => $maxPosition + 1,
+            'is_closed' => $data['is_closed'] ?? false,
+        ]);
+    }
+
+    /**
+     * Reorder statuses
+     */
+    public function reorderStatuses(Space $space, array $order): void
+    {
+        DB::transaction(function () use ($order) {
+            foreach ($order as $position => $statusId) {
+                Status::where('id', $statusId)->update(['position' => $position]);
             }
-
-            // Copy folders and lists would go here
-            // This is simplified - full implementation would recursively copy all content
-
-            return $newSpace;
         });
     }
 }
