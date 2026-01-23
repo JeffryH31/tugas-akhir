@@ -72,6 +72,7 @@ const handleTaskMoved = ({ task, statusId, newIndex }) => {
                 if (window.showSnackbar) {
                     window.showSnackbar('Task moved successfully!', 'success');
                 }
+                router.reload({ only: ['tasksByStatus'] });
             }
         }
     );
@@ -88,6 +89,7 @@ const handleTaskComplete = (task) => {
                 if (window.showSnackbar) {
                     window.showSnackbar('Task completed!', 'success');
                 }
+                router.reload({ only: ['tasksByStatus'] });
             }
         }
     );

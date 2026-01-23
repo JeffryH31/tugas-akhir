@@ -85,7 +85,7 @@ const currentPriority = computed(() => {
     return priorityConfig[props.task.priority.level] || null;
 });
 
-// Format duration
+// Format duration (for time spent in seconds)
 const formatDuration = (seconds) => {
     if (!seconds) return 'Not set';
     const hours = Math.floor(seconds / 3600);
@@ -94,6 +94,13 @@ const formatDuration = (seconds) => {
         return `${hours}h ${minutes}m`;
     }
     return `${minutes}m`;
+};
+
+// Format time estimate (in minutes, display as man-hour)
+const formatTimeEstimate = (minutes) => {
+    if (!minutes) return 'Not set';
+    const hours = minutes / 60;
+    return hours % 1 === 0 ? `${hours}h` : `${hours.toFixed(1)}h`;
 };
 
 // Date formatting
@@ -174,7 +181,59 @@ const changePriority = (priorityId) => {
         }
     );
 };
+// Update due date
+const showDueDatePicker = ref(false);
+const tempDueDate = ref(null);
 
+const updateDueDate = () => {
+    router.patch(
+        route('tasks.update', [props.workspace.id, props.space.id, props.list.id, props.task.id]),
+        { due_date: tempDueDate.value },
+        {
+            preserveScroll: true,
+            onSuccess: () => {
+                showDueDatePicker.value = false;
+                if (window.showSnackbar) {
+                    window.showSnackbar('Due date updated!', 'success');
+                }
+            }
+        }
+    );
+};
+
+const openDueDatePicker = () => {
+    tempDueDate.value = props.task.due_date;
+    showDueDatePicker.value = true;
+};
+
+// Update time estimate
+const showTimeEstimatePicker = ref(false);
+const tempTimeEstimate = ref(0);
+
+const updateTimeEstimate = () => {
+    const totalMinutes = (parseFloat(tempTimeEstimate.value) || 0) * 60;
+    
+    router.patch(
+        route('tasks.update', [props.workspace.id, props.space.id, props.list.id, props.task.id]),
+        { time_estimate: totalMinutes },
+        {
+            preserveScroll: true,
+            onSuccess: () => {
+                showTimeEstimatePicker.value = false;
+                router.reload({ only: ['task'] });
+                if (window.showSnackbar) {
+                    window.showSnackbar('Time estimate updated!', 'success');
+                }
+            }
+        }
+    );
+};
+
+const openTimeEstimatePicker = () => {
+    const minutes = props.task.time_estimate || 0;
+    tempTimeEstimate.value = minutes / 60;
+    showTimeEstimatePicker.value = true;
+};
 // Toggle assignee
 const toggleAssignee = (userId) => {
     const isAssigned = props.task.assignees?.some(a => a.id === userId);
@@ -189,6 +248,7 @@ const toggleAssignee = (userId) => {
                     if (window.showSnackbar) {
                         window.showSnackbar('Assignee removed!', 'success');
                     }
+                    router.reload({ only: ['task'] });
                 }
             }
         );
@@ -202,6 +262,7 @@ const toggleAssignee = (userId) => {
                     if (window.showSnackbar) {
                         window.showSnackbar('Assignee added!', 'success');
                     }
+                    router.reload({ only: ['task'] });
                 }
             }
         );
@@ -220,6 +281,7 @@ const toggleComplete = () => {
                     if (window.showSnackbar) {
                         window.showSnackbar('Task reopened!', 'success');
                     }
+                    router.reload({ only: ['task'] });
                 }
             }
         );
@@ -233,6 +295,7 @@ const toggleComplete = () => {
                     if (window.showSnackbar) {
                         window.showSnackbar('Task completed!', 'success');
                     }
+                    router.reload({ only: ['task'] });
                 }
             }
         );
@@ -273,6 +336,7 @@ const submitComment = () => {
                     window.showSnackbar('Comment added!', 'success');
                 }
                 newComment.value = '';
+                router.reload({ only: ['task'] });
             }
         }
     );
@@ -471,7 +535,45 @@ const submitComment = () => {
                                     Due Date
                                 </div>
                                 <div class="detail-value">
-                                    {{ formatDate(task.due_date) }}
+                                    <v-menu v-model="showDueDatePicker" :close-on-content-click="false">
+                                        <template v-slot:activator="{ props: menuProps }">
+                                            <v-btn
+                                                v-bind="menuProps"
+                                                variant="text"
+                                                size="small"
+                                                :color="task.due_date ? 'primary' : 'default'"
+                                            >
+                                                <v-icon start size="16">mdi-calendar</v-icon>
+                                                {{ formatDate(task.due_date) }}
+                                            </v-btn>
+                                        </template>
+                                        <v-card color="surface" min-width="300">
+                                            <v-card-text>
+                                                <v-text-field
+                                                    v-model="tempDueDate"
+                                                    type="date"
+                                                    label="Due Date"
+                                                    variant="outlined"
+                                                    density="compact"
+                                                    hide-details
+                                                    bg-color="#1e1e1e"
+                                                />
+                                            </v-card-text>
+                                            <v-card-actions>
+                                                <v-btn
+                                                    v-if="task.due_date"
+                                                    size="small"
+                                                    variant="text"
+                                                    @click="tempDueDate = null; updateDueDate();"
+                                                >
+                                                    Clear
+                                                </v-btn>
+                                                <v-spacer />
+                                                <v-btn size="small" variant="text" @click="showDueDatePicker = false">Cancel</v-btn>
+                                                <v-btn size="small" color="primary" @click="updateDueDate">Save</v-btn>
+                                            </v-card-actions>
+                                        </v-card>
+                                    </v-menu>
                                 </div>
                             </div>
 
@@ -482,7 +584,48 @@ const submitComment = () => {
                                     Time Estimate
                                 </div>
                                 <div class="detail-value">
-                                    {{ formatDuration(task.time_estimate) }}
+                                    <v-menu v-model="showTimeEstimatePicker" :close-on-content-click="false">
+                                        <template v-slot:activator="{ props: menuProps }">
+                                            <v-btn
+                                                v-bind="menuProps"
+                                                variant="text"
+                                                size="small"
+                                                :color="task.time_estimate ? 'primary' : 'default'"
+                                            >
+                                                <v-icon start size="16">mdi-timer</v-icon>
+                                                {{ formatTimeEstimate(task.time_estimate) }}
+                                            </v-btn>
+                                        </template>
+                                        <v-card color="surface" min-width="300">
+                                            <v-card-text>
+                                                <div class="text-sm font-medium mb-3">Set Time Estimate (Man-Hour)</div>
+                                                <v-text-field
+                                                    v-model="tempTimeEstimate"
+                                                    type="number"
+                                                    label="Hours"
+                                                    variant="outlined"
+                                                    density="compact"
+                                                    hide-details
+                                                    min="0"
+                                                    step="0.5"
+                                                    bg-color="#1e1e1e"
+                                                />
+                                            </v-card-text>
+                                            <v-card-actions>
+                                                <v-btn
+                                                    v-if="task.time_estimate"
+                                                    size="small"
+                                                    variant="text"
+                                                    @click="tempTimeEstimate = 0; updateTimeEstimate();"
+                                                >
+                                                    Clear
+                                                </v-btn>
+                                                <v-spacer />
+                                                <v-btn size="small" variant="text" @click="showTimeEstimatePicker = false">Cancel</v-btn>
+                                                <v-btn size="small" color="primary" @click="updateTimeEstimate">Save</v-btn>
+                                            </v-card-actions>
+                                        </v-card>
+                                    </v-menu>
                                 </div>
                             </div>
 

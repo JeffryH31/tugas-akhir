@@ -195,6 +195,23 @@
                             @update:model-value="updateTask"
                         />
                     </div>
+
+                    <!-- Time Estimate -->
+                    <div class="bg-[#2D2D2D] rounded-lg p-4">
+                        <div class="text-sm text-gray-400 mb-2">Time Estimate (Man-Hour)</div>
+                        <v-text-field
+                            v-model="timeEstimateHours"
+                            type="number"
+                            label="Hours"
+                            variant="solo-filled"
+                            density="compact"
+                            hide-details
+                            bg-color="#3D3D3D"
+                            min="0"
+                            step="0.5"
+                            @blur="updateTimeEstimate"
+                        />
+                    </div>
                 </div>
                 
                 <!-- Description -->
@@ -384,7 +401,10 @@
                                         variant="text"
                                         color="success"
                                         prepend-icon="mdi-check"
-                                        @click="router.post(route('comments.resolve', comment.id), {}, { preserveScroll: true })"
+                                        @click="router.post(route('comments.resolve', comment.id), {}, { 
+                                            preserveScroll: true,
+                                            onSuccess: () => router.reload({ only: ['task'] })
+                                        })"
                                     >
                                         Resolve
                                     </v-btn>
@@ -393,7 +413,10 @@
                                         size="x-small"
                                         variant="text"
                                         prepend-icon="mdi-undo"
-                                        @click="router.post(route('comments.unresolve', comment.id), {}, { preserveScroll: true })"
+                                        @click="router.post(route('comments.unresolve', comment.id), {}, { 
+                                            preserveScroll: true,
+                                            onSuccess: () => router.reload({ only: ['task'] })
+                                        })"
                                     >
                                         Unresolve
                                     </v-btn>
@@ -486,6 +509,27 @@ const localTask = ref({
     priority_id: props.task.priority_id,
     due_date: props.task.due_date,
 });
+
+// Time estimate (man-hour only)
+const timeEstimateHours = ref((props.task.time_estimate || 0) / 60);
+
+const updateTimeEstimate = () => {
+    const totalMinutes = (parseFloat(timeEstimateHours.value) || 0) * 60;
+    
+    router.patch(
+        route('tasks.update', [props.workspace.id, props.space.id, props.list.id, props.task.id]),
+        { time_estimate: totalMinutes },
+        {
+            preserveScroll: true,
+            onSuccess: () => {
+                router.reload({ only: ['task'] });
+                if (window.showSnackbar) {
+                    window.showSnackbar('Time estimate updated!', 'success');
+                }
+            }
+        }
+    );
+};
 
 // Comment
 const newComment = ref('');
@@ -595,7 +639,10 @@ const assignMember = (member) => {
     router.post(
         route('tasks.assign', [props.workspace.id, props.space.id, props.list.id, props.task.id]),
         { user_id: member.id },
-        { preserveScroll: true }
+        { 
+            preserveScroll: true,
+            onSuccess: () => router.reload({ only: ['task'] })
+        }
     );
 };
 
@@ -604,7 +651,8 @@ const removeAssignee = (assignee) => {
         route('tasks.unassign', [props.workspace.id, props.space.id, props.list.id, props.task.id]),
         {
             data: { user_id: assignee.id },
-            preserveScroll: true 
+            preserveScroll: true,
+            onSuccess: () => router.reload({ only: ['task'] })
         }
     );
 };
@@ -613,7 +661,10 @@ const addLabel = (label) => {
     router.post(
         route('tasks.labels.add', [props.workspace.id, props.space.id, props.list.id, props.task.id]),
         { label_id: label.id },
-        { preserveScroll: true }
+        { 
+            preserveScroll: true,
+            onSuccess: () => router.reload({ only: ['task'] })
+        }
     );
 };
 
@@ -622,7 +673,8 @@ const removeLabel = (label) => {
         route('tasks.labels.remove', [props.workspace.id, props.space.id, props.list.id, props.task.id]),
         {
             data: { label_id: label.id },
-            preserveScroll: true 
+            preserveScroll: true,
+            onSuccess: () => router.reload({ only: ['task'] })
         }
     );
 };
@@ -637,6 +689,7 @@ const addComment = () => {
             preserveScroll: true,
             onSuccess: () => {
                 newComment.value = '';
+                router.reload({ only: ['task'] });
             }
         }
     );
@@ -646,7 +699,10 @@ const toggleReaction = (comment, emoji) => {
     router.post(
         route('comments.react', comment.id),
         { emoji },
-        { preserveScroll: true }
+        { 
+            preserveScroll: true,
+            onSuccess: () => router.reload({ only: ['task'] })
+        }
     );
 };
 
@@ -669,6 +725,7 @@ const addSubtask = () => {
             onSuccess: () => {
                 newSubtaskName.value = '';
                 showAddSubtask.value = false;
+                router.reload({ only: ['task'] });
             }
         }
     );
@@ -679,13 +736,19 @@ const toggleSubtask = (subtask) => {
         router.post(
             route('tasks.reopen', [props.workspace.id, props.space.id, props.list.id, subtask.id]),
             {},
-            { preserveScroll: true }
+            { 
+                preserveScroll: true,
+                onSuccess: () => router.reload({ only: ['task'] })
+            }
         );
     } else {
         router.post(
             route('tasks.complete', [props.workspace.id, props.space.id, props.list.id, subtask.id]),
             {},
-            { preserveScroll: true }
+            { 
+                preserveScroll: true,
+                onSuccess: () => router.reload({ only: ['task'] })
+            }
         );
     }
 };
