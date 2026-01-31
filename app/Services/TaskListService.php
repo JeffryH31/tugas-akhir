@@ -19,8 +19,8 @@ class TaskListService
     public function getListsForSpace(Space $space, ?Folder $folder = null): Collection
     {
         $query = $space->lists()
-            ->with(['tasks' => fn($q) => $q->root()->with(['status', 'priority', 'assignees'])])
-            ->withCount(['allTasks', 'allTasks as completed_tasks_count' => fn($q) => $q->completed()]);
+            ->with(['tasks' => fn($q) => $q->with(['status', 'priority', 'assignees'])])
+            ->withCount('tasks');
 
         if ($folder) {
             $query->where('folder_id', $folder->id);
@@ -30,25 +30,45 @@ class TaskListService
     }
 
     /**
-     * Get a list with tasks grouped by status
-     * Returns an associative array where key is status_id and value is array of tasks
+     * Get a list with tasks/subtasks grouped by status
+     * Returns an associative array where key is status_id and value is array of tasks/subtasks
      */
-    public function getWithTasksByStatus(TaskList $list): array
+    public function getWithTasksByStatus(TaskList $list, $taskId = null): array
     {
-        $list->load([
-            'space.statuses',
-            'tasks' => fn($q) => $q->root()
-                ->with(['status', 'priority', 'assignees', 'labels', 'subtasks'])
-                ->orderBy('position'),
-        ]);
+        // Load space with statuses first
+        $list->load('space.statuses');
+
+        // If viewing subtasks, load from parent task
+        if ($taskId) {
+            $parentTask = \App\Models\Task::with([
+                'subtasks.status',
+                'subtasks.priority',
+                'subtasks.assignees',
+                'subtasks.labels',
+                'subtasks.timeEntries.user',
+            ])->findOrFail($taskId);
+            
+            $items = $parentTask->subtasks;
+        } else {
+            // Load tasks for the list
+            $items = $list->tasks()
+                ->with([
+                    'status',
+                    'priority',
+                    'assignees',
+                    'labels',
+                    'subtasks', // For subtask count
+                ])
+                ->orderBy('position')
+                ->get();
+        }
 
         $statuses = $list->space->statuses;
-        $tasks = $list->tasks;
 
         $grouped = [];
         foreach ($statuses as $status) {
-            // Return array of tasks directly, not wrapped in object
-            $grouped[$status->id] = $tasks->where('status_id', $status->id)->values()->toArray();
+            // Return array of items directly, not wrapped in object
+            $grouped[$status->id] = $items->where('status_id', $status->id)->values()->toArray();
         }
 
         return $grouped;
@@ -210,13 +230,20 @@ class TaskListService
                 $newTask->task_id = null; // Will be auto-generated
                 $newTask->save();
 
+                // Copy task assignees and labels
+                $newTask->assignees()->sync($task->assignees->pluck('id'));
+                $newTask->labels()->sync($task->labels->pluck('id'));
+
                 // Duplicate subtasks
                 foreach ($task->subtasks as $subtask) {
                     $newSubtask = $subtask->replicate();
-                    $newSubtask->task_list_id = $newList->id;
-                    $newSubtask->parent_id = $newTask->id;
-                    $newSubtask->task_id = null;
+                    $newSubtask->task_id = $newTask->id;
+                    $newSubtask->subtask_id = null; // Will be auto-generated
                     $newSubtask->save();
+                    
+                    // Copy subtask assignees and labels
+                    $newSubtask->assignees()->sync($subtask->assignees->pluck('id'));
+                    $newSubtask->labels()->sync($subtask->labels->pluck('id'));
                 }
             }
 

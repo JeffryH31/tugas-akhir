@@ -262,7 +262,7 @@ const formatDuration = (seconds) => {
                                     </div>
                                     <div v-if="!isSidebarMini" class="flex-1 min-w-0">
                                         <div class="font-medium truncate">{{ activeWorkspace?.name || 'Select Workspace'
-                                            }}</div>
+                                        }}</div>
                                     </div>
                                     <v-icon v-if="!isSidebarMini" size="18">mdi-chevron-down</v-icon>
                                 </div>
@@ -297,6 +297,14 @@ const formatDuration = (seconds) => {
                             prepend-icon="mdi-home-outline" title="Home" rounded="lg" />
                         <v-list-item :href="route('my-tasks')" :active="route().current('my-tasks')"
                             prepend-icon="mdi-checkbox-marked-circle-outline" title="My Tasks" rounded="lg" />
+                        <v-list-item 
+                            v-if="activeWorkspace"
+                            :href="route('calendar.index', activeWorkspace.id)" 
+                            :active="route().current('calendar.*')"
+                            prepend-icon="mdi-calendar-month-outline" 
+                            title="Calendar" 
+                            rounded="lg" 
+                        />
                         <v-list-item :href="route('time-tracking.index')" :active="route().current('time-tracking.*')"
                             prepend-icon="mdi-timer-outline" title="Time Tracking" rounded="lg" />
                     </v-list>
@@ -332,14 +340,8 @@ const formatDuration = (seconds) => {
 
                     <!-- View All Spaces Link -->
                     <v-list density="compact" nav class="mb-2">
-                        <v-list-item 
-                            v-if="activeWorkspace"
-                            :href="route('workspaces.show', activeWorkspace.id)" 
-                            prepend-icon="mdi-view-grid-outline"
-                            title="View All Spaces" 
-                            rounded="lg"
-                            class="text-sm"
-                        />
+                        <v-list-item v-if="activeWorkspace" :href="route('workspaces.show', activeWorkspace.id)"
+                            prepend-icon="mdi-view-grid-outline" title="View All Spaces" rounded="lg" class="text-sm" />
                     </v-list>
 
                     <v-list density="compact" nav>
@@ -354,17 +356,26 @@ const formatDuration = (seconds) => {
                                             </div>
                                         </template>
                                         <v-list-item-title class="text-sm font-medium">{{ space.name
-                                            }}</v-list-item-title>
+                                        }}</v-list-item-title>
                                     </v-list-item>
                                 </template>
+
+                                <!-- Sprint Link -->
+                                <v-list-item :href="route('sprints.index', [activeWorkspace?.id, space.id])"
+                                    rounded="lg" class="pl-8">
+                                    <template v-slot:prepend>
+                                        <v-icon size="14" class="mr-1">mdi-calendar-clock</v-icon>
+                                    </template>
+                                    <v-list-item-title class="text-sm">Sprints</v-list-item-title>
+                                </v-list-item>
 
                                 <!-- Folders -->
                                 <template v-for="folder in space.folders || []" :key="folder.id">
                                     <v-list-group :value="'folder-' + folder.id">
                                         <template v-slot:activator="{ props: folderProps }">
-                                            <v-list-item v-bind="folderProps" rounded="lg">
+                                            <v-list-item v-bind="folderProps" rounded="lg" class="pl-8">
                                                 <template v-slot:prepend>
-                                                    <v-icon size="16" class="mr-2">mdi-folder-outline</v-icon>
+                                                    <v-icon size="16" class="mr-1">mdi-folder-outline</v-icon>
                                                 </template>
                                                 <v-list-item-title class="text-sm">{{ folder.name }}</v-list-item-title>
                                             </v-list-item>
@@ -373,9 +384,9 @@ const formatDuration = (seconds) => {
                                         <!-- Lists in Folder -->
                                         <v-list-item v-for="list in folder.lists || []" :key="list.id"
                                             :href="route('lists.show', [activeWorkspace?.id, space.id, list.id])"
-                                            rounded="lg">
+                                            rounded="lg" class="pl-12">
                                             <template v-slot:prepend>
-                                                <v-icon size="14" class="mr-2">mdi-format-list-bulleted</v-icon>
+                                                <v-icon size="14" class="mr-1">mdi-format-list-bulleted</v-icon>
                                             </template>
                                             <v-list-item-title class="text-sm">{{ list.name }}</v-list-item-title>
                                         </v-list-item>
@@ -384,9 +395,9 @@ const formatDuration = (seconds) => {
 
                                 <!-- Lists without Folder -->
                                 <v-list-item v-for="list in space.lists_without_folder || []" :key="list.id"
-                                    :href="route('lists.show', [activeWorkspace?.id, space.id, list.id])" rounded="lg">
+                                    :href="route('lists.show', [activeWorkspace?.id, space.id, list.id])" rounded="lg" class="pl-8">
                                     <template v-slot:prepend>
-                                        <v-icon size="14" class="mr-2">mdi-format-list-bulleted</v-icon>
+                                        <v-icon size="14" class="mr-1">mdi-format-list-bulleted</v-icon>
                                     </template>
                                     <v-list-item-title class="text-sm">{{ list.name }}</v-list-item-title>
                                 </v-list-item>
@@ -543,6 +554,23 @@ const formatDuration = (seconds) => {
 :deep(.v-navigation-drawer__content) {
     display: flex;
     flex-direction: column;
+}
+
+/* Override Vuetify's default list indentation */
+:deep(.v-list-group__items) {
+    --indent-padding: 0px !important;
+}
+
+:deep(.v-list-group__items .v-list-item) {
+    padding-inline-start: 16px !important;
+}
+
+:deep(.v-list-group__items .v-list-group__items .v-list-item) {
+    padding-inline-start: 32px !important;
+}
+
+:deep(.v-list-item__prepend) {
+    width: auto !important;
 }
 
 .search-dialog-input :deep(.v-field) {

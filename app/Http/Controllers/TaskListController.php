@@ -45,7 +45,8 @@ class TaskListController extends Controller
      */
     public function show(Request $request, Workspace $workspace, Space $space, TaskList $list): Response
     {
-        $tasksByStatus = $this->taskListService->getWithTasksByStatus($list);
+        $taskId = $request->query('task_id');
+        $tasksByStatus = $this->taskListService->getWithTasksByStatus($list, $taskId);
 
         // Load workspace with sidebar data
         $workspace->load([
@@ -58,12 +59,22 @@ class TaskListController extends Controller
             'labels',
         ]);
 
+        // Filter statuses based on whether viewing subtasks or tasks
+        $statusesQuery = $space->statuses()->orderBy('position');
+        if ($taskId) {
+            $statusesQuery->forSubtasks(); // Only subtask-applicable statuses
+        } else {
+            $statusesQuery->forTasks(); // Only task-applicable statuses
+        }
+
         return Inertia::render('Lists/Show', [
             'workspace' => $workspace,
             'space' => $space,
             'list' => $list,
             'tasksByStatus' => $tasksByStatus,
-            'statuses' => $space->statuses()->orderBy('position')->get(),
+            'statuses' => $statusesQuery->get(),
+            'sprints' => $space->sprints()->orderBy('position')->get(),
+            'parentTask' => $taskId ? \App\Models\Task::find($taskId) : null,
         ]);
     }
 

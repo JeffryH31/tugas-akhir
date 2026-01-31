@@ -26,7 +26,6 @@ class TaskService
         ?int $perPage = null
     ): Collection|LengthAwarePaginator {
         $query = $list->tasks()
-            ->root()
             ->with([
                 'status',
                 'priority',
@@ -61,12 +60,10 @@ class TaskService
             'assignees',
             'labels',
             'watchers',
-            'subtasks' => fn($q) => $q->with(['status', 'assignees', 'subtasks'])->orderBy('position'),
-            'parent',
+            'subtasks' => fn($q) => $q->with(['status', 'assignees'])->orderBy('position'),
             'dependencies',
             'dependents',
             'comments' => fn($q) => $q->with(['user', 'replies.user']),
-            'timeEntries' => fn($q) => $q->with('user')->latest(),
             'attachments',
             'creator',
         ]);
@@ -75,23 +72,19 @@ class TaskService
     /**
      * Create a new task
      */
-    public function create(array $data, TaskList $list, User $user, ?Task $parent = null): Task
+    public function create(array $data, TaskList $list, User $user): Task
     {
-        return DB::transaction(function () use ($data, $list, $user, $parent) {
+        return DB::transaction(function () use ($data, $list, $user) {
             $task = Task::create([
                 'task_list_id' => $list->id,
-                'parent_id' => $parent?->id,
                 'name' => $data['name'],
                 'description' => $data['description'] ?? null,
                 'status_id' => $data['status_id'] ?? null,
                 'priority_id' => $data['priority_id'] ?? null,
-                'start_date' => $data['start_date'] ?? null,
-                'due_date' => $data['due_date'] ?? null,
-                'time_estimate' => $data['time_estimate'] ?? null,
                 'created_by' => $user->id,
             ]);
 
-            // Assign users if provided
+            // Assign users to task if provided
             if (!empty($data['assignee_ids'])) {
                 foreach ($data['assignee_ids'] as $assigneeId) {
                     $assignee = User::findOrFail($assigneeId);
@@ -120,8 +113,7 @@ class TaskService
         return DB::transaction(function () use ($task, $data, $user) {
             $changes = [];
             $oldValues = $task->only([
-                'name', 'description', 'status_id', 'priority_id',
-                'start_date', 'due_date', 'time_estimate'
+                'name', 'description', 'status_id', 'priority_id'
             ]);
 
             $task->update([
@@ -129,9 +121,6 @@ class TaskService
                 'description' => $data['description'] ?? $task->description,
                 'status_id' => $data['status_id'] ?? $task->status_id,
                 'priority_id' => $data['priority_id'] ?? $task->priority_id,
-                'start_date' => $data['start_date'] ?? $task->start_date,
-                'due_date' => $data['due_date'] ?? $task->due_date,
-                'time_estimate' => $data['time_estimate'] ?? $task->time_estimate,
             ]);
 
             // Track changes
@@ -181,33 +170,7 @@ class TaskService
         });
     }
 
-    /**
-     * Complete a task
-     */
-    public function complete(Task $task, User $user): Task
-    {
-        $task->complete($user);
 
-        Activity::log($task->taskList->space->workspace, $user, $task, 'completed', [
-            'name' => $task->name,
-        ]);
-
-        return $task->fresh();
-    }
-
-    /**
-     * Reopen a task
-     */
-    public function reopen(Task $task, User $user): Task
-    {
-        $task->reopen();
-
-        Activity::log($task->taskList->space->workspace, $user, $task, 'reopened', [
-            'name' => $task->name,
-        ]);
-
-        return $task->fresh();
-    }
 
     /**
      * Change task status
@@ -348,12 +311,9 @@ class TaskService
     public function duplicate(Task $task, User $user): Task
     {
         return DB::transaction(function () use ($task, $user) {
-            $newTask = $task->replicate([
-                'task_id', 'completed_at', 'completed_by', 'time_spent'
-            ]);
+            $newTask = $task->replicate(['task_id']);
             $newTask->name = $task->name . ' (Copy)';
             $newTask->position = Task::where('task_list_id', $task->task_list_id)
-                ->whereNull('parent_id')
                 ->max('position') + 1;
             $newTask->save();
 
@@ -366,10 +326,14 @@ class TaskService
             // Duplicate subtasks
             foreach ($task->subtasks as $subtask) {
                 $newSubtask = $subtask->replicate([
-                    'task_id', 'completed_at', 'completed_by', 'time_spent'
+                    'subtask_id', 'completed_at', 'completed_by', 'time_spent'
                 ]);
-                $newSubtask->parent_id = $newTask->id;
+                $newSubtask->task_id = $newTask->id;
                 $newSubtask->save();
+                
+                // Copy subtask assignees and labels
+                $newSubtask->assignees()->sync($subtask->assignees->pluck('id'));
+                $newSubtask->labels()->sync($subtask->labels->pluck('id'));
             }
 
             Activity::log($task->taskList->space->workspace, $user, $newTask, 'duplicated', [
@@ -402,22 +366,33 @@ class TaskService
             $query->whereHas('labels', fn($q) => $q->whereIn('label_id', $filters['label_ids']));
         }
 
+        // Tasks don't have completed_at - only subtasks do
+        // Filter by tasks with all subtasks completed or incomplete
         if (!empty($filters['is_completed'])) {
-            $query->whereNotNull('completed_at');
+            $query->whereDoesntHave('subtasks', fn($q) => $q->whereNull('completed_at'));
         } elseif (isset($filters['is_completed']) && $filters['is_completed'] === false) {
-            $query->whereNull('completed_at');
+            $query->whereHas('subtasks', fn($q) => $q->whereNull('completed_at'));
         }
 
+        // Tasks don't have due dates - only subtasks do
         if (!empty($filters['is_overdue'])) {
-            $query->overdue();
+            $query->whereHas('subtasks', fn($q) => 
+                $q->whereNull('completed_at')
+                  ->whereNotNull('due_date')
+                  ->where('due_date', '<', now())
+            );
         }
 
         if (!empty($filters['due_date_from'])) {
-            $query->where('due_date', '>=', $filters['due_date_from']);
+            $query->whereHas('subtasks', fn($q) => 
+                $q->where('due_date', '>=', $filters['due_date_from'])
+            );
         }
 
         if (!empty($filters['due_date_to'])) {
-            $query->where('due_date', '<=', $filters['due_date_to']);
+            $query->whereHas('subtasks', fn($q) => 
+                $q->where('due_date', '<=', $filters['due_date_to'])
+            );
         }
 
         if (!empty($filters['search'])) {
@@ -438,9 +413,8 @@ class TaskService
     public function getMyTasks(User $user, array $filters = []): Collection
     {
         $query = $user->assignedTasks()
-            ->with(['taskList.space.workspace', 'status', 'priority', 'labels'])
-            ->whereNull('completed_at')
-            ->orderBy('due_date');
+            ->with(['taskList.space.workspace', 'status', 'priority', 'labels', 'subtasks'])
+            ->orderBy('position');
 
         return $this->applyFilters($query, $filters)->get();
     }

@@ -73,7 +73,7 @@ class TaskList extends Model
 
     public function tasks(): HasMany
     {
-        return $this->hasMany(Task::class)->whereNull('parent_id')->orderBy('position');
+        return $this->hasMany(Task::class)->orderBy('position');
     }
 
     public function allTasks(): HasMany

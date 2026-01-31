@@ -11,6 +11,7 @@ const props = defineProps({
     workspace: Object,
     space: Object,
     list: Object,
+    parentTask: Object, // If present, we're viewing a subtask
     statuses: {
         type: Array,
         default: () => [],
@@ -27,9 +28,54 @@ const props = defineProps({
         type: Array,
         default: () => [],
     },
+    sprints: {
+        type: Array,
+        default: () => [],
+    },
 });
 
-const emit = defineEmits(['update:modelValue', 'updated']);
+const emit = defineEmits(['update:modelValue', 'updated', 'view-subtasks']);
+
+// Determine if we're viewing a subtask
+const isSubtask = computed(() => !!props.parentTask);
+
+// Helper function to get correct update route
+const getUpdateRoute = () => {
+    if (isSubtask.value) {
+        return route('tasks.subtasks.update', [
+            props.workspace.id,
+            props.space.id,
+            props.list.id,
+            props.parentTask.id,
+            props.task.id
+        ]);
+    }
+    return route('tasks.update', [
+        props.workspace.id,
+        props.space.id,
+        props.list.id,
+        props.task.id
+    ]);
+};
+
+// Helper function to get correct delete route
+const getDeleteRoute = () => {
+    if (isSubtask.value) {
+        return route('tasks.subtasks.destroy', [
+            props.workspace.id,
+            props.space.id,
+            props.list.id,
+            props.parentTask.id,
+            props.task.id
+        ]);
+    }
+    return route('tasks.destroy', [
+        props.workspace.id,
+        props.space.id,
+        props.list.id,
+        props.task.id
+    ]);
+};
 
 // Local state
 const activeTab = ref('details');
@@ -117,13 +163,15 @@ const formatDate = (dateStr) => {
 const saveName = () => {
     if (editedName.value.trim() && editedName.value !== props.task.name) {
         router.patch(
-            route('tasks.update', [props.workspace.id, props.space.id, props.list.id, props.task.id]),
+            getUpdateRoute(),
             { name: editedName.value.trim() },
             {
                 preserveScroll: true,
                 onSuccess: () => {
+                    router.reload({ only: ['task', 'tasksByStatus'] });
                     if (window.showSnackbar) {
-                        window.showSnackbar('Task name updated!', 'success');
+                        const itemType = isSubtask.value ? 'Subtask' : 'Task';
+                        window.showSnackbar(`${itemType} name updated!`, 'success');
                     }
                 }
             }
@@ -136,11 +184,12 @@ const saveName = () => {
 const saveDescription = () => {
     if (editedDescription.value !== props.task.description) {
         router.patch(
-            route('tasks.update', [props.workspace.id, props.space.id, props.list.id, props.task.id]),
+            getUpdateRoute(),
             { description: editedDescription.value },
             {
                 preserveScroll: true,
                 onSuccess: () => {
+                    router.reload({ only: ['task', 'tasksByStatus'] });
                     if (window.showSnackbar) {
                         window.showSnackbar('Description updated!', 'success');
                     }
@@ -153,11 +202,12 @@ const saveDescription = () => {
 // Change status
 const changeStatus = (statusId) => {
     router.patch(
-        route('tasks.change-status', [props.workspace.id, props.space.id, props.list.id, props.task.id]),
+        getUpdateRoute(),
         { status_id: statusId },
         {
             preserveScroll: true,
             onSuccess: () => {
+                router.reload({ only: ['task', 'tasksByStatus'] });
                 if (window.showSnackbar) {
                     window.showSnackbar('Status changed!', 'success');
                 }
@@ -169,11 +219,12 @@ const changeStatus = (statusId) => {
 // Change priority
 const changePriority = (priorityId) => {
     router.patch(
-        route('tasks.change-priority', [props.workspace.id, props.space.id, props.list.id, props.task.id]),
+        getUpdateRoute(),
         { priority_id: priorityId },
         {
             preserveScroll: true,
             onSuccess: () => {
+                router.reload({ only: ['task', 'tasksByStatus'] });
                 if (window.showSnackbar) {
                     window.showSnackbar('Priority changed!', 'success');
                 }
@@ -181,21 +232,195 @@ const changePriority = (priorityId) => {
         }
     );
 };
-// Update due date
-const showDueDatePicker = ref(false);
-const tempDueDate = ref(null);
 
-const updateDueDate = () => {
+// Change sprint
+const changeSprint = (sprintId) => {
     router.patch(
-        route('tasks.update', [props.workspace.id, props.space.id, props.list.id, props.task.id]),
-        { due_date: tempDueDate.value },
+        getUpdateRoute(),
+        { sprint_id: sprintId },
         {
             preserveScroll: true,
             onSuccess: () => {
-                showDueDatePicker.value = false;
+                router.reload({ only: ['task', 'tasksByStatus'] });
+                if (window.showSnackbar) {
+                    window.showSnackbar(sprintId ? 'Added to sprint!' : 'Removed from sprint!', 'success');
+                }
+            }
+        }
+    );
+};
+
+// Check if sprint is active based on dates
+const isSprintActive = (sprint) => {
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    const start = new Date(sprint.start_date);
+    const end = new Date(sprint.end_date);
+    return today >= start && today <= end;
+};
+
+// Subtask management
+const showAddSubtaskPanel = ref(false);
+const newSubtaskName = ref('');
+const editingSubtaskId = ref(null);
+const editingSubtaskName = ref('');
+
+const addSubtaskPanel = () => {
+    if (!newSubtaskName.value.trim()) return;
+
+    router.post(
+        route('tasks.store', [props.workspace.id, props.space.id, props.list.id]),
+        {
+            name: newSubtaskName.value,
+            task_id: props.task.id,
+            status_id: props.statuses[0]?.id,
+        },
+        {
+            preserveScroll: true,
+            onSuccess: () => {
+                newSubtaskName.value = '';
+                showAddSubtaskPanel.value = false;
+            },
+            onFinish: () => {
+                router.reload({ only: ['task', 'tasksByStatus'] });
+                if (window.showSnackbar) {
+                    window.showSnackbar('Subtask added!', 'success');
+                }
+            }
+        }
+    );
+};
+
+const toggleSubtaskPanel = (subtask) => {
+    if (subtask.completed_at) {
+        router.post(
+            route('tasks.reopen', [props.workspace.id, props.space.id, props.list.id, subtask.id]),
+            {},
+            {
+                preserveScroll: true,
+                onSuccess: () => {
+                    router.reload({ only: ['task', 'tasksByStatus'] });
+                    if (window.showSnackbar) {
+                        window.showSnackbar('Subtask reopened!', 'success');
+                    }
+                }
+            }
+        );
+    } else {
+        router.post(
+            route('tasks.complete', [props.workspace.id, props.space.id, props.list.id, subtask.id]),
+            {},
+            {
+                preserveScroll: true,
+                onSuccess: () => {
+                    router.reload({ only: ['task', 'tasksByStatus'] });
+                    if (window.showSnackbar) {
+                        window.showSnackbar('Subtask completed!', 'success');
+                    }
+                }
+            }
+        );
+    }
+};
+
+const startEditSubtaskPanel = (subtask) => {
+    editingSubtaskId.value = subtask.id;
+    editingSubtaskName.value = subtask.name;
+};
+
+const cancelSubtaskEditPanel = () => {
+    editingSubtaskId.value = null;
+    editingSubtaskName.value = '';
+};
+
+const saveSubtaskEditPanel = (subtask) => {
+    if (!editingSubtaskName.value.trim()) return;
+
+    router.patch(
+        route('tasks.update', [props.workspace.id, props.space.id, props.list.id, subtask.id]),
+        { name: editingSubtaskName.value },
+        {
+            preserveScroll: true,
+            onSuccess: () => {
+                cancelSubtaskEditPanel();
+                router.reload({ only: ['task', 'tasksByStatus'] });
+                if (window.showSnackbar) {
+                    window.showSnackbar('Subtask updated!', 'success');
+                }
+            }
+        }
+    );
+};
+
+const deleteSubtaskPanel = (subtask) => {
+    if (confirm(`Delete subtask "${subtask.name}"?`)) {
+        router.delete(
+            route('tasks.destroy', [props.workspace.id, props.space.id, props.list.id, subtask.id]),
+            {
+                preserveScroll: true,
+                onSuccess: () => {
+                    router.reload({ only: ['task', 'tasksByStatus'] });
+                    if (window.showSnackbar) {
+                        window.showSnackbar('Subtask deleted!', 'success');
+                    }
+                }
+            }
+        );
+    }
+};
+
+// Update due date
+const showDueDatePicker = ref(false);
+const tempDueDate = ref(null);
+const showStartDatePicker = ref(false);
+const tempStartDate = ref(null);
+
+const updateStartDate = () => {
+    const oldValue = props.task.start_date;
+    props.task.start_date = tempStartDate.value;
+    showStartDatePicker.value = false;
+
+    router.patch(
+        getUpdateRoute(),
+        { start_date: tempStartDate.value },
+        {
+            preserveScroll: true,
+            preserveState: true,
+            onSuccess: () => {
+                if (window.showSnackbar) {
+                    window.showSnackbar('Start date updated!', 'success');
+                }
+            },
+            onError: () => {
+                props.task.start_date = oldValue;
+            }
+        }
+    );
+};
+
+const openStartDatePicker = () => {
+    tempStartDate.value = props.task.start_date;
+    showStartDatePicker.value = true;
+};
+
+const updateDueDate = () => {
+    const oldValue = props.task.due_date;
+    props.task.due_date = tempDueDate.value;
+    showDueDatePicker.value = false;
+
+    router.patch(
+        getUpdateRoute(),
+        { due_date: tempDueDate.value },
+        {
+            preserveScroll: true,
+            preserveState: true,
+            onSuccess: () => {
                 if (window.showSnackbar) {
                     window.showSnackbar('Due date updated!', 'success');
                 }
+            },
+            onError: () => {
+                props.task.due_date = oldValue;
             }
         }
     );
@@ -212,18 +437,23 @@ const tempTimeEstimate = ref(0);
 
 const updateTimeEstimate = () => {
     const totalMinutes = (parseFloat(tempTimeEstimate.value) || 0) * 60;
-    
+    const oldValue = props.task.time_estimate;
+    props.task.time_estimate = totalMinutes;
+    showTimeEstimatePicker.value = false;
+
     router.patch(
-        route('tasks.update', [props.workspace.id, props.space.id, props.list.id, props.task.id]),
+        getUpdateRoute(),
         { time_estimate: totalMinutes },
         {
             preserveScroll: true,
+            preserveState: true,
             onSuccess: () => {
-                showTimeEstimatePicker.value = false;
-                router.reload({ only: ['task'] });
                 if (window.showSnackbar) {
                     window.showSnackbar('Time estimate updated!', 'success');
                 }
+            },
+            onError: () => {
+                props.task.time_estimate = oldValue;
             }
         }
     );
@@ -234,38 +464,175 @@ const openTimeEstimatePicker = () => {
     tempTimeEstimate.value = minutes / 60;
     showTimeEstimatePicker.value = true;
 };
+
+// Time tracking
+const isTracking = ref(false);
+const isPaused = ref(false);
+const trackingDuration = ref(0);
+const trackingInterval = ref(null);
+
+const startTracking = () => {
+    isTracking.value = true;
+    isPaused.value = false;
+    trackingDuration.value = 0;
+
+    trackingInterval.value = setInterval(() => {
+        trackingDuration.value += 1;
+    }, 1000);
+};
+
+const pauseTracking = () => {
+    isPaused.value = true;
+    if (trackingInterval.value) {
+        clearInterval(trackingInterval.value);
+        trackingInterval.value = null;
+    }
+};
+
+const resumeTracking = () => {
+    isPaused.value = false;
+    trackingInterval.value = setInterval(() => {
+        trackingDuration.value += 1;
+    }, 1000);
+};
+
+const stopTracking = () => {
+    if (trackingInterval.value) {
+        clearInterval(trackingInterval.value);
+        trackingInterval.value = null;
+    }
+
+    const durationInMinutes = Math.round(trackingDuration.value / 60);
+
+    if (durationInMinutes > 0) {
+        // Optimistically update time_spent
+        const oldTimeSpent = props.task.time_spent || 0;
+        props.task.time_spent = oldTimeSpent + durationInMinutes;
+
+        router.post(
+            route('tasks.subtasks.time-entries.store', [
+                props.workspace.id,
+                props.space.id,
+                props.list.id,
+                props.parentTask.id,
+                props.task.id
+            ]),
+            {
+                duration: durationInMinutes,
+                description: 'Tracked time'
+            },
+            {
+                preserveScroll: true,
+                preserveState: true,
+                onSuccess: (page) => {
+                    // Update task data from response
+                    if (page.props.task) {
+                        Object.assign(props.task, page.props.task);
+                    }
+                    if (window.showSnackbar) {
+                        window.showSnackbar(`Time entry saved: ${formatDuration(trackingDuration.value)}`, 'success');
+                    }
+                },
+                onError: (errors) => {
+                    // Revert on error
+                    props.task.time_spent = oldTimeSpent;
+                    console.error('Failed to save time entry:', errors);
+                    if (window.showSnackbar) {
+                        window.showSnackbar('Failed to save time entry', 'error');
+                    }
+                }
+            }
+        );
+    }
+
+    // Reset tracker state
+    isTracking.value = false;
+    isPaused.value = false;
+    trackingDuration.value = 0;
+};
+
+const formatTrackingDuration = computed(() => {
+    const hours = Math.floor(trackingDuration.value / 3600);
+    const minutes = Math.floor((trackingDuration.value % 3600) / 60);
+    const seconds = trackingDuration.value % 60;
+
+    return `${String(hours).padStart(2, '0')}:${String(minutes).padStart(2, '0')}:${String(seconds).padStart(2, '0')}`;
+});
+
 // Toggle assignee
 const toggleAssignee = (userId) => {
     const isAssigned = props.task.assignees?.some(a => a.id === userId);
+    const member = props.members.find(m => m.id === userId);
 
+    // Optimistically update UI
     if (isAssigned) {
-        router.delete(
-            route('tasks.unassign', [props.workspace.id, props.space.id, props.list.id, props.task.id]),
+        props.task.assignees = props.task.assignees.filter(a => a.id !== userId);
+    } else {
+        if (!props.task.assignees) {
+            props.task.assignees = [];
+        }
+        props.task.assignees.push(member);
+    }
+
+    if (isSubtask.value) {
+        // For subtasks, use update route with assignee_ids
+        const currentAssigneeIds = props.task.assignees?.map(a => a.id) || [];
+
+        router.patch(
+            getUpdateRoute(),
+            { assignee_ids: currentAssigneeIds },
             {
-                data: { user_id: userId },
                 preserveScroll: true,
+                preserveState: true,
                 onSuccess: () => {
                     if (window.showSnackbar) {
-                        window.showSnackbar('Assignee removed!', 'success');
+                        window.showSnackbar(isAssigned ? 'Assignee removed!' : 'Assignee added!', 'success');
                     }
-                    router.reload({ only: ['task'] });
+                },
+                onError: () => {
+                    // Revert on error
+                    if (isAssigned) {
+                        props.task.assignees.push(member);
+                    } else {
+                        props.task.assignees = props.task.assignees.filter(a => a.id !== userId);
+                    }
                 }
             }
         );
     } else {
-        router.post(
-            route('tasks.assign', [props.workspace.id, props.space.id, props.list.id, props.task.id]),
-            { user_id: userId },
-            {
-                preserveScroll: true,
-                onSuccess: () => {
-                    if (window.showSnackbar) {
-                        window.showSnackbar('Assignee added!', 'success');
+        // For tasks, use assign/unassign routes
+        if (isAssigned) {
+            router.delete(
+                route('tasks.unassign', [props.workspace.id, props.space.id, props.list.id, props.task.id]),
+                {
+                    data: { user_id: userId },
+                    preserveScroll: true,
+                    preserveState: true,
+                    onSuccess: () => {
+                        if (window.showSnackbar) {
+                            window.showSnackbar('Assignee removed!', 'success');
+                        }
+                    },
+                    onError: () => {
+                        props.task.assignees.push(member);
                     }
-                    router.reload({ only: ['task'] });
                 }
-            }
-        );
+            );
+        } else {
+            router.post(
+                route('tasks.assign', [props.workspace.id, props.space.id, props.list.id, props.task.id]),
+                { user_id: userId },
+                {
+                    preserveScroll: true,
+                    preserveState: true,
+                    onSuccess: () => {
+                        if (window.showSnackbar) {
+                            window.showSnackbar('Assignee added!', 'success');
+                        }
+                    },
+                }
+            );
+        }
     }
 };
 
@@ -281,7 +648,7 @@ const toggleComplete = () => {
                     if (window.showSnackbar) {
                         window.showSnackbar('Task reopened!', 'success');
                     }
-                    router.reload({ only: ['task'] });
+                    router.reload({ only: ['task', 'tasksByStatus'] });
                 }
             }
         );
@@ -295,7 +662,7 @@ const toggleComplete = () => {
                     if (window.showSnackbar) {
                         window.showSnackbar('Task completed!', 'success');
                     }
-                    router.reload({ only: ['task'] });
+                    router.reload({ only: ['task', 'tasksByStatus'] });
                 }
             }
         );
@@ -328,15 +695,75 @@ const submitComment = () => {
 
     router.post(
         route('tasks.comments.store', [props.workspace.id, props.space.id, props.list.id, props.task.id]),
-        { content: newComment.value.trim() },
+        { content: newComment.value },
+        {
+            preserveScroll: true,
+            onSuccess: () => {
+                newComment.value = '';
+                if (window.showSnackbar) {
+                    window.showSnackbar('Comment added!', 'success');
+                }
+                router.reload({ only: ['task', 'tasksByStatus'] });
+            }
+        }
+    );
+};
+
+// Time entry management
+const newTimeEntry = ref({
+    duration: null,
+    description: ''
+});
+
+const addTimeEntry = () => {
+    if (!newTimeEntry.value.duration || !isSubtask.value) return;
+
+    const durationInMinutes = parseFloat(newTimeEntry.value.duration) * 60;
+
+    router.post(
+        route('tasks.subtasks.time-entries.store', [
+            props.workspace.id,
+            props.space.id,
+            props.list.id,
+            props.parentTask.id,
+            props.task.id
+        ]),
+        {
+            duration: durationInMinutes,
+            description: newTimeEntry.value.description
+        },
+        {
+            preserveScroll: true,
+            onSuccess: () => {
+                newTimeEntry.value = { duration: null, description: '' };
+                if (window.showSnackbar) {
+                    window.showSnackbar('Time entry added!', 'success');
+                }
+                router.reload({ only: ['task', 'tasksByStatus'] });
+            }
+        }
+    );
+};
+
+const deleteTimeEntry = (entryId) => {
+    if (!confirm('Delete this time entry?')) return;
+
+    router.delete(
+        route('tasks.subtasks.time-entries.destroy', [
+            props.workspace.id,
+            props.space.id,
+            props.list.id,
+            props.parentTask.id,
+            props.task.id,
+            entryId
+        ]),
         {
             preserveScroll: true,
             onSuccess: () => {
                 if (window.showSnackbar) {
-                    window.showSnackbar('Comment added!', 'success');
+                    window.showSnackbar('Time entry deleted!', 'success');
                 }
-                newComment.value = '';
-                router.reload({ only: ['task'] });
+                router.reload({ only: ['task', 'tasksByStatus'] });
             }
         }
     );
@@ -405,12 +832,6 @@ const submitComment = () => {
                     </v-btn>
                 </div>
             </div>
-
-            <!-- Task ID -->
-            <div class="px-4 py-1 text-xs text-gray-500">
-                {{ task.task_id }}
-            </div>
-
             <!-- Task Name -->
             <div class="px-4 py-2">
                 <div v-if="!isEditing"
@@ -425,14 +846,14 @@ const submitComment = () => {
             <!-- Tabs -->
             <v-tabs v-model="activeTab" color="primary" class="flex-shrink-0">
                 <v-tab value="details">Details</v-tab>
-                <v-tab value="subtasks">
-                    Subtasks
-                    <v-badge v-if="task.subtasks_count" :content="task.subtasks_count" color="grey" inline
-                        class="ml-1" />
-                </v-tab>
                 <v-tab value="comments">
                     Comments
                     <v-badge v-if="task.comments_count" :content="task.comments_count" color="grey" inline
+                        class="ml-1" />
+                </v-tab>
+                <v-tab v-if="isSubtask" value="time">
+                    Time Tracking
+                    <v-badge v-if="task.time_entries?.length" :content="task.time_entries.length" color="grey" inline
                         class="ml-1" />
                 </v-tab>
                 <v-tab value="activity">Activity</v-tab>
@@ -446,52 +867,6 @@ const submitComment = () => {
                     <!-- Details Tab -->
                     <v-tabs-window-item value="details">
                         <div class="p-4 space-y-4">
-                            <!-- Assignees -->
-                            <div class="detail-row">
-                                <div class="detail-label">
-                                    <v-icon size="18" class="mr-2">mdi-account-outline</v-icon>
-                                    Assignees
-                                </div>
-                                <div class="detail-value">
-                                    <v-menu :close-on-content-click="false">
-                                        <template v-slot:activator="{ props: menuProps }">
-                                            <div v-bind="menuProps" class="cursor-pointer">
-                                                <div v-if="task.assignees?.length"
-                                                    class="flex items-center gap-1 flex-wrap">
-                                                    <v-chip v-for="assignee in task.assignees" :key="assignee.id"
-                                                        size="small" variant="tonal">
-                                                        <v-avatar :color="assignee.avatar_color" size="20" start>
-                                                            <span class="text-[10px]">{{ assignee.initials }}</span>
-                                                        </v-avatar>
-                                                        {{ assignee.name }}
-                                                    </v-chip>
-                                                </div>
-                                                <span v-else class="text-gray-500">Add assignees</span>
-                                            </div>
-                                        </template>
-                                        <v-card width="250">
-                                            <v-list density="compact">
-                                                <v-list-item v-for="member in members" :key="member.id"
-                                                    @click="toggleAssignee(member.id)">
-                                                    <template v-slot:prepend>
-                                                        <v-avatar :color="member.avatar_color" size="28">
-                                                            <span class="text-xs">{{ member.initials }}</span>
-                                                        </v-avatar>
-                                                    </template>
-                                                    <v-list-item-title>{{ member.name }}</v-list-item-title>
-                                                    <template v-slot:append>
-                                                        <v-icon v-if="task.assignees?.some(a => a.id === member.id)"
-                                                            color="success" size="18">
-                                                            mdi-check
-                                                        </v-icon>
-                                                    </template>
-                                                </v-list-item>
-                                            </v-list>
-                                        </v-card>
-                                    </v-menu>
-                                </div>
-                            </div>
-
                             <!-- Priority -->
                             <div class="detail-row">
                                 <div class="detail-label">
@@ -504,7 +879,7 @@ const submitComment = () => {
                                             <v-btn v-bind="menuProps" :color="currentPriority?.color || 'grey'"
                                                 variant="tonal" size="small">
                                                 <v-icon start size="16">{{ currentPriority?.icon || 'mdi-flag-outline'
-                                                    }}</v-icon>
+                                                }}</v-icon>
                                                 {{ task.priority?.name || 'No Priority' }}
                                             </v-btn>
                                         </template>
@@ -528,8 +903,105 @@ const submitComment = () => {
                                 </div>
                             </div>
 
-                            <!-- Due Date -->
+                            <!-- Assignees -->
                             <div class="detail-row">
+                                <div class="detail-label">
+                                    <v-icon size="18" class="mr-2">mdi-account-outline</v-icon>
+                                    Assignees
+                                </div>
+                                <div class="detail-value">
+                                    <div class="flex items-center gap-2">
+                                        <!-- Current Assignees -->
+                                        <div v-if="task.assignees?.length" class="flex -space-x-2">
+                                            <v-tooltip v-for="assignee in task.assignees" :key="assignee.id"
+                                                location="top">
+                                                <template v-slot:activator="{ props: tooltipProps }">
+                                                    <v-avatar v-bind="tooltipProps"
+                                                        :color="assignee.avatar_color || 'primary'" size="32"
+                                                        class="cursor-pointer border-2 border-[#1e1e1e]"
+                                                        @click="toggleAssignee(assignee.id)">
+                                                        <span class="text-xs">{{ assignee.initials }}</span>
+                                                    </v-avatar>
+                                                </template>
+                                                <span>{{ assignee.name }} (click to remove)</span>
+                                            </v-tooltip>
+                                        </div>
+
+                                        <!-- Add Assignee Button -->
+                                        <v-menu>
+                                            <template v-slot:activator="{ props: menuProps }">
+                                                <v-btn v-bind="menuProps" icon variant="outlined" size="small">
+                                                    <v-icon>mdi-plus</v-icon>
+                                                </v-btn>
+                                            </template>
+                                            <v-card color="surface" max-width="300">
+                                                <v-card-text class="pa-2">
+                                                    <v-list density="compact">
+                                                        <v-list-item v-for="member in members" :key="member.id"
+                                                            :active="task.assignees?.some(a => a.id === member.id)"
+                                                            @click="toggleAssignee(member.id)">
+                                                            <template v-slot:prepend>
+                                                                <v-avatar :color="member.avatar_color || 'primary'"
+                                                                    size="28" class="mr-2">
+                                                                    <span class="text-xs">{{ member.initials }}</span>
+                                                                </v-avatar>
+                                                            </template>
+                                                            <v-list-item-title>{{ member.name }}</v-list-item-title>
+                                                            <template v-slot:append>
+                                                                <v-icon
+                                                                    v-if="task.assignees?.some(a => a.id === member.id)"
+                                                                    color="primary">
+                                                                    mdi-check
+                                                                </v-icon>
+                                                            </template>
+                                                        </v-list-item>
+                                                    </v-list>
+                                                </v-card-text>
+                                            </v-card>
+                                        </v-menu>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Start Date (Subtasks only) -->
+                            <div v-if="isSubtask" class="detail-row">
+                                <div class="detail-label">
+                                    <v-icon size="18" class="mr-2">mdi-calendar-start</v-icon>
+                                    Start Date
+                                </div>
+                                <div class="detail-value">
+                                    <v-menu v-model="showStartDatePicker" :close-on-content-click="false">
+                                        <template v-slot:activator="{ props: menuProps }">
+                                            <v-btn v-bind="menuProps" variant="text" size="small"
+                                                :color="task.start_date ? 'primary' : 'default'">
+                                                <v-icon start size="16">mdi-calendar-start</v-icon>
+                                                {{ formatDate(task.start_date) }}
+                                            </v-btn>
+                                        </template>
+                                        <v-card color="surface" min-width="300">
+                                            <v-card-text>
+                                                <v-text-field v-model="tempStartDate" type="date" label="Start Date"
+                                                    variant="outlined" density="compact" hide-details
+                                                    bg-color="#1e1e1e" />
+                                            </v-card-text>
+                                            <v-card-actions>
+                                                <v-btn v-if="task.start_date" size="small" variant="text"
+                                                    @click="tempStartDate = null; updateStartDate();">
+                                                    Clear
+                                                </v-btn>
+                                                <v-spacer />
+                                                <v-btn size="small" variant="text"
+                                                    @click="showStartDatePicker = false">Cancel</v-btn>
+                                                <v-btn size="small" color="primary"
+                                                    @click="updateStartDate">Save</v-btn>
+                                            </v-card-actions>
+                                        </v-card>
+                                    </v-menu>
+                                </div>
+                            </div>
+
+                            <!-- Due Date (Subtasks only) -->
+                            <div v-if="isSubtask" class="detail-row">
                                 <div class="detail-label">
                                     <v-icon size="18" class="mr-2">mdi-calendar-outline</v-icon>
                                     Due Date
@@ -537,39 +1009,26 @@ const submitComment = () => {
                                 <div class="detail-value">
                                     <v-menu v-model="showDueDatePicker" :close-on-content-click="false">
                                         <template v-slot:activator="{ props: menuProps }">
-                                            <v-btn
-                                                v-bind="menuProps"
-                                                variant="text"
-                                                size="small"
-                                                :color="task.due_date ? 'primary' : 'default'"
-                                            >
+                                            <v-btn v-bind="menuProps" variant="text" size="small"
+                                                :color="task.due_date ? 'primary' : 'default'">
                                                 <v-icon start size="16">mdi-calendar</v-icon>
                                                 {{ formatDate(task.due_date) }}
                                             </v-btn>
                                         </template>
                                         <v-card color="surface" min-width="300">
                                             <v-card-text>
-                                                <v-text-field
-                                                    v-model="tempDueDate"
-                                                    type="date"
-                                                    label="Due Date"
-                                                    variant="outlined"
-                                                    density="compact"
-                                                    hide-details
-                                                    bg-color="#1e1e1e"
-                                                />
+                                                <v-text-field v-model="tempDueDate" type="date" label="Due Date"
+                                                    variant="outlined" density="compact" hide-details
+                                                    bg-color="#1e1e1e" />
                                             </v-card-text>
                                             <v-card-actions>
-                                                <v-btn
-                                                    v-if="task.due_date"
-                                                    size="small"
-                                                    variant="text"
-                                                    @click="tempDueDate = null; updateDueDate();"
-                                                >
+                                                <v-btn v-if="task.due_date" size="small" variant="text"
+                                                    @click="tempDueDate = null; updateDueDate();">
                                                     Clear
                                                 </v-btn>
                                                 <v-spacer />
-                                                <v-btn size="small" variant="text" @click="showDueDatePicker = false">Cancel</v-btn>
+                                                <v-btn size="small" variant="text"
+                                                    @click="showDueDatePicker = false">Cancel</v-btn>
                                                 <v-btn size="small" color="primary" @click="updateDueDate">Save</v-btn>
                                             </v-card-actions>
                                         </v-card>
@@ -577,66 +1036,102 @@ const submitComment = () => {
                                 </div>
                             </div>
 
-                            <!-- Time Estimate -->
-                            <div class="detail-row">
+                            <!-- Time Estimate (Subtasks only) -->
+                            <div v-if="isSubtask" class="detail-row">
                                 <div class="detail-label">
-                                    <v-icon size="18" class="mr-2">mdi-timer-outline</v-icon>
+                                    <v-icon size="18" class="mr-2">mdi-clock-outline</v-icon>
                                     Time Estimate
                                 </div>
                                 <div class="detail-value">
                                     <v-menu v-model="showTimeEstimatePicker" :close-on-content-click="false">
                                         <template v-slot:activator="{ props: menuProps }">
-                                            <v-btn
-                                                v-bind="menuProps"
-                                                variant="text"
-                                                size="small"
-                                                :color="task.time_estimate ? 'primary' : 'default'"
-                                            >
-                                                <v-icon start size="16">mdi-timer</v-icon>
+                                            <v-btn v-bind="menuProps" variant="text" size="small"
+                                                :color="task.time_estimate ? 'primary' : 'default'">
+                                                <v-icon start size="16">mdi-timer-outline</v-icon>
                                                 {{ formatTimeEstimate(task.time_estimate) }}
                                             </v-btn>
                                         </template>
                                         <v-card color="surface" min-width="300">
                                             <v-card-text>
-                                                <div class="text-sm font-medium mb-3">Set Time Estimate (Man-Hour)</div>
-                                                <v-text-field
-                                                    v-model="tempTimeEstimate"
-                                                    type="number"
-                                                    label="Hours"
-                                                    variant="outlined"
-                                                    density="compact"
-                                                    hide-details
-                                                    min="0"
-                                                    step="0.5"
-                                                    bg-color="#1e1e1e"
-                                                />
+                                                <v-text-field v-model="tempTimeEstimate" type="number"
+                                                    label="Time Estimate (hours)" variant="outlined" density="compact"
+                                                    hide-details bg-color="#1e1e1e" step="0.5" min="0" />
                                             </v-card-text>
                                             <v-card-actions>
-                                                <v-btn
-                                                    v-if="task.time_estimate"
-                                                    size="small"
-                                                    variant="text"
-                                                    @click="tempTimeEstimate = 0; updateTimeEstimate();"
-                                                >
+                                                <v-btn v-if="task.time_estimate" size="small" variant="text"
+                                                    @click="tempTimeEstimate = 0; updateTimeEstimate();">
                                                     Clear
                                                 </v-btn>
                                                 <v-spacer />
-                                                <v-btn size="small" variant="text" @click="showTimeEstimatePicker = false">Cancel</v-btn>
-                                                <v-btn size="small" color="primary" @click="updateTimeEstimate">Save</v-btn>
+                                                <v-btn size="small" variant="text"
+                                                    @click="showTimeEstimatePicker = false">Cancel</v-btn>
+                                                <v-btn size="small" color="primary"
+                                                    @click="updateTimeEstimate">Save</v-btn>
                                             </v-card-actions>
                                         </v-card>
                                     </v-menu>
                                 </div>
                             </div>
 
-                            <!-- Time Spent -->
-                            <div class="detail-row">
+                            <!-- Time Tracker (Subtasks only) -->
+                            <div v-if="isSubtask" class="detail-row">
                                 <div class="detail-label">
-                                    <v-icon size="18" class="mr-2">mdi-timer-check-outline</v-icon>
+                                    <v-icon size="18" class="mr-2">mdi-timer</v-icon>
+                                    Time Tracker
+                                </div>
+                                <div class="detail-value">
+                                    <div class="flex items-center gap-2">
+                                        <v-chip variant="text" size="small" class="font-mono">
+                                            <v-icon start size="16">mdi-clock</v-icon>
+                                            {{ formatTrackingDuration }}
+                                        </v-chip>
+                                        <div class="flex gap-1">
+                                            <v-btn v-if="!isTracking" icon="mdi-play" color="success" variant="tonal"
+                                                size="small" @click="startTracking" />
+                                            <template v-else>
+                                                <v-btn v-if="!isPaused" icon="mdi-pause" color="warning" variant="tonal"
+                                                    size="small" @click="pauseTracking" />
+                                                <v-btn v-else icon="mdi-play" color="success" variant="tonal"
+                                                    size="small" @click="resumeTracking" />
+                                                <v-btn icon="mdi-stop" color="error" variant="tonal" size="small"
+                                                    @click="stopTracking" />
+                                            </template>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Time Spent (Subtasks only) -->
+                            <div v-if="isSubtask" class="detail-row">
+                                <div class="detail-label">
+                                    <v-icon size="18" class="mr-2">mdi-chart-timeline-variant</v-icon>
                                     Time Spent
                                 </div>
                                 <div class="detail-value">
-                                    {{ formatDuration(task.time_spent) }}
+                                    <v-chip variant="text" size="small">
+                                        <v-icon start size="16">mdi-clock</v-icon>
+                                        {{ formatDuration((task.time_spent || 0) * 60) }}
+                                    </v-chip>
+                                    <v-progress-linear v-if="task.time_estimate && task.time_spent"
+                                        :model-value="(task.time_spent / task.time_estimate) * 100"
+                                        :color="task.time_spent > task.time_estimate ? 'error' : 'primary'" height="4"
+                                        class="mt-2" />
+                                </div>
+                            </div>
+
+                            <!-- Subtasks (Tasks only) -->
+                            <div v-if="!isSubtask" class="detail-row">
+                                <div class="detail-label">
+                                    <v-icon size="18" class="mr-2">mdi-file-tree-outline</v-icon>
+                                    Subtasks
+                                </div>
+                                <div class="detail-value">
+                                    <v-btn variant="tonal" size="small" @click="emit('view-subtasks', task)">
+                                        <v-icon start size="16">mdi-view-dashboard-outline</v-icon>
+                                        View Subtasks
+                                        <v-badge v-if="task.subtasks_count" :content="task.subtasks_count"
+                                            color="primary" inline class="ml-2" />
+                                    </v-btn>
                                 </div>
                             </div>
 
@@ -648,29 +1143,6 @@ const submitComment = () => {
                                 <v-textarea v-model="editedDescription" placeholder="Add a description..."
                                     variant="outlined" rows="4" hide-details @blur="saveDescription" />
                             </div>
-                        </div>
-                    </v-tabs-window-item>
-
-                    <!-- Subtasks Tab -->
-                    <v-tabs-window-item value="subtasks">
-                        <div class="p-4">
-                            <div v-if="!task.subtasks?.length" class="text-center py-8 text-gray-500">
-                                <v-icon size="48" class="mb-2">mdi-checkbox-multiple-outline</v-icon>
-                                <div>No subtasks yet</div>
-                            </div>
-                            <div v-else class="space-y-2">
-                                <div v-for="subtask in task.subtasks" :key="subtask.id"
-                                    class="flex items-center gap-2 p-2 rounded hover:bg-[#2d2d30]">
-                                    <v-checkbox :model-value="!!subtask.completed_at" hide-details density="compact" />
-                                    <span :class="{ 'line-through text-gray-500': subtask.completed_at }">
-                                        {{ subtask.name }}
-                                    </span>
-                                </div>
-                            </div>
-                            <v-btn variant="text" block class="mt-4">
-                                <v-icon start>mdi-plus</v-icon>
-                                Add Subtask
-                            </v-btn>
                         </div>
                     </v-tabs-window-item>
 
@@ -709,6 +1181,90 @@ const submitComment = () => {
                                         <div class="text-sm">{{ comment.content }}</div>
                                     </div>
                                 </div>
+                            </div>
+                        </div>
+                    </v-tabs-window-item>
+
+                    <!-- Time Tracking Tab (Subtasks only) -->
+                    <v-tabs-window-item v-if="isSubtask" value="time">
+                        <div class="p-4">
+                            <!-- Summary Card -->
+                            <v-card variant="tonal" class="mb-4">
+                                <v-card-text class="pb-2">
+                                    <div class="grid grid-cols-2 gap-4 text-sm">
+                                        <div>
+                                            <div class="text-gray-400 mb-1">Time Estimate</div>
+                                            <div class="text-lg font-semibold">
+                                                {{ formatTimeEstimate(task.time_estimate) }}
+                                            </div>
+                                        </div>
+                                        <div>
+                                            <div class="text-gray-400 mb-1">Time Spent</div>
+                                            <div class="text-lg font-semibold"
+                                                :class="task.time_spent > task.time_estimate ? 'text-error' : ''">
+                                                {{ formatDuration((task.time_spent || 0) * 60) }}
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <v-progress-linear v-if="task.time_estimate"
+                                        :model-value="((task.time_spent || 0) / task.time_estimate) * 100"
+                                        :color="(task.time_spent || 0) > task.time_estimate ? 'error' : 'primary'"
+                                        height="6" rounded class="mt-3" />
+                                </v-card-text>
+                            </v-card>
+
+                            <!-- Add Time Entry Form -->
+                            <v-card variant="outlined" class="mb-4">
+                                <v-card-text>
+                                    <div class="text-sm font-medium mb-3">Log Time</div>
+                                    <div class="space-y-3">
+                                        <v-text-field v-model="newTimeEntry.duration" type="number"
+                                            label="Duration (hours)" variant="outlined" density="compact" step="0.25"
+                                            min="0" hide-details />
+                                        <v-textarea v-model="newTimeEntry.description" label="Description (optional)"
+                                            variant="outlined" density="compact" rows="2" hide-details />
+                                        <v-btn color="primary" size="small" block :disabled="!newTimeEntry.duration"
+                                            @click="addTimeEntry">
+                                            <v-icon start>mdi-plus</v-icon>
+                                            Add Time Entry
+                                        </v-btn>
+                                    </div>
+                                </v-card-text>
+                            </v-card>
+
+                            <!-- Time Entries List -->
+                            <div v-if="!task.time_entries?.length" class="text-center py-8 text-gray-500">
+                                <v-icon size="48" class="mb-2">mdi-clock-outline</v-icon>
+                                <div>No time entries yet</div>
+                            </div>
+                            <div v-else class="space-y-2">
+                                <v-card v-for="entry in task.time_entries" :key="entry.id" variant="outlined">
+                                    <v-card-text class="py-2">
+                                        <div class="flex items-start justify-between">
+                                            <div class="flex-1">
+                                                <div class="flex items-center gap-2 mb-1">
+                                                    <v-avatar :color="entry.user?.avatar_color" size="20">
+                                                        <span class="text-[10px]">{{ entry.user?.initials }}</span>
+                                                    </v-avatar>
+                                                    <span class="text-sm font-medium">{{ entry.user?.name }}</span>
+                                                    <v-chip size="x-small" color="primary">
+                                                        {{ formatDuration(entry.duration * 60) }}
+                                                    </v-chip>
+                                                </div>
+                                                <div v-if="entry.description" class="text-sm text-gray-400 ml-7">
+                                                    {{ entry.description }}
+                                                </div>
+                                                <div class="text-xs text-gray-500 ml-7 mt-1">
+                                                    {{ new Date(entry.created_at).toLocaleString() }}
+                                                </div>
+                                            </div>
+                                            <v-btn icon size="x-small" variant="text"
+                                                @click="deleteTimeEntry(entry.id)">
+                                                <v-icon size="16">mdi-delete-outline</v-icon>
+                                            </v-btn>
+                                        </div>
+                                    </v-card-text>
+                                </v-card>
                             </div>
                         </div>
                     </v-tabs-window-item>

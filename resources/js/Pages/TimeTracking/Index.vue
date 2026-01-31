@@ -1,3 +1,156 @@
+<script setup>
+import { ref, computed, onMounted, onUnmounted } from 'vue';
+import { Head, router, usePage } from '@inertiajs/vue3';
+import MainLayout from '@/Layouts/MainLayout.vue';
+
+const props = defineProps({
+    activeWorkspace: Object,
+    entries: Array,
+    runningTimer: Object,
+    stats: Object,
+});
+
+const page = usePage();
+
+// Date range filter
+const dateRange = ref('today');
+
+// Running timer
+const elapsedSeconds = ref(0);
+const timerInterval = ref(null);
+
+// Form
+const showAddEntry = ref(false);
+const editingEntry = ref(null);
+const entryForm = ref({
+    description: '',
+    started_at: '',
+    ended_at: '',
+    is_billable: false,
+});
+
+// Computed
+const formatRunningTime = computed(() => {
+    const hours = Math.floor(elapsedSeconds.value / 3600);
+    const minutes = Math.floor((elapsedSeconds.value % 3600) / 60);
+    const seconds = elapsedSeconds.value % 60;
+    return `${String(hours).padStart(2, '0')}:${String(minutes).padStart(2, '0')}:${String(seconds).padStart(2, '0')}`;
+});
+
+// Methods
+const formatDuration = (seconds) => {
+    if (!seconds) return '0h 0m';
+    const hours = Math.floor(seconds / 3600);
+    const minutes = Math.floor((seconds % 3600) / 60);
+    return `${hours}h ${minutes}m`;
+};
+
+const formatDateTime = (dateString) => {
+    if (!dateString) return '-';
+    return new Date(dateString).toLocaleString('id-ID', {
+        day: 'numeric',
+        month: 'short',
+        hour: '2-digit',
+        minute: '2-digit',
+    });
+};
+
+const goToTask = (task) => {
+    if (!task) return;
+    
+    router.visit(route('tasks.show', [
+        props.activeWorkspace.id,
+        task.task_list?.space_id,
+        task.task_list_id,
+        task.id,
+    ]));
+};
+
+const stopTimer = (entry) => {
+    router.post(
+        route('tasks.timer.stop', [
+            props.activeWorkspace.id,
+            entry.task?.task_list?.space_id,
+            entry.task?.task_list_id,
+            entry.task?.id,
+            entry.id,
+        ]),
+        {},
+        { preserveScroll: true }
+    );
+};
+
+const editEntry = (entry) => {
+    editingEntry.value = entry;
+    entryForm.value = {
+        description: entry.description || '',
+        started_at: entry.started_at ? new Date(entry.started_at).toISOString().slice(0, 16) : '',
+        ended_at: entry.ended_at ? new Date(entry.ended_at).toISOString().slice(0, 16) : '',
+        is_billable: entry.is_billable,
+    };
+    showAddEntry.value = true;
+};
+
+const saveEntry = () => {
+    if (editingEntry.value) {
+        router.patch(
+            route('time-entries.update', editingEntry.value.id),
+            entryForm.value,
+            {
+                preserveScroll: true,
+                onSuccess: () => {
+                    showAddEntry.value = false;
+                    editingEntry.value = null;
+                    resetForm();
+                }
+            }
+        );
+    }
+};
+
+const deleteEntry = (entry) => {
+    if (confirm('Are you sure you want to delete this time entry?')) {
+        router.delete(route('time-entries.destroy', entry.id), {
+            preserveScroll: true
+        });
+    }
+};
+
+const resetForm = () => {
+    entryForm.value = {
+        description: '',
+        started_at: '',
+        ended_at: '',
+        is_billable: false,
+    };
+};
+
+const startTimerInterval = () => {
+    timerInterval.value = setInterval(() => {
+        elapsedSeconds.value++;
+    }, 1000);
+};
+
+const stopTimerInterval = () => {
+    if (timerInterval.value) {
+        clearInterval(timerInterval.value);
+        timerInterval.value = null;
+    }
+};
+
+onMounted(() => {
+    if (props.runningTimer) {
+        const startTime = new Date(props.runningTimer.started_at).getTime();
+        elapsedSeconds.value = Math.floor((Date.now() - startTime) / 1000);
+        startTimerInterval();
+    }
+});
+
+onUnmounted(() => {
+    stopTimerInterval();
+});
+</script>
+
 <template>
     <Head title="Time Tracking" />
     
@@ -203,155 +356,3 @@
     </MainLayout>
 </template>
 
-<script setup>
-import { ref, computed, onMounted, onUnmounted } from 'vue';
-import { Head, router, usePage } from '@inertiajs/vue3';
-import MainLayout from '@/Layouts/MainLayout.vue';
-
-const props = defineProps({
-    activeWorkspace: Object,
-    entries: Array,
-    runningTimer: Object,
-    stats: Object,
-});
-
-const page = usePage();
-
-// Date range filter
-const dateRange = ref('today');
-
-// Running timer
-const elapsedSeconds = ref(0);
-const timerInterval = ref(null);
-
-// Form
-const showAddEntry = ref(false);
-const editingEntry = ref(null);
-const entryForm = ref({
-    description: '',
-    started_at: '',
-    ended_at: '',
-    is_billable: false,
-});
-
-// Computed
-const formatRunningTime = computed(() => {
-    const hours = Math.floor(elapsedSeconds.value / 3600);
-    const minutes = Math.floor((elapsedSeconds.value % 3600) / 60);
-    const seconds = elapsedSeconds.value % 60;
-    return `${String(hours).padStart(2, '0')}:${String(minutes).padStart(2, '0')}:${String(seconds).padStart(2, '0')}`;
-});
-
-// Methods
-const formatDuration = (seconds) => {
-    if (!seconds) return '0h 0m';
-    const hours = Math.floor(seconds / 3600);
-    const minutes = Math.floor((seconds % 3600) / 60);
-    return `${hours}h ${minutes}m`;
-};
-
-const formatDateTime = (dateString) => {
-    if (!dateString) return '-';
-    return new Date(dateString).toLocaleString('id-ID', {
-        day: 'numeric',
-        month: 'short',
-        hour: '2-digit',
-        minute: '2-digit',
-    });
-};
-
-const goToTask = (task) => {
-    if (!task) return;
-    
-    router.visit(route('tasks.show', [
-        props.activeWorkspace.id,
-        task.task_list?.space_id,
-        task.task_list_id,
-        task.id,
-    ]));
-};
-
-const stopTimer = (entry) => {
-    router.post(
-        route('tasks.timer.stop', [
-            props.activeWorkspace.id,
-            entry.task?.task_list?.space_id,
-            entry.task?.task_list_id,
-            entry.task?.id,
-            entry.id,
-        ]),
-        {},
-        { preserveScroll: true }
-    );
-};
-
-const editEntry = (entry) => {
-    editingEntry.value = entry;
-    entryForm.value = {
-        description: entry.description || '',
-        started_at: entry.started_at ? new Date(entry.started_at).toISOString().slice(0, 16) : '',
-        ended_at: entry.ended_at ? new Date(entry.ended_at).toISOString().slice(0, 16) : '',
-        is_billable: entry.is_billable,
-    };
-    showAddEntry.value = true;
-};
-
-const saveEntry = () => {
-    if (editingEntry.value) {
-        router.patch(
-            route('time-entries.update', editingEntry.value.id),
-            entryForm.value,
-            {
-                preserveScroll: true,
-                onSuccess: () => {
-                    showAddEntry.value = false;
-                    editingEntry.value = null;
-                    resetForm();
-                }
-            }
-        );
-    }
-};
-
-const deleteEntry = (entry) => {
-    if (confirm('Are you sure you want to delete this time entry?')) {
-        router.delete(route('time-entries.destroy', entry.id), {
-            preserveScroll: true
-        });
-    }
-};
-
-const resetForm = () => {
-    entryForm.value = {
-        description: '',
-        started_at: '',
-        ended_at: '',
-        is_billable: false,
-    };
-};
-
-const startTimerInterval = () => {
-    timerInterval.value = setInterval(() => {
-        elapsedSeconds.value++;
-    }, 1000);
-};
-
-const stopTimerInterval = () => {
-    if (timerInterval.value) {
-        clearInterval(timerInterval.value);
-        timerInterval.value = null;
-    }
-};
-
-onMounted(() => {
-    if (props.runningTimer) {
-        const startTime = new Date(props.runningTimer.started_at).getTime();
-        elapsedSeconds.value = Math.floor((Date.now() - startTime) / 1000);
-        startTimerInterval();
-    }
-});
-
-onUnmounted(() => {
-    stopTimerInterval();
-});
-</script>

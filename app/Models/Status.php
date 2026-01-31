@@ -17,6 +17,7 @@ class Status extends Model
         'slug',
         'color',
         'type',
+        'applies_to', // NEW
         'position',
         'is_default',
         'is_closed',
@@ -55,5 +56,21 @@ class Status extends Model
     public function scopeClosed($query)
     {
         return $query->where('is_closed', true);
+    }
+
+    /**
+     * Scope to get statuses applicable for tasks
+     */
+    public function scopeForTasks($query)
+    {
+        return $query->whereIn('applies_to', ['tasks', 'both']);
+    }
+
+    /**
+     * Scope to get statuses applicable for subtasks
+     */
+    public function scopeForSubtasks($query)
+    {
+        return $query->whereIn('applies_to', ['subtasks', 'both']);
     }
 }

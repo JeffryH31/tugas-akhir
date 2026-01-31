@@ -18,6 +18,7 @@ return new class extends Migration
             $table->string('slug');
             $table->string('color', 7)->default('#6B7280');
             $table->string('type')->default('custom'); // open, in_progress, review, closed, custom
+            $table->enum('applies_to', ['tasks', 'subtasks', 'both'])->default('both'); // NEW: controls where status can be used
             $table->integer('position')->default(0);
             $table->boolean('is_default')->default(false);
             $table->boolean('is_closed')->default(false);
@@ -25,6 +26,7 @@ return new class extends Migration
 
             $table->unique(['space_id', 'slug']);
             $table->index(['space_id', 'position']);
+            $table->index(['space_id', 'applies_to']); // NEW: index for filtering
         });
     }
 

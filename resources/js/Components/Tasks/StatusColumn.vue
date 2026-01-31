@@ -28,6 +28,14 @@ const props = defineProps({
         type: Object,
         required: true,
     },
+    parentTask: {
+        type: Object,
+        default: null,
+    },
+    statuses: {
+        type: Array,
+        default: () => [],
+    },
 });
 
 const emit = defineEmits(['task-moved', 'task-complete', 'task-open', 'add-task']);
@@ -39,8 +47,33 @@ const isDragging = ref(false);
 const showAddTask = ref(false);
 const newTaskName = ref('');
 
+// Edit status dialog
+const showEditStatus = ref(false);
+const editStatusForm = ref({
+    name: '',
+    color: '',
+    is_closed: false,
+    applies_to: 'both',
+});
+
+// Delete status dialog
+const showDeleteStatus = ref(false);
+const moveToStatusId = ref(null);
+
 // Task count
 const taskCount = computed(() => props.tasks.length);
+
+// Color options
+const colorOptions = [
+    '#6366F1', '#8B5CF6', '#EC4899', '#EF4444',
+    '#F59E0B', '#10B981', '#0EA5E9', '#06B6D4',
+    '#84cc16', '#22c55e', '#14b8a6', '#0891b2',
+];
+
+// Available statuses for moving tasks (exclude current status)
+const availableStatuses = computed(() => {
+    return props.statuses.filter(s => s.id !== props.status.id);
+});
 
 // Handle drag change
 const onDragChange = (evt) => {
@@ -62,12 +95,12 @@ const onDragChange = (evt) => {
 // Add new task
 const addTask = () => {
     if (!newTaskName.value.trim()) return;
-    
+
     emit('add-task', {
         name: newTaskName.value.trim(),
         status_id: props.status.id,
     });
-    
+
     newTaskName.value = '';
     showAddTask.value = false;
 };
@@ -76,6 +109,61 @@ const addTask = () => {
 const cancelAddTask = () => {
     newTaskName.value = '';
     showAddTask.value = false;
+};
+
+// Open edit status dialog
+const openEditStatus = () => {
+    editStatusForm.value = {
+        name: props.status.name,
+        color: props.status.color,
+        is_closed: props.status.is_closed || false,
+        applies_to: props.status.applies_to || 'both',
+    };
+    showEditStatus.value = true;
+};
+
+// Save status
+const saveStatus = () => {
+    router.patch(
+        route('spaces.statuses.update', [props.workspace.id, props.space.id, props.status.id]),
+        editStatusForm.value,
+        {
+            preserveScroll: true,
+            onSuccess: () => {
+                showEditStatus.value = false;
+                if (window.showSnackbar) {
+                    window.showSnackbar('Status updated successfully!', 'success');
+                }
+            },
+        }
+    );
+};
+
+// Open delete status dialog
+const openDeleteStatus = () => {
+    moveToStatusId.value = availableStatuses.value[0]?.id || null;
+    showDeleteStatus.value = true;
+};
+
+// Delete status
+const deleteStatus = () => {
+    if (!confirm(`Delete status "${props.status.name}"? All items will be moved to the selected status.`)) {
+        return;
+    }
+
+    router.delete(
+        route('spaces.statuses.delete', [props.workspace.id, props.space.id, props.status.id]),
+        {
+            data: { move_to_status_id: moveToStatusId.value },
+            preserveScroll: true,
+            onSuccess: () => {
+                showDeleteStatus.value = false;
+                if (window.showSnackbar) {
+                    window.showSnackbar('Status deleted successfully!', 'success');
+                }
+            },
+        }
+    );
 };
 
 // Handle task complete
@@ -94,42 +182,30 @@ const handleTaskOpen = (task) => {
         <!-- Column Header -->
         <div class="column-header">
             <div class="flex items-center gap-2">
-                <div 
-                    class="w-3 h-3 rounded-full"
-                    :style="{ backgroundColor: status.color }"
-                />
+                <div class="w-3 h-3 rounded-full" :style="{ backgroundColor: status.color }" />
                 <span class="font-medium text-sm">{{ status.name }}</span>
                 <span class="text-xs text-gray-500 ml-1">{{ taskCount }}</span>
             </div>
-            
+
             <div class="column-actions">
-                <v-btn
-                    icon
-                    variant="text"
-                    size="x-small"
-                    @click="showAddTask = true"
-                >
+                <v-btn icon variant="text" size="x-small" @click="showAddTask = true">
                     <v-icon size="16">mdi-plus</v-icon>
                 </v-btn>
                 <v-menu>
                     <template v-slot:activator="{ props: menuProps }">
-                        <v-btn
-                            v-bind="menuProps"
-                            icon
-                            variant="text"
-                            size="x-small"
-                        >
+                        <v-btn v-bind="menuProps" icon variant="text" size="x-small">
                             <v-icon size="16">mdi-dots-horizontal</v-icon>
                         </v-btn>
                     </template>
-                <v-card color="surface">
-                    <v-list density="compact">
-                        <v-list-item prepend-icon="mdi-pencil-outline" title="Edit Status" />
-                        <v-list-item prepend-icon="mdi-palette-outline" title="Change Color" />
-                        <v-divider />
-                        <v-list-item prepend-icon="mdi-delete-outline" title="Delete Status" class="text-error" />
-                    </v-list>
-                </v-card>
+                    <v-card color="surface">
+                        <v-list density="compact">
+                            <v-list-item prepend-icon="mdi-pencil-outline" title="Edit Status"
+                                @click="openEditStatus" />
+                            <v-divider v-if="availableStatuses.length > 0" />
+                            <v-list-item v-if="availableStatuses.length > 0" prepend-icon="mdi-delete-outline"
+                                title="Delete Status" class="text-error" @click="openDeleteStatus" />
+                        </v-list>
+                    </v-card>
                 </v-menu>
             </div>
         </div>
@@ -139,31 +215,14 @@ const handleTaskOpen = (task) => {
             <!-- Add Task Form -->
             <div v-if="showAddTask" class="add-task-form mb-2">
                 <v-card variant="outlined" rounded="lg">
-                    <v-card-text class="pa-2">
-                        <v-text-field
-                            v-model="newTaskName"
-                            placeholder="Task name"
-                            variant="plain"
-                            density="compact"
-                            hide-details
-                            autofocus
-                            @keydown.enter="addTask"
-                            @keydown.escape="cancelAddTask"
-                        />
+                    <v-card-text class="pa-3">
+                        <v-text-field v-model="newTaskName" placeholder="Task name" variant="plain" density="compact"
+                            hide-details autofocus @keydown.enter="addTask" @keydown.escape="cancelAddTask" />
                         <div class="flex items-center gap-2 mt-2">
-                            <v-btn
-                                color="primary"
-                                size="small"
-                                variant="flat"
-                                @click="addTask"
-                            >
+                            <v-btn color="primary" size="small" variant="flat" @click="addTask">
                                 Save
                             </v-btn>
-                            <v-btn
-                                size="small"
-                                variant="text"
-                                @click="cancelAddTask"
-                            >
+                            <v-btn size="small" variant="text" @click="cancelAddTask">
                                 Cancel
                             </v-btn>
                         </div>
@@ -172,41 +231,87 @@ const handleTaskOpen = (task) => {
             </div>
 
             <!-- Draggable Tasks -->
-            <draggable
-                :list="tasks"
-                group="tasks"
-                item-key="id"
-                :animation="200"
-                ghost-class="task-ghost"
-                drag-class="task-dragging"
-                class="tasks-list"
-                @change="onDragChange"
-                @start="isDragging = true"
-                @end="isDragging = false"
-            >
+            <draggable :list="tasks" group="tasks" item-key="id" :animation="200" ghost-class="task-ghost"
+                drag-class="task-dragging" class="tasks-list" @change="onDragChange" @start="isDragging = true"
+                @end="isDragging = false">
                 <template #item="{ element }">
                     <div class="task-wrapper">
-                        <TaskCard
-                            :task="element"
-                            @complete="handleTaskComplete"
-                            @open-detail="handleTaskOpen"
-                        />
+                        <TaskCard :task="element" @complete="handleTaskComplete" @open-detail="handleTaskOpen" />
                     </div>
                 </template>
             </draggable>
 
             <!-- Add Task Button (when form is hidden) -->
-            <v-btn
-                v-if="!showAddTask"
-                variant="text"
-                block
-                class="add-task-btn mt-2"
-                @click="showAddTask = true"
-            >
+            <v-btn v-if="!showAddTask" variant="text" block class="add-task-btn mt-2" @click="showAddTask = true">
                 <v-icon start size="16">mdi-plus</v-icon>
-                Add Task
+                {{ parentTask ? 'Add Subtask' : 'Add Task' }}
             </v-btn>
         </div>
+
+        <!-- Edit Status Dialog -->
+        <v-dialog v-model="showEditStatus" max-width="500">
+            <v-card>
+                <v-card-title class="d-flex justify-space-between align-center">
+                    <span>Edit Status</span>
+                    <v-btn icon="mdi-close" variant="text" size="small" @click="showEditStatus = false" />
+                </v-card-title>
+                <v-divider />
+                <v-card-text class="pa-4">
+                    <v-text-field v-model="editStatusForm.name" label="Status Name" variant="outlined"
+                        density="comfortable" class="mb-3" />
+
+                    <div class="mb-3">
+                        <label class="text-sm text-gray-400 mb-2 block">Color</label>
+                        <div class="grid grid-cols-6 gap-2">
+                            <button v-for="color in colorOptions" :key="color" class="w-10 h-10 rounded-lg transition"
+                                :class="editStatusForm.color === color ? 'ring-2 ring-white ring-offset-2 ring-offset-gray-800' : ''"
+                                :style="{ backgroundColor: color }" @click="editStatusForm.color = color" />
+                        </div>
+                    </div>
+
+                    <v-select v-model="editStatusForm.applies_to" label="Applies To" :items="[
+                        { title: 'Both Tasks & Subtasks', value: 'both' },
+                        { title: 'Tasks Only', value: 'tasks' },
+                        { title: 'Subtasks Only', value: 'subtasks' }
+                    ]" variant="outlined" density="comfortable" class="mb-3" />
+
+                    <v-checkbox v-model="editStatusForm.is_closed" label="Mark as closed status" density="comfortable"
+                        hide-details />
+                </v-card-text>
+                <v-divider />
+                <v-card-actions class="pa-4">
+                    <v-spacer />
+                    <v-btn variant="text" @click="showEditStatus = false">Cancel</v-btn>
+                    <v-btn color="primary" variant="flat" @click="saveStatus">Save</v-btn>
+                </v-card-actions>
+            </v-card>
+        </v-dialog>
+
+        <!-- Delete Status Dialog -->
+        <v-dialog v-model="showDeleteStatus" max-width="500">
+            <v-card>
+                <v-card-title class="d-flex justify-space-between align-center">
+                    <span>Delete Status</span>
+                    <v-btn icon="mdi-close" variant="text" size="small" @click="showDeleteStatus = false" />
+                </v-card-title>
+                <v-divider />
+                <v-card-text class="pa-4">
+                    <p class="mb-4">
+                        Are you sure you want to delete the status "{{ status.name }}"?
+                        <strong>{{ taskCount }}</strong> item(s) will be moved to the selected status.
+                    </p>
+
+                    <v-select v-model="moveToStatusId" label="Move items to" :items="availableStatuses"
+                        item-title="name" item-value="id" variant="outlined" density="comfortable" />
+                </v-card-text>
+                <v-divider />
+                <v-card-actions class="pa-4">
+                    <v-spacer />
+                    <v-btn variant="text" @click="showDeleteStatus = false">Cancel</v-btn>
+                    <v-btn color="error" variant="flat" @click="deleteStatus">Delete</v-btn>
+                </v-card-actions>
+            </v-card>
+        </v-dialog>
     </div>
 </template>
 
@@ -281,5 +386,11 @@ const handleTaskOpen = (task) => {
 
 .add-task-form :deep(.v-field) {
     background-color: transparent;
+}
+
+.add-task-form :deep(.v-field__input) {
+    padding-top: 0 !important;
+    padding-bottom: 0 !important;
+    min-height: 32px;
 }
 </style>

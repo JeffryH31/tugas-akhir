@@ -1,9 +1,12 @@
 <?php
 
+use App\Http\Controllers\CalendarController;
 use App\Http\Controllers\CommentController;
 use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\FolderController;
 use App\Http\Controllers\SpaceController;
+use App\Http\Controllers\SprintController;
+use App\Http\Controllers\SubtaskController;
 use App\Http\Controllers\TaskController;
 use App\Http\Controllers\TaskListController;
 use App\Http\Controllers\TimeEntryController;
@@ -63,6 +66,9 @@ Route::middleware(['auth:sanctum', config('jetstream.auth_session'), 'verified']
             Route::delete('/', [WorkspaceController::class, 'destroy'])->name('workspaces.destroy');
             Route::post('/switch', [DashboardController::class, 'switchWorkspace'])->name('workspaces.switch');
 
+            // Calendar
+            Route::get('/calendar', [CalendarController::class, 'index'])->name('calendar.index');
+
             // Workspace Members
             Route::prefix('members')->group(function () {
                 Route::post('/', [WorkspaceController::class, 'addMember'])->name('workspaces.members.add');
@@ -84,7 +90,25 @@ Route::middleware(['auth:sanctum', config('jetstream.auth_session'), 'verified']
                     Route::delete('/', [SpaceController::class, 'destroy'])->name('spaces.destroy');
                     Route::post('/star', [SpaceController::class, 'toggleStar'])->name('spaces.star');
                     Route::post('/statuses', [SpaceController::class, 'addStatus'])->name('spaces.statuses.add');
+                    Route::patch('/statuses/{status}', [SpaceController::class, 'updateStatus'])->name('spaces.statuses.update');
+                    Route::delete('/statuses/{status}', [SpaceController::class, 'deleteStatus'])->name('spaces.statuses.delete');
                     Route::post('/statuses/reorder', [SpaceController::class, 'reorderStatuses'])->name('spaces.statuses.reorder');
+
+                    // Sprints
+                    Route::prefix('sprints')->group(function () {
+                        Route::get('/', [SprintController::class, 'index'])->name('sprints.index');
+                        Route::post('/', [SprintController::class, 'store'])->name('sprints.store');
+
+                        Route::prefix('{sprint}')->group(function () {
+                            Route::get('/', [SprintController::class, 'show'])->name('sprints.show');
+                            Route::patch('/', [SprintController::class, 'update'])->name('sprints.update');
+                            Route::delete('/', [SprintController::class, 'destroy'])->name('sprints.destroy');
+                            Route::post('/start', [SprintController::class, 'start'])->name('sprints.start');
+                            Route::post('/complete', [SprintController::class, 'complete'])->name('sprints.complete');
+                            Route::post('/tasks', [SprintController::class, 'addTask'])->name('sprints.tasks.add');
+                            Route::delete('/tasks', [SprintController::class, 'removeTask'])->name('sprints.tasks.remove');
+                        });
+                    });
 
                     // Folders
                     Route::prefix('folders')->group(function () {
@@ -121,8 +145,6 @@ Route::middleware(['auth:sanctum', config('jetstream.auth_session'), 'verified']
                                     Route::get('/', [TaskController::class, 'show'])->name('tasks.show');
                                     Route::patch('/', [TaskController::class, 'update'])->name('tasks.update');
                                     Route::delete('/', [TaskController::class, 'destroy'])->name('tasks.destroy');
-                                    Route::post('/complete', [TaskController::class, 'complete'])->name('tasks.complete');
-                                    Route::post('/reopen', [TaskController::class, 'reopen'])->name('tasks.reopen');
                                     Route::patch('/status', [TaskController::class, 'changeStatus'])->name('tasks.change-status');
                                     Route::patch('/priority', [TaskController::class, 'changePriority'])->name('tasks.change-priority');
                                     Route::post('/assign', [TaskController::class, 'assign'])->name('tasks.assign');
@@ -136,9 +158,23 @@ Route::middleware(['auth:sanctum', config('jetstream.auth_session'), 'verified']
                                         Route::delete('/', [TaskController::class, 'removeLabel'])->name('tasks.labels.remove');
                                     });
 
-                                    // Time Entries
-                                    Route::prefix('time-entries')->group(function () {
-                                        Route::post('/', [TimeEntryController::class, 'store'])->name('tasks.time-entries.store');
+                                    // Subtasks
+                                    Route::prefix('subtasks')->group(function () {
+                                        Route::post('/', [SubtaskController::class, 'store'])->name('tasks.subtasks.store');
+
+                                        Route::prefix('{subtask}')->group(function () {
+                                            Route::patch('/', [SubtaskController::class, 'update'])->name('tasks.subtasks.update');
+                                            Route::delete('/', [SubtaskController::class, 'destroy'])->name('tasks.subtasks.destroy');
+                                        });
+                                    });
+
+                                    // Time Entries (now for subtasks only)
+                                    Route::prefix('subtasks/{subtask}/time-entries')->group(function () {
+                                        Route::post('/', [TimeEntryController::class, 'store'])->name('tasks.subtasks.time-entries.store');
+
+                                        Route::prefix('{entry}')->group(function () {
+                                            Route::delete('/', [TimeEntryController::class, 'destroy'])->name('tasks.subtasks.time-entries.destroy');
+                                        });
                                     });
 
                                     // Timer

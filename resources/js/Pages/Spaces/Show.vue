@@ -300,6 +300,15 @@ const availableFolders = computed(() => {
                 </div>
 
                 <div class="flex items-center gap-2">
+                    <v-btn
+                        color="primary"
+                        prepend-icon="mdi-calendar-clock"
+                        variant="tonal"
+                        @click="router.visit(route('sprints.index', [workspace.id, space.id]))"
+                    >
+                        Sprints
+                    </v-btn>
+
                     <v-btn v-if="space?.is_starred" icon variant="text"
                         @click="router.post(route('spaces.star', [workspace.id, space.id]))">
                         <v-icon color="warning">mdi-star</v-icon>

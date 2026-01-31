@@ -41,7 +41,7 @@ const dueDate = computed(() => {
     const date = new Date(props.task.due_date);
     const now = new Date();
     const diffDays = Math.ceil((date - now) / (1000 * 60 * 60 * 24));
-    
+
     if (diffDays < 0) {
         return { text: `${Math.abs(diffDays)}d overdue`, color: 'error', overdue: true };
     } else if (diffDays === 0) {
@@ -70,11 +70,38 @@ const subtaskProgress = computed(() => {
     };
 });
 
-// Time spent formatting
-const timeSpent = computed(() => {
-    if (!props.task.time_spent) return null;
-    const hours = Math.floor(props.task.time_spent / 3600);
-    const minutes = Math.floor((props.task.time_spent % 3600) / 60);
+// Aggregate assignees from subtasks
+const aggregatedAssignees = computed(() => {
+    console.log('TaskCard - Task:', props.task.name, 'Subtasks:', props.task.subtasks);
+    if (!props.task.subtasks || props.task.subtasks.length === 0) return [];
+
+    const assigneeMap = new Map();
+    props.task.subtasks.forEach(subtask => {
+        console.log('  Subtask:', subtask.name, 'Assignees:', subtask.assignees);
+        if (subtask.assignees) {
+            subtask.assignees.forEach(assignee => {
+                if (!assigneeMap.has(assignee.id)) {
+                    assigneeMap.set(assignee.id, assignee);
+                }
+            });
+        }
+    });
+
+    return Array.from(assigneeMap.values());
+});
+
+// Aggregate time spent from subtasks
+const aggregatedTimeSpent = computed(() => {
+    if (!props.task.subtasks || props.task.subtasks.length === 0) return null;
+
+    const totalMinutes = props.task.subtasks.reduce((sum, subtask) => {
+        return sum + (subtask.time_spent || 0);
+    }, 0);
+
+    if (totalMinutes === 0) return null;
+
+    const hours = Math.floor(totalMinutes / 60);
+    const minutes = totalMinutes % 60;
     if (hours > 0) {
         return `${hours}h ${minutes}m`;
     }
@@ -94,133 +121,80 @@ const openDetail = () => {
 </script>
 
 <template>
-    <v-card
-        class="task-card"
-        :class="{ 
-            'task-card--completed': isCompleted,
-            'task-card--compact': compact,
-        }"
-        variant="outlined"
-        rounded="lg"
-        @click="openDetail"
-    >
+    <v-card class="task-card" :class="{
+        'task-card--completed': isCompleted,
+        'task-card--compact': compact,
+    }" variant="outlined" rounded="lg" @click="openDetail">
         <v-card-text class="pa-3">
-            <div class="flex items-start gap-2">
+            <div class="flex items-center gap-2">
                 <!-- Complete Checkbox -->
-                <v-btn
-                    :icon="isCompleted ? 'mdi-checkbox-marked-circle' : 'mdi-checkbox-blank-circle-outline'"
-                    :color="isCompleted ? task.status?.color || 'success' : 'grey'"
-                    variant="text"
-                    size="x-small"
-                    density="compact"
-                    @click="toggleComplete"
-                />
+                <v-btn :icon="isCompleted ? 'mdi-checkbox-marked' : 'mdi-checkbox-blank-outline'"
+                    :color="isCompleted ? 'success' : 'grey'" variant="text" size="x-small"
+                    density="compact" @click="toggleComplete" />
 
-                <div class="flex-1 min-w-0">
-                    <!-- Task Title -->
-                    <div 
-                        class="text-sm font-medium mb-1"
-                        :class="{ 'line-through text-gray-500': isCompleted }"
-                    >
-                        {{ task.name }}
+                <!-- Task Title -->
+                <div class="text-sm font-medium" :class="{ 'line-through text-gray-500': isCompleted }">
+                    {{ task.name }}
+                </div>
+
+                <!-- Task Meta -->
+                <div class="flex flex-wrap items-center gap-2">
+                    <!-- Labels -->
+                    <v-chip v-for="label in task.labels?.slice(0, 2)" :key="label.id" :color="label.color"
+                        size="x-small" variant="tonal">
+                        {{ label.name }}
+                    </v-chip>
+                    <v-chip v-if="task.labels?.length > 2" size="x-small" variant="tonal">
+                        +{{ task.labels.length - 2 }}
+                    </v-chip>
+                </div>
+
+                <!-- Bottom Row -->
+                <div v-if="!compact" class="flex items-center gap-3 mt-2">
+                    <!-- Priority -->
+                    <div v-if="priority" class="flex items-center gap-1">
+                        <v-icon :color="priority.color" size="14">{{ priority.icon }}</v-icon>
                     </div>
 
-                    <!-- Task Meta -->
-                    <div class="flex flex-wrap items-center gap-2">
-                        <!-- Status Badge -->
-                        <v-chip
-                            v-if="task.status"
-                            :color="task.status.color"
-                            size="x-small"
-                            variant="tonal"
-                            label
-                        >
-                            {{ task.status.name }}
-                        </v-chip>
-
-                        <!-- List Name -->
-                        <span v-if="showList && task.task_list" class="text-xs text-gray-500">
-                            <v-icon size="12" class="mr-1">mdi-format-list-bulleted</v-icon>
-                            {{ task.task_list.name }}
-                        </span>
-
-                        <!-- Labels -->
-                        <v-chip
-                            v-for="label in task.labels?.slice(0, 2)"
-                            :key="label.id"
-                            :color="label.color"
-                            size="x-small"
-                            variant="tonal"
-                        >
-                            {{ label.name }}
-                        </v-chip>
-                        <v-chip
-                            v-if="task.labels?.length > 2"
-                            size="x-small"
-                            variant="tonal"
-                        >
-                            +{{ task.labels.length - 2 }}
-                        </v-chip>
+                    <!-- Due Date -->
+                    <div v-if="dueDate" class="flex items-center gap-1 text-xs"
+                        :class="dueDate.overdue ? 'text-red-500' : 'text-gray-500'">
+                        <v-icon size="12">mdi-calendar-outline</v-icon>
+                        {{ dueDate.text }}
                     </div>
 
-                    <!-- Bottom Row -->
-                    <div v-if="!compact" class="flex items-center gap-3 mt-2">
-                        <!-- Priority -->
-                        <div v-if="priority" class="flex items-center gap-1">
-                            <v-icon :color="priority.color" size="14">{{ priority.icon }}</v-icon>
-                        </div>
+                    <!-- Subtasks Progress -->
+                    <div v-if="subtaskProgress" class="flex items-center gap-1 text-xs text-gray-500">
+                        <v-icon size="12">mdi-checkbox-multiple-outline</v-icon>
+                        {{ subtaskProgress.completed }}/{{ subtaskProgress.total }}
+                    </div>
 
-                        <!-- Due Date -->
-                        <div 
-                            v-if="dueDate" 
-                            class="flex items-center gap-1 text-xs"
-                            :class="dueDate.overdue ? 'text-red-500' : 'text-gray-500'"
-                        >
-                            <v-icon size="12">mdi-calendar-outline</v-icon>
-                            {{ dueDate.text }}
-                        </div>
+                    <!-- Time Spent -->
+                    <div v-if="aggregatedTimeSpent" class="flex items-center gap-1 text-xs text-gray-500">
+                        <v-icon size="12">mdi-timer-outline</v-icon>
+                        {{ aggregatedTimeSpent }}
+                    </div>
 
-                        <!-- Subtasks Progress -->
-                        <div v-if="subtaskProgress" class="flex items-center gap-1 text-xs text-gray-500">
-                            <v-icon size="12">mdi-checkbox-multiple-outline</v-icon>
-                            {{ subtaskProgress.completed }}/{{ subtaskProgress.total }}
-                        </div>
+                    <!-- Comments Count -->
+                    <div v-if="task.comments_count" class="flex items-center gap-1 text-xs text-gray-500">
+                        <v-icon size="12">mdi-comment-outline</v-icon>
+                        {{ task.comments_count }}
+                    </div>
 
-                        <!-- Time Spent -->
-                        <div v-if="timeSpent" class="flex items-center gap-1 text-xs text-gray-500">
-                            <v-icon size="12">mdi-timer-outline</v-icon>
-                            {{ timeSpent }}
-                        </div>
+                    <v-spacer />
 
-                        <!-- Comments Count -->
-                        <div v-if="task.comments_count" class="flex items-center gap-1 text-xs text-gray-500">
-                            <v-icon size="12">mdi-comment-outline</v-icon>
-                            {{ task.comments_count }}
-                        </div>
-
-                        <v-spacer />
-
-                        <!-- Assignees -->
-                        <div v-if="task.assignees?.length" class="flex -space-x-1">
-                            <v-avatar
-                                v-for="assignee in task.assignees.slice(0, 3)"
-                                :key="assignee.id"
-                                :color="assignee.avatar_color"
-                                size="20"
-                                class="border border-[#2d2d30]"
-                            >
-                                <img v-if="assignee.profile_photo_url" :src="assignee.profile_photo_url" :alt="assignee.name" />
-                                <span v-else class="text-[10px]">{{ assignee.initials }}</span>
-                            </v-avatar>
-                            <v-avatar
-                                v-if="task.assignees.length > 3"
-                                color="grey-darken-2"
-                                size="20"
-                                class="border border-[#2d2d30]"
-                            >
-                                <span class="text-[10px]">+{{ task.assignees.length - 3 }}</span>
-                            </v-avatar>
-                        </div>
+                    <!-- Assignees from Subtasks -->
+                    <div v-if="aggregatedAssignees?.length" class="flex -space-x-1">
+                        <v-avatar v-for="assignee in aggregatedAssignees.slice(0, 3)" :key="assignee.id"
+                            :color="assignee.avatar_color" size="20" class="border border-[#2d2d30]">
+                            <img v-if="assignee.profile_photo_url" :src="assignee.profile_photo_url"
+                                :alt="assignee.name" />
+                            <span v-else class="text-[10px]">{{ assignee.initials }}</span>
+                        </v-avatar>
+                        <v-avatar v-if="aggregatedAssignees.length > 3" color="grey-darken-2" size="20"
+                            class="border border-[#2d2d30]">
+                            <span class="text-[10px]">+{{ aggregatedAssignees.length - 3 }}</span>
+                        </v-avatar>
                     </div>
                 </div>
             </div>
@@ -249,7 +223,7 @@ const openDetail = () => {
     padding: 8px 12px !important;
 }
 
-.-space-x-1 > * + * {
+.-space-x-1>*+* {
     margin-left: -4px;
 }
 </style>

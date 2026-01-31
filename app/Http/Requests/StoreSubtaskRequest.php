@@ -4,7 +4,7 @@ namespace App\Http\Requests;
 
 use Illuminate\Foundation\Http\FormRequest;
 
-class StoreTaskRequest extends FormRequest
+class StoreSubtaskRequest extends FormRequest
 {
     /**
      * Determine if the user is authorized to make this request.
@@ -28,13 +28,17 @@ class StoreTaskRequest extends FormRequest
                 function ($attribute, $value, $fail) {
                     if ($value) {
                         $status = \App\Models\Status::find($value);
-                        if ($status && $status->applies_to === 'subtasks') {
-                            $fail('This status can only be used for subtasks, not tasks.');
+                        if ($status && $status->applies_to === 'tasks') {
+                            $fail('This status can only be used for tasks, not subtasks.');
                         }
                     }
                 },
             ],
             'priority_id' => ['nullable', 'exists:priorities,id'],
+            'task_id' => ['required', 'exists:tasks,id'],
+            'start_date' => ['nullable', 'date'],
+            'due_date' => ['nullable', 'date', 'after_or_equal:start_date'],
+            'time_estimate' => ['nullable', 'integer', 'min:0', 'max:525600'], // max 1 year in minutes
             'assignee_ids' => ['nullable', 'array'],
             'assignee_ids.*' => ['exists:users,id'],
             'label_ids' => ['nullable', 'array'],
@@ -48,12 +52,13 @@ class StoreTaskRequest extends FormRequest
     public function messages(): array
     {
         return [
-            'name.required' => 'Task name is required.',
-            'name.max' => 'Task name must not exceed 255 characters.',
+            'name.required' => 'Subtask name is required.',
+            'name.max' => 'Subtask name must not exceed 255 characters.',
             'due_date.after_or_equal' => 'Due date must be after or equal to start date.',
             'status_id.exists' => 'Selected status does not exist.',
             'priority_id.exists' => 'Selected priority does not exist.',
-            'parent_id.exists' => 'Parent task does not exist.',
+            'task_id.required' => 'Task ID is required.',
+            'task_id.exists' => 'Parent task does not exist.',
             'time_estimate.max' => 'Time estimate cannot exceed 1 year.',
         ];
     }

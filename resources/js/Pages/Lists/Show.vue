@@ -20,6 +20,8 @@ const props = defineProps({
     list: Object,
     tasksByStatus: Object,
     statuses: Array,
+    sprints: Array,
+    parentTask: Object,
 });
 
 const page = usePage();
@@ -39,9 +41,15 @@ const initializeTasksByStatus = () => {
 const localTasksByStatus = ref(initializeTasksByStatus());
 
 // Watch for changes in props.tasksByStatus to update local state
-watch(() => props.tasksByStatus, () => {
+watch(() => props.tasksByStatus, (newValue) => {
+    console.log('tasksByStatus changed:', newValue);
     localTasksByStatus.value = initializeTasksByStatus();
 }, { deep: true });
+
+// Watch for parentTask changes
+watch(() => props.parentTask, (newValue) => {
+    console.log('parentTask changed:', newValue);
+}, { immediate: true });
 
 // Selected task for detail panel
 const selectedTask = ref(null);
@@ -49,6 +57,9 @@ const showTaskDetail = ref(false);
 
 // View mode
 const viewMode = ref('board'); // board, list, calendar
+
+// Calendar state
+const currentCalendarDate = ref(new Date());
 
 // Filters
 const filterStatus = ref([]);
@@ -101,21 +112,76 @@ const handleTaskOpen = (task) => {
     showTaskDetail.value = true;
 };
 
+// Handle view subtasks
+const viewSubtasks = (task) => {
+    router.visit(route('lists.show', [props.workspace.id, props.space.id, props.list.id]) + `?task_id=${task.id}`);
+};
+
 // Handle add task
 const handleAddTask = ({ name, status_id }) => {
-    router.post(
-        route('tasks.store', [props.workspace.id, props.space.id, props.list.id]),
-        { name, status_id },
-        {
-            preserveScroll: true,
-            onSuccess: () => {
-                if (window.showSnackbar) {
-                    window.showSnackbar('Task added successfully!', 'success');
+    // If we're viewing subtasks, use subtask route
+    if (props.parentTask) {
+        const data = {
+            name,
+            status_id,
+            task_id: props.parentTask.id
+        };
+
+        console.log('Adding subtask with data:', data);
+
+        router.post(
+            route('tasks.subtasks.store', [props.workspace.id, props.space.id, props.list.id, props.parentTask.id]),
+            data,
+            {
+                preserveScroll: true,
+                onSuccess: (response) => {
+                    console.log('Subtask created successfully:', response);
+                    if (window.showSnackbar) {
+                        window.showSnackbar('Subtask added successfully!', 'success');
+                    }
+                    // Reload subtask view
+                    router.visit(route('lists.show', [props.workspace.id, props.space.id, props.list.id]) + `?task_id=${props.parentTask.id}`, {
+                        preserveScroll: true
+                    });
+                },
+                onError: (errors) => {
+                    console.error('Failed to create subtask:', errors);
+                    if (window.showSnackbar) {
+                        window.showSnackbar('Failed to add subtask', 'error');
+                    }
                 }
-                router.reload({ only: ['tasksByStatus'] });
             }
-        }
-    );
+        );
+    } else {
+        // Creating a regular task
+        const data = {
+            name,
+            status_id
+        };
+
+        console.log('Adding task with data:', data);
+
+        router.post(
+            route('tasks.store', [props.workspace.id, props.space.id, props.list.id]),
+            data,
+            {
+                preserveScroll: true,
+                onSuccess: (response) => {
+                    console.log('Task created successfully:', response);
+                    if (window.showSnackbar) {
+                        window.showSnackbar('Task added successfully!', 'success');
+                    }
+                    router.reload({ only: ['tasksByStatus'] });
+                },
+                onError: (errors) => {
+                    console.error('Failed to create task:', errors);
+                    if (window.showSnackbar) {
+                        window.showSnackbar('Failed to add task', 'error');
+                    }
+                }
+            }
+        );
+    }
 };
 
 // Add status dialog
@@ -243,6 +309,99 @@ const moveToFolder = () => {
         }
     );
 };
+
+// Calendar functions
+const currentMonthName = computed(() => {
+    return currentCalendarDate.value.toLocaleDateString('en-US', { month: 'long', year: 'numeric' });
+});
+
+const calendarYear = computed(() => currentCalendarDate.value.getFullYear());
+const calendarMonth = computed(() => currentCalendarDate.value.getMonth());
+
+const daysInCurrentMonth = computed(() => {
+    return new Date(calendarYear.value, calendarMonth.value + 1, 0).getDate();
+});
+
+const firstDayOfCurrentMonth = computed(() => {
+    return new Date(calendarYear.value, calendarMonth.value, 1).getDay();
+});
+
+const calendarDays = computed(() => {
+    const days = [];
+    const prevMonthDays = new Date(calendarYear.value, calendarMonth.value, 0).getDate();
+
+    // Previous month days
+    for (let i = firstDayOfCurrentMonth.value - 1; i >= 0; i--) {
+        days.push({
+            date: new Date(calendarYear.value, calendarMonth.value - 1, prevMonthDays - i),
+            isCurrentMonth: false,
+        });
+    }
+
+    // Current month days
+    for (let i = 1; i <= daysInCurrentMonth.value; i++) {
+        days.push({
+            date: new Date(calendarYear.value, calendarMonth.value, i),
+            isCurrentMonth: true,
+        });
+    }
+
+    // Next month days to complete the grid
+    const remainingDays = 42 - days.length;
+    for (let i = 1; i <= remainingDays; i++) {
+        days.push({
+            date: new Date(calendarYear.value, calendarMonth.value + 1, i),
+            isCurrentMonth: false,
+        });
+    }
+
+    return days;
+});
+
+// Get all items (tasks or subtasks) for calendar view
+const allItems = computed(() => {
+    return Object.values(localTasksByStatus.value).flat();
+});
+
+// Get items for a specific date
+const getItemsForDate = (date) => {
+    const dateStr = date.toISOString().split('T')[0];
+    return allItems.value.filter(item => {
+        const dueDate = item.due_date ? item.due_date.split('T')[0] : null;
+        const startDate = item.start_date ? item.start_date.split('T')[0] : null;
+        
+        // If both start and due date exist, check if date is in range
+        if (startDate && dueDate) {
+            return dateStr >= startDate && dateStr <= dueDate;
+        }
+        // Otherwise, check if date matches either start or due date
+        return dueDate === dateStr || startDate === dateStr;
+    });
+};
+
+// Get item status
+const getItemStatus = (item) => {
+    return props.statuses.find(s => s.id === item.status_id);
+};
+
+// Check if date is today
+const isDateToday = (date) => {
+    const today = new Date();
+    return date.toDateString() === today.toDateString();
+};
+
+// Calendar navigation
+const previousMonth = () => {
+    currentCalendarDate.value = new Date(calendarYear.value, calendarMonth.value - 1, 1);
+};
+
+const nextMonth = () => {
+    currentCalendarDate.value = new Date(calendarYear.value, calendarMonth.value + 1, 1);
+};
+
+const goToToday = () => {
+    currentCalendarDate.value = new Date();
+};
 </script>
 
 <template>
@@ -274,18 +433,49 @@ const moveToFolder = () => {
                         </a>
                     </div>
                     <v-icon size="16" class="text-gray-600">mdi-chevron-right</v-icon>
-                    <div class="flex items-center gap-2">
+                    <a v-if="parentTask" :href="route('lists.show', [workspace.id, space.id, list.id])"
+                        class="flex items-center gap-2 text-gray-400 hover:text-white">
+                        <v-icon size="16">mdi-format-list-bulleted</v-icon>
+                        <span>{{ list?.name }}</span>
+                    </a>
+                    <div v-else class="flex items-center gap-2">
                         <v-icon size="16" color="primary">mdi-format-list-bulleted</v-icon>
                         <span class="font-medium text-white">{{ list?.name }}</span>
                     </div>
+                    <template v-if="parentTask">
+                        <v-icon size="16" class="text-gray-600">mdi-chevron-right</v-icon>
+                        <div class="flex items-center gap-2">
+                            <v-icon size="16" color="primary">mdi-file-tree-outline</v-icon>
+                            <span class="font-medium text-white">{{ parentTask.name }}</span>
+                        </div>
+                    </template>
                 </div>
+            </div>
+
+            <!-- Subtask View Banner -->
+            <div v-if="parentTask"
+                class="bg-gradient-to-r from-blue-900/40 to-purple-900/40 border border-blue-700/30 rounded-lg p-3 mb-4 flex items-center gap-3">
+                <v-btn icon="mdi-arrow-left" variant="tonal" size="small" color="primary"
+                    @click="router.visit(route('lists.show', [workspace.id, space.id, list.id]))" />
+                <div class="flex items-center gap-2 flex-1">
+                    <v-icon size="20" color="primary">mdi-file-tree-outline</v-icon>
+                    <div>
+                        <div class="text-xs text-gray-400">Viewing subtasks of</div>
+                        <div class="font-semibold text-white">{{ parentTask.name }}</div>
+                    </div>
+                </div>
+                <v-chip size="small" color="primary" variant="flat">
+                    Subtask Board
+                </v-chip>
             </div>
 
             <!-- List Header -->
             <div class="list-header">
                 <div class="flex items-center gap-3">
                     <!-- List Title -->
-                    <h1 class="text-xl font-bold">{{ list?.name }}</h1>
+                    <h1 class="text-xl font-bold">
+                        {{ parentTask ? 'Subtasks' : list?.name }}
+                    </h1>
                 </div>
 
                 <div class="flex items-center gap-2">
@@ -361,12 +551,13 @@ const moveToFolder = () => {
 
             <!-- Board View -->
             <div v-if="viewMode === 'board'" class="board-container">
+                <!-- Board columns (show even when empty for subtasks) -->
                 <div class="board-columns">
                     <!-- Status Columns -->
-                    <StatusColumn v-for="status in statuses" :key="status.id" :status="status"
+                    <StatusColumn v-for="status in statuses" :key="status.id" :status="status" :statuses="statuses"
                         :tasks="localTasksByStatus[status.id] || []" :workspace="workspace" :space="space" :list="list"
-                        @task-moved="handleTaskMoved" @task-complete="handleTaskComplete" @task-open="handleTaskOpen"
-                        @add-task="handleAddTask" />
+                        :parent-task="parentTask" @task-moved="handleTaskMoved" @task-complete="handleTaskComplete"
+                        @task-open="handleTaskOpen" @add-task="handleAddTask" />
 
                     <!-- Add Status Column -->
                     <div class="add-status-column">
@@ -467,21 +658,64 @@ const moveToFolder = () => {
                 </v-card>
             </div>
 
-            <!-- Calendar View (TODO) -->
+            <!-- Calendar View -->
             <div v-else-if="viewMode === 'calendar'" class="calendar-view">
-                <v-card variant="outlined" rounded="lg">
-                    <v-card-text class="text-center py-12">
-                        <v-icon size="64" color="grey" class="mb-4">mdi-calendar</v-icon>
-                        <div class="text-h6 mb-2">Calendar View</div>
-                        <div class="text-gray-500">Coming soon...</div>
-                    </v-card-text>
-                </v-card>
+                <div class="calendar-container">
+                    <!-- Calendar Header -->
+                    <div class="calendar-header">
+                        <v-btn-group density="compact" variant="outlined" divided>
+                            <v-btn @click="previousMonth">
+                                <v-icon>mdi-chevron-left</v-icon>
+                            </v-btn>
+                            <v-btn @click="goToToday" min-width="80">
+                                Today
+                            </v-btn>
+                            <v-btn @click="nextMonth">
+                                <v-icon>mdi-chevron-right</v-icon>
+                            </v-btn>
+                        </v-btn-group>
+                        <h2 class="text-xl font-semibold">{{ currentMonthName }}</h2>
+                    </div>
+
+                    <!-- Calendar Grid -->
+                    <div class="mini-calendar-grid">
+                        <!-- Day headers -->
+                        <div v-for="day in ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat']" :key="day"
+                            class="calendar-day-header">
+                            {{ day }}
+                        </div>
+
+                        <!-- Calendar days -->
+                        <div v-for="(day, index) in calendarDays" :key="index" class="calendar-cell" :class="{
+                            'current-month': day.isCurrentMonth,
+                            'other-month': !day.isCurrentMonth,
+                            'today': isDateToday(day.date)
+                        }">
+                            <div class="cell-header">
+                                <span class="day-num">{{ day.date.getDate() }}</span>
+                            </div>
+
+                            <div class="cell-tasks">
+                                <div v-for="item in getItemsForDate(day.date)" :key="item.id" class="calendar-item"
+                                    @click="handleTaskOpen(item)">
+                                    <div class="item-dot"
+                                        :style="{ backgroundColor: getItemStatus(item)?.color || '#6366F1' }" />
+                                    <span class="item-name">{{ item.name }}</span>
+                                    <v-icon v-if="item.completed_at" size="12" color="success">
+                                        mdi-check-circle
+                                    </v-icon>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
             </div>
         </div>
 
         <!-- Task Detail Panel -->
         <TaskDetailPanel v-model="showTaskDetail" :task="selectedTask" :workspace="workspace" :space="space"
-            :list="list" :statuses="statuses" :priorities="priorities" :members="members" :labels="labels" />
+            :list="list" :parent-task="parentTask" :statuses="statuses" :priorities="priorities" :members="members"
+            :labels="labels" :sprints="sprints" @view-subtasks="viewSubtasks" />
 
         <!-- Edit List Dialog -->
         <v-dialog v-model="showEditList" max-width="400">
@@ -603,5 +837,127 @@ const moveToFolder = () => {
 
 .task-row:hover {
     background-color: #2d2d30;
+}
+
+/* Calendar View Styles */
+.calendar-view {
+    padding: 24px;
+    height: 100%;
+    overflow: auto;
+}
+
+.calendar-container {
+    max-width: 1400px;
+    margin: 0 auto;
+}
+
+.calendar-header {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    margin-bottom: 24px;
+}
+
+.mini-calendar-grid {
+    display: grid;
+    grid-template-columns: repeat(7, 1fr);
+    gap: 1px;
+    background-color: #2d2d30;
+    border: 1px solid #2d2d30;
+    border-radius: 8px;
+    overflow: hidden;
+}
+
+.calendar-day-header {
+    background-color: #252526;
+    padding: 12px;
+    text-align: center;
+    font-weight: 600;
+    font-size: 12px;
+    text-transform: uppercase;
+    color: #8b949e;
+}
+
+.calendar-cell {
+    background-color: #1e1e1e;
+    min-height: 100px;
+    padding: 8px;
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+}
+
+.calendar-cell.other-month {
+    background-color: #181818;
+    opacity: 0.5;
+}
+
+.calendar-cell.today {
+    background-color: #1a2332;
+    border: 2px solid #4c9aff;
+}
+
+.cell-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 4px;
+}
+
+.day-num {
+    font-size: 14px;
+    font-weight: 600;
+    color: #c5c5c5;
+}
+
+.calendar-cell.today .day-num {
+    background-color: #4c9aff;
+    color: white;
+    width: 24px;
+    height: 24px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.cell-tasks {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    overflow-y: auto;
+    flex: 1;
+}
+
+.calendar-item {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    padding: 4px 6px;
+    background-color: #252526;
+    border-radius: 4px;
+    cursor: pointer;
+    transition: all 0.15s;
+    font-size: 12px;
+}
+
+.calendar-item:hover {
+    background-color: #2d2d30;
+    transform: translateY(-1px);
+}
+
+.item-dot {
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+    flex-shrink: 0;
+}
+
+.item-name {
+    flex: 1;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    color: #c5c5c5;
 }
 </style>

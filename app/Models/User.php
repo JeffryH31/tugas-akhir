@@ -152,18 +152,21 @@ class User extends Authenticatable
     public function getMyTasks()
     {
         return $this->assignedTasks()
-            ->whereNull('completed_at')
             ->with(['taskList.space', 'status', 'priority'])
-            ->orderBy('due_date')
+            ->orderBy('position')
             ->get();
     }
 
     public function getOverdueTasks()
     {
+        // Tasks don't have due dates - only subtasks do
+        // Return tasks that have overdue subtasks
         return $this->assignedTasks()
-            ->whereNull('completed_at')
-            ->whereNotNull('due_date')
-            ->where('due_date', '<', now())
+            ->whereHas('subtasks', function($q) {
+                $q->whereNull('completed_at')
+                  ->whereNotNull('due_date')
+                  ->where('due_date', '<', now());
+            })
             ->get();
     }
 

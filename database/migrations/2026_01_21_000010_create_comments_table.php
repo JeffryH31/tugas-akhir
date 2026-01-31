@@ -16,14 +16,14 @@ return new class extends Migration
             $table->foreignId('task_id')->constrained()->cascadeOnDelete();
             $table->foreignId('user_id')->constrained()->cascadeOnDelete();
             $table->foreignId('parent_id')->nullable()->constrained('comments')->cascadeOnDelete();
-            
+
             $table->text('content');
             $table->json('mentions')->nullable(); // Array of mentioned user IDs
             $table->json('attachments')->nullable();
-            
+
             $table->boolean('is_resolved')->default(false);
             $table->timestamp('edited_at')->nullable();
-            
+
             $table->timestamps();
             $table->softDeletes();
 

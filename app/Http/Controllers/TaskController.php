@@ -33,13 +33,10 @@ class TaskController extends Controller
     public function store(StoreTaskRequest $request, Workspace $workspace, Space $space, TaskList $list): RedirectResponse
     {
         try {
-            $parent = $request->parent_id ? Task::findOrFail($request->parent_id) : null;
-
             $task = $this->taskService->create(
                 $request->validated(),
                 $list,
-                $request->user(),
-                $parent
+                $request->user()
             );
 
             return redirect()->back()->with([
@@ -75,6 +72,7 @@ class TaskController extends Controller
             'list' => $list,
             'task' => new TaskResource($task),
             'statuses' => $space->statuses()->orderBy('position')->get(),
+            'sprints' => $space->sprints()->orderBy('position')->get(),
         ]);
     }
 
@@ -110,39 +108,7 @@ class TaskController extends Controller
         }
     }
 
-    /**
-     * Complete the task.
-     */
-    public function complete(Request $request, Workspace $workspace, Space $space, TaskList $list, Task $task): RedirectResponse
-    {
-        try {
-            $completedTask = $this->taskService->complete($task, $request->user());
 
-            return redirect()->back()->with([
-                'success' => 'Task completed successfully.',
-                'task' => new TaskResource($completedTask->load(['status', 'priority', 'assignees', 'labels']))
-            ]);
-        } catch (\Exception $e) {
-            return redirect()->back()->withErrors(['error' => 'Failed to complete task: ' . $e->getMessage()]);
-        }
-    }
-
-    /**
-     * Reopen the task.
-     */
-    public function reopen(Request $request, Workspace $workspace, Space $space, TaskList $list, Task $task): RedirectResponse
-    {
-        try {
-            $reopenedTask = $this->taskService->reopen($task, $request->user());
-
-            return redirect()->back()->with([
-                'success' => 'Task reopened successfully.',
-                'task' => new TaskResource($reopenedTask->load(['status', 'priority', 'assignees', 'labels']))
-            ]);
-        } catch (\Exception $e) {
-            return redirect()->back()->withErrors(['error' => 'Failed to reopen task: ' . $e->getMessage()]);
-        }
-    }
 
     /**
      * Change task status.

@@ -142,6 +142,7 @@ class SpaceController extends Controller
             'name' => 'required|string|max:255',
             'color' => 'nullable|string|regex:/^#[0-9A-Fa-f]{6}$/',
             'is_closed' => 'nullable|boolean',
+            'applies_to' => 'nullable|in:tasks,subtasks,both',
         ]);
 
         try {
@@ -153,6 +154,45 @@ class SpaceController extends Controller
             ]);
         } catch (\Exception $e) {
             return redirect()->back()->withErrors(['error' => 'Failed to add status: ' . $e->getMessage()]);
+        }
+    }
+
+    /**
+     * Update status.
+     */
+    public function updateStatus(Request $request, Workspace $workspace, Space $space, Status $status): RedirectResponse
+    {
+        $validated = $request->validate([
+            'name' => 'nullable|string|max:255',
+            'color' => 'nullable|string|regex:/^#[0-9A-Fa-f]{6}$/',
+            'is_closed' => 'nullable|boolean',
+            'applies_to' => 'nullable|in:tasks,subtasks,both',
+        ]);
+
+        try {
+            $this->spaceService->updateStatus($status, $validated);
+
+            return redirect()->back()->with('success', 'Status updated successfully.');
+        } catch (\Exception $e) {
+            return redirect()->back()->withErrors(['error' => 'Failed to update status: ' . $e->getMessage()]);
+        }
+    }
+
+    /**
+     * Delete status.
+     */
+    public function deleteStatus(Request $request, Workspace $workspace, Space $space, Status $status): RedirectResponse
+    {
+        $validated = $request->validate([
+            'move_to_status_id' => 'nullable|exists:statuses,id',
+        ]);
+
+        try {
+            $this->spaceService->deleteStatus($status, $validated['move_to_status_id'] ?? null);
+
+            return redirect()->back()->with('success', 'Status deleted successfully.');
+        } catch (\Exception $e) {
+            return redirect()->back()->withErrors(['error' => 'Failed to delete status: ' . $e->getMessage()]);
         }
     }
 

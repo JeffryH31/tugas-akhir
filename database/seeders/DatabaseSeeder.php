@@ -111,14 +111,14 @@ class DatabaseSeeder extends Seeder
 
         // Create folder
         $sprint1Folder = Folder::create([
-            'name' => 'Sprint 1',
+            'name' => 'User Authorization',
             'space_id' => $developmentSpace->id,
             'position' => 0,
         ]);
 
         // Create list in folder
         $backendList = TaskList::create([
-            'name' => 'Backend Tasks',
+            'name' => 'SAP Integration',
             'space_id' => $developmentSpace->id,
             'folder_id' => $sprint1Folder->id,
             'position' => 0,
@@ -150,7 +150,6 @@ class DatabaseSeeder extends Seeder
                 'priority_id' => $highPriority->id,
                 'created_by' => $user->id,
                 'position' => 0,
-                'completed_at' => now(),
             ],
             [
                 'name' => 'Implement user authentication',
@@ -160,7 +159,6 @@ class DatabaseSeeder extends Seeder
                 'priority_id' => $urgentPriority->id,
                 'created_by' => $user->id,
                 'position' => 1,
-                'due_date' => now()->addDays(3),
             ],
             [
                 'name' => 'Create API endpoints',
@@ -170,7 +168,6 @@ class DatabaseSeeder extends Seeder
                 'priority_id' => $normalPriority->id,
                 'created_by' => $user->id,
                 'position' => 2,
-                'due_date' => now()->addDays(7),
             ],
             [
                 'name' => 'Design dashboard layout',
@@ -180,7 +177,6 @@ class DatabaseSeeder extends Seeder
                 'priority_id' => $highPriority->id,
                 'created_by' => $teamMembers[1]->id,
                 'position' => 0,
-                'completed_at' => now()->subDays(2),
             ],
             [
                 'name' => 'Implement drag and drop',
@@ -204,7 +200,7 @@ class DatabaseSeeder extends Seeder
 
         foreach ($tasks as $taskData) {
             $task = Task::create($taskData);
-            
+
             // Assign random team members
             $assignees = $teamMembers->random(rand(1, 2));
             foreach ($assignees as $assignee) {
@@ -213,7 +209,7 @@ class DatabaseSeeder extends Seeder
                     'assigned_by' => $user->id,
                 ]);
             }
-            
+
             // Add labels to some tasks
             if (rand(0, 1)) {
                 $task->labels()->attach(rand(0, 1) ? $bugLabel->id : $featureLabel->id);
@@ -222,7 +218,7 @@ class DatabaseSeeder extends Seeder
 
         // Clear and create custom design space statuses
         $designSpace->statuses()->delete();
-        
+
         $designStatuses = [
             ['name' => 'Ideas', 'type' => 'open', 'color' => '#6B7280', 'space_id' => $designSpace->id, 'position' => 0],
             ['name' => 'In Design', 'type' => 'in_progress', 'color' => '#EC4899', 'space_id' => $designSpace->id, 'position' => 1],

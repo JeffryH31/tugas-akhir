@@ -11,7 +11,7 @@ class TimeEntry extends Model
     use HasFactory;
 
     protected $fillable = [
-        'task_id',
+        'subtask_id',
         'user_id',
         'duration',
         'description',
@@ -33,23 +33,29 @@ class TimeEntry extends Model
         parent::boot();
 
         static::created(function ($entry) {
-            $entry->task->updateTimeSpent();
+            $entry->subtask->update([
+                'time_spent' => $entry->subtask->timeEntries()->sum('duration')
+            ]);
         });
 
         static::updated(function ($entry) {
-            $entry->task->updateTimeSpent();
+            $entry->subtask->update([
+                'time_spent' => $entry->subtask->timeEntries()->sum('duration')
+            ]);
         });
 
         static::deleted(function ($entry) {
-            $entry->task->updateTimeSpent();
+            $entry->subtask->update([
+                'time_spent' => $entry->subtask->timeEntries()->sum('duration')
+            ]);
         });
     }
 
     // ==================== RELATIONSHIPS ====================
 
-    public function task(): BelongsTo
+    public function subtask(): BelongsTo
     {
-        return $this->belongsTo(Task::class);
+        return $this->belongsTo(Subtask::class);
     }
 
     public function user(): BelongsTo
@@ -110,7 +116,7 @@ class TimeEntry extends Model
         ]);
     }
 
-    public static function startTimer(Task $task, User $user, ?string $description = null): self
+    public static function startTimer(Subtask $subtask, User $user, ?string $description = null): self
     {
         // Stop any running timer for this user
         static::where('user_id', $user->id)
@@ -118,7 +124,7 @@ class TimeEntry extends Model
             ->each(fn($entry) => $entry->stop());
 
         return static::create([
-            'task_id' => $task->id,
+            'subtask_id' => $subtask->id,
             'user_id' => $user->id,
             'description' => $description,
             'started_at' => now(),

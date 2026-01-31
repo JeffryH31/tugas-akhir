@@ -119,6 +119,16 @@ class Space extends Model
         return $this->hasManyThrough(Task::class, TaskList::class);
     }
 
+    public function sprints(): HasMany
+    {
+        return $this->hasMany(Sprint::class)->orderBy('position');
+    }
+
+    public function activeSprints(): HasMany
+    {
+        return $this->hasMany(Sprint::class)->where('is_active', true)->orderBy('position');
+    }
+
     public function statuses(): HasMany
     {
         return $this->hasMany(Status::class)->orderBy('position');

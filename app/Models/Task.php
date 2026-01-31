@@ -16,36 +16,24 @@ class Task extends Model
     protected $fillable = [
         'task_id',
         'task_list_id',
-        'parent_id',
         'status_id',
         'priority_id',
         'name',
         'description',
-        'start_date',
-        'due_date',
-        'completed_at',
-        'time_estimate',
-        'time_spent',
         'position',
         'is_archived',
         'is_template',
         'custom_fields',
         'created_by',
-        'completed_by',
     ];
 
     protected $casts = [
-        'start_date' => 'datetime',
-        'due_date' => 'datetime',
-        'completed_at' => 'datetime',
         'is_archived' => 'boolean',
         'is_template' => 'boolean',
         'custom_fields' => 'array',
     ];
 
     protected $appends = [
-        'is_completed',
-        'is_overdue',
         'progress',
     ];
 
@@ -72,7 +60,6 @@ class Task extends Model
             // Set position
             if (empty($task->position)) {
                 $task->position = static::where('task_list_id', $task->task_list_id)
-                    ->where('parent_id', $task->parent_id)
                     ->max('position') + 1;
             }
 
@@ -84,14 +71,9 @@ class Task extends Model
             }
         });
 
-        // Update time_spent when time entries change
+        // Recalculate progress when subtasks change
         static::saved(function ($task) {
-            if ($task->wasChanged('completed_at') && $task->completed_at) {
-                // Update parent progress if this is a subtask
-                if ($task->parent) {
-                    $task->parent->updateProgress();
-                }
-            }
+            // Progress is calculated from subtasks
         });
     }
 
@@ -102,14 +84,9 @@ class Task extends Model
         return $this->belongsTo(TaskList::class);
     }
 
-    public function parent(): BelongsTo
-    {
-        return $this->belongsTo(Task::class, 'parent_id');
-    }
-
     public function subtasks(): HasMany
     {
-        return $this->hasMany(Task::class, 'parent_id')->orderBy('position');
+        return $this->hasMany(Subtask::class)->orderBy('position');
     }
 
     public function status(): BelongsTo
@@ -127,10 +104,7 @@ class Task extends Model
         return $this->belongsTo(User::class, 'created_by');
     }
 
-    public function completedBy(): BelongsTo
-    {
-        return $this->belongsTo(User::class, 'completed_by');
-    }
+
 
     public function assignees(): BelongsToMany
     {
@@ -185,84 +159,18 @@ class Task extends Model
 
     // ==================== ACCESSORS ====================
 
-    public function getIsCompletedAttribute(): bool
-    {
-        return $this->completed_at !== null;
-    }
-
-    public function getIsOverdueAttribute(): bool
-    {
-        if (!$this->due_date || $this->is_completed) {
-            return false;
-        }
-        return $this->due_date->isPast();
-    }
-
     public function getProgressAttribute(): float
     {
         $subtasks = $this->subtasks;
         if ($subtasks->isEmpty()) {
-            return $this->is_completed ? 100 : 0;
+            return 0;
         }
 
-        $completed = $subtasks->filter(fn($t) => $t->is_completed)->count();
+        $completed = $subtasks->filter(fn($t) => $t->isCompleted())->count();
         return round(($completed / $subtasks->count()) * 100, 1);
     }
 
-    public function getTimeSpentFormattedAttribute(): string
-    {
-        $hours = floor($this->time_spent / 60);
-        $minutes = $this->time_spent % 60;
-        
-        if ($hours > 0) {
-            return $hours . 'h ' . $minutes . 'm';
-        }
-        return $minutes . 'm';
-    }
-
-    public function getTimeEstimateFormattedAttribute(): string
-    {
-        if (!$this->time_estimate) return '-';
-        
-        $hours = floor($this->time_estimate / 60);
-        $minutes = $this->time_estimate % 60;
-        
-        if ($hours > 0) {
-            return $hours . 'h ' . $minutes . 'm';
-        }
-        return $minutes . 'm';
-    }
-
     // ==================== SCOPES ====================
-
-    public function scopeRoot($query)
-    {
-        return $query->whereNull('parent_id');
-    }
-
-    public function scopeCompleted($query)
-    {
-        return $query->whereNotNull('completed_at');
-    }
-
-    public function scopeIncomplete($query)
-    {
-        return $query->whereNull('completed_at');
-    }
-
-    public function scopeOverdue($query)
-    {
-        return $query->whereNull('completed_at')
-            ->whereNotNull('due_date')
-            ->where('due_date', '<', now());
-    }
-
-    public function scopeDueSoon($query, int $days = 3)
-    {
-        return $query->whereNull('completed_at')
-            ->whereNotNull('due_date')
-            ->whereBetween('due_date', [now(), now()->addDays($days)]);
-    }
 
     public function scopeActive($query)
     {
@@ -271,32 +179,9 @@ class Task extends Model
 
     // ==================== HELPER METHODS ====================
 
-    public function complete(?User $user = null): void
-    {
-        $this->update([
-            'completed_at' => now(),
-            'completed_by' => $user?->id,
-        ]);
-    }
-
-    public function reopen(): void
-    {
-        $this->update([
-            'completed_at' => null,
-            'completed_by' => null,
-        ]);
-    }
-
-    public function updateTimeSpent(): void
-    {
-        $totalMinutes = $this->timeEntries()->sum('duration');
-        $this->update(['time_spent' => $totalMinutes]);
-    }
-
     public function updateProgress(): void
     {
-        // This method is called when subtask completion status changes
-        // Progress is calculated dynamically via accessor
+        // Progress is calculated dynamically via accessor based on subtasks
     }
 
     public function assign(User $user, ?User $assignedBy = null): void
@@ -329,22 +214,12 @@ class Task extends Model
         $this->update([
             'task_list_id' => $newList->id,
             'position' => $position ?? Task::where('task_list_id', $newList->id)
-                ->whereNull('parent_id')
                 ->max('position') + 1,
         ]);
     }
 
     public function changeStatus(Status $status): void
     {
-        $wasCompleted = $this->is_completed;
-        
         $this->update(['status_id' => $status->id]);
-
-        // Auto-complete if status is closed
-        if ($status->is_closed && !$wasCompleted) {
-            $this->complete();
-        } elseif (!$status->is_closed && $wasCompleted) {
-            $this->reopen();
-        }
     }
 }

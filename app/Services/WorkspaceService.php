@@ -159,10 +159,19 @@ class WorkspaceService
             ->join('spaces', 'task_lists.space_id', '=', 'spaces.id')
             ->where('spaces.workspace_id', $workspace->id)
             ->whereNull('tasks.deleted_at')
+            ->selectRaw('COUNT(*) as total')
+            ->first();
+
+        // Get subtask counts for completion and overdue metrics
+        $subtaskCounts = DB::table('subtasks')
+            ->join('tasks', 'subtasks.task_id', '=', 'tasks.id')
+            ->join('task_lists', 'tasks.task_list_id', '=', 'task_lists.id')
+            ->join('spaces', 'task_lists.space_id', '=', 'spaces.id')
+            ->where('spaces.workspace_id', $workspace->id)
+            ->whereNull('subtasks.deleted_at')
             ->selectRaw('
-                COUNT(*) as total,
-                SUM(CASE WHEN tasks.completed_at IS NOT NULL THEN 1 ELSE 0 END) as completed,
-                SUM(CASE WHEN tasks.completed_at IS NULL AND tasks.due_date < NOW() THEN 1 ELSE 0 END) as overdue
+                SUM(CASE WHEN subtasks.completed_at IS NOT NULL THEN 1 ELSE 0 END) as completed,
+                SUM(CASE WHEN subtasks.completed_at IS NULL AND subtasks.due_date < NOW() THEN 1 ELSE 0 END) as overdue
             ')
             ->first();
 
@@ -170,8 +179,8 @@ class WorkspaceService
             'spaces_count' => $spaces->count(),
             'lists_count' => $totalLists,
             'tasks_count' => $taskCounts->total ?? 0,
-            'completed_tasks_count' => $taskCounts->completed ?? 0,
-            'overdue_tasks_count' => $taskCounts->overdue ?? 0,
+            'completed_subtasks_count' => $subtaskCounts->completed ?? 0,
+            'overdue_subtasks_count' => $subtaskCounts->overdue ?? 0,
             'members_count' => $workspace->members()->count(),
         ];
     }

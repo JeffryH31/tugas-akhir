@@ -15,21 +15,11 @@ return new class extends Migration
             $table->id();
             $table->string('task_id')->unique(); // Human-readable ID like "PROJ-123"
             $table->foreignId('task_list_id')->constrained()->cascadeOnDelete();
-            $table->foreignId('parent_id')->nullable()->constrained('tasks')->cascadeOnDelete();
             $table->foreignId('status_id')->nullable()->constrained()->nullOnDelete();
             $table->foreignId('priority_id')->nullable()->constrained()->nullOnDelete();
             
             $table->string('name');
             $table->text('description')->nullable();
-            
-            // Dates
-            $table->timestamp('start_date')->nullable();
-            $table->timestamp('due_date')->nullable();
-            $table->timestamp('completed_at')->nullable();
-            
-            // Time tracking
-            $table->integer('time_estimate')->nullable(); // in minutes
-            $table->integer('time_spent')->default(0); // in minutes (denormalized for performance)
             
             // Position for ordering
             $table->integer('position')->default(0);
@@ -41,14 +31,11 @@ return new class extends Migration
             // Metadata
             $table->json('custom_fields')->nullable();
             $table->foreignId('created_by')->nullable()->constrained('users')->nullOnDelete();
-            $table->foreignId('completed_by')->nullable()->constrained('users')->nullOnDelete();
             
             $table->timestamps();
             $table->softDeletes();
 
             $table->index(['task_list_id', 'status_id', 'position']);
-            $table->index(['parent_id']);
-            $table->index(['due_date', 'completed_at']);
             $table->index(['created_by']);
         });
 

@@ -141,28 +141,29 @@ class SpaceService
      */
     public function getStatistics(Space $space): array
     {
-        $taskCounts = DB::table('tasks')
+        $subtaskCounts = DB::table('subtasks')
+            ->join('tasks', 'subtasks.task_id', '=', 'tasks.id')
             ->join('task_lists', 'tasks.task_list_id', '=', 'task_lists.id')
-            ->join('statuses', 'tasks.status_id', '=', 'statuses.id')
+            ->join('statuses', 'subtasks.status_id', '=', 'statuses.id')
             ->where('task_lists.space_id', $space->id)
-            ->whereNull('tasks.deleted_at')
+            ->whereNull('subtasks.deleted_at')
             ->selectRaw('
                 COUNT(*) as total,
-                SUM(CASE WHEN statuses.is_closed = 1 THEN 1 ELSE 0 END) as completed,
-                SUM(CASE WHEN statuses.is_closed = 0 AND statuses.type IN ("in_progress", "review") THEN 1 ELSE 0 END) as in_progress,
-                SUM(CASE WHEN statuses.is_closed = 0 AND tasks.due_date IS NOT NULL AND tasks.due_date < NOW() THEN 1 ELSE 0 END) as overdue
+                SUM(CASE WHEN subtasks.completed_at IS NOT NULL THEN 1 ELSE 0 END) as completed,
+                SUM(CASE WHEN subtasks.completed_at IS NULL AND statuses.type IN ("in_progress", "review") THEN 1 ELSE 0 END) as in_progress,
+                SUM(CASE WHEN subtasks.completed_at IS NULL AND subtasks.due_date IS NOT NULL AND subtasks.due_date < NOW() THEN 1 ELSE 0 END) as overdue
             ')
             ->first();
 
         return [
-            'total_tasks' => $taskCounts->total ?? 0,
-            'completed_tasks' => $taskCounts->completed ?? 0,
-            'in_progress_tasks' => $taskCounts->in_progress ?? 0,
-            'overdue_tasks' => $taskCounts->overdue ?? 0,
+            'total_tasks' => $subtaskCounts->total ?? 0,
+            'completed_tasks' => $subtaskCounts->completed ?? 0,
+            'in_progress_tasks' => $subtaskCounts->in_progress ?? 0,
+            'overdue_tasks' => $subtaskCounts->overdue ?? 0,
             'folders_count' => $space->allFolders()->count(),
             'lists_count' => $space->lists()->count(),
-            'progress' => $taskCounts->total > 0
-                ? round(($taskCounts->completed / $taskCounts->total) * 100, 1)
+            'progress' => $subtaskCounts->total > 0
+                ? round(($subtaskCounts->completed / $subtaskCounts->total) * 100, 1)
                 : 0,
         ];
     }
@@ -181,7 +182,40 @@ class SpaceService
             'type' => 'custom',
             'position' => $maxPosition + 1,
             'is_closed' => $data['is_closed'] ?? false,
+            'applies_to' => $data['applies_to'] ?? 'both',
         ]);
+    }
+
+    /**
+     * Update status
+     */
+    public function updateStatus(Status $status, array $data)
+    {
+        $status->update([
+            'name' => $data['name'] ?? $status->name,
+            'slug' => isset($data['name']) ? Str::slug($data['name']) : $status->slug,
+            'color' => $data['color'] ?? $status->color,
+            'is_closed' => $data['is_closed'] ?? $status->is_closed,
+            'applies_to' => $data['applies_to'] ?? $status->applies_to,
+        ]);
+
+        return $status->fresh();
+    }
+
+    /**
+     * Delete status
+     */
+    public function deleteStatus(Status $status, int $moveToStatusId = null): void
+    {
+        DB::transaction(function () use ($status, $moveToStatusId) {
+            // Move tasks/subtasks to another status if provided
+            if ($moveToStatusId) {
+                $status->tasks()->update(['status_id' => $moveToStatusId]);
+                $status->subtasks()->update(['status_id' => $moveToStatusId]);
+            }
+
+            $status->delete();
+        });
     }
 
     /**
