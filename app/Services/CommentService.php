@@ -86,39 +86,6 @@ class CommentService
     }
 
     /**
-     * Add reaction to comment
-     */
-    public function addReaction(Comment $comment, User $user, string $emoji): void
-    {
-        $comment->react($user, $emoji);
-    }
-
-    /**
-     * Remove reaction from comment
-     */
-    public function removeReaction(Comment $comment, User $user, string $emoji): void
-    {
-        $comment->unreact($user, $emoji);
-    }
-
-    /**
-     * Toggle reaction on comment
-     */
-    public function toggleReaction(Comment $comment, User $user, string $emoji): void
-    {
-        $existing = $comment->reactions()
-            ->where('user_id', $user->id)
-            ->where('emoji', $emoji)
-            ->exists();
-
-        if ($existing) {
-            $this->removeReaction($comment, $user, $emoji);
-        } else {
-            $this->addReaction($comment, $user, $emoji);
-        }
-    }
-
-    /**
      * Resolve a comment
      */
     public function resolve(Comment $comment, User $user): Comment

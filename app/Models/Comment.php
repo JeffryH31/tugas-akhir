@@ -52,11 +52,6 @@ class Comment extends Model
         return $this->hasMany(Comment::class, 'parent_id')->latest();
     }
 
-    public function reactions(): HasMany
-    {
-        return $this->hasMany(CommentReaction::class);
-    }
-
     // ==================== HELPER METHODS ====================
 
     public function edit(string $content): void
@@ -75,25 +70,5 @@ class Comment extends Model
     public function unresolve(): void
     {
         $this->update(['is_resolved' => false]);
-    }
-
-    public function react(User $user, string $emoji): void
-    {
-        CommentReaction::updateOrCreate(
-            [
-                'comment_id' => $this->id,
-                'user_id' => $user->id,
-                'emoji' => $emoji,
-            ]
-        );
-    }
-
-    public function unreact(User $user, string $emoji): void
-    {
-        CommentReaction::where([
-            'comment_id' => $this->id,
-            'user_id' => $user->id,
-            'emoji' => $emoji,
-        ])->delete();
     }
 }

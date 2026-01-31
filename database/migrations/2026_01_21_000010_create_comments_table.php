@@ -18,7 +18,7 @@ return new class extends Migration
             $table->foreignId('parent_id')->nullable()->constrained('comments')->cascadeOnDelete();
 
             $table->text('content');
-            $table->json('mentions')->nullable(); // Array of mentioned user IDs
+            $table->json('mentions')->nullable();
             $table->json('attachments')->nullable();
 
             $table->boolean('is_resolved')->default(false);
@@ -30,17 +30,6 @@ return new class extends Migration
             $table->index(['task_id', 'created_at']);
             $table->index('user_id');
         });
-
-        // Comment reactions
-        Schema::create('comment_reactions', function (Blueprint $table) {
-            $table->id();
-            $table->foreignId('comment_id')->constrained()->cascadeOnDelete();
-            $table->foreignId('user_id')->constrained()->cascadeOnDelete();
-            $table->string('emoji');
-            $table->timestamps();
-
-            $table->unique(['comment_id', 'user_id', 'emoji']);
-        });
     }
 
     /**
@@ -48,7 +37,6 @@ return new class extends Migration
      */
     public function down(): void
     {
-        Schema::dropIfExists('comment_reactions');
         Schema::dropIfExists('comments');
     }
 };

@@ -76,24 +76,6 @@ class CommentController extends Controller
     }
 
     /**
-     * Toggle reaction.
-     */
-    public function toggleReaction(Request $request, Comment $comment): RedirectResponse
-    {
-        $validated = $request->validate([
-            'emoji' => 'required|string|max:10',
-        ]);
-
-        try {
-            $this->commentService->toggleReaction($comment, $request->user(), $validated['emoji']);
-
-            return redirect()->back()->with('success', 'Reaction updated successfully.');
-        } catch (\Exception $e) {
-            return redirect()->back()->withErrors(['error' => 'Failed to update reaction: ' . $e->getMessage()]);
-        }
-    }
-
-    /**
      * Resolve comment.
      */
     public function resolve(Request $request, Comment $comment): RedirectResponse

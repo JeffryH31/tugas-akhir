@@ -200,7 +200,6 @@ Route::middleware(['auth:sanctum', config('jetstream.auth_session'), 'verified']
     Route::prefix('comments')->group(function () {
         Route::patch('/{comment}', [CommentController::class, 'update'])->name('comments.update');
         Route::delete('/{comment}', [CommentController::class, 'destroy'])->name('comments.destroy');
-        Route::post('/{comment}/react', [CommentController::class, 'toggleReaction'])->name('comments.react');
         Route::post('/{comment}/resolve', [CommentController::class, 'resolve'])->name('comments.resolve');
         Route::post('/{comment}/unresolve', [CommentController::class, 'unresolve'])->name('comments.unresolve');
     });
