@@ -689,21 +689,50 @@ const deleteTask = () => {
 
 // Comment form
 const newComment = ref('');
+const isSubmittingComment = ref(false);
 
 const submitComment = () => {
-    if (!newComment.value.trim()) return;
+    if (!newComment.value.trim() || isSubmittingComment.value) return;
+
+    console.log('=== Submitting Comment ===');
+    console.log('Task ID:', props.task?.id);
+    console.log('Content:', newComment.value);
+
+    // Get the correct task ID for comments (always use main task, not subtask)
+    const taskId = isSubtask.value ? props.parentTask.id : props.task.id;
+
+    console.log('Using Task ID for comment:', taskId);
+    console.log('Route params:', {
+        workspace: props.workspace?.id,
+        space: props.space?.id,
+        list: props.list?.id,
+        task: taskId
+    });
+
+    isSubmittingComment.value = true;
 
     router.post(
-        route('tasks.comments.store', [props.workspace.id, props.space.id, props.list.id, props.task.id]),
+        route('tasks.comments.store', [props.workspace.id, props.space.id, props.list.id, taskId]),
         { content: newComment.value },
         {
             preserveScroll: true,
             onSuccess: () => {
+                console.log('Comment added successfully!');
                 newComment.value = '';
                 if (window.showSnackbar) {
                     window.showSnackbar('Comment added!', 'success');
                 }
-                router.reload({ only: ['task', 'tasksByStatus'] });
+                // Emit updated event to refresh task data
+                emit('updated');
+            },
+            onError: (errors) => {
+                console.error('Failed to add comment:', errors);
+                if (window.showSnackbar) {
+                    window.showSnackbar('Failed to add comment', 'error');
+                }
+            },
+            onFinish: () => {
+                isSubmittingComment.value = false;
             }
         }
     );
@@ -879,7 +908,7 @@ const deleteTimeEntry = (entryId) => {
                                             <v-btn v-bind="menuProps" :color="currentPriority?.color || 'grey'"
                                                 variant="tonal" size="small">
                                                 <v-icon start size="16">{{ currentPriority?.icon || 'mdi-flag-outline'
-                                                }}</v-icon>
+                                                    }}</v-icon>
                                                 {{ task.priority?.name || 'No Priority' }}
                                             </v-btn>
                                         </template>
@@ -1152,10 +1181,11 @@ const deleteTimeEntry = (entryId) => {
                             <!-- Comment Input -->
                             <div class="mb-4">
                                 <v-textarea v-model="newComment" placeholder="Write a comment..." variant="outlined"
-                                    rows="3" hide-details />
+                                    rows="3" hide-details :disabled="isSubmittingComment" />
                                 <div class="flex justify-end mt-2">
-                                    <v-btn color="primary" size="small" :disabled="!newComment.trim()"
-                                        @click="submitComment">
+                                    <v-btn color="primary" size="small"
+                                        :disabled="!newComment.trim() || isSubmittingComment"
+                                        :loading="isSubmittingComment" @click="submitComment">
                                         Comment
                                     </v-btn>
                                 </div>

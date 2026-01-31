@@ -46,6 +46,7 @@ class TaskListService
                 'subtasks.assignees',
                 'subtasks.labels',
                 'subtasks.timeEntries.user',
+                'subtasks.comments.user', // Include comments
             ])->findOrFail($taskId);
             
             $items = $parentTask->subtasks;
@@ -58,6 +59,7 @@ class TaskListService
                     'assignees',
                     'labels',
                     'subtasks', // For subtask count
+                    'comments.user', // Include comments
                 ])
                 ->orderBy('position')
                 ->get();

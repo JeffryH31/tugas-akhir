@@ -63,7 +63,7 @@ class TaskService
             'subtasks' => fn($q) => $q->with(['status', 'assignees'])->orderBy('position'),
             'dependencies',
             'dependents',
-            'comments' => fn($q) => $q->with(['user', 'replies.user']),
+            'comments' => fn($q) => $q->whereNull('parent_id')->with(['user', 'replies.user', 'reactions.user'])->latest(),
             'attachments',
             'creator',
         ]);

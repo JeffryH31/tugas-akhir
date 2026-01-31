@@ -129,8 +129,8 @@ const openDetail = () => {
             <div class="flex items-center gap-2">
                 <!-- Complete Checkbox -->
                 <v-btn :icon="isCompleted ? 'mdi-checkbox-marked' : 'mdi-checkbox-blank-outline'"
-                    :color="isCompleted ? 'success' : 'grey'" variant="text" size="x-small"
-                    density="compact" @click="toggleComplete" />
+                    :color="isCompleted ? 'success' : 'grey'" variant="text" size="x-small" density="compact"
+                    @click="toggleComplete" />
 
                 <!-- Task Title -->
                 <div class="text-sm font-medium" :class="{ 'line-through text-gray-500': isCompleted }">

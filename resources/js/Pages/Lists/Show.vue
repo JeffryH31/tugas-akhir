@@ -117,6 +117,11 @@ const viewSubtasks = (task) => {
     router.visit(route('lists.show', [props.workspace.id, props.space.id, props.list.id]) + `?task_id=${task.id}`);
 };
 
+// Handle refresh tasks (after comment added, etc)
+const refreshTasks = () => {
+    router.reload({ only: ['tasksByStatus'] });
+};
+
 // Handle add task
 const handleAddTask = ({ name, status_id }) => {
     // If we're viewing subtasks, use subtask route
@@ -369,7 +374,7 @@ const getItemsForDate = (date) => {
     return allItems.value.filter(item => {
         const dueDate = item.due_date ? item.due_date.split('T')[0] : null;
         const startDate = item.start_date ? item.start_date.split('T')[0] : null;
-        
+
         // If both start and due date exist, check if date is in range
         if (startDate && dueDate) {
             return dateStr >= startDate && dateStr <= dueDate;
@@ -715,7 +720,7 @@ const goToToday = () => {
         <!-- Task Detail Panel -->
         <TaskDetailPanel v-model="showTaskDetail" :task="selectedTask" :workspace="workspace" :space="space"
             :list="list" :parent-task="parentTask" :statuses="statuses" :priorities="priorities" :members="members"
-            :labels="labels" :sprints="sprints" @view-subtasks="viewSubtasks" />
+            :labels="labels" :sprints="sprints" @view-subtasks="viewSubtasks" @updated="refreshTasks" />
 
         <!-- Edit List Dialog -->
         <v-dialog v-model="showEditList" max-width="400">

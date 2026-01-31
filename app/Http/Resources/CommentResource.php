@@ -16,13 +16,25 @@ class CommentResource extends JsonResource
     {
         return [
             'id' => $this->id,
+            'task_id' => $this->task_id,
+            'parent_id' => $this->parent_id,
             'content' => $this->content,
             'is_resolved' => $this->is_resolved ?? false,
+            'edited_at' => $this->edited_at?->format('Y-m-d H:i:s'),
             'created_at' => $this->created_at?->format('Y-m-d H:i:s'),
             'updated_at' => $this->updated_at?->format('Y-m-d H:i:s'),
             'user' => new UserResource($this->whenLoaded('user')),
             'replies' => CommentResource::collection($this->whenLoaded('replies')),
-            'reactions' => $this->whenLoaded('reactions'),
+            'reactions' => $this->whenLoaded('reactions', function() {
+                return $this->reactions->map(function($reaction) {
+                    return [
+                        'id' => $reaction->id,
+                        'emoji' => $reaction->emoji,
+                        'user_id' => $reaction->user_id,
+                        'user' => new UserResource($reaction->whenLoaded('user')),
+                    ];
+                });
+            }),
         ];
     }
 }

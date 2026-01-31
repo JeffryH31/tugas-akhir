@@ -49,6 +49,7 @@ const updateTimeEstimate = () => {
 
 // Comment
 const newComment = ref('');
+const isSubmittingComment = ref(false);
 
 // Subtask
 const showAddSubtask = ref(false);
@@ -196,18 +197,50 @@ const removeLabel = (label) => {
 };
 
 const addComment = () => {
-    if (!newComment.value.trim()) return;
+    if (!newComment.value.trim() || isSubmittingComment.value) return;
+
+    console.log('=== Adding Comment ===');
+    console.log('Content:', newComment.value);
+    console.log('Workspace ID:', props.workspace?.id);
+    console.log('Space ID:', props.space?.id);
+    console.log('List ID:', props.list?.id);
+    console.log('Task ID:', props.task?.id);
+
+    if (!props.workspace?.id || !props.space?.id || !props.list?.id || !props.task?.id) {
+        console.error('Missing required IDs!');
+        if (window.showSnackbar) {
+            window.showSnackbar('Missing required data', 'error');
+        }
+        return;
+    }
+
+    isSubmittingComment.value = true;
+
+    const url = route('tasks.comments.store', [props.workspace.id, props.space.id, props.list.id, props.task.id]);
+    console.log('POST URL:', url);
 
     router.post(
-        route('tasks.comments.store', [props.workspace.id, props.space.id, props.list.id, props.task.id]),
+        url,
         { content: newComment.value },
         {
             preserveScroll: true,
-            onSuccess: () => {
+            onSuccess: (page) => {
+                console.log('Comment added successfully!');
+                console.log('Page props:', page.props);
                 newComment.value = '';
+                if (window.showSnackbar) {
+                    window.showSnackbar('Comment added!', 'success');
+                }
+            },
+            onError: (errors) => {
+                console.error('Failed to add comment:', errors);
+                if (window.showSnackbar) {
+                    window.showSnackbar(Object.values(errors).flat().join(', ') || 'Failed to add comment', 'error');
+                }
             },
             onFinish: () => {
-                router.reload({ only: ['task'] });
+                console.log('Finished, reloading...');
+                isSubmittingComment.value = false;
             }
         }
     );
@@ -520,6 +553,9 @@ const formatDate = (dateString) => {
 
 // Check for running timer on mount
 onMounted(() => {
+    console.log('Task data:', props.task);
+    console.log('Task comments:', props.task.comments);
+    
     const runningEntry = props.task.time_entries?.find(e => e.is_running);
     if (runningEntry) {
         runningTimer.value = runningEntry;
@@ -700,9 +736,10 @@ onUnmounted(() => {
                         </v-avatar>
                         <div class="flex-1">
                             <v-textarea v-model="newComment" placeholder="Write a comment..." variant="solo-filled"
-                                bg-color="#3D3D3D" hide-details rows="2" />
+                                bg-color="#3D3D3D" hide-details rows="2" :disabled="isSubmittingComment" />
                             <div class="flex justify-end mt-2">
-                                <v-btn color="primary" size="small" :disabled="!newComment.trim()" @click="addComment">
+                                <v-btn color="primary" size="small" :disabled="!newComment.trim() || isSubmittingComment" 
+                                    :loading="isSubmittingComment" @click="addComment">
                                     Comment
                                 </v-btn>
                             </div>
@@ -710,7 +747,7 @@ onUnmounted(() => {
                     </div>
 
                     <!-- Comments list -->
-                    <div v-if="task.comments?.length > 0">
+                    <div v-if="task.comments && task.comments.length > 0">
                         <div v-for="comment in task.comments" :key="comment.id"
                             class="flex gap-3 py-3 border-b border-gray-700 last:border-0">
                             <v-avatar size="32" :image="comment.user?.profile_photo_url">
@@ -726,7 +763,7 @@ onUnmounted(() => {
                                         Resolved
                                     </v-chip>
                                 </div>
-                                <p class="text-gray-300 mt-1">{{ comment.content }}</p>
+                                <p class="text-gray-300 mt-1 whitespace-pre-wrap">{{ comment.content }}</p>
 
                                 <!-- Comment Actions -->
                                 <div class="flex items-center gap-2 mt-2">
