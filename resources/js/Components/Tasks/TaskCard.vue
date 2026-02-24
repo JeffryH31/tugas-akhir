@@ -2,7 +2,7 @@
 /**
  * Task Card Component - ClickUp Style
  */
-import { computed } from 'vue';
+import { computed, inject } from 'vue';
 import { router } from '@inertiajs/vue3';
 
 const props = defineProps({
@@ -21,6 +21,12 @@ const props = defineProps({
 });
 
 const emit = defineEmits(['click', 'complete', 'open-detail']);
+
+// Inject CPM critical path checker (provided by parent)
+const isSubtaskCritical = inject('isSubtaskCritical', () => false);
+
+// Check if this task/subtask is on critical path
+const isCritical = computed(() => isSubtaskCritical(props.task.id));
 
 // Priority config
 const priorityConfig = {
@@ -72,12 +78,10 @@ const subtaskProgress = computed(() => {
 
 // Aggregate assignees from subtasks
 const aggregatedAssignees = computed(() => {
-    console.log('TaskCard - Task:', props.task.name, 'Subtasks:', props.task.subtasks);
     if (!props.task.subtasks || props.task.subtasks.length === 0) return [];
 
     const assigneeMap = new Map();
     props.task.subtasks.forEach(subtask => {
-        console.log('  Subtask:', subtask.name, 'Assignees:', subtask.assignees);
         if (subtask.assignees) {
             subtask.assignees.forEach(assignee => {
                 if (!assigneeMap.has(assignee.id)) {
@@ -124,9 +128,20 @@ const openDetail = () => {
     <v-card class="task-card" :class="{
         'task-card--completed': isCompleted,
         'task-card--compact': compact,
+        'task-card--critical': isCritical && !isCompleted,
     }" variant="outlined" rounded="lg" @click="openDetail">
         <v-card-text class="pa-3">
             <div class="flex items-center gap-2">
+                <!-- Critical Path Indicator -->
+                <v-tooltip v-if="isCritical && !isCompleted" location="top">
+                    <template #activator="{ props: tooltipProps }">
+                        <v-icon v-bind="tooltipProps" size="16" color="error" class="critical-icon">
+                            mdi-alert-circle
+                        </v-icon>
+                    </template>
+                    <span>On Critical Path - Any delay affects project deadline</span>
+                </v-tooltip>
+
                 <!-- Complete Checkbox -->
                 <v-btn :icon="isCompleted ? 'mdi-checkbox-marked' : 'mdi-checkbox-blank-outline'"
                     :color="isCompleted ? 'success' : 'grey'" variant="text" size="x-small" density="compact"
@@ -219,11 +234,35 @@ const openDetail = () => {
     opacity: 0.7;
 }
 
+.task-card--critical {
+    border-color: #ef4444 !important;
+    border-width: 2px;
+    background: linear-gradient(135deg, rgba(239, 68, 68, 0.1) 0%, transparent 50%);
+}
+
+.task-card--critical:hover {
+    border-color: #f87171 !important;
+    box-shadow: 0 0 12px rgba(239, 68, 68, 0.3);
+}
+
 .task-card--compact .v-card-text {
     padding: 8px 12px !important;
 }
 
 .-space-x-1>*+* {
     margin-left: -4px;
+}
+
+.critical-icon {
+    animation: pulse 2s infinite;
+}
+
+@keyframes pulse {
+    0%, 100% {
+        opacity: 1;
+    }
+    50% {
+        opacity: 0.5;
+    }
 }
 </style>

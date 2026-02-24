@@ -2,6 +2,7 @@
 
 use App\Http\Controllers\CalendarController;
 use App\Http\Controllers\CommentController;
+use App\Http\Controllers\CpmController;
 use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\FolderController;
 use App\Http\Controllers\SpaceController;
@@ -161,6 +162,7 @@ Route::middleware(['auth:sanctum', config('jetstream.auth_session'), 'verified']
                                     // Subtasks
                                     Route::prefix('subtasks')->group(function () {
                                         Route::post('/', [SubtaskController::class, 'store'])->name('tasks.subtasks.store');
+                                        Route::post('/reorder', [SubtaskController::class, 'reorder'])->name('tasks.subtasks.reorder');
 
                                         Route::prefix('{subtask}')->group(function () {
                                             Route::patch('/', [SubtaskController::class, 'update'])->name('tasks.subtasks.update');
@@ -186,6 +188,14 @@ Route::middleware(['auth:sanctum', config('jetstream.auth_session'), 'verified']
                                     // Comments
                                     Route::prefix('comments')->group(function () {
                                         Route::post('/', [CommentController::class, 'store'])->name('tasks.comments.store');
+                                    });
+
+                                    // CPM (Critical Path Method)
+                                    Route::prefix('cpm')->group(function () {
+                                        Route::get('/', [CpmController::class, 'analyze'])->name('tasks.cpm.analyze');
+                                        Route::get('/gantt', [CpmController::class, 'gantt'])->name('tasks.cpm.gantt');
+                                        Route::post('/dependencies', [CpmController::class, 'addDependency'])->name('tasks.cpm.dependencies.add');
+                                        Route::delete('/dependencies', [CpmController::class, 'removeDependency'])->name('tasks.cpm.dependencies.remove');
                                     });
                                 });
                             });

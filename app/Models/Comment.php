@@ -14,6 +14,7 @@ class Comment extends Model
 
     protected $fillable = [
         'task_id',
+        'subtask_id',
         'user_id',
         'parent_id',
         'content',
@@ -35,6 +36,11 @@ class Comment extends Model
     public function task(): BelongsTo
     {
         return $this->belongsTo(Task::class);
+    }
+
+    public function subtask(): BelongsTo
+    {
+        return $this->belongsTo(Subtask::class);
     }
 
     public function user(): BelongsTo

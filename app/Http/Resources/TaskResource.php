@@ -40,6 +40,8 @@ class TaskResource extends JsonResource
             'watchers' => UserResource::collection($this->whenLoaded('watchers')),
             'creator' => new UserResource($this->whenLoaded('creator')),
             'subtasks' => TaskResource::collection($this->whenLoaded('subtasks')),
+            'dependencies' => TaskResource::collection($this->whenLoaded('dependencies')),
+            'dependents' => TaskResource::collection($this->whenLoaded('dependents')),
             'parent' => new TaskResource($this->whenLoaded('parent')),
             'comments' => CommentResource::collection($this->whenLoaded('comments')),
             'time_entries' => TimeEntryResource::collection($this->whenLoaded('timeEntries')),

@@ -22,6 +22,7 @@ class StoreCommentRequest extends FormRequest
         return [
             'content' => ['required', 'string', 'max:10000'],
             'parent_id' => ['nullable', 'exists:comments,id'],
+            'subtask_id' => ['nullable', 'exists:subtasks,id'],
             'mentions' => ['nullable', 'array'],
             'mentions.*' => ['exists:users,id'],
         ];

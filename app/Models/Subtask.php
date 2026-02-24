@@ -101,12 +101,6 @@ class Subtask extends Model
             ->withTimestamps();
     }
 
-    public function watchers(): BelongsToMany
-    {
-        return $this->belongsToMany(User::class, 'subtask_watchers')
-            ->withTimestamps();
-    }
-
     public function creator(): BelongsTo
     {
         return $this->belongsTo(User::class, 'created_by');
@@ -122,9 +116,9 @@ class Subtask extends Model
         return $this->hasMany(TimeEntry::class);
     }
 
-    public function comments(): MorphMany
+    public function comments(): HasMany
     {
-        return $this->morphMany(Comment::class, 'commentable');
+        return $this->hasMany(Comment::class);
     }
 
     public function activities(): MorphMany

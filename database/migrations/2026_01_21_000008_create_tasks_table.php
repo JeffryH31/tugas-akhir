@@ -61,16 +61,6 @@ return new class extends Migration
             $table->unique(['task_id', 'label_id']);
         });
 
-        // Task watchers
-        Schema::create('task_watchers', function (Blueprint $table) {
-            $table->id();
-            $table->foreignId('task_id')->constrained()->cascadeOnDelete();
-            $table->foreignId('user_id')->constrained()->cascadeOnDelete();
-            $table->timestamps();
-
-            $table->unique(['task_id', 'user_id']);
-        });
-
         // Task dependencies
         Schema::create('task_dependencies', function (Blueprint $table) {
             $table->id();
@@ -89,7 +79,6 @@ return new class extends Migration
     public function down(): void
     {
         Schema::dropIfExists('task_dependencies');
-        Schema::dropIfExists('task_watchers');
         Schema::dropIfExists('task_labels');
         Schema::dropIfExists('task_assignees');
         Schema::dropIfExists('tasks');

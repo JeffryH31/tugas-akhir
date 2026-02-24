@@ -34,6 +34,7 @@ class CommentService
         return DB::transaction(function () use ($task, $user, $data) {
             $comment = Comment::create([
                 'task_id' => $task->id,
+                'subtask_id' => $data['subtask_id'] ?? null,
                 'user_id' => $user->id,
                 'parent_id' => $data['parent_id'] ?? null,
                 'content' => $data['content'],

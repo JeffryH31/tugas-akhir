@@ -2,7 +2,7 @@
 /**
  * Task Detail Panel - Slide-over panel for task details
  */
-import { ref, computed, watch } from 'vue';
+import { ref, computed, watch, reactive } from 'vue';
 import { router, useForm } from '@inertiajs/vue3';
 
 const props = defineProps({
@@ -35,6 +35,20 @@ const props = defineProps({
 });
 
 const emit = defineEmits(['update:modelValue', 'updated', 'view-subtasks']);
+
+// Local reactive copy of task to ensure proper reactivity
+const localTask = ref(null);
+
+// Deep clone helper
+const deepClone = (obj) => {
+    if (!obj) return null;
+    return JSON.parse(JSON.stringify(obj));
+};
+
+// Watch for task prop changes and update local copy
+watch(() => props.task, (newTask) => {
+    localTask.value = deepClone(newTask);
+}, { immediate: true, deep: true });
 
 // Determine if we're viewing a subtask
 const isSubtask = computed(() => !!props.parentTask);
@@ -94,8 +108,8 @@ const form = useForm({
     time_estimate: null,
 });
 
-// Watch task changes
-watch(() => props.task, (newTask) => {
+// Watch task changes for form
+watch(() => localTask.value, (newTask) => {
     if (newTask) {
         form.name = newTask.name;
         form.description = newTask.description || '';
@@ -115,7 +129,7 @@ const close = () => {
 };
 
 // Is completed
-const isCompleted = computed(() => props.task?.completed_at);
+const isCompleted = computed(() => localTask.value?.completed_at);
 
 // Priority config
 const priorityConfig = {
@@ -127,8 +141,8 @@ const priorityConfig = {
 
 // Get current priority
 const currentPriority = computed(() => {
-    if (!props.task?.priority) return null;
-    return priorityConfig[props.task.priority.level] || null;
+    if (!localTask.value?.priority) return null;
+    return priorityConfig[localTask.value.priority.level] || null;
 });
 
 // Format duration (for time spent in seconds)
@@ -711,9 +725,14 @@ const submitComment = () => {
 
     isSubmittingComment.value = true;
 
+    const commentData = { content: newComment.value };
+    if (isSubtask.value) {
+        commentData.subtask_id = props.task.id;
+    }
+
     router.post(
         route('tasks.comments.store', [props.workspace.id, props.space.id, props.list.id, taskId]),
-        { content: newComment.value },
+        commentData,
         {
             preserveScroll: true,
             onSuccess: () => {
@@ -802,7 +821,7 @@ const deleteTimeEntry = (entryId) => {
 <template>
     <v-navigation-drawer :model-value="modelValue" @update:model-value="emit('update:modelValue', $event)"
         location="right" temporary width="600" class="task-detail-panel">
-        <div v-if="task" class="flex flex-col h-full">
+        <div v-if="localTask" class="flex flex-col h-full">
             <!-- Header -->
             <div class="panel-header">
                 <div class="flex items-center gap-2">
@@ -813,15 +832,16 @@ const deleteTimeEntry = (entryId) => {
                     <!-- Status -->
                     <v-menu>
                         <template v-slot:activator="{ props: menuProps }">
-                            <v-chip v-bind="menuProps" :color="task.status?.color" size="small" variant="tonal" label>
-                                {{ task.status?.name || 'No Status' }}
+                            <v-chip v-bind="menuProps" :color="localTask.status?.color" size="small" variant="tonal"
+                                label>
+                                {{ localTask.status?.name || 'No Status' }}
                                 <v-icon end size="14">mdi-chevron-down</v-icon>
                             </v-chip>
                         </template>
                         <v-card color="surface">
                             <v-list density="compact">
                                 <v-list-item v-for="status in statuses" :key="status.id"
-                                    :active="status.id === task.status_id" @click="changeStatus(status.id)">
+                                    :active="status.id === localTask.status_id" @click="changeStatus(status.id)">
                                     <template v-slot:prepend>
                                         <div class="w-3 h-3 rounded-full mr-3"
                                             :style="{ backgroundColor: status.color }" />
@@ -866,7 +886,7 @@ const deleteTimeEntry = (entryId) => {
                 <div v-if="!isEditing"
                     class="text-xl font-semibold cursor-pointer hover:bg-[#2d2d30] rounded px-2 py-1 -mx-2"
                     @click="isEditing = true">
-                    {{ task.name }}
+                    {{ localTask.name }}
                 </div>
                 <v-text-field v-else v-model="editedName" variant="outlined" density="compact" hide-details autofocus
                     @blur="saveName" @keydown.enter="saveName" @keydown.escape="isEditing = false" />
@@ -877,13 +897,13 @@ const deleteTimeEntry = (entryId) => {
                 <v-tab value="details">Details</v-tab>
                 <v-tab value="comments">
                     Comments
-                    <v-badge v-if="task.comments_count" :content="task.comments_count" color="grey" inline
+                    <v-badge v-if="localTask.comments?.length" :content="localTask.comments.length" color="grey" inline
                         class="ml-1" />
                 </v-tab>
                 <v-tab v-if="isSubtask" value="time">
                     Time Tracking
-                    <v-badge v-if="task.time_entries?.length" :content="task.time_entries.length" color="grey" inline
-                        class="ml-1" />
+                    <v-badge v-if="localTask.time_entries?.length" :content="localTask.time_entries.length" color="grey"
+                        inline class="ml-1" />
                 </v-tab>
                 <v-tab value="activity">Activity</v-tab>
             </v-tabs>
@@ -908,26 +928,28 @@ const deleteTimeEntry = (entryId) => {
                                             <v-btn v-bind="menuProps" :color="currentPriority?.color || 'grey'"
                                                 variant="tonal" size="small">
                                                 <v-icon start size="16">{{ currentPriority?.icon || 'mdi-flag-outline'
-                                                    }}</v-icon>
-                                                {{ task.priority?.name || 'No Priority' }}
-                                            </v-btn>
+                                                }}</v-icon>
+                                                {{ localTask.priority?.name || 'No Priority' }}
+                                                </ v-btn>
                                         </template>
-                                        <v-list density="compact" color="surface">
-                                            <v-list-item v-for="priority in priorities" :key="priority.id"
-                                                :active="priority.id === task.priority_id"
-                                                @click="changePriority(priority.id)">
-                                                <template v-slot:prepend>
-                                                    <v-icon :color="priorityConfig[priority.level]?.color" size="18"
-                                                        class="mr-2">
-                                                        {{ priorityConfig[priority.level]?.icon }}
-                                                    </v-icon>
-                                                </template>
-                                                <v-list-item-title>{{ priority.name }}</v-list-item-title>
-                                            </v-list-item>
-                                            <v-divider v-if="task.priority_id" />
-                                            <v-list-item v-if="task.priority_id" prepend-icon="mdi-close"
-                                                title="Clear Priority" @click="changePriority(null)" />
-                                        </v-list>
+                                        <v-card color="surface">
+                                            <v-list density="compact">
+                                                <v-list-item v-for="priority in priorities" :key="priority.id"
+                                                    :active="priority.id === localTask.priority_id"
+                                                    @click="changePriority(priority.id)">
+                                                    <template v-slot:prepend>
+                                                        <v-icon :color="priorityConfig[priority.level]?.color" size="18"
+                                                            class="mr-2">
+                                                            {{ priorityConfig[priority.level]?.icon }}
+                                                        </v-icon>
+                                                    </template>
+                                                    <v-list-item-title>{{ priority.name }}</v-list-item-title>
+                                                </v-list-item>
+                                                <v-divider v-if="localTask.priority_id" />
+                                                <v-list-item v-if="localTask.priority_id" prepend-icon="mdi-close"
+                                                    title="Clear Priority" @click="changePriority(null)" />
+                                            </v-list>
+                                        </v-card>
                                     </v-menu>
                                 </div>
                             </div>
@@ -941,8 +963,8 @@ const deleteTimeEntry = (entryId) => {
                                 <div class="detail-value">
                                     <div class="flex items-center gap-2">
                                         <!-- Current Assignees -->
-                                        <div v-if="task.assignees?.length" class="flex -space-x-2">
-                                            <v-tooltip v-for="assignee in task.assignees" :key="assignee.id"
+                                        <div v-if="localTask.assignees?.length" class="flex -space-x-2">
+                                            <v-tooltip v-for="assignee in localTask.assignees" :key="assignee.id"
                                                 location="top">
                                                 <template v-slot:activator="{ props: tooltipProps }">
                                                     <v-avatar v-bind="tooltipProps"
@@ -967,7 +989,7 @@ const deleteTimeEntry = (entryId) => {
                                                 <v-card-text class="pa-2">
                                                     <v-list density="compact">
                                                         <v-list-item v-for="member in members" :key="member.id"
-                                                            :active="task.assignees?.some(a => a.id === member.id)"
+                                                            :active="localTask.assignees?.some(a => a.id === member.id)"
                                                             @click="toggleAssignee(member.id)">
                                                             <template v-slot:prepend>
                                                                 <v-avatar :color="member.avatar_color || 'primary'"
@@ -978,7 +1000,7 @@ const deleteTimeEntry = (entryId) => {
                                                             <v-list-item-title>{{ member.name }}</v-list-item-title>
                                                             <template v-slot:append>
                                                                 <v-icon
-                                                                    v-if="task.assignees?.some(a => a.id === member.id)"
+                                                                    v-if="localTask.assignees?.some(a => a.id === member.id)"
                                                                     color="primary">
                                                                     mdi-check
                                                                 </v-icon>
@@ -1002,9 +1024,9 @@ const deleteTimeEntry = (entryId) => {
                                     <v-menu v-model="showStartDatePicker" :close-on-content-click="false">
                                         <template v-slot:activator="{ props: menuProps }">
                                             <v-btn v-bind="menuProps" variant="text" size="small"
-                                                :color="task.start_date ? 'primary' : 'default'">
+                                                :color="localTask.start_date ? 'primary' : 'default'">
                                                 <v-icon start size="16">mdi-calendar-start</v-icon>
-                                                {{ formatDate(task.start_date) }}
+                                                {{ formatDate(localTask.start_date) }}
                                             </v-btn>
                                         </template>
                                         <v-card color="surface" min-width="300">
@@ -1014,7 +1036,7 @@ const deleteTimeEntry = (entryId) => {
                                                     bg-color="#1e1e1e" />
                                             </v-card-text>
                                             <v-card-actions>
-                                                <v-btn v-if="task.start_date" size="small" variant="text"
+                                                <v-btn v-if="localTask.start_date" size="small" variant="text"
                                                     @click="tempStartDate = null; updateStartDate();">
                                                     Clear
                                                 </v-btn>
@@ -1039,9 +1061,9 @@ const deleteTimeEntry = (entryId) => {
                                     <v-menu v-model="showDueDatePicker" :close-on-content-click="false">
                                         <template v-slot:activator="{ props: menuProps }">
                                             <v-btn v-bind="menuProps" variant="text" size="small"
-                                                :color="task.due_date ? 'primary' : 'default'">
+                                                :color="localTask.due_date ? 'primary' : 'default'">
                                                 <v-icon start size="16">mdi-calendar</v-icon>
-                                                {{ formatDate(task.due_date) }}
+                                                {{ formatDate(localTask.due_date) }}
                                             </v-btn>
                                         </template>
                                         <v-card color="surface" min-width="300">
@@ -1051,7 +1073,7 @@ const deleteTimeEntry = (entryId) => {
                                                     bg-color="#1e1e1e" />
                                             </v-card-text>
                                             <v-card-actions>
-                                                <v-btn v-if="task.due_date" size="small" variant="text"
+                                                <v-btn v-if="localTask.due_date" size="small" variant="text"
                                                     @click="tempDueDate = null; updateDueDate();">
                                                     Clear
                                                 </v-btn>
@@ -1075,9 +1097,9 @@ const deleteTimeEntry = (entryId) => {
                                     <v-menu v-model="showTimeEstimatePicker" :close-on-content-click="false">
                                         <template v-slot:activator="{ props: menuProps }">
                                             <v-btn v-bind="menuProps" variant="text" size="small"
-                                                :color="task.time_estimate ? 'primary' : 'default'">
+                                                :color="localTask.time_estimate ? 'primary' : 'default'">
                                                 <v-icon start size="16">mdi-timer-outline</v-icon>
-                                                {{ formatTimeEstimate(task.time_estimate) }}
+                                                {{ formatTimeEstimate(localTask.time_estimate) }}
                                             </v-btn>
                                         </template>
                                         <v-card color="surface" min-width="300">
@@ -1087,7 +1109,7 @@ const deleteTimeEntry = (entryId) => {
                                                     hide-details bg-color="#1e1e1e" step="0.5" min="0" />
                                             </v-card-text>
                                             <v-card-actions>
-                                                <v-btn v-if="task.time_estimate" size="small" variant="text"
+                                                <v-btn v-if="localTask.time_estimate" size="small" variant="text"
                                                     @click="tempTimeEstimate = 0; updateTimeEstimate();">
                                                     Clear
                                                 </v-btn>
@@ -1139,12 +1161,12 @@ const deleteTimeEntry = (entryId) => {
                                 <div class="detail-value">
                                     <v-chip variant="text" size="small">
                                         <v-icon start size="16">mdi-clock</v-icon>
-                                        {{ formatDuration((task.time_spent || 0) * 60) }}
+                                        {{ formatDuration((localTask.time_spent || 0) * 60) }}
                                     </v-chip>
-                                    <v-progress-linear v-if="task.time_estimate && task.time_spent"
-                                        :model-value="(task.time_spent / task.time_estimate) * 100"
-                                        :color="task.time_spent > task.time_estimate ? 'error' : 'primary'" height="4"
-                                        class="mt-2" />
+                                    <v-progress-linear v-if="localTask.time_estimate && localTask.time_spent"
+                                        :model-value="(localTask.time_spent / localTask.time_estimate) * 100"
+                                        :color="localTask.time_spent > localTask.time_estimate ? 'error' : 'primary'"
+                                        height="4" class="mt-2" />
                                 </div>
                             </div>
 
@@ -1155,10 +1177,10 @@ const deleteTimeEntry = (entryId) => {
                                     Subtasks
                                 </div>
                                 <div class="detail-value">
-                                    <v-btn variant="tonal" size="small" @click="emit('view-subtasks', task)">
+                                    <v-btn variant="tonal" size="small" @click="emit('view-subtasks', localTask)">
                                         <v-icon start size="16">mdi-view-dashboard-outline</v-icon>
                                         View Subtasks
-                                        <v-badge v-if="task.subtasks_count" :content="task.subtasks_count"
+                                        <v-badge v-if="localTask.subtasks_count" :content="localTask.subtasks_count"
                                             color="primary" inline class="ml-2" />
                                     </v-btn>
                                 </div>
@@ -1192,12 +1214,12 @@ const deleteTimeEntry = (entryId) => {
                             </div>
 
                             <!-- Comments List -->
-                            <div v-if="!task.comments?.length" class="text-center py-8 text-gray-500">
+                            <div v-if="!localTask.comments?.length" class="text-center py-8 text-gray-500">
                                 <v-icon size="48" class="mb-2">mdi-comment-outline</v-icon>
                                 <div>No comments yet</div>
                             </div>
                             <div v-else class="space-y-4">
-                                <div v-for="comment in task.comments" :key="comment.id" class="flex gap-3">
+                                <div v-for="comment in localTask.comments" :key="comment.id" class="flex gap-3">
                                     <v-avatar :color="comment.user?.avatar_color" size="32">
                                         <span class="text-xs">{{ comment.user?.initials }}</span>
                                     </v-avatar>
@@ -1225,20 +1247,20 @@ const deleteTimeEntry = (entryId) => {
                                         <div>
                                             <div class="text-gray-400 mb-1">Time Estimate</div>
                                             <div class="text-lg font-semibold">
-                                                {{ formatTimeEstimate(task.time_estimate) }}
+                                                {{ formatTimeEstimate(localTask.time_estimate) }}
                                             </div>
                                         </div>
                                         <div>
                                             <div class="text-gray-400 mb-1">Time Spent</div>
                                             <div class="text-lg font-semibold"
-                                                :class="task.time_spent > task.time_estimate ? 'text-error' : ''">
-                                                {{ formatDuration((task.time_spent || 0) * 60) }}
+                                                :class="localTask.time_spent > localTask.time_estimate ? 'text-error' : ''">
+                                                {{ formatDuration((localTask.time_spent || 0) * 60) }}
                                             </div>
                                         </div>
                                     </div>
-                                    <v-progress-linear v-if="task.time_estimate"
-                                        :model-value="((task.time_spent || 0) / task.time_estimate) * 100"
-                                        :color="(task.time_spent || 0) > task.time_estimate ? 'error' : 'primary'"
+                                    <v-progress-linear v-if="localTask.time_estimate"
+                                        :model-value="((localTask.time_spent || 0) / localTask.time_estimate) * 100"
+                                        :color="(localTask.time_spent || 0) > localTask.time_estimate ? 'error' : 'primary'"
                                         height="6" rounded class="mt-3" />
                                 </v-card-text>
                             </v-card>
@@ -1263,12 +1285,12 @@ const deleteTimeEntry = (entryId) => {
                             </v-card>
 
                             <!-- Time Entries List -->
-                            <div v-if="!task.time_entries?.length" class="text-center py-8 text-gray-500">
+                            <div v-if="!localTask.time_entries?.length" class="text-center py-8 text-gray-500">
                                 <v-icon size="48" class="mb-2">mdi-clock-outline</v-icon>
                                 <div>No time entries yet</div>
                             </div>
                             <div v-else class="space-y-2">
-                                <v-card v-for="entry in task.time_entries" :key="entry.id" variant="outlined">
+                                <v-card v-for="entry in localTask.time_entries" :key="entry.id" variant="outlined">
                                     <v-card-text class="py-2">
                                         <div class="flex items-start justify-between">
                                             <div class="flex-1">
@@ -1302,12 +1324,12 @@ const deleteTimeEntry = (entryId) => {
                     <!-- Activity Tab -->
                     <v-tabs-window-item value="activity">
                         <div class="p-4">
-                            <div v-if="!task.activities?.length" class="text-center py-8 text-gray-500">
+                            <div v-if="!localTask.activities?.length" class="text-center py-8 text-gray-500">
                                 <v-icon size="48" class="mb-2">mdi-history</v-icon>
                                 <div>No activity yet</div>
                             </div>
                             <div v-else class="space-y-3">
-                                <div v-for="activity in task.activities" :key="activity.id"
+                                <div v-for="activity in localTask.activities" :key="activity.id"
                                     class="flex items-start gap-3">
                                     <v-avatar :color="activity.user?.avatar_color" size="24">
                                         <span class="text-[10px]">{{ activity.user?.initials }}</span>

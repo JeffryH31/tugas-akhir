@@ -97,12 +97,6 @@ class User extends Authenticatable
             ->withTimestamps();
     }
 
-    public function watchingTasks(): BelongsToMany
-    {
-        return $this->belongsToMany(Task::class, 'task_watchers')
-            ->withTimestamps();
-    }
-
     public function timeEntries(): HasMany
     {
         return $this->hasMany(TimeEntry::class);

@@ -124,4 +124,18 @@ class SubtaskService
             );
         });
     }
+
+    /**
+     * Reorder subtasks within a task
+     */
+    public function reorder(Task $task, array $subtaskIds): void
+    {
+        DB::transaction(function () use ($task, $subtaskIds) {
+            foreach ($subtaskIds as $position => $subtaskId) {
+                Subtask::where('id', $subtaskId)
+                    ->where('task_id', $task->id)
+                    ->update(['position' => $position]);
+            }
+        });
+    }
 }

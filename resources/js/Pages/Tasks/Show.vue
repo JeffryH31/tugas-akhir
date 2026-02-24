@@ -1,6 +1,7 @@
 <script setup>
 import { ref, computed, onMounted, onUnmounted } from 'vue';
 import { Head, router, usePage } from '@inertiajs/vue3';
+import draggable from 'vuedraggable';
 import MainLayout from '@/Layouts/MainLayout.vue';
 
 const props = defineProps({
@@ -54,6 +55,34 @@ const isSubmittingComment = ref(false);
 // Subtask
 const showAddSubtask = ref(false);
 const newSubtaskName = ref('');
+const subtasksDragging = ref(false);
+
+// Local subtasks list for drag-drop reactivity
+const localSubtasks = computed({
+    get: () => props.task.subtasks || [],
+    set: (val) => {
+        props.task.subtasks = val;
+    }
+});
+
+const onSubtaskDragEnd = () => {
+    subtasksDragging.value = false;
+    const subtaskIds = localSubtasks.value.map(s => s.id);
+    router.post(
+        route('tasks.subtasks.reorder', [props.workspace.id, props.space.id, props.list.id, props.task.id]),
+        { subtask_ids: subtaskIds },
+        {
+            preserveScroll: true,
+            preserveState: true,
+            onError: () => {
+                if (window.showSnackbar) {
+                    window.showSnackbar('Failed to reorder subtasks', 'error');
+                }
+                router.reload({ only: ['task'] });
+            }
+        }
+    );
+};
 
 // Running timer
 const runningTimer = ref(null);
@@ -541,6 +570,101 @@ const formatDuration = (seconds) => {
     return `${minutes}m`;
 };
 
+// ===== Dependency Management =====
+const dependencyDialog = ref(false);
+const dependencySubtask = ref(null);
+const dependencyLoading = ref(false);
+
+const openDependencyDialog = (subtask) => {
+    dependencySubtask.value = subtask;
+    dependencyDialog.value = true;
+};
+
+// Get subtasks that can be added as dependencies (not self, not already a dependency)
+const getAvailableDependencies = (subtask) => {
+    const existingDepIds = (subtask.dependencies || []).map(d => d.id);
+    return (props.task.subtasks || []).filter(
+        s => s.id !== subtask.id && !existingDepIds.includes(s.id)
+    );
+};
+
+const addDependency = (subtask, dependsOn) => {
+    dependencyLoading.value = true;
+    
+    fetch(
+        route('tasks.cpm.dependencies.add', [props.workspace.id, props.space.id, props.list.id, props.task.id]),
+        {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'Accept': 'application/json',
+                'X-Requested-With': 'XMLHttpRequest',
+                'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]')?.content,
+            },
+            body: JSON.stringify({
+                subtask_id: subtask.id,
+                depends_on_id: dependsOn.id,
+                type: 'blocks',
+            }),
+        }
+    ).then(res => res.json()).then(result => {
+        if (result.success) {
+            router.reload({ only: ['task'] });
+            if (window.showSnackbar) {
+                window.showSnackbar('Dependency added!', 'success');
+            }
+        } else {
+            if (window.showSnackbar) {
+                window.showSnackbar(result.message || 'Failed to add dependency', 'error');
+            }
+        }
+    }).catch(() => {
+        if (window.showSnackbar) {
+            window.showSnackbar('Failed to add dependency', 'error');
+        }
+    }).finally(() => {
+        dependencyLoading.value = false;
+    });
+};
+
+const removeDependency = (subtask, dependsOn) => {
+    dependencyLoading.value = true;
+    
+    fetch(
+        route('tasks.cpm.dependencies.remove', [props.workspace.id, props.space.id, props.list.id, props.task.id]),
+        {
+            method: 'DELETE',
+            headers: {
+                'Content-Type': 'application/json',
+                'Accept': 'application/json',
+                'X-Requested-With': 'XMLHttpRequest',
+                'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]')?.content,
+            },
+            body: JSON.stringify({
+                subtask_id: subtask.id,
+                depends_on_id: dependsOn.id,
+            }),
+        }
+    ).then(res => res.json()).then(result => {
+        if (result.success) {
+            router.reload({ only: ['task'] });
+            if (window.showSnackbar) {
+                window.showSnackbar('Dependency removed!', 'success');
+            }
+        } else {
+            if (window.showSnackbar) {
+                window.showSnackbar(result.message || 'Failed to remove dependency', 'error');
+            }
+        }
+    }).catch(() => {
+        if (window.showSnackbar) {
+            window.showSnackbar('Failed to remove dependency', 'error');
+        }
+    }).finally(() => {
+        dependencyLoading.value = false;
+    });
+};
+
 const formatDate = (dateString) => {
     return new Date(dateString).toLocaleDateString('en-US', {
         day: 'numeric',
@@ -822,10 +946,14 @@ onUnmounted(() => {
 
                 <!-- Subtasks list -->
                 <div v-if="task.subtasks?.length > 0" class="space-y-3">
-                    <div v-for="subtask in task.subtasks" :key="subtask.id"
-                        class="bg-[#2D2D2D] rounded-lg p-3 hover:bg-[#323233] transition-colors">
+                    <draggable v-model="localSubtasks" item-key="id" :animation="200"
+                        ghost-class="subtask-ghost" handle=".subtask-drag-handle"
+                        @start="subtasksDragging = true" @end="onSubtaskDragEnd">
+                        <template #item="{ element: subtask }">
+                            <div class="bg-[#2D2D2D] rounded-lg p-3 hover:bg-[#323233] transition-colors mb-3">
                         <!-- Subtask Header -->
                         <div class="group flex items-start gap-2 mb-2">
+                            <v-icon class="subtask-drag-handle cursor-grab mt-1 text-gray-500 hover:text-gray-300" size="16">mdi-drag</v-icon>
                             <v-checkbox :model-value="!!subtask.completed_at" hide-details density="compact"
                                 @update:model-value="toggleSubtask(subtask)" />
                             <div v-if="editingSubtaskId === subtask.id" class="flex-1">
@@ -937,8 +1065,62 @@ onUnmounted(() => {
                                     {{ formatSubtaskTime(subtask.time_spent) }}
                                 </span>
                             </div>
+
+                            <!-- Dependencies (Predecessor) -->
+                            <div class="flex items-start gap-2">
+                                <v-icon size="14" class="text-gray-500 mt-1">mdi-link-variant</v-icon>
+                                <div class="flex-1">
+                                    <div class="flex flex-wrap gap-1 items-center">
+                                        <v-chip v-for="dep in (subtask.dependencies || [])" :key="dep.id"
+                                            size="x-small" color="warning" variant="tonal" closable
+                                            @click:close="removeDependency(subtask, dep)">
+                                            <v-icon start size="10">mdi-arrow-left</v-icon>
+                                            {{ dep.name }}
+                                        </v-chip>
+                                        <v-chip v-for="dep in (subtask.dependents || [])" :key="'dep-' + dep.id"
+                                            size="x-small" color="info" variant="tonal">
+                                            <v-icon start size="10">mdi-arrow-right</v-icon>
+                                            {{ dep.name }}
+                                        </v-chip>
+                                        <v-menu :close-on-content-click="false">
+                                            <template #activator="{ props: menuProps }">
+                                                <v-btn v-bind="menuProps" icon="mdi-plus" size="x-small"
+                                                    variant="text" />
+                                            </template>
+                                            <v-card color="surface" min-width="250">
+                                                <v-card-title class="text-sm py-2">
+                                                    Add Predecessor
+                                                </v-card-title>
+                                                <v-divider />
+                                                <v-list density="compact" max-height="200" class="overflow-auto">
+                                                    <v-list-item
+                                                        v-for="s in getAvailableDependencies(subtask)"
+                                                        :key="s.id"
+                                                        :disabled="dependencyLoading"
+                                                        @click="addDependency(subtask, s)">
+                                                        <template #prepend>
+                                                            <v-icon size="16">mdi-subtitles-outline</v-icon>
+                                                        </template>
+                                                        <v-list-item-title class="text-sm">{{ s.name }}</v-list-item-title>
+                                                        <v-list-item-subtitle v-if="s.time_estimate" class="text-xs">
+                                                            Est: {{ formatSubtaskTimeEstimate(s.time_estimate) }}
+                                                        </v-list-item-subtitle>
+                                                    </v-list-item>
+                                                    <v-list-item v-if="getAvailableDependencies(subtask).length === 0" disabled>
+                                                        <v-list-item-title class="text-sm text-gray-500">No available subtasks</v-list-item-title>
+                                                    </v-list-item>
+                                                </v-list>
+                                            </v-card>
+                                        </v-menu>
+                                    </div>
+                                    <div v-if="!(subtask.dependencies || []).length && !(subtask.dependents || []).length"
+                                        class="text-gray-500 text-[10px]">No dependencies</div>
+                                </div>
+                            </div>
                         </div>
                     </div>
+                        </template>
+                    </draggable>
                 </div>
                 <div v-else class="text-sm text-gray-500 text-center py-4">
                     No subtasks yet
@@ -947,3 +1129,15 @@ onUnmounted(() => {
         </div>
     </MainLayout>
 </template>
+
+<style scoped>
+.subtask-ghost {
+    opacity: 0.4;
+    background: #3D3D3D;
+    border-radius: 8px;
+}
+
+.subtask-drag-handle:active {
+    cursor: grabbing;
+}
+</style>

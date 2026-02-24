@@ -7,6 +7,7 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Database\Eloquent\Relations\HasManyThrough;
 use Illuminate\Database\Eloquent\SoftDeletes;
 
 class Task extends Model
@@ -118,11 +119,6 @@ class Task extends Model
         return $this->belongsToMany(Label::class, 'task_labels')->withTimestamps();
     }
 
-    public function watchers(): BelongsToMany
-    {
-        return $this->belongsToMany(User::class, 'task_watchers')->withTimestamps();
-    }
-
     public function dependencies(): BelongsToMany
     {
         return $this->belongsToMany(Task::class, 'task_dependencies', 'task_id', 'depends_on_task_id')
@@ -137,9 +133,9 @@ class Task extends Model
             ->withTimestamps();
     }
 
-    public function timeEntries(): HasMany
+    public function timeEntries(): HasManyThrough
     {
-        return $this->hasMany(TimeEntry::class);
+        return $this->hasManyThrough(TimeEntry::class, Subtask::class);
     }
 
     public function comments(): HasMany

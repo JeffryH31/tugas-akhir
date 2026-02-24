@@ -69,7 +69,7 @@ class TimeEntry extends Model
     {
         $hours = floor($this->duration / 60);
         $minutes = $this->duration % 60;
-        
+
         if ($hours > 0) {
             return $hours . 'h ' . $minutes . 'm';
         }

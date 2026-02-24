@@ -7,12 +7,15 @@
  * - Drag and drop tasks
  * - Task detail panel
  * - Add/edit tasks
+ * - Gantt chart with CPM analysis (for subtasks)
  */
-import { ref, computed, provide, watch } from 'vue';
+import { ref, computed, provide, watch, onMounted } from 'vue';
 import { Head, router, usePage } from '@inertiajs/vue3';
 import MainLayout from '@/Layouts/MainLayout.vue';
 import StatusColumn from '@/Components/Tasks/StatusColumn.vue';
 import TaskDetailPanel from '@/Components/Tasks/TaskDetailPanel.vue';
+import GanttChart from '@/Components/Cpm/GanttChart.vue';
+import CpmSummary from '@/Components/Cpm/CpmSummary.vue';
 
 const props = defineProps({
     workspace: Object,
@@ -42,13 +45,24 @@ const localTasksByStatus = ref(initializeTasksByStatus());
 
 // Watch for changes in props.tasksByStatus to update local state
 watch(() => props.tasksByStatus, (newValue) => {
-    console.log('tasksByStatus changed:', newValue);
     localTasksByStatus.value = initializeTasksByStatus();
+    
+    // Also update selectedTask with fresh data if panel is open
+    if (selectedTask.value) {
+        const taskId = selectedTask.value.id;
+        for (const statusId in newValue) {
+            const tasks = newValue[statusId];
+            const updatedTask = tasks.find(t => t.id === taskId);
+            if (updatedTask) {
+                selectedTask.value = { ...updatedTask };
+                break;
+            }
+        }
+    }
 }, { deep: true });
 
 // Watch for parentTask changes
 watch(() => props.parentTask, (newValue) => {
-    console.log('parentTask changed:', newValue);
 }, { immediate: true });
 
 // Selected task for detail panel
@@ -56,7 +70,11 @@ const selectedTask = ref(null);
 const showTaskDetail = ref(false);
 
 // View mode
-const viewMode = ref('board'); // board, list, calendar
+const viewMode = ref('board'); // board, list, calendar, gantt
+
+// CPM data for Gantt chart (only for subtasks)
+const cpmData = ref(null);
+const loadingCpm = ref(false);
 
 // Calendar state
 const currentCalendarDate = ref(new Date());
@@ -74,19 +92,37 @@ const labels = computed(() => props.workspace?.labels || []);
 
 // Handle task moved between columns
 const handleTaskMoved = ({ task, statusId, newIndex }) => {
-    router.patch(
-        route('tasks.change-status', [props.workspace.id, props.space.id, props.list.id, task.id]),
-        { status_id: statusId },
-        {
-            preserveScroll: true,
-            onSuccess: () => {
-                if (window.showSnackbar) {
-                    window.showSnackbar('Task moved successfully!', 'success');
+    if (props.parentTask) {
+        // Subtask view — use subtask update route
+        router.patch(
+            route('tasks.subtasks.update', [props.workspace.id, props.space.id, props.list.id, props.parentTask.id, task.id]),
+            { status_id: statusId },
+            {
+                preserveScroll: true,
+                onSuccess: () => {
+                    if (window.showSnackbar) {
+                        window.showSnackbar('Subtask moved successfully!', 'success');
+                    }
+                    router.reload({ only: ['tasksByStatus'] });
                 }
-                router.reload({ only: ['tasksByStatus'] });
             }
-        }
-    );
+        );
+    } else {
+        // Task view — use task change-status route
+        router.patch(
+            route('tasks.change-status', [props.workspace.id, props.space.id, props.list.id, task.id]),
+            { status_id: statusId },
+            {
+                preserveScroll: true,
+                onSuccess: () => {
+                    if (window.showSnackbar) {
+                        window.showSnackbar('Task moved successfully!', 'success');
+                    }
+                    router.reload({ only: ['tasksByStatus'] });
+                }
+            }
+        );
+    }
 };
 
 // Handle task complete
@@ -132,15 +168,12 @@ const handleAddTask = ({ name, status_id }) => {
             task_id: props.parentTask.id
         };
 
-        console.log('Adding subtask with data:', data);
-
         router.post(
             route('tasks.subtasks.store', [props.workspace.id, props.space.id, props.list.id, props.parentTask.id]),
             data,
             {
                 preserveScroll: true,
                 onSuccess: (response) => {
-                    console.log('Subtask created successfully:', response);
                     if (window.showSnackbar) {
                         window.showSnackbar('Subtask added successfully!', 'success');
                     }
@@ -150,7 +183,6 @@ const handleAddTask = ({ name, status_id }) => {
                     });
                 },
                 onError: (errors) => {
-                    console.error('Failed to create subtask:', errors);
                     if (window.showSnackbar) {
                         window.showSnackbar('Failed to add subtask', 'error');
                     }
@@ -164,22 +196,18 @@ const handleAddTask = ({ name, status_id }) => {
             status_id
         };
 
-        console.log('Adding task with data:', data);
-
         router.post(
             route('tasks.store', [props.workspace.id, props.space.id, props.list.id]),
             data,
             {
                 preserveScroll: true,
                 onSuccess: (response) => {
-                    console.log('Task created successfully:', response);
                     if (window.showSnackbar) {
                         window.showSnackbar('Task added successfully!', 'success');
                     }
                     router.reload({ only: ['tasksByStatus'] });
                 },
                 onError: (errors) => {
-                    console.error('Failed to create task:', errors);
                     if (window.showSnackbar) {
                         window.showSnackbar('Failed to add task', 'error');
                     }
@@ -407,6 +435,151 @@ const nextMonth = () => {
 const goToToday = () => {
     currentCalendarDate.value = new Date();
 };
+
+// CPM Analysis Functions
+const fetchCpmData = async () => {
+    if (!props.parentTask) return;
+    
+    loadingCpm.value = true;
+    try {
+        const response = await fetch(
+            route('tasks.cpm.analyze', [props.workspace.id, props.space.id, props.list.id, props.parentTask.id]),
+            {
+                method: 'GET',
+                headers: {
+                    'Accept': 'application/json',
+                    'X-Requested-With': 'XMLHttpRequest',
+                },
+            }
+        );
+        
+        if (response.ok) {
+            cpmData.value = await response.json();
+        } else {
+            cpmData.value = {
+                success: false,
+                message: 'Failed to fetch CPM data',
+            };
+        }
+    } catch (error) {
+        console.error('Error fetching CPM data:', error);
+        cpmData.value = {
+            success: false,
+            message: 'An error occurred while calculating CPM',
+        };
+    } finally {
+        loadingCpm.value = false;
+    }
+};
+
+// Fetch CPM data when switching to gantt view or when viewing subtasks
+watch(viewMode, (newMode) => {
+    if (newMode === 'gantt' && props.parentTask && !cpmData.value) {
+        fetchCpmData();
+    }
+});
+
+// Also fetch when parentTask changes (entering subtask view)
+watch(() => props.parentTask, (newParentTask) => {
+    if (newParentTask) {
+        cpmData.value = null; // Reset CPM data
+        if (viewMode.value === 'gantt') {
+            fetchCpmData();
+        }
+    }
+}, { immediate: true });
+
+// Handle subtask click from Gantt chart
+const handleGanttSubtaskClick = (subtask) => {
+    // Find the full subtask object from our local data
+    for (const statusId in localTasksByStatus.value) {
+        const found = localTasksByStatus.value[statusId].find(s => s.id === subtask.id);
+        if (found) {
+            handleTaskOpen(found);
+            return;
+        }
+    }
+};
+
+// Handle dependency add/remove from Gantt chart
+const handleGanttDependencyAdd = async ({ subtaskId, dependsOnId }) => {
+    try {
+        const response = await fetch(
+            route('tasks.cpm.dependencies.add', [props.workspace.id, props.space.id, props.list.id, props.parentTask.id]),
+            {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Accept': 'application/json',
+                    'X-Requested-With': 'XMLHttpRequest',
+                    'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]')?.content,
+                },
+                body: JSON.stringify({
+                    subtask_id: subtaskId,
+                    depends_on_id: dependsOnId,
+                    type: 'blocks',
+                }),
+            }
+        );
+        const result = await response.json();
+        if (result.success) {
+            await fetchCpmData();
+            if (window.showSnackbar) window.showSnackbar('Dependency added!', 'success');
+        } else {
+            if (window.showSnackbar) window.showSnackbar(result.message || 'Failed', 'error');
+        }
+    } catch {
+        if (window.showSnackbar) window.showSnackbar('Failed to add dependency', 'error');
+    }
+};
+
+const handleGanttDependencyRemove = async ({ subtaskId, dependsOnId }) => {
+    try {
+        const response = await fetch(
+            route('tasks.cpm.dependencies.remove', [props.workspace.id, props.space.id, props.list.id, props.parentTask.id]),
+            {
+                method: 'DELETE',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Accept': 'application/json',
+                    'X-Requested-With': 'XMLHttpRequest',
+                    'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]')?.content,
+                },
+                body: JSON.stringify({
+                    subtask_id: subtaskId,
+                    depends_on_id: dependsOnId,
+                }),
+            }
+        );
+        const result = await response.json();
+        if (result.success) {
+            await fetchCpmData();
+            if (window.showSnackbar) window.showSnackbar('Dependency removed!', 'success');
+        } else {
+            if (window.showSnackbar) window.showSnackbar(result.message || 'Failed', 'error');
+        }
+    } catch {
+        if (window.showSnackbar) window.showSnackbar('Failed to remove dependency', 'error');
+    }
+};
+
+// Switch to Gantt view
+const viewGantt = () => {
+    viewMode.value = 'gantt';
+    if (!cpmData.value) {
+        fetchCpmData();
+    }
+};
+
+// Check if a subtask is on the critical path (for board view highlighting)
+const isSubtaskCritical = (subtaskId) => {
+    if (!cpmData.value?.success) return false;
+    return cpmData.value.data?.criticalPath?.includes(subtaskId) || false;
+};
+
+// Provide critical path info to child components
+provide('isSubtaskCritical', isSubtaskCritical);
+provide('cpmData', cpmData);
 </script>
 
 <template>
@@ -472,6 +645,17 @@ const goToToday = () => {
                 <v-chip size="small" color="primary" variant="flat">
                     Subtask Board
                 </v-chip>
+                <!-- CPM Analysis Button -->
+                <v-btn 
+                    variant="tonal" 
+                    color="warning" 
+                    size="small"
+                    :loading="loadingCpm"
+                    @click="viewGantt"
+                >
+                    <v-icon start size="16">mdi-chart-gantt</v-icon>
+                    CPM Analysis
+                </v-btn>
             </div>
 
             <!-- List Header -->
@@ -525,6 +709,10 @@ const goToToday = () => {
                         </v-btn>
                         <v-btn value="calendar" size="small">
                             <v-icon size="16">mdi-calendar</v-icon>
+                        </v-btn>
+                        <!-- Gantt view only available for subtasks -->
+                        <v-btn v-if="parentTask" value="gantt" size="small">
+                            <v-icon size="16">mdi-chart-gantt</v-icon>
                         </v-btn>
                     </v-btn-toggle>
 
@@ -715,6 +903,38 @@ const goToToday = () => {
                     </div>
                 </div>
             </div>
+
+            <!-- Gantt View (CPM Analysis) - Only for subtasks -->
+            <div v-else-if="viewMode === 'gantt' && parentTask" class="gantt-view">
+                <!-- Loading State -->
+                <div v-if="loadingCpm" class="flex items-center justify-center h-64">
+                    <v-progress-circular indeterminate color="primary" size="48" />
+                    <span class="ml-4 text-gray-400">Calculating Critical Path...</span>
+                </div>
+                
+                <!-- CPM Content -->
+                <template v-else>
+                    <!-- CPM Summary Card -->
+                    <div class="mb-4">
+                        <CpmSummary 
+                            :cpm-data="cpmData" 
+                            @subtask-click="handleGanttSubtaskClick"
+                        />
+                    </div>
+                    
+                    <!-- Gantt Chart -->
+                    <GanttChart 
+                        :cpm-data="cpmData"
+                        :workspace="workspace"
+                        :space="space"
+                        :list="list"
+                        :task="parentTask"
+                        @subtask-click="handleGanttSubtaskClick"
+                        @dependency-add="handleGanttDependencyAdd"
+                        @dependency-remove="handleGanttDependencyRemove"
+                    />
+                </template>
+            </div>
         </div>
 
         <!-- Task Detail Panel -->
@@ -831,8 +1051,14 @@ const goToToday = () => {
 }
 
 .list-view,
-.calendar-view {
+.calendar-view,
+.gantt-view {
     padding: 24px;
+}
+
+.gantt-view {
+    height: calc(100vh - 200px);
+    overflow: auto;
 }
 
 .task-row {

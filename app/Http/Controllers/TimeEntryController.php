@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Http\Requests\StoreTimeEntryRequest;
 use App\Http\Requests\UpdateTimeEntryRequest;
 use App\Models\Space;
+use App\Models\Subtask;
 use App\Models\Task;
 use App\Models\TaskList;
 use App\Models\TimeEntry;
@@ -83,11 +84,11 @@ class TimeEntryController extends Controller
     /**
      * Log time entry.
      */
-    public function store(StoreTimeEntryRequest $request, Workspace $workspace, Space $space, TaskList $list, Task $task): RedirectResponse
+    public function store(StoreTimeEntryRequest $request, Workspace $workspace, Space $space, TaskList $list, Task $task, Subtask $subtask): RedirectResponse
     {
         try {
             $entry = $this->timeTrackingService->logTime(
-                $task,
+                $subtask,
                 $request->user(),
                 $request->validated()
             );
@@ -107,8 +108,15 @@ class TimeEntryController extends Controller
     public function startTimer(Request $request, Workspace $workspace, Space $space, TaskList $list, Task $task): RedirectResponse
     {
         try {
+            // Note: This route receives task_id; if used with subtasks,
+            // the subtask_id should be passed as request data 
+            $subtaskId = $request->input('subtask_id');
+            $subtask = $subtaskId 
+                ? Subtask::findOrFail($subtaskId)
+                : Subtask::where('task_id', $task->id)->firstOrFail();
+
             $entry = $this->timeTrackingService->startTimer(
-                $task,
+                $subtask,
                 $request->user(),
                 $request->description
             );
@@ -147,7 +155,7 @@ class TimeEntryController extends Controller
         $timer = $this->timeTrackingService->getRunningTimer($request->user());
 
         return Inertia::render('TimeTracking/RunningTimer', [
-            'timer' => $timer ? new \App\Http\Resources\TimeEntryResource($timer->load('user', 'task')) : null,
+            'timer' => $timer ? new \App\Http\Resources\TimeEntryResource($timer->load('user', 'subtask')) : null,
         ]);
     }
 

@@ -60,7 +60,7 @@ class TaskService
             'assignees',
             'labels',
             'watchers',
-            'subtasks' => fn($q) => $q->with(['status', 'assignees'])->orderBy('position'),
+            'subtasks' => fn($q) => $q->with(['status', 'assignees', 'dependencies', 'dependents'])->orderBy('position'),
             'dependencies',
             'dependents',
             'comments' => fn($q) => $q->whereNull('parent_id')->with(['user', 'replies.user', 'reactions.user'])->latest(),

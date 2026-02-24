@@ -58,7 +58,7 @@ class TaskListService
                     'priority',
                     'assignees',
                     'labels',
-                    'subtasks', // For subtask count
+                    'subtasks.assignees', // For subtask count & assignee aggregation
                     'comments.user', // Include comments
                 ])
                 ->orderBy('position')

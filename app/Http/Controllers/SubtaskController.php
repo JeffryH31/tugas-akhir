@@ -78,4 +78,22 @@ class SubtaskController extends Controller
             return redirect()->back()->withErrors(['error' => $e->getMessage()]);
         }
     }
+
+    /**
+     * Reorder subtasks.
+     */
+    public function reorder(Request $request, Workspace $workspace, Space $space, TaskList $list, Task $task): RedirectResponse
+    {
+        $request->validate([
+            'subtask_ids' => ['required', 'array'],
+            'subtask_ids.*' => ['integer', 'exists:subtasks,id'],
+        ]);
+
+        try {
+            $this->subtaskService->reorder($task, $request->subtask_ids);
+            return redirect()->back()->with('success', 'Subtasks reordered successfully.');
+        } catch (\Exception $e) {
+            return redirect()->back()->withErrors(['error' => 'Failed to reorder subtasks: ' . $e->getMessage()]);
+        }
+    }
 }
