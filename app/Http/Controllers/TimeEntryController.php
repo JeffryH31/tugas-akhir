@@ -105,7 +105,7 @@ class TimeEntryController extends Controller
     /**
      * Start timer.
      */
-    public function startTimer(Request $request, Workspace $workspace, Space $space, TaskList $list, Task $task): RedirectResponse
+    public function startTimer(Request $request, Workspace $workspace, Space $space, TaskList $list, Task $task)
     {
         try {
             // Note: This route receives task_id; if used with subtasks,
@@ -121,11 +121,22 @@ class TimeEntryController extends Controller
                 $request->description
             );
 
+            if ($request->wantsJson()) {
+                return response()->json([
+                    'success' => true,
+                    'message' => 'Timer started successfully.',
+                    'timeEntry' => new \App\Http\Resources\TimeEntryResource($entry->load('user')),
+                ]);
+            }
+
             return redirect()->back()->with([
                 'success' => 'Timer started successfully.',
                 'timeEntry' => new \App\Http\Resources\TimeEntryResource($entry->load('user'))
             ]);
         } catch (\Exception $e) {
+            if ($request->wantsJson()) {
+                return response()->json(['success' => false, 'message' => $e->getMessage()], 422);
+            }
             return redirect()->back()->withErrors(['error' => 'Failed to start timer: ' . $e->getMessage()]);
         }
     }
@@ -133,16 +144,27 @@ class TimeEntryController extends Controller
     /**
      * Stop timer.
      */
-    public function stopTimer(Request $request, TimeEntry $entry): RedirectResponse
+    public function stopTimer(Request $request, Workspace $workspace, Space $space, TaskList $list, Task $task, TimeEntry $entry)
     {
         try {
             $stoppedEntry = $this->timeTrackingService->stopTimer($entry, $request->user());
+
+            if ($request->wantsJson()) {
+                return response()->json([
+                    'success' => true,
+                    'message' => 'Timer stopped successfully.',
+                    'timeEntry' => new \App\Http\Resources\TimeEntryResource($stoppedEntry->load('user')),
+                ]);
+            }
 
             return redirect()->back()->with([
                 'success' => 'Timer stopped successfully.',
                 'timeEntry' => new \App\Http\Resources\TimeEntryResource($stoppedEntry->load('user'))
             ]);
         } catch (\Exception $e) {
+            if ($request->wantsJson()) {
+                return response()->json(['success' => false, 'message' => $e->getMessage()], 422);
+            }
             return redirect()->back()->withErrors(['error' => 'Failed to stop timer: ' . $e->getMessage()]);
         }
     }
@@ -150,9 +172,15 @@ class TimeEntryController extends Controller
     /**
      * Get running timer.
      */
-    public function runningTimer(Request $request): Response
+    public function runningTimer(Request $request)
     {
         $timer = $this->timeTrackingService->getRunningTimer($request->user());
+
+        if ($request->wantsJson()) {
+            return response()->json([
+                'timer' => $timer ? new \App\Http\Resources\TimeEntryResource($timer->load('user', 'subtask')) : null,
+            ]);
+        }
 
         return Inertia::render('TimeTracking/RunningTimer', [
             'timer' => $timer ? new \App\Http\Resources\TimeEntryResource($timer->load('user', 'subtask')) : null,

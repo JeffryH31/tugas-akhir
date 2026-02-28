@@ -2,7 +2,7 @@
 /**
  * Task Detail Panel - Slide-over panel for task details
  */
-import { ref, computed, watch, reactive } from 'vue';
+import { ref, computed, watch, reactive, onMounted, onUnmounted } from 'vue';
 import { router, useForm } from '@inertiajs/vue3';
 
 const props = defineProps({
@@ -396,7 +396,7 @@ const updateStartDate = () => {
 
     router.patch(
         getUpdateRoute(),
-        { start_date: tempStartDate.value },
+        { start_date: tempStartDate.value || '' },
         {
             preserveScroll: true,
             preserveState: true,
@@ -424,7 +424,7 @@ const updateDueDate = () => {
 
     router.patch(
         getUpdateRoute(),
-        { due_date: tempDueDate.value },
+        { due_date: tempDueDate.value || '' },
         {
             preserveScroll: true,
             preserveState: true,
@@ -479,90 +479,225 @@ const openTimeEstimatePicker = () => {
     showTimeEstimatePicker.value = true;
 };
 
-// Time tracking
+// Time tracking (server-side timer)
 const isTracking = ref(false);
-const isPaused = ref(false);
 const trackingDuration = ref(0);
 const trackingInterval = ref(null);
+const runningEntryId = ref(null);
+const isTimerLoading = ref(false);
 
-const startTracking = () => {
-    isTracking.value = true;
-    isPaused.value = false;
-    trackingDuration.value = 0;
+// Helper: fetch with fresh CSRF token (avoids 419 on long sessions)
+const safeFetch = async (url, options = {}) => {
+    const token = document.querySelector('meta[name="csrf-token"]')?.content;
+    return fetch(url, {
+        ...options,
+        headers: {
+            'Content-Type': 'application/json',
+            'Accept': 'application/json',
+            'X-CSRF-TOKEN': token,
+            'X-Requested-With': 'XMLHttpRequest',
+            ...options.headers,
+        },
+        credentials: 'same-origin',
+    });
+};
 
+const startTimerInterval = () => {
+    if (trackingInterval.value) clearInterval(trackingInterval.value);
     trackingInterval.value = setInterval(() => {
         trackingDuration.value += 1;
     }, 1000);
 };
 
-const pauseTracking = () => {
-    isPaused.value = true;
+const stopTimerInterval = () => {
     if (trackingInterval.value) {
         clearInterval(trackingInterval.value);
         trackingInterval.value = null;
     }
 };
 
-const resumeTracking = () => {
-    isPaused.value = false;
-    trackingInterval.value = setInterval(() => {
-        trackingDuration.value += 1;
-    }, 1000);
+const startTracking = async () => {
+    if (!isSubtask.value || isTimerLoading.value) return;
+    isTimerLoading.value = true;
+
+    try {
+        const url = route('tasks.timer.start', [
+            props.workspace.id,
+            props.space.id,
+            props.list.id,
+            props.parentTask.id,
+        ]);
+
+        const res = await safeFetch(url, {
+            method: 'POST',
+            body: JSON.stringify({ subtask_id: props.task.id }),
+        });
+
+        if (res.ok || res.status === 302 || res.status === 303) {
+            // Read entry ID from the JSON response
+            const data = await res.json().catch(() => ({}));
+
+            isTracking.value = true;
+            trackingDuration.value = 0;
+            runningEntryId.value = data.timeEntry?.id || data.time_entry?.id || data.id || null;
+            startTimerInterval();
+
+            // Reload to sync UI
+            router.reload({ preserveScroll: true, only: ['task', 'runningTimer'] });
+
+            if (window.showSnackbar) {
+                window.showSnackbar('Timer started!', 'success');
+            }
+        } else if (res.status === 419) {
+            // Session expired — reload the page to get fresh token
+            window.location.reload();
+        } else {
+            const data = await res.json().catch(() => ({}));
+            if (window.showSnackbar) {
+                window.showSnackbar(data.message || 'Failed to start timer', 'error');
+            }
+        }
+    } catch (err) {
+        if (window.showSnackbar) {
+            window.showSnackbar('Failed to start timer', 'error');
+        }
+    } finally {
+        isTimerLoading.value = false;
+    }
 };
 
-const stopTracking = () => {
-    if (trackingInterval.value) {
-        clearInterval(trackingInterval.value);
-        trackingInterval.value = null;
+const stopTracking = async () => {
+    if (isTimerLoading.value) return;
+    isTimerLoading.value = true;
+    stopTimerInterval();
+
+    // Find the running entry ID from multiple sources
+    let entryId = runningEntryId.value;
+
+    // Source 2: task's time_entries
+    if (!entryId) {
+        const runningEntry = props.task.time_entries?.find(e => e.is_running);
+        entryId = runningEntry?.id;
     }
 
-    const durationInMinutes = Math.round(trackingDuration.value / 60);
+    // Source 3: global running timer from shared Inertia props
+    if (!entryId) {
+        const globalTimer = router.page?.props?.runningTimer;
+        if (globalTimer?.subtask_id === props.task.id && globalTimer?.is_running) {
+            entryId = globalTimer.id;
+        }
+    }
 
-    if (durationInMinutes > 0) {
-        // Optimistically update time_spent
-        const oldTimeSpent = props.task.time_spent || 0;
-        props.task.time_spent = oldTimeSpent + durationInMinutes;
-
-        router.post(
-            route('tasks.subtasks.time-entries.store', [
-                props.workspace.id,
-                props.space.id,
-                props.list.id,
-                props.parentTask.id,
-                props.task.id
-            ]),
-            {
-                duration: durationInMinutes,
-                description: 'Tracked time'
-            },
-            {
-                preserveScroll: true,
-                preserveState: true,
-                onSuccess: (page) => {
-                    // Update task data from response
-                    if (page.props.task) {
-                        Object.assign(props.task, page.props.task);
-                    }
-                    if (window.showSnackbar) {
-                        window.showSnackbar(`Time entry saved: ${formatDuration(trackingDuration.value)}`, 'success');
-                    }
-                },
-                onError: (errors) => {
-                    // Revert on error
-                    props.task.time_spent = oldTimeSpent;
-                    console.error('Failed to save time entry:', errors);
-                    if (window.showSnackbar) {
-                        window.showSnackbar('Failed to save time entry', 'error');
-                    }
+    // Source 4: ask the server directly for the running timer
+    if (!entryId) {
+        try {
+            const runningRes = await safeFetch(route('time-tracking.running'), { method: 'GET' });
+            if (runningRes.ok) {
+                const runningData = await runningRes.json().catch(() => ({}));
+                if (runningData.timer?.id) {
+                    entryId = runningData.timer.id;
                 }
             }
-        );
+        } catch (e) { }
     }
 
-    // Reset tracker state
-    isTracking.value = false;
-    isPaused.value = false;
-    trackingDuration.value = 0;
+    if (!entryId) {
+        if (window.showSnackbar) {
+            window.showSnackbar('No running timer found.', 'warning');
+        }
+        isTracking.value = false;
+        trackingDuration.value = 0;
+        isTimerLoading.value = false;
+        router.reload({ preserveScroll: true });
+        return;
+    }
+
+    try {
+        const url = route('tasks.timer.stop', [
+            props.workspace.id,
+            props.space.id,
+            props.list.id,
+            props.parentTask.id,
+            entryId,
+        ]);
+
+        const res = await safeFetch(url, { method: 'POST' });
+
+        if (res.ok || res.status === 302 || res.status === 303) {
+            const data = await res.json().catch(() => ({}));
+
+            isTracking.value = false;
+            runningEntryId.value = null;
+
+            if (window.showSnackbar) {
+                window.showSnackbar(`Timer stopped: ${formatTrackingDuration.value}`, 'success');
+            }
+
+            trackingDuration.value = 0;
+
+            // Update local data instantly — no page reload needed
+            if (data.timeEntry) {
+                const stoppedEntry = data.timeEntry;
+                // Update time_spent on localTask (duration is in minutes)
+                const oldSpent = localTask.value.time_spent || 0;
+                localTask.value.time_spent = oldSpent + (stoppedEntry.duration || 0);
+
+                // Update the entry in the local time_entries list
+                if (localTask.value.time_entries) {
+                    const idx = localTask.value.time_entries.findIndex(e => e.id === stoppedEntry.id);
+                    if (idx >= 0) {
+                        localTask.value.time_entries[idx] = stoppedEntry;
+                    } else {
+                        localTask.value.time_entries.push(stoppedEntry);
+                    }
+                }
+            } else {
+                // Fallback: recalculate from tracking duration
+                const minutesTracked = Math.max(1, Math.ceil(trackingDuration.value / 60));
+                localTask.value.time_spent = (localTask.value.time_spent || 0) + minutesTracked;
+            }
+        } else if (res.status === 419) {
+            window.location.reload();
+        } else {
+            if (window.showSnackbar) {
+                window.showSnackbar('Failed to stop timer', 'error');
+            }
+        }
+    } catch (err) {
+        if (window.showSnackbar) {
+            window.showSnackbar('Failed to stop timer', 'error');
+        }
+    } finally {
+        isTimerLoading.value = false;
+    }
+};
+
+// Check for existing running timer on this subtask (e.g. page reload, browser reopened)
+const initRunningTimer = () => {
+    if (!isSubtask.value) return;
+
+    // Check from task's time_entries
+    const runningEntry = props.task?.time_entries?.find(e => e.is_running);
+    if (runningEntry && runningEntry.subtask_id === props.task.id) {
+        isTracking.value = true;
+        runningEntryId.value = runningEntry.id;
+        // Calculate elapsed from started_at
+        const startedAt = new Date(runningEntry.started_at).getTime();
+        trackingDuration.value = Math.floor((Date.now() - startedAt) / 1000);
+        startTimerInterval();
+        return;
+    }
+
+    // Also check global running timer from shared props
+    const page = router.page;
+    const globalTimer = page?.props?.runningTimer;
+    if (globalTimer?.subtask_id === props.task?.id && globalTimer?.is_running) {
+        isTracking.value = true;
+        runningEntryId.value = globalTimer.id;
+        const startedAt = new Date(globalTimer.started_at).getTime();
+        trackingDuration.value = Math.floor((Date.now() - startedAt) / 1000);
+        startTimerInterval();
+    }
 };
 
 const formatTrackingDuration = computed(() => {
@@ -572,6 +707,112 @@ const formatTrackingDuration = computed(() => {
 
     return `${String(hours).padStart(2, '0')}:${String(minutes).padStart(2, '0')}:${String(seconds).padStart(2, '0')}`;
 });
+
+// Initialize running timer on mount, cleanup on unmount
+onMounted(() => {
+    initRunningTimer();
+});
+
+onUnmounted(() => {
+    stopTimerInterval();
+});
+
+// Re-check running timer when task prop changes (e.g. after reload)
+watch(() => props.task?.time_entries, () => {
+    if (!isTracking.value) {
+        initRunningTimer();
+    } else {
+        // Update the running entry ID if we got fresh data
+        const runningEntry = props.task?.time_entries?.find(e => e.is_running);
+        if (runningEntry) {
+            runningEntryId.value = runningEntry.id;
+        }
+    }
+}, { deep: true });
+
+// ===== Dependency Management =====
+const dependencyLoading = ref(false);
+
+const getAvailableDependencies = computed(() => {
+    if (!isSubtask.value || !props.parentTask?.subtasks) return [];
+    const existingDepIds = (props.task.dependencies || []).map(d => d.id);
+    return props.parentTask.subtasks.filter(
+        s => s.id !== props.task.id && !existingDepIds.includes(s.id)
+    );
+});
+
+const addDependency = (dependsOn) => {
+    if (!isSubtask.value || !props.parentTask) return;
+    dependencyLoading.value = true;
+
+    fetch(
+        route('tasks.cpm.dependencies.add', [props.workspace.id, props.space.id, props.list.id, props.parentTask.id]),
+        {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'Accept': 'application/json',
+                'X-Requested-With': 'XMLHttpRequest',
+                'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]')?.content,
+            },
+            body: JSON.stringify({
+                subtask_id: props.task.id,
+                depends_on_id: dependsOn.id,
+                type: 'blocks',
+            }),
+        }
+    ).then(res => res.json()).then(result => {
+        if (result.success) {
+            emit('updated');
+            if (window.showSnackbar) window.showSnackbar('Dependency added!', 'success');
+        } else {
+            if (window.showSnackbar) window.showSnackbar(result.message || 'Failed', 'error');
+        }
+    }).catch(() => {
+        if (window.showSnackbar) window.showSnackbar('Failed to add dependency', 'error');
+    }).finally(() => {
+        dependencyLoading.value = false;
+    });
+};
+
+const removeDependency = (dependsOn) => {
+    if (!isSubtask.value || !props.parentTask) return;
+    dependencyLoading.value = true;
+
+    fetch(
+        route('tasks.cpm.dependencies.remove', [props.workspace.id, props.space.id, props.list.id, props.parentTask.id]),
+        {
+            method: 'DELETE',
+            headers: {
+                'Content-Type': 'application/json',
+                'Accept': 'application/json',
+                'X-Requested-With': 'XMLHttpRequest',
+                'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]')?.content,
+            },
+            body: JSON.stringify({
+                subtask_id: props.task.id,
+                depends_on_id: dependsOn.id,
+            }),
+        }
+    ).then(res => res.json()).then(result => {
+        if (result.success) {
+            emit('updated');
+            if (window.showSnackbar) window.showSnackbar('Dependency removed!', 'success');
+        } else {
+            if (window.showSnackbar) window.showSnackbar(result.message || 'Failed', 'error');
+        }
+    }).catch(() => {
+        if (window.showSnackbar) window.showSnackbar('Failed to remove dependency', 'error');
+    }).finally(() => {
+        dependencyLoading.value = false;
+    });
+};
+
+const formatSubtaskEstimate = (minutes) => {
+    if (!minutes) return '';
+    const hours = minutes / 60;
+    return hours >= 1 ? `${hours}h` : `${minutes}m`;
+};
 
 // Toggle assignee
 const toggleAssignee = (userId) => {
@@ -708,20 +949,8 @@ const isSubmittingComment = ref(false);
 const submitComment = () => {
     if (!newComment.value.trim() || isSubmittingComment.value) return;
 
-    console.log('=== Submitting Comment ===');
-    console.log('Task ID:', props.task?.id);
-    console.log('Content:', newComment.value);
-
     // Get the correct task ID for comments (always use main task, not subtask)
     const taskId = isSubtask.value ? props.parentTask.id : props.task.id;
-
-    console.log('Using Task ID for comment:', taskId);
-    console.log('Route params:', {
-        workspace: props.workspace?.id,
-        space: props.space?.id,
-        list: props.list?.id,
-        task: taskId
-    });
 
     isSubmittingComment.value = true;
 
@@ -736,7 +965,6 @@ const submitComment = () => {
         {
             preserveScroll: true,
             onSuccess: () => {
-                console.log('Comment added successfully!');
                 newComment.value = '';
                 if (window.showSnackbar) {
                     window.showSnackbar('Comment added!', 'success');
@@ -745,7 +973,6 @@ const submitComment = () => {
                 emit('updated');
             },
             onError: (errors) => {
-                console.error('Failed to add comment:', errors);
                 if (window.showSnackbar) {
                     window.showSnackbar('Failed to add comment', 'error');
                 }
@@ -1132,21 +1359,18 @@ const deleteTimeEntry = (entryId) => {
                                 </div>
                                 <div class="detail-value">
                                     <div class="flex items-center gap-2">
-                                        <v-chip variant="text" size="small" class="font-mono">
+                                        <v-chip variant="text" size="small" class="font-mono"
+                                            :color="isTracking ? 'success' : 'default'">
                                             <v-icon start size="16">mdi-clock</v-icon>
                                             {{ formatTrackingDuration }}
+                                            <div v-if="isTracking"
+                                                class="w-2 h-2 bg-green-500 rounded-full animate-pulse ml-2" />
                                         </v-chip>
                                         <div class="flex gap-1">
                                             <v-btn v-if="!isTracking" icon="mdi-play" color="success" variant="tonal"
                                                 size="small" @click="startTracking" />
-                                            <template v-else>
-                                                <v-btn v-if="!isPaused" icon="mdi-pause" color="warning" variant="tonal"
-                                                    size="small" @click="pauseTracking" />
-                                                <v-btn v-else icon="mdi-play" color="success" variant="tonal"
-                                                    size="small" @click="resumeTracking" />
-                                                <v-btn icon="mdi-stop" color="error" variant="tonal" size="small"
-                                                    @click="stopTracking" />
-                                            </template>
+                                            <v-btn v-else icon="mdi-stop" color="error" variant="tonal" size="small"
+                                                @click="stopTracking" />
                                         </div>
                                     </div>
                                 </div>
@@ -1167,6 +1391,62 @@ const deleteTimeEntry = (entryId) => {
                                         :model-value="(localTask.time_spent / localTask.time_estimate) * 100"
                                         :color="localTask.time_spent > localTask.time_estimate ? 'error' : 'primary'"
                                         height="4" class="mt-2" />
+                                </div>
+                            </div>
+
+                            <!-- Dependencies (Subtasks only) -->
+                            <div v-if="isSubtask" class="detail-row">
+                                <div class="detail-label">
+                                    <v-icon size="18" class="mr-2">mdi-link-variant</v-icon>
+                                    Dependencies
+                                </div>
+                                <div class="detail-value">
+                                    <div class="flex flex-wrap gap-1 items-center">
+                                        <!-- Predecessors (depends on) -->
+                                        <v-chip v-for="dep in (localTask?.dependencies || [])" :key="dep.id"
+                                            size="small" color="warning" variant="tonal" closable
+                                            :disabled="dependencyLoading" @click:close="removeDependency(dep)">
+                                            <v-icon start size="12">mdi-arrow-left</v-icon>
+                                            {{ dep.name }}
+                                        </v-chip>
+                                        <!-- Successors (depended by) -->
+                                        <v-chip v-for="dep in (localTask?.dependents || [])" :key="'s-' + dep.id"
+                                            size="small" color="info" variant="tonal">
+                                            <v-icon start size="12">mdi-arrow-right</v-icon>
+                                            {{ dep.name }}
+                                        </v-chip>
+                                        <!-- Add predecessor -->
+                                        <v-menu :close-on-content-click="false">
+                                            <template v-slot:activator="{ props: menuProps }">
+                                                <v-btn v-bind="menuProps" icon="mdi-plus" size="x-small" variant="text"
+                                                    :loading="dependencyLoading" />
+                                            </template>
+                                            <v-card color="surface" min-width="250">
+                                                <v-card-title class="text-sm py-2">Add Predecessor</v-card-title>
+                                                <v-divider />
+                                                <v-list density="compact" max-height="200" class="overflow-auto">
+                                                    <v-list-item v-for="s in getAvailableDependencies" :key="s.id"
+                                                        :disabled="dependencyLoading" @click="addDependency(s)">
+                                                        <template #prepend>
+                                                            <v-icon size="16">mdi-subtitles-outline</v-icon>
+                                                        </template>
+                                                        <v-list-item-title class="text-sm">{{ s.name
+                                                        }}</v-list-item-title>
+                                                        <v-list-item-subtitle v-if="s.time_estimate" class="text-xs">
+                                                            Est: {{ formatSubtaskEstimate(s.time_estimate) }}
+                                                        </v-list-item-subtitle>
+                                                    </v-list-item>
+                                                    <v-list-item v-if="getAvailableDependencies.length === 0" disabled>
+                                                        <v-list-item-title class="text-sm text-gray-500">
+                                                            No available subtasks
+                                                        </v-list-item-title>
+                                                    </v-list-item>
+                                                </v-list>
+                                            </v-card>
+                                        </v-menu>
+                                    </div>
+                                    <div v-if="!(localTask?.dependencies || []).length && !(localTask?.dependents || []).length"
+                                        class="text-xs text-gray-500 mt-1">No dependencies</div>
                                 </div>
                             </div>
 

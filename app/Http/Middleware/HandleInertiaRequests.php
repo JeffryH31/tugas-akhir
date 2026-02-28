@@ -2,6 +2,7 @@
 
 namespace App\Http\Middleware;
 
+use App\Models\TimeEntry;
 use Illuminate\Http\Request;
 use Inertia\Middleware;
 
@@ -73,6 +74,10 @@ class HandleInertiaRequests extends Middleware
             ...parent::share($request),
             'activeWorkspace' => $activeWorkspace,
             'workspaces' => $workspaces,
+            'runningTimer' => fn () => $request->user() ? TimeEntry::where('user_id', $request->user()->id)
+                ->where('is_running', true)
+                ->with('subtask.task.taskList.space')
+                ->first() : null,
         ];
     }
 }

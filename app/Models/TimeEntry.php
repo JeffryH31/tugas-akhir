@@ -33,21 +33,27 @@ class TimeEntry extends Model
         parent::boot();
 
         static::created(function ($entry) {
-            $entry->subtask->update([
-                'time_spent' => $entry->subtask->timeEntries()->sum('duration')
-            ]);
+            if ($entry->subtask) {
+                $entry->subtask->update([
+                    'time_spent' => $entry->subtask->timeEntries()->sum('duration')
+                ]);
+            }
         });
 
         static::updated(function ($entry) {
-            $entry->subtask->update([
-                'time_spent' => $entry->subtask->timeEntries()->sum('duration')
-            ]);
+            if ($entry->subtask) {
+                $entry->subtask->update([
+                    'time_spent' => $entry->subtask->timeEntries()->sum('duration')
+                ]);
+            }
         });
 
         static::deleted(function ($entry) {
-            $entry->subtask->update([
-                'time_spent' => $entry->subtask->timeEntries()->sum('duration')
-            ]);
+            if ($entry->subtask) {
+                $entry->subtask->update([
+                    'time_spent' => $entry->subtask->timeEntries()->sum('duration')
+                ]);
+            }
         });
     }
 
@@ -112,7 +118,7 @@ class TimeEntry extends Model
         $this->update([
             'is_running' => false,
             'ended_at' => now(),
-            'duration' => now()->diffInMinutes($this->started_at),
+            'duration' => max(1, (int) $this->started_at->diffInMinutes(now())),
         ]);
     }
 

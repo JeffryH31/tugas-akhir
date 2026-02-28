@@ -1,5 +1,5 @@
 <script setup>
-import { ref, computed, onMounted, onUnmounted } from 'vue';
+import { ref, computed, watch, onMounted, onUnmounted } from 'vue';
 import { Head, router, usePage } from '@inertiajs/vue3';
 import MainLayout from '@/Layouts/MainLayout.vue';
 
@@ -38,11 +38,11 @@ const formatRunningTime = computed(() => {
 });
 
 // Methods
-const formatDuration = (seconds) => {
-    if (!seconds) return '0h 0m';
-    const hours = Math.floor(seconds / 3600);
-    const minutes = Math.floor((seconds % 3600) / 60);
-    return `${hours}h ${minutes}m`;
+const formatDuration = (minutes) => {
+    if (!minutes) return '0h 0m';
+    const hours = Math.floor(minutes / 60);
+    const mins = Math.round(minutes % 60);
+    return `${hours}h ${mins}m`;
 };
 
 const formatDateTime = (dateString) => {
@@ -55,7 +55,8 @@ const formatDateTime = (dateString) => {
     });
 };
 
-const goToTask = (task) => {
+const goToTask = (entry) => {
+    const task = entry?.subtask?.task;
     if (!task) return;
     
     router.visit(route('tasks.show', [
@@ -66,18 +67,48 @@ const goToTask = (task) => {
     ]));
 };
 
-const stopTimer = (entry) => {
-    router.post(
-        route('tasks.timer.stop', [
+// Helper: fetch with fresh CSRF token
+const safeFetch = async (url, options = {}) => {
+    const token = document.querySelector('meta[name="csrf-token"]')?.content;
+    return fetch(url, {
+        ...options,
+        headers: {
+            'Content-Type': 'application/json',
+            'Accept': 'application/json',
+            'X-CSRF-TOKEN': token,
+            'X-Requested-With': 'XMLHttpRequest',
+            ...options.headers,
+        },
+        credentials: 'same-origin',
+    });
+};
+
+const stopTimer = async (entry) => {
+    const task = entry?.subtask?.task;
+    if (!task) return;
+
+    try {
+        const url = route('tasks.timer.stop', [
             props.activeWorkspace.id,
-            entry.task?.task_list?.space_id,
-            entry.task?.task_list_id,
-            entry.task?.id,
+            task.task_list?.space_id,
+            task.task_list_id,
+            task.id,
             entry.id,
-        ]),
-        {},
-        { preserveScroll: true }
-    );
+        ]);
+        const res = await safeFetch(url, { method: 'POST' });
+
+        if (res.ok || res.status === 302 || res.status === 303) {
+            stopTimerInterval();
+            elapsedSeconds.value = 0;
+            router.reload({ preserveScroll: true });
+        } else if (res.status === 419) {
+            window.location.reload();
+        }
+    } catch (err) {
+        if (window.showSnackbar) {
+            window.showSnackbar('Failed to stop timer', 'error');
+        }
+    }
 };
 
 const editEntry = (entry) => {
@@ -149,6 +180,18 @@ onMounted(() => {
 onUnmounted(() => {
     stopTimerInterval();
 });
+
+// Re-sync timer display when runningTimer prop changes (e.g. after stop)
+watch(() => props.runningTimer, (newTimer) => {
+    stopTimerInterval();
+    if (newTimer?.is_running) {
+        const startTime = new Date(newTimer.started_at).getTime();
+        elapsedSeconds.value = Math.floor((Date.now() - startTime) / 1000);
+        startTimerInterval();
+    } else {
+        elapsedSeconds.value = 0;
+    }
+});
 </script>
 
 <template>
@@ -170,7 +213,7 @@ onUnmounted(() => {
                             <div class="w-2 h-2 bg-red-500 rounded-full animate-pulse"></div>
                             <span class="text-white font-mono">{{ formatRunningTime }}</span>
                             <span class="text-gray-400">on</span>
-                            <span class="text-white">{{ runningTimer.task?.name }}</span>
+                            <span class="text-white">{{ runningTimer.subtask?.name || runningTimer.subtask?.task?.name || 'Task' }}</span>
                             <v-btn
                                 icon="mdi-stop"
                                 size="small"
@@ -237,14 +280,17 @@ onUnmounted(() => {
                             >
                                 <td>
                                     <a 
-                                        @click="goToTask(entry.task)"
+                                        @click="goToTask(entry)"
                                         class="text-primary hover:underline cursor-pointer"
                                     >
-                                        {{ entry.task?.name || 'No task' }}
+                                        {{ entry.subtask?.name || 'No subtask' }}
                                     </a>
+                                    <div v-if="entry.subtask?.task" class="text-xs text-gray-500">
+                                        {{ entry.subtask.task.name }}
+                                    </div>
                                 </td>
                                 <td class="text-gray-400">
-                                    {{ entry.task?.task_list?.name || '-' }}
+                                    {{ entry.subtask?.task?.task_list?.name || '-' }}
                                 </td>
                                 <td>{{ entry.description || '-' }}</td>
                                 <td class="text-gray-400">{{ formatDateTime(entry.started_at) }}</td>

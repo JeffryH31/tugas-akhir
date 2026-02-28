@@ -49,9 +49,9 @@ class DashboardController extends Controller
         $overdueTasks = $user->getOverdueTasks();
 
         // Get running timer if any
-        $runningTimer = TimeEntry::where('user_id' , $user->id)
+        $runningTimer = TimeEntry::where('user_id', $user->id)
             ->where('is_running', true)
-            ->with('task.taskList.space')
+            ->with('subtask.task.taskList.space')
             ->first();
 
         // Time stats

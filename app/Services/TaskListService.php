@@ -45,6 +45,8 @@ class TaskListService
                 'subtasks.priority',
                 'subtasks.assignees',
                 'subtasks.labels',
+                'subtasks.dependencies',
+                'subtasks.dependents',
                 'subtasks.timeEntries.user',
                 'subtasks.comments.user', // Include comments
             ])->findOrFail($taskId);

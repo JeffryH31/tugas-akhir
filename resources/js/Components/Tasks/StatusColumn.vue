@@ -117,7 +117,7 @@ const openEditStatus = () => {
         name: props.status.name,
         color: props.status.color,
         is_closed: props.status.is_closed || false,
-        applies_to: props.status.applies_to || 'both',
+        applies_to: props.parentTask ? 'subtasks' : 'tasks',
     };
     showEditStatus.value = true;
 };
@@ -212,8 +212,19 @@ const handleTaskOpen = (task) => {
 
         <!-- Tasks Container -->
         <div class="column-content">
+            <!-- Draggable Tasks -->
+            <draggable :list="tasks" group="tasks" item-key="id" :animation="200" ghost-class="task-ghost"
+                drag-class="task-dragging" class="tasks-list" @change="onDragChange" @start="isDragging = true"
+                @end="isDragging = false">
+                <template #item="{ element }">
+                    <div class="task-wrapper">
+                        <TaskCard :task="element" @complete="handleTaskComplete" @open-detail="handleTaskOpen" />
+                    </div>
+                </template>
+            </draggable>
+
             <!-- Add Task Form -->
-            <div v-if="showAddTask" class="add-task-form mb-2">
+            <div v-if="showAddTask" class="add-task-form mt-2">
                 <v-card variant="outlined" rounded="lg">
                     <v-card-text class="pa-3">
                         <v-text-field v-model="newTaskName" placeholder="Task name" variant="plain" density="compact"
@@ -229,17 +240,6 @@ const handleTaskOpen = (task) => {
                     </v-card-text>
                 </v-card>
             </div>
-
-            <!-- Draggable Tasks -->
-            <draggable :list="tasks" group="tasks" item-key="id" :animation="200" ghost-class="task-ghost"
-                drag-class="task-dragging" class="tasks-list" @change="onDragChange" @start="isDragging = true"
-                @end="isDragging = false">
-                <template #item="{ element }">
-                    <div class="task-wrapper">
-                        <TaskCard :task="element" @complete="handleTaskComplete" @open-detail="handleTaskOpen" />
-                    </div>
-                </template>
-            </draggable>
 
             <!-- Add Task Button (when form is hidden) -->
             <v-btn v-if="!showAddTask" variant="text" block class="add-task-btn mt-2" @click="showAddTask = true">
@@ -268,15 +268,6 @@ const handleTaskOpen = (task) => {
                                 :style="{ backgroundColor: color }" @click="editStatusForm.color = color" />
                         </div>
                     </div>
-
-                    <v-select v-model="editStatusForm.applies_to" label="Applies To" :items="[
-                        { title: 'Both Tasks & Subtasks', value: 'both' },
-                        { title: 'Tasks Only', value: 'tasks' },
-                        { title: 'Subtasks Only', value: 'subtasks' }
-                    ]" variant="outlined" density="comfortable" class="mb-3" />
-
-                    <v-checkbox v-model="editStatusForm.is_closed" label="Mark as closed status" density="comfortable"
-                        hide-details />
                 </v-card-text>
                 <v-divider />
                 <v-card-actions class="pa-4">
@@ -386,6 +377,21 @@ const handleTaskOpen = (task) => {
 
 .add-task-form :deep(.v-field) {
     background-color: transparent;
+}
+
+.add-task-form :deep(.v-field--focused .v-field__outline) {
+    --v-field-border-opacity: 0;
+    box-shadow: none;
+}
+
+.add-task-form :deep(.v-card) {
+    border-color: #2d2d30 !important;
+}
+
+.add-task-form :deep(*:focus),
+.add-task-form :deep(*:focus-visible) {
+    outline: none !important;
+    box-shadow: none !important;
 }
 
 .add-task-form :deep(.v-field__input) {

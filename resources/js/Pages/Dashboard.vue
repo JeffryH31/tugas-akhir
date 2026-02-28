@@ -26,12 +26,12 @@ const props = defineProps({
 // Active tab for tasks
 const activeTaskTab = ref('my-tasks');
 
-// Format duration
-const formatDuration = (seconds) => {
-    if (!seconds) return '0h 0m';
-    const hours = Math.floor(seconds / 3600);
-    const minutes = Math.floor((seconds % 3600) / 60);
-    return `${hours}h ${minutes}m`;
+// Format duration (input is in minutes from backend)
+const formatDuration = (minutes) => {
+    if (!minutes) return '0h 0m';
+    const hours = Math.floor(minutes / 60);
+    const mins = Math.round(minutes % 60);
+    return `${hours}h ${mins}m`;
 };
 
 // Quick create
@@ -359,8 +359,8 @@ const openCreateSpace = () => {
                                     <v-icon color="success" size="16">mdi-timer-outline</v-icon>
                                     <span class="text-sm font-medium text-success">Timer Running</span>
                                 </div>
-                                <div class="text-sm truncate">{{ runningTimer.task?.name }}</div>
-                                <div class="text-xs text-gray-500">{{ runningTimer.task?.task_list?.space?.name }}</div>
+                                <div class="text-sm truncate">{{ runningTimer.subtask?.name }}</div>
+                                <div class="text-xs text-gray-500">{{ runningTimer.subtask?.task?.name }} &middot; {{ runningTimer.subtask?.task?.task_list?.space?.name }}</div>
                             </div>
                         </v-card-text>
                     </v-card>

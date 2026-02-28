@@ -88,6 +88,7 @@ const onSubtaskDragEnd = () => {
 const runningTimer = ref(null);
 const timerInterval = ref(null);
 const elapsedSeconds = ref(0);
+const isTimerLoading = ref(false);
 
 // Computed
 const priorities = computed(() => props.workspace?.priorities || []);
@@ -122,7 +123,7 @@ const updateTask = () => {
         {
             name: localTask.value.name,
             description: localTask.value.description,
-            due_date: localTask.value.due_date,
+            due_date: localTask.value.due_date || '',
         },
         { preserveScroll: true }
     );
@@ -228,15 +229,7 @@ const removeLabel = (label) => {
 const addComment = () => {
     if (!newComment.value.trim() || isSubmittingComment.value) return;
 
-    console.log('=== Adding Comment ===');
-    console.log('Content:', newComment.value);
-    console.log('Workspace ID:', props.workspace?.id);
-    console.log('Space ID:', props.space?.id);
-    console.log('List ID:', props.list?.id);
-    console.log('Task ID:', props.task?.id);
-
     if (!props.workspace?.id || !props.space?.id || !props.list?.id || !props.task?.id) {
-        console.error('Missing required IDs!');
         if (window.showSnackbar) {
             window.showSnackbar('Missing required data', 'error');
         }
@@ -245,30 +238,23 @@ const addComment = () => {
 
     isSubmittingComment.value = true;
 
-    const url = route('tasks.comments.store', [props.workspace.id, props.space.id, props.list.id, props.task.id]);
-    console.log('POST URL:', url);
-
     router.post(
-        url,
+        route('tasks.comments.store', [props.workspace.id, props.space.id, props.list.id, props.task.id]),
         { content: newComment.value },
         {
             preserveScroll: true,
-            onSuccess: (page) => {
-                console.log('Comment added successfully!');
-                console.log('Page props:', page.props);
+            onSuccess: () => {
                 newComment.value = '';
                 if (window.showSnackbar) {
                     window.showSnackbar('Comment added!', 'success');
                 }
             },
             onError: (errors) => {
-                console.error('Failed to add comment:', errors);
                 if (window.showSnackbar) {
                     window.showSnackbar(Object.values(errors).flat().join(', ') || 'Failed to add comment', 'error');
                 }
             },
             onFinish: () => {
-                console.log('Finished, reloading...');
                 isSubmittingComment.value = false;
             }
         }
@@ -438,55 +424,95 @@ const changeSubtaskSprint = (subtask, sprintId) => {
     );
 };
 
+// Helper: fetch with fresh CSRF token (avoids 419 on long sessions)
+const safeFetch = async (url, options = {}) => {
+    const token = document.querySelector('meta[name="csrf-token"]')?.content;
+    return fetch(url, {
+        ...options,
+        headers: {
+            'Content-Type': 'application/json',
+            'Accept': 'application/json',
+            'X-CSRF-TOKEN': token,
+            'X-Requested-With': 'XMLHttpRequest',
+            ...options.headers,
+        },
+        credentials: 'same-origin',
+    });
+};
+
 // Subtask time tracking
 const isSubtaskTimerRunning = (subtask) => {
-    return runningTimer.value && runningTimer.value.task_id === subtask.id;
+    // Check directly from subtask's own time_entries (most reliable)
+    if (subtask.time_entries?.some(e => e.is_running)) return true;
+    // Fallback: check local state
+    return runningTimer.value && runningTimer.value.subtask_id === subtask.id;
 };
 
-const startSubtaskTimer = (subtask) => {
-    router.post(
-        route('tasks.timer.start', [props.workspace.id, props.space.id, props.list.id, subtask.id]),
-        {},
-        {
-            preserveScroll: true,
-            onSuccess: (page) => {
-                runningTimer.value = page.props.task.subtasks.find(s => s.id === subtask.id);
-                startTimerInterval();
-                window.showSnackbar('Timer started!', 'success');
-            }
+const startSubtaskTimer = async (subtask) => {
+    if (isTimerLoading.value) return;
+    isTimerLoading.value = true;
+    try {
+        const url = route('tasks.timer.start', [props.workspace.id, props.space.id, props.list.id, props.task.id]);
+        const res = await safeFetch(url, {
+            method: 'POST',
+            body: JSON.stringify({ subtask_id: subtask.id }),
+        });
+
+        if (res.ok || res.status === 302 || res.status === 303) {
+            runningTimer.value = { subtask_id: subtask.id };
+            elapsedSeconds.value = 0;
+            startTimerInterval();
+            window.showSnackbar('Timer started!', 'success');
+            router.reload({ preserveScroll: true, only: ['task', 'runningTimer'] });
+        } else if (res.status === 419) {
+            window.location.reload();
+        } else {
+            window.showSnackbar('Failed to start timer', 'error');
         }
-    );
-};
-
-const stopSubtaskTimer = (subtask) => {
-    // Find the running entry for this subtask
-    const runningEntry = subtask.time_entries?.find(e => !e.end_time);
-    if (runningEntry) {
-        router.post(
-            route('tasks.timer.stop', [props.workspace.id, props.space.id, props.list.id, subtask.id, runningEntry.id]),
-            {},
-            {
-                preserveScroll: true,
-                onSuccess: () => {
-                    runningTimer.value = null;
-                    stopTimerInterval();
-                    window.showSnackbar('Timer stopped!', 'success');
-                },
-                onFinish: () => {
-                    router.reload({ only: ['task'] });
-                }
-            }
-        );
+    } catch (err) {
+        window.showSnackbar('Failed to start timer', 'error');
+    } finally {
+        isTimerLoading.value = false;
     }
 };
 
-const formatSubtaskTime = (seconds) => {
-    const hours = Math.floor(seconds / 3600);
-    const minutes = Math.floor((seconds % 3600) / 60);
+const stopSubtaskTimer = async (subtask) => {
+    if (isTimerLoading.value) return;
+    const runningEntry = subtask.time_entries?.find(e => e.is_running);
+    if (!runningEntry) return;
+    isTimerLoading.value = true;
+
+    try {
+        const url = route('tasks.timer.stop', [props.workspace.id, props.space.id, props.list.id, props.task.id, runningEntry.id]);
+        const res = await safeFetch(url, { method: 'POST' });
+
+        if (res.ok || res.status === 302 || res.status === 303) {
+            runningTimer.value = null;
+            elapsedSeconds.value = 0;
+            stopTimerInterval();
+            window.showSnackbar('Timer stopped!', 'success');
+            router.reload({ preserveScroll: true, only: ['task', 'runningTimer'] });
+        } else if (res.status === 419) {
+            window.location.reload();
+        } else {
+            window.showSnackbar('Failed to stop timer', 'error');
+        }
+    } catch (err) {
+        window.showSnackbar('Failed to stop timer', 'error');
+    } finally {
+        isTimerLoading.value = false;
+    }
+};
+
+// time_spent is in minutes (from DB)
+const formatSubtaskTime = (minutes) => {
+    if (!minutes) return '0m';
+    const hours = Math.floor(minutes / 60);
+    const mins = Math.round(minutes % 60);
     if (hours > 0) {
-        return `${hours}h ${minutes}m`;
+        return `${hours}h ${mins}m`;
     }
-    return `${minutes}m`;
+    return `${mins}m`;
 };
 
 const formatSubtaskTimeEstimate = (minutes) => {
@@ -514,35 +540,54 @@ const updateSubtaskTimeEstimate = (subtask, hours) => {
     );
 };
 
-const startTimer = () => {
-    router.post(
-        route('tasks.timer.start', [props.workspace.id, props.space.id, props.list.id, props.task.id]),
-        {},
-        {
-            preserveScroll: true,
-            onSuccess: (page) => {
-                runningTimer.value = true;
-                startTimerInterval();
-            }
+const startTimer = async () => {
+    if (isTimerLoading.value) return;
+    isTimerLoading.value = true;
+    try {
+        const url = route('tasks.timer.start', [props.workspace.id, props.space.id, props.list.id, props.task.id]);
+        const res = await safeFetch(url, { method: 'POST' });
+
+        if (res.ok) {
+            const data = await res.json().catch(() => ({}));
+            runningTimer.value = data.timeEntry || { subtask_id: null };
+            startTimerInterval();
+            router.reload({ preserveScroll: true, only: ['task', 'runningTimer'] });
+        } else if (res.status === 419) {
+            window.location.reload();
         }
-    );
+    } catch (err) {
+        window.showSnackbar('Failed to start timer', 'error');
+    } finally {
+        isTimerLoading.value = false;
+    }
 };
 
-const stopTimer = () => {
-    // Find the running entry
-    const runningEntry = props.task.time_entries?.find(e => e.is_running);
-    if (runningEntry) {
-        router.post(
-            route('tasks.timer.stop', [props.workspace.id, props.space.id, props.list.id, props.task.id, runningEntry.id]),
-            {},
-            {
-                preserveScroll: true,
-                onSuccess: () => {
-                    runningTimer.value = null;
-                    stopTimerInterval();
-                }
-            }
-        );
+const stopTimer = async () => {
+    if (isTimerLoading.value) return;
+    // Search through subtasks for the running entry
+    let runningEntry = null;
+    for (const subtask of (props.task.subtasks || [])) {
+        runningEntry = subtask.time_entries?.find(e => e.is_running);
+        if (runningEntry) break;
+    }
+    if (!runningEntry) return;
+    isTimerLoading.value = true;
+
+    try {
+        const url = route('tasks.timer.stop', [props.workspace.id, props.space.id, props.list.id, props.task.id, runningEntry.id]);
+        const res = await safeFetch(url, { method: 'POST' });
+
+        if (res.ok || res.status === 302 || res.status === 303) {
+            runningTimer.value = null;
+            stopTimerInterval();
+            router.reload({ preserveScroll: true, only: ['task', 'runningTimer'] });
+        } else if (res.status === 419) {
+            window.location.reload();
+        }
+    } catch (err) {
+        window.showSnackbar('Failed to stop timer', 'error');
+    } finally {
+        isTimerLoading.value = false;
     }
 };
 
@@ -675,18 +720,32 @@ const formatDate = (dateString) => {
     });
 };
 
-// Check for running timer on mount
+// Check for running timer on mount — scan subtasks since task-level time_entries isn't loaded
 onMounted(() => {
-    console.log('Task data:', props.task);
-    console.log('Task comments:', props.task.comments);
-    
-    const runningEntry = props.task.time_entries?.find(e => e.is_running);
-    if (runningEntry) {
-        runningTimer.value = runningEntry;
-        // Calculate elapsed time
-        const startTime = new Date(runningEntry.started_at).getTime();
-        elapsedSeconds.value = Math.floor((Date.now() - startTime) / 1000);
-        startTimerInterval();
+    // Search through subtask time_entries
+    for (const subtask of (props.task.subtasks || [])) {
+        const runningEntry = subtask.time_entries?.find(e => e.is_running);
+        if (runningEntry) {
+            runningTimer.value = { ...runningEntry, subtask_id: subtask.id };
+            const startTime = new Date(runningEntry.started_at).getTime();
+            elapsedSeconds.value = Math.floor((Date.now() - startTime) / 1000);
+            startTimerInterval();
+            break;
+        }
+    }
+
+    // Fallback: check global running timer from shared props
+    if (!runningTimer.value) {
+        const globalTimer = page.props.runningTimer;
+        if (globalTimer?.is_running) {
+            const belongsToThisTask = (props.task.subtasks || []).some(s => s.id === globalTimer.subtask_id);
+            if (belongsToThisTask) {
+                runningTimer.value = globalTimer;
+                const startTime = new Date(globalTimer.started_at).getTime();
+                elapsedSeconds.value = Math.floor((Date.now() - startTime) / 1000);
+                startTimerInterval();
+            }
+        }
     }
 });
 

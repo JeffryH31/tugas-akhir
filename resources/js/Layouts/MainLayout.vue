@@ -1,5 +1,5 @@
 <script setup>
-import { ref, computed, onMounted, watch } from 'vue';
+import { ref, computed, onMounted, onUnmounted, watch } from 'vue';
 import { Head, Link, router, usePage } from '@inertiajs/vue3';
 import { useDisplay } from 'vuetify';
 
@@ -100,8 +100,27 @@ const goToSpace = (space) => {
     searchQuery.value = '';
 };
 
-// Running timer from props
+// Running timer from shared props
 const runningTimer = computed(() => page.props.runningTimer);
+const timerElapsed = ref(0);
+let timerInterval = null;
+
+const startGlobalTimerInterval = () => {
+    if (timerInterval) clearInterval(timerInterval);
+    if (runningTimer.value?.started_at) {
+        timerElapsed.value = Math.floor((Date.now() - new Date(runningTimer.value.started_at).getTime()) / 1000);
+        timerInterval = setInterval(() => { timerElapsed.value++; }, 1000);
+    }
+};
+
+watch(runningTimer, (val) => {
+    if (val?.started_at) {
+        startGlobalTimerInterval();
+    } else {
+        if (timerInterval) { clearInterval(timerInterval); timerInterval = null; }
+        timerElapsed.value = 0;
+    }
+}, { immediate: true });
 
 // Create Space dialog
 const showCreateSpace = ref(false);
@@ -146,6 +165,11 @@ onMounted(() => {
             showCreateSpace.value = true;
         };
     }
+    startGlobalTimerInterval();
+});
+
+onUnmounted(() => {
+    if (timerInterval) { clearInterval(timerInterval); timerInterval = null; }
 });
 
 // Format duration helper
@@ -184,13 +208,12 @@ const formatDuration = (seconds) => {
                 @click="searchDialog = true">
                 <v-icon start size="18">mdi-magnify</v-icon>
                 <span v-if="!smAndDown" class="text-sm text-gray-400">Search...</span>
-                <span v-if="!smAndDown" class="ml-4 text-xs text-gray-500">⌘K</span>
             </v-btn>
 
             <!-- Running Timer Indicator -->
             <v-chip v-if="runningTimer" color="success" size="small" class="mr-2" variant="tonal">
                 <v-icon start size="14">mdi-timer-outline</v-icon>
-                {{ formatDuration(runningTimer.elapsed) }}
+                {{ formatDuration(timerElapsed) }}
             </v-chip>
 
             <!-- Create Button -->

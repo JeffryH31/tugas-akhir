@@ -60,7 +60,7 @@ class TaskService
             'assignees',
             'labels',
             'watchers',
-            'subtasks' => fn($q) => $q->with(['status', 'assignees', 'dependencies', 'dependents'])->orderBy('position'),
+            'subtasks' => fn($q) => $q->with(['status', 'assignees', 'dependencies', 'dependents', 'timeEntries.user'])->orderBy('position'),
             'dependencies',
             'dependents',
             'comments' => fn($q) => $q->whereNull('parent_id')->with(['user', 'replies.user', 'reactions.user'])->latest(),
@@ -113,7 +113,10 @@ class TaskService
         return DB::transaction(function () use ($task, $data, $user) {
             $changes = [];
             $oldValues = $task->only([
-                'name', 'description', 'status_id', 'priority_id'
+                'name',
+                'description',
+                'status_id',
+                'priority_id'
             ]);
 
             $task->update([
@@ -135,7 +138,7 @@ class TaskService
             if (isset($data['assignee_ids'])) {
                 $oldAssignees = $task->assignees->pluck('id')->toArray();
                 $task->assignees()->sync($data['assignee_ids']);
-                
+
                 if ($oldAssignees != $data['assignee_ids']) {
                     $changes['assignees'] = ['old' => $oldAssignees, 'new' => $data['assignee_ids']];
                 }
@@ -326,11 +329,14 @@ class TaskService
             // Duplicate subtasks
             foreach ($task->subtasks as $subtask) {
                 $newSubtask = $subtask->replicate([
-                    'subtask_id', 'completed_at', 'completed_by', 'time_spent'
+                    'subtask_id',
+                    'completed_at',
+                    'completed_by',
+                    'time_spent'
                 ]);
                 $newSubtask->task_id = $newTask->id;
                 $newSubtask->save();
-                
+
                 // Copy subtask assignees and labels
                 $newSubtask->assignees()->sync($subtask->assignees->pluck('id'));
                 $newSubtask->labels()->sync($subtask->labels->pluck('id'));
@@ -376,21 +382,27 @@ class TaskService
 
         // Tasks don't have due dates - only subtasks do
         if (!empty($filters['is_overdue'])) {
-            $query->whereHas('subtasks', fn($q) => 
+            $query->whereHas(
+                'subtasks',
+                fn($q) =>
                 $q->whereNull('completed_at')
-                  ->whereNotNull('due_date')
-                  ->where('due_date', '<', now())
+                    ->whereNotNull('due_date')
+                    ->where('due_date', '<', now())
             );
         }
 
         if (!empty($filters['due_date_from'])) {
-            $query->whereHas('subtasks', fn($q) => 
+            $query->whereHas(
+                'subtasks',
+                fn($q) =>
                 $q->where('due_date', '>=', $filters['due_date_from'])
             );
         }
 
         if (!empty($filters['due_date_to'])) {
-            $query->whereHas('subtasks', fn($q) => 
+            $query->whereHas(
+                'subtasks',
+                fn($q) =>
                 $q->where('due_date', '<=', $filters['due_date_to'])
             );
         }

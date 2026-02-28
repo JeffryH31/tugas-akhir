@@ -6,6 +6,7 @@ use App\Http\Requests\ReorderRequest;
 use App\Http\Requests\StoreSpaceRequest;
 use App\Http\Requests\UpdateSpaceRequest;
 use App\Models\Space;
+use App\Models\Status;
 use App\Models\Workspace;
 use App\Services\SpaceService;
 use Illuminate\Foundation\Auth\Access\AuthorizesRequests;

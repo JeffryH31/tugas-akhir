@@ -93,13 +93,21 @@ class TimeTrackingService
     {
         $oldDuration = $entry->duration;
 
-        $entry->update([
-            'duration' => $data['duration'] ?? $entry->duration,
+        $updateData = [
             'description' => $data['description'] ?? $entry->description,
             'started_at' => $data['started_at'] ?? $entry->started_at,
             'ended_at' => $data['ended_at'] ?? $entry->ended_at,
             'is_billable' => $data['is_billable'] ?? $entry->is_billable,
-        ]);
+        ];
+
+        // Recalculate duration if start/end times changed
+        if (isset($data['started_at']) && isset($data['ended_at'])) {
+            $updateData['duration'] = max(1, (int) \Carbon\Carbon::parse($data['started_at'])->diffInMinutes(\Carbon\Carbon::parse($data['ended_at'])));
+        } elseif (isset($data['duration'])) {
+            $updateData['duration'] = $data['duration'];
+        }
+
+        $entry->update($updateData);
 
         if ($oldDuration !== $entry->duration) {
             $workspace = $entry->subtask->task->taskList->space->workspace;
