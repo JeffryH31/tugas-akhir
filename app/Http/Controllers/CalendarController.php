@@ -18,7 +18,6 @@ class CalendarController extends Controller
         $endDate = $request->get('end_date', now()->endOfMonth()->toDateString());
         $viewMode = $request->get('view', 'month');
 
-        // Load workspace with necessary relationships
         $workspace->load([
             'spaces.statuses',
             'priorities',
@@ -26,7 +25,6 @@ class CalendarController extends Controller
             'members',
         ]);
 
-        // Get all subtasks within date range that have due_date or start_date
         $subtasks = \App\Models\Subtask::query()
             ->whereHas('task.taskList.space', function ($query) use ($workspace) {
                 $query->where('workspace_id', $workspace->id);

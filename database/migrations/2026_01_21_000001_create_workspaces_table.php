@@ -27,7 +27,6 @@ return new class extends Migration
             $table->index(['owner_id', 'is_personal']);
         });
 
-        // Pivot table for workspace members
         Schema::create('workspace_members', function (Blueprint $table) {
             $table->id();
             $table->foreignId('workspace_id')->constrained()->cascadeOnDelete();

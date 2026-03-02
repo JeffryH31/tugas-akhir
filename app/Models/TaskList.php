@@ -41,7 +41,6 @@ class TaskList extends Model
                 $list->slug = Str::slug($list->name);
             }
 
-            // Set position
             if (empty($list->position)) {
                 $query = static::where('space_id', $list->space_id);
                 if ($list->folder_id) {
@@ -54,7 +53,6 @@ class TaskList extends Model
         });
     }
 
-    // ==================== RELATIONSHIPS ====================
 
     public function space(): BelongsTo
     {
@@ -86,7 +84,6 @@ class TaskList extends Model
         return $this->hasMany(View::class);
     }
 
-    // ==================== ACCESSORS ====================
 
     public function getTaskCountAttribute(): int
     {
@@ -106,7 +103,6 @@ class TaskList extends Model
         return round(($this->completed_task_count / $total) * 100, 1);
     }
 
-    // ==================== SCOPES ====================
 
     public function scopeActive($query)
     {
@@ -118,7 +114,6 @@ class TaskList extends Model
         return $query->where('is_archived', true);
     }
 
-    // ==================== HELPER METHODS ====================
 
     public function archive(): void
     {

@@ -24,10 +24,8 @@ class DashboardController extends Controller
     {
         $user = $request->user();
 
-        // Get user's workspaces with full hierarchy
         $workspaces = $this->workspaceService->getWorkspacesForUser($user);
 
-        // Get active workspace (first one or from session)
         $activeWorkspaceId = session('active_workspace_id', $workspaces->first()?->id);
         $activeWorkspace = $workspaces->firstWhere('id', $activeWorkspaceId) ?? $workspaces->first();
 
@@ -44,7 +42,6 @@ class DashboardController extends Controller
             ]);
         }
 
-        // Get user's tasks
         $myTasks = $user->getMyTasks();
         $overdueTasks = $user->getOverdueTasks();
 

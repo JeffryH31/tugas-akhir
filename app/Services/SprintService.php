@@ -46,7 +46,6 @@ class SprintService
      */
     public function deleteSprint(Sprint $sprint): bool
     {
-        // Remove sprint from all subtasks
         $sprint->subtasks()->update(['sprint_id' => null]);
         
         return $sprint->delete();
@@ -57,7 +56,6 @@ class SprintService
      */
     public function startSprint(Sprint $sprint): Sprint
     {
-        // Deactivate other active sprints in the same space
         Sprint::where('space_id', $sprint->space_id)
             ->where('id', '!=', $sprint->id)
             ->update(['is_active' => false]);
@@ -197,7 +195,6 @@ class SprintService
         $daysInSprint = $sprint->getDurationInDays();
         $idealBurndown = [];
         
-        // Calculate ideal burndown line
         for ($day = 0; $day <= $daysInSprint; $day++) {
             $idealBurndown[] = [
                 'day' => $day,

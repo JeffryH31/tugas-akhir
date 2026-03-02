@@ -37,7 +37,6 @@ class TaskResource extends JsonResource
             'priority' => new PriorityResource($this->whenLoaded('priority')),
             'assignees' => UserResource::collection($this->whenLoaded('assignees')),
             'labels' => LabelResource::collection($this->whenLoaded('labels')),
-            'watchers' => UserResource::collection($this->whenLoaded('watchers')),
             'creator' => new UserResource($this->whenLoaded('creator')),
             'subtasks' => TaskResource::collection($this->whenLoaded('subtasks')),
             'dependencies' => TaskResource::collection($this->whenLoaded('dependencies')),

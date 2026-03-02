@@ -60,7 +60,7 @@ class SpaceService
                 'created_by' => $user->id,
             ]);
 
-            // Log activity
+
             Activity::log($workspace, $user, $space, 'created', [
                 'name' => $space->name,
             ]);
@@ -85,7 +85,6 @@ class SpaceService
             'is_private' => $data['is_private'] ?? $space->is_private,
         ]);
 
-        // Track changes
         foreach ($oldValues as $key => $oldValue) {
             if (isset($data[$key]) && $data[$key] !== $oldValue) {
                 $changes[$key] = ['old' => $oldValue, 'new' => $data[$key]];
@@ -208,7 +207,6 @@ class SpaceService
     public function deleteStatus(Status $status, int $moveToStatusId = null): void
     {
         DB::transaction(function () use ($status, $moveToStatusId) {
-            // Move tasks/subtasks to another status if provided
             if ($moveToStatusId) {
                 $status->tasks()->update(['status_id' => $moveToStatusId]);
                 $status->subtasks()->update(['status_id' => $moveToStatusId]);

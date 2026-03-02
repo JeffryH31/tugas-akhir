@@ -100,7 +100,6 @@ class TimeTrackingService
             'is_billable' => $data['is_billable'] ?? $entry->is_billable,
         ];
 
-        // Recalculate duration if start/end times changed
         if (isset($data['started_at']) && isset($data['ended_at'])) {
             $updateData['duration'] = max(1, (int) \Carbon\Carbon::parse($data['started_at'])->diffInMinutes(\Carbon\Carbon::parse($data['ended_at'])));
         } elseif (isset($data['duration'])) {

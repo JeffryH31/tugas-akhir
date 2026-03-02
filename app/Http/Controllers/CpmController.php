@@ -28,7 +28,6 @@ class CpmController extends Controller
         TaskList $list,
         Task $task
     ) {
-        // Verify task belongs to the list
         if ($task->task_list_id !== $list->id) {
             abort(404);
         }
@@ -52,15 +51,12 @@ class CpmController extends Controller
         TaskList $list,
         Task $task
     ): Response {
-        // Verify task belongs to the list
         if ($task->task_list_id !== $list->id) {
             abort(404);
         }
 
-        // Get CPM analysis
         $cpmResult = $this->cpmService->analyze($task);
 
-        // Load workspace with sidebar data
         $workspace->load([
             'spaces' => fn($q) => $q->with([
                 'folders.lists',
@@ -71,7 +67,6 @@ class CpmController extends Controller
             'labels',
         ]);
 
-        // Get statuses for subtasks
         $statuses = $space->statuses()
             ->forSubtasks()
             ->orderBy('position')
@@ -106,7 +101,6 @@ class CpmController extends Controller
         $subtask = Subtask::findOrFail($validated['subtask_id']);
         $dependsOn = Subtask::findOrFail($validated['depends_on_id']);
 
-        // Verify both subtasks belong to this task
         if ($subtask->task_id !== $task->id || $dependsOn->task_id !== $task->id) {
             return response()->json([
                 'success' => false,

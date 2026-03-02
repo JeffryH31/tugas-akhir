@@ -57,7 +57,6 @@ class TimeEntry extends Model
         });
     }
 
-    // ==================== RELATIONSHIPS ====================
 
     public function subtask(): BelongsTo
     {
@@ -69,7 +68,6 @@ class TimeEntry extends Model
         return $this->belongsTo(User::class);
     }
 
-    // ==================== ACCESSORS ====================
 
     public function getDurationFormattedAttribute(): string
     {
@@ -82,7 +80,6 @@ class TimeEntry extends Model
         return $minutes . 'm';
     }
 
-    // ==================== SCOPES ====================
 
     public function scopeRunning($query)
     {
@@ -109,7 +106,6 @@ class TimeEntry extends Model
         return $query->whereBetween('started_at', [$start, $end]);
     }
 
-    // ==================== HELPER METHODS ====================
 
     public function stop(): void
     {
@@ -124,7 +120,6 @@ class TimeEntry extends Model
 
     public static function startTimer(Subtask $subtask, User $user, ?string $description = null): self
     {
-        // Stop any running timer for this user
         static::where('user_id', $user->id)
             ->where('is_running', true)
             ->each(fn($entry) => $entry->stop());

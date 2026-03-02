@@ -46,18 +46,15 @@ class HandleInertiaRequests extends Middleware
                 ->orderBy('created_at', 'desc')
                 ->get();
 
-            // Get active workspace
             if ($activeWorkspaceId) {
                 $activeWorkspace = $workspaces->firstWhere('id', $activeWorkspaceId);
             }
 
-            // If no active workspace, use the first one
             if (!$activeWorkspace && $workspaces->isNotEmpty()) {
                 $activeWorkspace = $workspaces->first();
                 session(['active_workspace_id' => $activeWorkspace->id]);
             }
 
-            // Load spaces for active workspace
             if ($activeWorkspace) {
                 $activeWorkspace->load([
                     'spaces' => function ($query) {

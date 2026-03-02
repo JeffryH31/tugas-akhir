@@ -22,22 +22,17 @@ return new class extends Migration
             $table->string('name');
             $table->text('description')->nullable();
 
-            // Dates - ONLY for subtasks
             $table->timestamp('start_date')->nullable();
             $table->timestamp('due_date')->nullable();
             $table->timestamp('completed_at')->nullable();
 
-            // Time tracking - ONLY for subtasks
             $table->integer('time_estimate')->nullable(); // in minutes
             $table->integer('time_spent')->default(0); // in minutes (denormalized for performance)
 
-            // Position for ordering
             $table->integer('position')->default(0);
 
-            // Flags
             $table->boolean('is_archived')->default(false);
 
-            // Metadata
             $table->json('custom_fields')->nullable();
             $table->foreignId('created_by')->nullable()->constrained('users')->nullOnDelete();
             $table->foreignId('completed_by')->nullable()->constrained('users')->nullOnDelete();
@@ -51,7 +46,6 @@ return new class extends Migration
             $table->index(['created_by']);
         });
 
-        // Pivot table for subtask assignees
         Schema::create('subtask_assignees', function (Blueprint $table) {
             $table->id();
             $table->foreignId('subtask_id')->constrained()->cascadeOnDelete();
@@ -63,7 +57,6 @@ return new class extends Migration
             $table->unique(['subtask_id', 'user_id']);
         });
 
-        // Pivot table for subtask labels
         Schema::create('subtask_labels', function (Blueprint $table) {
             $table->id();
             $table->foreignId('subtask_id')->constrained()->cascadeOnDelete();
@@ -73,7 +66,6 @@ return new class extends Migration
             $table->unique(['subtask_id', 'label_id']);
         });
 
-        // Subtask dependencies
         Schema::create('subtask_dependencies', function (Blueprint $table) {
             $table->id();
             $table->foreignId('subtask_id')->constrained()->cascadeOnDelete();
@@ -84,7 +76,6 @@ return new class extends Migration
             $table->unique(['subtask_id', 'depends_on_subtask_id']);
         });
 
-        // Add foreign key for comments.subtask_id (comments table created earlier)
         Schema::table('comments', function (Blueprint $table) {
             $table->foreign('subtask_id')->references('id')->on('subtasks')->cascadeOnDelete();
         });

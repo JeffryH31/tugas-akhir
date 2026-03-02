@@ -55,7 +55,6 @@ class TaskController extends Controller
     {
         $task = $this->taskService->getTaskWithRelations($task);
 
-        // Load workspace with sidebar data - optimized with eager loading
         $workspace->load([
             'spaces' => fn($q) => $q->with([
                 'folders.lists',

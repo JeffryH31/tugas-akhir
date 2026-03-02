@@ -31,7 +31,6 @@ return new class extends Migration
             $table->index(['workspace_id', 'position']);
         });
 
-        // Pivot table for space members (for private spaces)
         Schema::create('space_members', function (Blueprint $table) {
             $table->id();
             $table->foreignId('space_id')->constrained()->cascadeOnDelete();

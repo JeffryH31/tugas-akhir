@@ -59,7 +59,6 @@ class CpmService
         // Backward pass - calculate Late Start (LS) and Late Finish (LF)
         $cpmData = $this->backwardPass($cpmData, $sortedIds, $graph);
 
-        // Calculate slack and identify critical path
         $cpmData = $this->calculateSlackAndCriticalPath($cpmData);
 
         // Get project summary
@@ -336,14 +335,12 @@ class CpmService
             }
         }
 
-        // Calculate dates
         $projectStart = $task->subtasks()
             ->whereNotNull('start_date')
             ->min('start_date');
         
         $startDate = $projectStart ? Carbon::parse($projectStart) : Carbon::today();
         
-        // Calculate end date based on project duration (in hours)
         // Assuming 8 working hours per day
         $workingHoursPerDay = 8;
         $workingDays = ceil($projectDuration / $workingHoursPerDay);
@@ -436,7 +433,6 @@ class CpmService
             
             $visited[] = $current;
 
-            // Get all subtasks that depend on current
             $dependents = Subtask::find($current)?->dependents ?? collect();
             foreach ($dependents as $dependent) {
                 if (!in_array($dependent->id, $visited)) {

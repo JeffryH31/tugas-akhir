@@ -16,7 +16,6 @@ return new class extends Migration
             $table->foreignId('workspace_id')->constrained()->cascadeOnDelete();
             $table->foreignId('user_id')->constrained()->cascadeOnDelete();
             
-            // Polymorphic relation to the subject (task, comment, list, etc.)
             $table->string('subject_type');
             $table->unsignedBigInteger('subject_id');
             

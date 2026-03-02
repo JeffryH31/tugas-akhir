@@ -39,7 +39,6 @@ class Workspace extends Model
                 $workspace->slug = Str::slug($workspace->name);
             }
             
-            // Ensure unique slug
             $originalSlug = $workspace->slug;
             $count = 1;
             while (static::where('slug', $workspace->slug)->exists()) {
@@ -48,12 +47,10 @@ class Workspace extends Model
         });
 
         static::created(function ($workspace) {
-            // Add owner as member
             $workspace->members()->attach($workspace->owner_id, ['role' => 'owner']);
         });
     }
 
-    // ==================== RELATIONSHIPS ====================
 
     public function owner(): BelongsTo
     {
@@ -87,21 +84,18 @@ class Workspace extends Model
         return $this->hasMany(Activity::class)->latest();
     }
 
-    // ==================== ACCESSORS ====================
 
     public function getInitialsAttribute(): string
     {
         return strtoupper(substr($this->name, 0, 2));
     }
 
-    // ==================== SCOPES ====================
 
     public function scopeForUser($query, User $user)
     {
         return $query->whereHas('members', fn($q) => $q->where('user_id', $user->id));
     }
 
-    // ==================== HELPER METHODS ====================
 
     public function addMember(User $user, string $role = 'member'): void
     {

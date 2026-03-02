@@ -23,14 +23,12 @@ class Priority extends Model
         'is_default' => 'boolean',
     ];
 
-    // ==================== RELATIONSHIPS ====================
 
     public function workspace(): BelongsTo
     {
         return $this->belongsTo(Workspace::class);
     }
 
-    // ==================== SCOPES ====================
 
     public function scopeOrdered($query)
     {

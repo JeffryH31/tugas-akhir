@@ -48,7 +48,6 @@ class Task extends Model
         parent::boot();
 
         static::creating(function ($task) {
-            // Generate human-readable task ID
             if (empty($task->task_id)) {
                 $list = TaskList::with('space.workspace')->find($task->task_list_id);
                 $prefix = strtoupper(substr($list->space->workspace->name, 0, 3));
@@ -58,13 +57,11 @@ class Task extends Model
                 $task->task_id = $prefix . '-' . $count;
             }
 
-            // Set position
             if (empty($task->position)) {
                 $task->position = static::where('task_list_id', $task->task_list_id)
                     ->max('position') + 1;
             }
 
-            // Set default status
             if (empty($task->status_id)) {
                 $list = TaskList::with('space')->find($task->task_list_id);
                 $defaultStatus = $list->space->getDefaultStatus();
@@ -72,13 +69,10 @@ class Task extends Model
             }
         });
 
-        // Recalculate progress when subtasks change
         static::saved(function ($task) {
-            // Progress is calculated from subtasks
         });
     }
 
-    // ==================== RELATIONSHIPS ====================
 
     public function taskList(): BelongsTo
     {
@@ -153,7 +147,6 @@ class Task extends Model
         return $this->hasMany(Attachment::class);
     }
 
-    // ==================== ACCESSORS ====================
 
     public function getProgressAttribute(): float
     {
@@ -166,18 +159,15 @@ class Task extends Model
         return round(($completed / $subtasks->count()) * 100, 1);
     }
 
-    // ==================== SCOPES ====================
 
     public function scopeActive($query)
     {
         return $query->where('is_archived', false);
     }
 
-    // ==================== HELPER METHODS ====================
 
     public function updateProgress(): void
     {
-        // Progress is calculated dynamically via accessor based on subtasks
     }
 
     public function assign(User $user, ?User $assignedBy = null): void

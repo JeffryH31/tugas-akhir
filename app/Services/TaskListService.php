@@ -227,25 +227,21 @@ class TaskListService
                 ->max('position') + 1;
             $newList->save();
 
-            // Duplicate tasks
             foreach ($list->tasks as $task) {
                 $newTask = $task->replicate();
                 $newTask->task_list_id = $newList->id;
                 $newTask->task_id = null; // Will be auto-generated
                 $newTask->save();
 
-                // Copy task assignees and labels
                 $newTask->assignees()->sync($task->assignees->pluck('id'));
                 $newTask->labels()->sync($task->labels->pluck('id'));
 
-                // Duplicate subtasks
                 foreach ($task->subtasks as $subtask) {
                     $newSubtask = $subtask->replicate();
                     $newSubtask->task_id = $newTask->id;
                     $newSubtask->subtask_id = null; // Will be auto-generated
                     $newSubtask->save();
                     
-                    // Copy subtask assignees and labels
                     $newSubtask->assignees()->sync($subtask->assignees->pluck('id'));
                     $newSubtask->labels()->sync($subtask->labels->pluck('id'));
                 }

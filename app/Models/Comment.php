@@ -31,7 +31,6 @@ class Comment extends Model
         'edited_at' => 'datetime',
     ];
 
-    // ==================== RELATIONSHIPS ====================
 
     public function task(): BelongsTo
     {
@@ -58,7 +57,6 @@ class Comment extends Model
         return $this->hasMany(Comment::class, 'parent_id')->latest();
     }
 
-    // ==================== HELPER METHODS ====================
 
     public function edit(string $content): void
     {

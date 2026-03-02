@@ -24,7 +24,6 @@ class Attachment extends Model
 
     protected $appends = ['url', 'size_formatted'];
 
-    // ==================== RELATIONSHIPS ====================
 
     public function task(): BelongsTo
     {
@@ -36,7 +35,6 @@ class Attachment extends Model
         return $this->belongsTo(User::class);
     }
 
-    // ==================== ACCESSORS ====================
 
     public function getUrlAttribute(): string
     {
@@ -74,7 +72,6 @@ class Attachment extends Model
         };
     }
 
-    // ==================== HELPER METHODS ====================
 
     public function delete(): bool
     {

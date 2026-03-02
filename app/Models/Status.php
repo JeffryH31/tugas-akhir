@@ -39,14 +39,12 @@ class Status extends Model
         });
     }
 
-    // ==================== RELATIONSHIPS ====================
 
     public function space(): BelongsTo
     {
         return $this->belongsTo(Space::class);
     }
 
-    // ==================== SCOPES ====================
 
     public function scopeOpen($query)
     {

@@ -34,28 +34,22 @@ Route::get('/', function () {
 
 Route::middleware(['auth:sanctum', config('jetstream.auth_session'), 'verified'])->group(function () {
 
-    // Dashboard
     Route::get('/dashboard', [DashboardController::class, 'index'])->name('dashboard');
 
-    // Search
     Route::get('/search', [TaskController::class, 'search'])->name('search');
 
-    // My Tasks
     Route::get('/my-tasks', [TaskController::class, 'myTasks'])->name('my-tasks');
 
-    // Time Tracking
     Route::prefix('time-tracking')->group(function () {
         Route::get('/', [TimeEntryController::class, 'index'])->name('time-tracking.index');
         Route::get('/running', [TimeEntryController::class, 'runningTimer'])->name('time-tracking.running');
     });
 
-    // Time Entries
     Route::prefix('time-entries')->group(function () {
         Route::patch('/{entry}', [TimeEntryController::class, 'update'])->name('time-entries.update');
         Route::delete('/{entry}', [TimeEntryController::class, 'destroy'])->name('time-entries.destroy');
     });
 
-    // Workspaces
     Route::prefix('workspaces')->group(function () {
         Route::get('/', [WorkspaceController::class, 'index'])->name('workspaces.index');
         Route::post('/', [WorkspaceController::class, 'store'])->name('workspaces.store');
@@ -67,20 +61,16 @@ Route::middleware(['auth:sanctum', config('jetstream.auth_session'), 'verified']
             Route::delete('/', [WorkspaceController::class, 'destroy'])->name('workspaces.destroy');
             Route::post('/switch', [DashboardController::class, 'switchWorkspace'])->name('workspaces.switch');
 
-            // Calendar
             Route::get('/calendar', [CalendarController::class, 'index'])->name('calendar.index');
 
-            // Workspace Members
             Route::prefix('members')->group(function () {
                 Route::post('/', [WorkspaceController::class, 'addMember'])->name('workspaces.members.add');
                 Route::delete('/', [WorkspaceController::class, 'removeMember'])->name('workspaces.members.remove');
                 Route::patch('/role', [WorkspaceController::class, 'updateMemberRole'])->name('workspaces.members.role');
             });
 
-            // Workspace Time Report
             Route::get('/time-report', [TimeEntryController::class, 'workspaceReport'])->name('workspaces.time-report');
 
-            // Spaces
             Route::prefix('spaces')->group(function () {
                 Route::post('/', [SpaceController::class, 'store'])->name('spaces.store');
                 Route::post('/reorder', [SpaceController::class, 'reorder'])->name('spaces.reorder');
@@ -95,7 +85,6 @@ Route::middleware(['auth:sanctum', config('jetstream.auth_session'), 'verified']
                     Route::delete('/statuses/{status}', [SpaceController::class, 'deleteStatus'])->name('spaces.statuses.delete');
                     Route::post('/statuses/reorder', [SpaceController::class, 'reorderStatuses'])->name('spaces.statuses.reorder');
 
-                    // Sprints
                     Route::prefix('sprints')->group(function () {
                         Route::get('/', [SprintController::class, 'index'])->name('sprints.index');
                         Route::post('/', [SprintController::class, 'store'])->name('sprints.store');
@@ -111,7 +100,6 @@ Route::middleware(['auth:sanctum', config('jetstream.auth_session'), 'verified']
                         });
                     });
 
-                    // Folders
                     Route::prefix('folders')->group(function () {
                         Route::post('/', [FolderController::class, 'store'])->name('folders.store');
                         Route::post('/reorder', [FolderController::class, 'reorder'])->name('folders.reorder');
@@ -123,7 +111,6 @@ Route::middleware(['auth:sanctum', config('jetstream.auth_session'), 'verified']
                         });
                     });
 
-                    // Lists
                     Route::prefix('lists')->group(function () {
                         Route::post('/', [TaskListController::class, 'store'])->name('lists.store');
                         Route::post('/reorder', [TaskListController::class, 'reorder'])->name('lists.reorder');
@@ -137,7 +124,6 @@ Route::middleware(['auth:sanctum', config('jetstream.auth_session'), 'verified']
                             Route::post('/move-to-folder', [TaskListController::class, 'moveToFolder'])->name('lists.move-to-folder');
                             Route::post('/duplicate', [TaskListController::class, 'duplicate'])->name('lists.duplicate');
 
-                            // Tasks
                             Route::prefix('tasks')->group(function () {
                                 Route::post('/', [TaskController::class, 'store'])->name('tasks.store');
                                 Route::post('/reorder', [TaskController::class, 'reorder'])->name('tasks.reorder');
@@ -153,13 +139,11 @@ Route::middleware(['auth:sanctum', config('jetstream.auth_session'), 'verified']
                                     Route::post('/move', [TaskController::class, 'move'])->name('tasks.move');
                                     Route::post('/duplicate', [TaskController::class, 'duplicate'])->name('tasks.duplicate');
 
-                                    // Labels
                                     Route::prefix('labels')->group(function () {
                                         Route::post('/', [TaskController::class, 'addLabel'])->name('tasks.labels.add');
                                         Route::delete('/', [TaskController::class, 'removeLabel'])->name('tasks.labels.remove');
                                     });
 
-                                    // Subtasks
                                     Route::prefix('subtasks')->group(function () {
                                         Route::post('/', [SubtaskController::class, 'store'])->name('tasks.subtasks.store');
                                         Route::post('/reorder', [SubtaskController::class, 'reorder'])->name('tasks.subtasks.reorder');
@@ -170,7 +154,6 @@ Route::middleware(['auth:sanctum', config('jetstream.auth_session'), 'verified']
                                         });
                                     });
 
-                                    // Time Entries (now for subtasks only)
                                     Route::prefix('subtasks/{subtask}/time-entries')->group(function () {
                                         Route::post('/', [TimeEntryController::class, 'store'])->name('tasks.subtasks.time-entries.store');
 
@@ -179,18 +162,15 @@ Route::middleware(['auth:sanctum', config('jetstream.auth_session'), 'verified']
                                         });
                                     });
 
-                                    // Timer
                                     Route::prefix('timer')->group(function () {
                                         Route::post('/start', [TimeEntryController::class, 'startTimer'])->name('tasks.timer.start');
                                         Route::post('/{entry}/stop', [TimeEntryController::class, 'stopTimer'])->name('tasks.timer.stop');
                                     });
 
-                                    // Comments
                                     Route::prefix('comments')->group(function () {
                                         Route::post('/', [CommentController::class, 'store'])->name('tasks.comments.store');
                                     });
 
-                                    // CPM (Critical Path Method)
                                     Route::prefix('cpm')->group(function () {
                                         Route::get('/', [CpmController::class, 'analyze'])->name('tasks.cpm.analyze');
                                         Route::get('/gantt', [CpmController::class, 'gantt'])->name('tasks.cpm.gantt');
@@ -206,7 +186,6 @@ Route::middleware(['auth:sanctum', config('jetstream.auth_session'), 'verified']
         });
     });
 
-    // Global Comment Routes
     Route::prefix('comments')->group(function () {
         Route::patch('/{comment}', [CommentController::class, 'update'])->name('comments.update');
         Route::delete('/{comment}', [CommentController::class, 'destroy'])->name('comments.destroy');

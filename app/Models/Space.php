@@ -43,7 +43,6 @@ class Space extends Model
                 $space->slug = Str::slug($space->name);
             }
             
-            // Ensure unique slug within workspace
             $originalSlug = $space->slug;
             $count = 1;
             while (static::where('workspace_id', $space->workspace_id)
@@ -51,14 +50,12 @@ class Space extends Model
                 $space->slug = $originalSlug . '-' . $count++;
             }
 
-            // Set position
             if (empty($space->position)) {
                 $space->position = static::where('workspace_id', $space->workspace_id)->max('position') + 1;
             }
         });
 
         static::created(function ($space) {
-            // Create default statuses
             $defaultStatuses = [
                 ['name' => 'Open', 'color' => '#6B7280', 'type' => 'open', 'position' => 0, 'is_default' => true],
                 ['name' => 'In Progress', 'color' => '#3B82F6', 'type' => 'in_progress', 'position' => 1],
@@ -75,7 +72,6 @@ class Space extends Model
         });
     }
 
-    // ==================== RELATIONSHIPS ====================
 
     public function workspace(): BelongsTo
     {
@@ -139,14 +135,12 @@ class Space extends Model
         return $this->hasMany(Label::class);
     }
 
-    // ==================== ACCESSORS ====================
 
     public function getInitialsAttribute(): string
     {
         return strtoupper(substr($this->name, 0, 1));
     }
 
-    // ==================== SCOPES ====================
 
     public function scopeStarred($query)
     {
@@ -158,7 +152,6 @@ class Space extends Model
         return $query->where('is_private', false);
     }
 
-    // ==================== HELPER METHODS ====================
 
     public function toggleStar(): void
     {

@@ -56,7 +56,6 @@ class WorkspaceController extends Controller
 
         $members = $workspace->members;
 
-        // Get users not in workspace
         $availableUsers = User::whereNotIn('id', $members->pluck('id'))
             ->get();
 

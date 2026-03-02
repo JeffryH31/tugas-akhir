@@ -26,7 +26,6 @@ class Activity extends Model
         'changes' => 'array',
     ];
 
-    // ==================== RELATIONSHIPS ====================
 
     public function workspace(): BelongsTo
     {
@@ -43,7 +42,6 @@ class Activity extends Model
         return $this->morphTo();
     }
 
-    // ==================== SCOPES ====================
 
     public function scopeForWorkspace($query, Workspace $workspace)
     {
@@ -61,7 +59,6 @@ class Activity extends Model
             ->where('subject_id', $subject->id);
     }
 
-    // ==================== HELPER METHODS ====================
 
     public static function log(
         Workspace $workspace,

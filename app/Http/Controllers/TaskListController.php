@@ -48,7 +48,6 @@ class TaskListController extends Controller
         $taskId = $request->query('task_id');
         $tasksByStatus = $this->taskListService->getWithTasksByStatus($list, $taskId);
 
-        // Load workspace with sidebar data
         $workspace->load([
             'spaces' => fn($q) => $q->with([
                 'folders.lists',

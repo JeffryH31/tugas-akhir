@@ -52,7 +52,6 @@ class SpaceController extends Controller
         $space = $this->spaceService->getWithHierarchy($space);
         $statistics = $this->spaceService->getStatistics($space);
 
-        // Load workspace with all spaces for sidebar
         $workspace->load([
             'spaces' => fn($q) => $q->with([
                 'folders.lists',

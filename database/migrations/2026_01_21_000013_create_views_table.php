@@ -11,7 +11,6 @@ return new class extends Migration
      */
     public function up(): void
     {
-        // Saved views/filters for lists
         Schema::create('views', function (Blueprint $table) {
             $table->id();
             $table->foreignId('task_list_id')->nullable()->constrained()->cascadeOnDelete();

@@ -59,7 +59,6 @@ class TaskService
             'priority',
             'assignees',
             'labels',
-            'watchers',
             'subtasks' => fn($q) => $q->with(['status', 'assignees', 'dependencies', 'dependents', 'timeEntries.user'])->orderBy('position'),
             'dependencies',
             'dependents',
@@ -84,7 +83,7 @@ class TaskService
                 'created_by' => $user->id,
             ]);
 
-            // Assign users to task if provided
+
             if (!empty($data['assignee_ids'])) {
                 foreach ($data['assignee_ids'] as $assigneeId) {
                     $assignee = User::findOrFail($assigneeId);
@@ -92,7 +91,6 @@ class TaskService
                 }
             }
 
-            // Add labels if provided
             if (!empty($data['label_ids'])) {
                 $task->labels()->sync($data['label_ids']);
             }
@@ -126,7 +124,6 @@ class TaskService
                 'priority_id' => $data['priority_id'] ?? $task->priority_id,
             ]);
 
-            // Track changes
             foreach ($oldValues as $key => $oldValue) {
                 $newValue = $data[$key] ?? $task->$key;
                 if ($newValue != $oldValue) {
@@ -320,13 +317,10 @@ class TaskService
                 ->max('position') + 1;
             $newTask->save();
 
-            // Copy assignees
             $newTask->assignees()->sync($task->assignees->pluck('id'));
 
-            // Copy labels
             $newTask->labels()->sync($task->labels->pluck('id'));
 
-            // Duplicate subtasks
             foreach ($task->subtasks as $subtask) {
                 $newSubtask = $subtask->replicate([
                     'subtask_id',
@@ -337,7 +331,6 @@ class TaskService
                 $newSubtask->task_id = $newTask->id;
                 $newSubtask->save();
 
-                // Copy subtask assignees and labels
                 $newSubtask->assignees()->sync($subtask->assignees->pluck('id'));
                 $newSubtask->labels()->sync($subtask->labels->pluck('id'));
             }

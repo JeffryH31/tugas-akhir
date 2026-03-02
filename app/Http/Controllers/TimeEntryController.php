@@ -38,10 +38,8 @@ class TimeEntryController extends Controller
             $request->end_date
         );
 
-        // Get running timer
         $runningTimer = $this->timeTrackingService->getRunningTimer($user);
 
-        // Get active workspace
         $workspaces = $user->workspaces()->with([
             'spaces' => fn($q) => $q->with([
                 'folders.lists',
@@ -52,7 +50,6 @@ class TimeEntryController extends Controller
         $activeWorkspaceId = session('active_workspace_id', $workspaces->first()?->id);
         $activeWorkspace = $workspaces->firstWhere('id', $activeWorkspaceId) ?? $workspaces->first();
 
-        // Calculate stats
         $today = now()->startOfDay();
         $weekStart = now()->startOfWeek();
         $monthStart = now()->startOfMonth();

@@ -40,10 +40,8 @@ class WorkspaceService
                 'is_personal' => $data['is_personal'] ?? false,
             ]);
 
-            // Create default priorities
             $this->createDefaultPriorities($workspace);
 
-            // Log activity
             Activity::log($workspace, $owner, $workspace, 'created', [
                 'name' => $workspace->name,
             ]);
@@ -66,7 +64,6 @@ class WorkspaceService
             'icon' => $data['icon'] ?? $workspace->icon,
         ]);
 
-        // Log activity if name changed
         if ($oldName !== $workspace->name) {
             Activity::log($workspace, $user, $workspace, 'updated', [
                 'name' => $workspace->name,

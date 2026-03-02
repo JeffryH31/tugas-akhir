@@ -66,7 +66,6 @@ class Subtask extends Model
         });
     }
 
-    // ==================== RELATIONSHIPS ====================
 
     public function task(): BelongsTo
     {
@@ -126,11 +125,6 @@ class Subtask extends Model
         return $this->morphMany(Activity::class, 'subject');
     }
 
-    public function attachments(): MorphMany
-    {
-        return $this->morphMany(Attachment::class, 'attachable');
-    }
-
     public function dependencies(): BelongsToMany
     {
         return $this->belongsToMany(Subtask::class, 'subtask_dependencies', 'subtask_id', 'depends_on_subtask_id')
@@ -145,7 +139,6 @@ class Subtask extends Model
             ->withTimestamps();
     }
 
-    // ==================== SCOPES ====================
 
     public function scopeActive($query)
     {
@@ -187,7 +180,6 @@ class Subtask extends Model
             ->whereBetween('due_date', [now(), now()->addDays($days)]);
     }
 
-    // ==================== METHODS ====================
 
     public function isOverdue(): bool
     {

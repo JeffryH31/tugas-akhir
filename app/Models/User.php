@@ -69,7 +69,6 @@ class User extends Authenticatable
         ];
     }
 
-    // ==================== RELATIONSHIPS ====================
 
     public function ownedWorkspaces(): HasMany
     {
@@ -112,7 +111,6 @@ class User extends Authenticatable
         return $this->hasMany(Activity::class);
     }
 
-    // ==================== ACCESSORS ====================
 
     public function getInitialsAttribute(): string
     {
@@ -136,7 +134,6 @@ class User extends Authenticatable
         return $colors[$this->id % count($colors)];
     }
 
-    // ==================== HELPER METHODS ====================
 
     public function getActiveWorkspace(): ?Workspace
     {

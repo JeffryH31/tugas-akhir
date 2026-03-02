@@ -38,7 +38,6 @@ class Folder extends Model
                 $folder->slug = Str::slug($folder->name);
             }
 
-            // Set position
             if (empty($folder->position)) {
                 $folder->position = static::where('space_id', $folder->space_id)
                     ->where('parent_id', $folder->parent_id)
@@ -47,7 +46,6 @@ class Folder extends Model
         });
     }
 
-    // ==================== RELATIONSHIPS ====================
 
     public function space(): BelongsTo
     {
@@ -74,7 +72,6 @@ class Folder extends Model
         return $this->belongsTo(User::class, 'created_by');
     }
 
-    // ==================== RECURSIVE RELATIONSHIPS ====================
 
     public function allChildren(): HasMany
     {
@@ -86,7 +83,6 @@ class Folder extends Model
         return $this->lists()->with('tasks');
     }
 
-    // ==================== HELPER METHODS ====================
 
     public function getDepth(): int
     {

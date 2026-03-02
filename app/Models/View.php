@@ -34,7 +34,6 @@ class View extends Model
         'is_private' => 'boolean',
     ];
 
-    // ==================== RELATIONSHIPS ====================
 
     public function taskList(): BelongsTo
     {
@@ -51,7 +50,6 @@ class View extends Model
         return $this->belongsTo(User::class);
     }
 
-    // ==================== SCOPES ====================
 
     public function scopeForUser($query, User $user)
     {
