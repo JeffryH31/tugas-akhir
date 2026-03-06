@@ -300,19 +300,21 @@ class TaskController extends Controller
      */
     public function myTasks(Request $request): Response
     {
-        $filters = $request->only([
-            'status_ids',
-            'priority_ids',
-            'due_date_from',
-            'due_date_to',
-            'search'
+        $validated = $request->validate([
+            'status_ids' => ['nullable', 'array'],
+            'status_ids.*' => ['integer', 'exists:statuses,id'],
+            'priority_ids' => ['nullable', 'array'],
+            'priority_ids.*' => ['integer', 'exists:priorities,id'],
+            'due_date_from' => ['nullable', 'date'],
+            'due_date_to' => ['nullable', 'date'],
+            'search' => ['nullable', 'string', 'max:200'],
         ]);
 
-        $tasks = $this->taskService->getMyTasks($request->user(), $filters);
+        $tasks = $this->taskService->getMyTasks($request->user(), $validated);
 
         return Inertia::render('Tasks/MyTasks', [
             'tasks' => TaskResource::collection($tasks),
-            'filters' => $filters,
+            'filters' => $validated,
         ]);
     }
 
@@ -321,11 +323,17 @@ class TaskController extends Controller
      */
     public function search(Request $request): \Illuminate\Http\JsonResponse
     {
-        $query = $request->input('q', '');
-        
+        $validated = $request->validate([
+            'q' => ['nullable', 'string', 'max:200'],
+        ]);
+
+        $query = $validated['q'] ?? '';
+
         if (strlen($query) < 2) {
             return response()->json(['tasks' => [], 'lists' => [], 'spaces' => []]);
         }
+
+        $query = str_replace(['%', '_'], ['\%', '\_'], $query);
 
         $user = $request->user();
         

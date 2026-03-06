@@ -22,6 +22,7 @@ class StoreTaskRequest extends FormRequest
         return [
             'name' => ['required', 'string', 'max:255'],
             'description' => ['nullable', 'string', 'max:10000'],
+            'task_id' => ['nullable', 'exists:tasks,id'],
             'status_id' => [
                 'nullable',
                 'exists:statuses,id',
@@ -35,6 +36,9 @@ class StoreTaskRequest extends FormRequest
                 },
             ],
             'priority_id' => ['nullable', 'exists:priorities,id'],
+            'start_date' => ['nullable', 'date'],
+            'due_date' => ['nullable', 'date', 'after_or_equal:start_date'],
+            'time_estimate' => ['nullable', 'integer', 'min:0', 'max:525600'],
             'assignee_ids' => ['nullable', 'array'],
             'assignee_ids.*' => ['exists:users,id'],
             'label_ids' => ['nullable', 'array'],

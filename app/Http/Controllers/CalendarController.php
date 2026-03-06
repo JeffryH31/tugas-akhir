@@ -2,8 +2,8 @@
 
 namespace App\Http\Controllers;
 
+use App\Http\Requests\CalendarFilterRequest;
 use App\Models\Workspace;
-use Illuminate\Http\Request;
 use Inertia\Inertia;
 use Inertia\Response;
 
@@ -12,11 +12,13 @@ class CalendarController extends Controller
     /**
      * Display the calendar view.
      */
-    public function index(Request $request, Workspace $workspace): Response
+    public function index(CalendarFilterRequest $request, Workspace $workspace): Response
     {
-        $startDate = $request->get('start_date', now()->startOfMonth()->toDateString());
-        $endDate = $request->get('end_date', now()->endOfMonth()->toDateString());
-        $viewMode = $request->get('view', 'month');
+        $validated = $request->validated();
+
+        $startDate = $validated['start_date'] ?? now()->startOfMonth()->toDateString();
+        $endDate = $validated['end_date'] ?? now()->endOfMonth()->toDateString();
+        $viewMode = $validated['view'] ?? 'month';
 
         $workspace->load([
             'spaces.statuses',

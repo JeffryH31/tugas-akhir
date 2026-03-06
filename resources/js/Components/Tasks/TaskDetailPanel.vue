@@ -2,8 +2,8 @@
 /**
  * Task Detail Panel - Slide-over panel for task details
  */
-import { ref, computed, watch, reactive, onMounted, onUnmounted } from 'vue';
-import { router, useForm } from '@inertiajs/vue3';
+import { ref, computed, watch, reactive, nextTick, onMounted, onUnmounted } from 'vue';
+import { router, useForm, usePage } from '@inertiajs/vue3';
 
 const props = defineProps({
     modelValue: Boolean,
@@ -11,7 +11,7 @@ const props = defineProps({
     workspace: Object,
     space: Object,
     list: Object,
-    parentTask: Object, // If present, we're viewing a subtask
+    parentTask: Object,
     statuses: {
         type: Array,
         default: () => [],
@@ -40,14 +40,32 @@ const emit = defineEmits(['update:modelValue', 'updated', 'view-subtasks']);
 const localTask = ref(null);
 
 // Deep clone helper
+const page = usePage();
+
 const deepClone = (obj) => {
     if (!obj) return null;
     return JSON.parse(JSON.stringify(obj));
 };
 
 // Watch for task prop changes and update local copy
-watch(() => props.task, (newTask) => {
+watch(() => props.task, (newTask, oldTask) => {
     localTask.value = deepClone(newTask);
+
+    const oldId = oldTask?.id;
+    const newId = newTask?.id;
+
+    // Reset timer state when task identity changes (including null transitions)
+    if (oldId !== newId) {
+        stopTimerInterval();
+        isTracking.value = false;
+        trackingDuration.value = 0;
+        runningEntryId.value = null;
+        isTimerLoading.value = false;
+
+        if (newTask) {
+            nextTick(() => initRunningTimer());
+        }
+    }
 }, { immediate: true, deep: true });
 
 // Determine if we're viewing a subtask
@@ -176,6 +194,11 @@ const formatDate = (dateStr) => {
 // Save name
 const saveName = () => {
     if (editedName.value.trim() && editedName.value !== props.task.name) {
+        if (editedName.value.trim().length > 255) {
+            if (window.showSnackbar) window.showSnackbar('Name cannot exceed 255 characters.', 'error');
+            isEditing.value = false;
+            return;
+        }
         router.patch(
             getUpdateRoute(),
             { name: editedName.value.trim() },
@@ -390,6 +413,13 @@ const showStartDatePicker = ref(false);
 const tempStartDate = ref(null);
 
 const updateStartDate = () => {
+    if (tempStartDate.value && props.task.due_date && tempStartDate.value > props.task.due_date) {
+        if (window.showSnackbar) {
+            window.showSnackbar('Start date cannot be after due date.', 'error');
+        }
+        return;
+    }
+
     const oldValue = props.task.start_date;
     props.task.start_date = tempStartDate.value;
     showStartDatePicker.value = false;
@@ -405,8 +435,12 @@ const updateStartDate = () => {
                     window.showSnackbar('Start date updated!', 'success');
                 }
             },
-            onError: () => {
+            onError: (errors) => {
                 props.task.start_date = oldValue;
+                if (window.showSnackbar) {
+                    const msg = Object.values(errors).flat().join(', ');
+                    window.showSnackbar(msg || 'Failed to update start date', 'error');
+                }
             }
         }
     );
@@ -418,6 +452,13 @@ const openStartDatePicker = () => {
 };
 
 const updateDueDate = () => {
+    if (tempDueDate.value && props.task.start_date && tempDueDate.value < props.task.start_date) {
+        if (window.showSnackbar) {
+            window.showSnackbar('Due date cannot be before start date.', 'error');
+        }
+        return;
+    }
+
     const oldValue = props.task.due_date;
     props.task.due_date = tempDueDate.value;
     showDueDatePicker.value = false;
@@ -433,8 +474,12 @@ const updateDueDate = () => {
                     window.showSnackbar('Due date updated!', 'success');
                 }
             },
-            onError: () => {
+            onError: (errors) => {
                 props.task.due_date = oldValue;
+                if (window.showSnackbar) {
+                    const msg = Object.values(errors).flat().join(', ');
+                    window.showSnackbar(msg || 'Failed to update due date', 'error');
+                }
             }
         }
     );
@@ -450,7 +495,16 @@ const showTimeEstimatePicker = ref(false);
 const tempTimeEstimate = ref(0);
 
 const updateTimeEstimate = () => {
-    const totalMinutes = (parseFloat(tempTimeEstimate.value) || 0) * 60;
+    const hours = parseFloat(tempTimeEstimate.value) || 0;
+    if (hours < 0) {
+        if (window.showSnackbar) window.showSnackbar('Time estimate cannot be negative.', 'error');
+        return;
+    }
+    if (hours > 8760) {
+        if (window.showSnackbar) window.showSnackbar('Time estimate cannot exceed 1 year.', 'error');
+        return;
+    }
+    const totalMinutes = hours * 60;
     const oldValue = props.task.time_estimate;
     props.task.time_estimate = totalMinutes;
     showTimeEstimatePicker.value = false;
@@ -542,8 +596,8 @@ const startTracking = async () => {
             runningEntryId.value = data.timeEntry?.id || data.time_entry?.id || data.id || null;
             startTimerInterval();
 
-            // Reload to sync UI
-            router.reload({ preserveScroll: true, only: ['task', 'runningTimer'] });
+            // Reload to sync UI (include tasksByStatus for list views)
+            router.reload({ preserveScroll: true, only: ['task', 'tasksByStatus', 'runningTimer'] });
 
             if (window.showSnackbar) {
                 window.showSnackbar('Timer started!', 'success');
@@ -582,7 +636,7 @@ const stopTracking = async () => {
 
     // Source 3: global running timer from shared Inertia props
     if (!entryId) {
-        const globalTimer = router.page?.props?.runningTimer;
+        const globalTimer = page.props.runningTimer;
         if (globalTimer?.subtask_id === props.task.id && globalTimer?.is_running) {
             entryId = globalTimer.id;
         }
@@ -633,16 +687,12 @@ const stopTracking = async () => {
                 window.showSnackbar(`Timer stopped: ${formatTrackingDuration.value}`, 'success');
             }
 
-            trackingDuration.value = 0;
-
-            // Update local data instantly — no page reload needed
+            // Update local data instantly for responsive UI
             if (data.timeEntry) {
                 const stoppedEntry = data.timeEntry;
-                // Update time_spent on localTask (duration is in minutes)
                 const oldSpent = localTask.value.time_spent || 0;
                 localTask.value.time_spent = oldSpent + (stoppedEntry.duration || 0);
 
-                // Update the entry in the local time_entries list
                 if (localTask.value.time_entries) {
                     const idx = localTask.value.time_entries.findIndex(e => e.id === stoppedEntry.id);
                     if (idx >= 0) {
@@ -652,10 +702,14 @@ const stopTracking = async () => {
                     }
                 }
             } else {
-                // Fallback: recalculate from tracking duration
                 const minutesTracked = Math.max(1, Math.ceil(trackingDuration.value / 60));
                 localTask.value.time_spent = (localTask.value.time_spent || 0) + minutesTracked;
             }
+
+            trackingDuration.value = 0;
+
+            // Reload to sync navbar timer chip and server state
+            router.reload({ preserveScroll: true, only: ['task', 'tasksByStatus', 'runningTimer'] });
         } else if (res.status === 419) {
             window.location.reload();
         } else {
@@ -673,31 +727,48 @@ const stopTracking = async () => {
 };
 
 // Check for existing running timer on this subtask (e.g. page reload, browser reopened)
-const initRunningTimer = () => {
+const initRunningTimer = async () => {
     if (!isSubtask.value) return;
 
-    // Check from task's time_entries
+    const currentTaskId = props.task?.id;
+
+    // Source 1: task's time_entries (from list data)
     const runningEntry = props.task?.time_entries?.find(e => e.is_running);
-    if (runningEntry && runningEntry.subtask_id === props.task.id) {
+    if (runningEntry && runningEntry.subtask_id === currentTaskId) {
         isTracking.value = true;
         runningEntryId.value = runningEntry.id;
-        // Calculate elapsed from started_at
         const startedAt = new Date(runningEntry.started_at).getTime();
         trackingDuration.value = Math.floor((Date.now() - startedAt) / 1000);
         startTimerInterval();
         return;
     }
 
-    // Also check global running timer from shared props
-    const page = router.page;
-    const globalTimer = page?.props?.runningTimer;
-    if (globalTimer?.subtask_id === props.task?.id && globalTimer?.is_running) {
+    // Source 2: global running timer from shared Inertia props
+    const globalTimer = page.props.runningTimer;
+    if (globalTimer?.subtask_id === currentTaskId && globalTimer?.is_running) {
         isTracking.value = true;
         runningEntryId.value = globalTimer.id;
         const startedAt = new Date(globalTimer.started_at).getTime();
         trackingDuration.value = Math.floor((Date.now() - startedAt) / 1000);
         startTimerInterval();
+        return;
     }
+
+    // Source 3: ask the server (handles stale local/global data)
+    try {
+        const res = await safeFetch(route('time-tracking.running'), { method: 'GET' });
+        if (res.ok && props.task?.id === currentTaskId) {
+            const data = await res.json().catch(() => ({}));
+            const timer = data.timer;
+            if (timer?.subtask_id === currentTaskId && (timer?.is_running ?? false)) {
+                isTracking.value = true;
+                runningEntryId.value = timer.id;
+                const startedAt = new Date(timer.started_at).getTime();
+                trackingDuration.value = Math.floor((Date.now() - startedAt) / 1000);
+                startTimerInterval();
+            }
+        }
+    } catch (e) { }
 };
 
 const formatTrackingDuration = computed(() => {
@@ -717,15 +788,20 @@ onUnmounted(() => {
     stopTimerInterval();
 });
 
-// Re-check running timer when task prop changes (e.g. after reload)
+// Re-check running timer when time_entries changes (e.g. after reload)
 watch(() => props.task?.time_entries, () => {
     if (!isTracking.value) {
         initRunningTimer();
     } else {
-        // Update the running entry ID if we got fresh data
         const runningEntry = props.task?.time_entries?.find(e => e.is_running);
         if (runningEntry) {
             runningEntryId.value = runningEntry.id;
+        } else {
+            // Timer was stopped externally (e.g. another subtask started)
+            stopTimerInterval();
+            isTracking.value = false;
+            trackingDuration.value = 0;
+            runningEntryId.value = null;
         }
     }
 }, { deep: true });
@@ -993,7 +1069,21 @@ const newTimeEntry = ref({
 const addTimeEntry = () => {
     if (!newTimeEntry.value.duration || !isSubtask.value) return;
 
-    const durationInMinutes = parseFloat(newTimeEntry.value.duration) * 60;
+    const hours = parseFloat(newTimeEntry.value.duration);
+    if (isNaN(hours) || hours <= 0) {
+        if (window.showSnackbar) window.showSnackbar('Duration must be greater than 0.', 'error');
+        return;
+    }
+    if (hours > 24) {
+        if (window.showSnackbar) window.showSnackbar('Duration cannot exceed 24 hours.', 'error');
+        return;
+    }
+    if (newTimeEntry.value.description && newTimeEntry.value.description.length > 500) {
+        if (window.showSnackbar) window.showSnackbar('Description cannot exceed 500 characters.', 'error');
+        return;
+    }
+
+    const durationInMinutes = hours * 60;
 
     router.post(
         route('tasks.subtasks.time-entries.store', [
@@ -1552,9 +1642,10 @@ const deleteTimeEntry = (entryId) => {
                                     <div class="space-y-3">
                                         <v-text-field v-model="newTimeEntry.duration" type="number"
                                             label="Duration (hours)" variant="outlined" density="compact" step="0.25"
-                                            min="0" hide-details />
+                                            min="0.01" max="24" hide-details />
                                         <v-textarea v-model="newTimeEntry.description" label="Description (optional)"
-                                            variant="outlined" density="compact" rows="2" hide-details />
+                                            variant="outlined" density="compact" rows="2" hide-details counter
+                                            maxlength="500" />
                                         <v-btn color="primary" size="small" block :disabled="!newTimeEntry.duration"
                                             @click="addTimeEntry">
                                             <v-icon start>mdi-plus</v-icon>

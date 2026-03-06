@@ -2,6 +2,8 @@
 
 namespace App\Http\Controllers;
 
+use App\Http\Requests\StoreSprintRequest;
+use App\Http\Requests\UpdateSprintRequest;
 use App\Models\Space;
 use App\Models\Sprint;
 use App\Models\Workspace;
@@ -88,17 +90,9 @@ class SprintController extends Controller
     /**
      * Store a newly created sprint.
      */
-    public function store(Request $request, Workspace $workspace, Space $space)
+    public function store(StoreSprintRequest $request, Workspace $workspace, Space $space)
     {
-        $validated = $request->validate([
-            'name' => 'required|string|max:255',
-            'goal' => 'nullable|string',
-            'start_date' => 'required|date',
-            'end_date' => 'required|date|after:start_date',
-            'is_active' => 'boolean',
-        ]);
-
-        $sprint = $this->sprintService->createSprint($space, $validated);
+        $sprint = $this->sprintService->createSprint($space, $request->validated());
 
         return redirect()->back()->with('success', 'Sprint created successfully!');
     }
@@ -106,17 +100,9 @@ class SprintController extends Controller
     /**
      * Update the specified sprint.
      */
-    public function update(Request $request, Workspace $workspace, Space $space, Sprint $sprint)
+    public function update(UpdateSprintRequest $request, Workspace $workspace, Space $space, Sprint $sprint)
     {
-        $validated = $request->validate([
-            'name' => 'string|max:255',
-            'goal' => 'nullable|string',
-            'start_date' => 'date',
-            'end_date' => 'date|after:start_date',
-            'is_active' => 'boolean',
-        ]);
-
-        $this->sprintService->updateSprint($sprint, $validated);
+        $this->sprintService->updateSprint($sprint, $request->validated());
 
         return redirect()->back()->with('success', 'Sprint updated successfully!');
     }

@@ -4,7 +4,9 @@ namespace App\Http\Controllers;
 
 use App\Http\Requests\ReorderRequest;
 use App\Http\Requests\StoreSpaceRequest;
+use App\Http\Requests\StoreStatusRequest;
 use App\Http\Requests\UpdateSpaceRequest;
+use App\Http\Requests\UpdateStatusRequest;
 use App\Models\Space;
 use App\Models\Status;
 use App\Models\Workspace;
@@ -136,17 +138,10 @@ class SpaceController extends Controller
     /**
      * Add status to space.
      */
-    public function addStatus(Request $request, Workspace $workspace, Space $space): RedirectResponse
+    public function addStatus(StoreStatusRequest $request, Workspace $workspace, Space $space): RedirectResponse
     {
-        $validated = $request->validate([
-            'name' => 'required|string|max:255',
-            'color' => 'nullable|string|regex:/^#[0-9A-Fa-f]{6}$/',
-            'is_closed' => 'nullable|boolean',
-            'applies_to' => 'nullable|in:tasks,subtasks,both',
-        ]);
-
         try {
-            $status = $this->spaceService->addStatus($space, $validated);
+            $status = $this->spaceService->addStatus($space, $request->validated());
 
             return redirect()->back()->with([
                 'success' => 'Status added successfully.',
@@ -160,17 +155,10 @@ class SpaceController extends Controller
     /**
      * Update status.
      */
-    public function updateStatus(Request $request, Workspace $workspace, Space $space, Status $status): RedirectResponse
+    public function updateStatus(UpdateStatusRequest $request, Workspace $workspace, Space $space, Status $status): RedirectResponse
     {
-        $validated = $request->validate([
-            'name' => 'nullable|string|max:255',
-            'color' => 'nullable|string|regex:/^#[0-9A-Fa-f]{6}$/',
-            'is_closed' => 'nullable|boolean',
-            'applies_to' => 'nullable|in:tasks,subtasks,both',
-        ]);
-
         try {
-            $this->spaceService->updateStatus($status, $validated);
+            $this->spaceService->updateStatus($status, $request->validated());
 
             return redirect()->back()->with('success', 'Status updated successfully.');
         } catch (\Exception $e) {

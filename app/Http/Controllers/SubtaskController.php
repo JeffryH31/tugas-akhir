@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Http\Requests\StoreSubtaskRequest;
+use App\Http\Requests\UpdateSubtaskRequest;
 use App\Http\Resources\SubtaskResource;
 use App\Models\Space;
 use App\Models\Subtask;
@@ -43,22 +44,10 @@ class SubtaskController extends Controller
     /**
      * Update the specified subtask.
      */
-    public function update(Request $request, Workspace $workspace, Space $space, TaskList $list, Task $task, Subtask $subtask): RedirectResponse
+    public function update(UpdateSubtaskRequest $request, Workspace $workspace, Space $space, TaskList $list, Task $task, Subtask $subtask): RedirectResponse
     {
         try {
-            $validated = $request->validate([
-                'name' => ['sometimes', 'string', 'max:255'],
-                'description' => ['nullable', 'string', 'max:10000'],
-                'status_id' => ['sometimes', 'exists:statuses,id'],
-                'priority_id' => ['nullable', 'exists:priorities,id'],
-                'start_date' => ['nullable', 'date'],
-                'due_date' => ['nullable', 'date'],
-                'time_estimate' => ['nullable', 'integer', 'min:0'],
-                'assignee_ids' => ['sometimes', 'array'],
-                'label_ids' => ['sometimes', 'array'],
-            ]);
-
-            $this->subtaskService->update($subtask, $validated, $request->user());
+            $this->subtaskService->update($subtask, $request->validated(), $request->user());
 
             return redirect()->back()->with('success', 'Subtask updated successfully.');
         } catch (\Exception $e) {

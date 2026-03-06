@@ -459,7 +459,16 @@ const startSubtaskTimer = async (subtask) => {
         });
 
         if (res.ok || res.status === 302 || res.status === 303) {
-            runningTimer.value = { subtask_id: subtask.id };
+            const data = await res.json().catch(() => ({}));
+
+            for (const s of (props.task.subtasks || [])) {
+                if (s.id !== subtask.id && s.time_entries) {
+                    s.time_entries.forEach(e => { e.is_running = false; });
+                }
+            }
+
+            stopTimerInterval();
+            runningTimer.value = data.timeEntry || { subtask_id: subtask.id };
             elapsedSeconds.value = 0;
             startTimerInterval();
             window.showSnackbar('Timer started!', 'success');
@@ -478,12 +487,52 @@ const startSubtaskTimer = async (subtask) => {
 
 const stopSubtaskTimer = async (subtask) => {
     if (isTimerLoading.value) return;
+
+    let entryId = null;
+
+    // Source 1: subtask's own time_entries
     const runningEntry = subtask.time_entries?.find(e => e.is_running);
-    if (!runningEntry) return;
+    entryId = runningEntry?.id;
+
+    // Source 2: local runningTimer state (set during startSubtaskTimer)
+    if (!entryId && runningTimer.value?.id && runningTimer.value.subtask_id === subtask.id) {
+        entryId = runningTimer.value.id;
+    }
+
+    // Source 3: global running timer from shared Inertia props
+    if (!entryId) {
+        const globalTimer = page.props.runningTimer;
+        if (globalTimer?.subtask_id === subtask.id && globalTimer?.is_running) {
+            entryId = globalTimer.id;
+        }
+    }
+
+    // Source 4: ask the server
+    if (!entryId) {
+        try {
+            const runningRes = await safeFetch(route('time-tracking.running'), { method: 'GET' });
+            if (runningRes.ok) {
+                const runningData = await runningRes.json().catch(() => ({}));
+                if (runningData.timer?.id) {
+                    entryId = runningData.timer.id;
+                }
+            }
+        } catch (e) { }
+    }
+
+    if (!entryId) {
+        window.showSnackbar('No running timer found.', 'warning');
+        runningTimer.value = null;
+        elapsedSeconds.value = 0;
+        stopTimerInterval();
+        router.reload({ preserveScroll: true, only: ['task', 'runningTimer'] });
+        return;
+    }
+
     isTimerLoading.value = true;
 
     try {
-        const url = route('tasks.timer.stop', [props.workspace.id, props.space.id, props.list.id, props.task.id, runningEntry.id]);
+        const url = route('tasks.timer.stop', [props.workspace.id, props.space.id, props.list.id, props.task.id, entryId]);
         const res = await safeFetch(url, { method: 'POST' });
 
         if (res.ok || res.status === 302 || res.status === 303) {
@@ -540,58 +589,8 @@ const updateSubtaskTimeEstimate = (subtask, hours) => {
     );
 };
 
-const startTimer = async () => {
-    if (isTimerLoading.value) return;
-    isTimerLoading.value = true;
-    try {
-        const url = route('tasks.timer.start', [props.workspace.id, props.space.id, props.list.id, props.task.id]);
-        const res = await safeFetch(url, { method: 'POST' });
-
-        if (res.ok) {
-            const data = await res.json().catch(() => ({}));
-            runningTimer.value = data.timeEntry || { subtask_id: null };
-            startTimerInterval();
-            router.reload({ preserveScroll: true, only: ['task', 'runningTimer'] });
-        } else if (res.status === 419) {
-            window.location.reload();
-        }
-    } catch (err) {
-        window.showSnackbar('Failed to start timer', 'error');
-    } finally {
-        isTimerLoading.value = false;
-    }
-};
-
-const stopTimer = async () => {
-    if (isTimerLoading.value) return;
-    // Search through subtasks for the running entry
-    let runningEntry = null;
-    for (const subtask of (props.task.subtasks || [])) {
-        runningEntry = subtask.time_entries?.find(e => e.is_running);
-        if (runningEntry) break;
-    }
-    if (!runningEntry) return;
-    isTimerLoading.value = true;
-
-    try {
-        const url = route('tasks.timer.stop', [props.workspace.id, props.space.id, props.list.id, props.task.id, runningEntry.id]);
-        const res = await safeFetch(url, { method: 'POST' });
-
-        if (res.ok || res.status === 302 || res.status === 303) {
-            runningTimer.value = null;
-            stopTimerInterval();
-            router.reload({ preserveScroll: true, only: ['task', 'runningTimer'] });
-        } else if (res.status === 419) {
-            window.location.reload();
-        }
-    } catch (err) {
-        window.showSnackbar('Failed to stop timer', 'error');
-    } finally {
-        isTimerLoading.value = false;
-    }
-};
-
 const startTimerInterval = () => {
+    if (timerInterval.value) clearInterval(timerInterval.value);
     timerInterval.value = setInterval(() => {
         elapsedSeconds.value++;
     }, 1000);
@@ -603,16 +602,6 @@ const stopTimerInterval = () => {
         timerInterval.value = null;
         elapsedSeconds.value = 0;
     }
-};
-
-const formatDuration = (seconds) => {
-    if (!seconds) return '0m';
-    const hours = Math.floor(seconds / 3600);
-    const minutes = Math.floor((seconds % 3600) / 60);
-    if (hours > 0) {
-        return `${hours}h ${minutes}m`;
-    }
-    return `${minutes}m`;
 };
 
 // ===== Dependency Management =====
@@ -1116,10 +1105,15 @@ onUnmounted(() => {
                                     variant="text" @click="startSubtaskTimer(subtask)">
                                     Start
                                 </v-btn>
-                                <v-btn v-else prepend-icon="mdi-stop" size="x-small" variant="text" color="error"
-                                    @click="stopSubtaskTimer(subtask)">
-                                    Stop
-                                </v-btn>
+                                <template v-else>
+                                    <v-btn prepend-icon="mdi-stop" size="x-small" variant="text" color="error"
+                                        @click="stopSubtaskTimer(subtask)">
+                                        Stop
+                                    </v-btn>
+                                    <span class="text-red-400 font-mono text-[11px]">
+                                        {{ formatRunningTime }}
+                                    </span>
+                                </template>
                                 <span v-if="subtask.time_spent" class="text-gray-400">
                                     {{ formatSubtaskTime(subtask.time_spent) }}
                                 </span>

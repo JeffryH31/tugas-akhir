@@ -38,7 +38,7 @@ const openTask = (task) => {
 const addTaskToSprint = (task) => {
     router.post(
         route('sprints.tasks.add', [props.workspace.id, props.space.id, props.sprint.id]),
-        { task_id: task.id },
+        { subtask_id: task.id },
         {
             preserveScroll: true,
             onFinish: () => {
@@ -53,7 +53,7 @@ const removeTaskFromSprint = (task) => {
     router.delete(
         route('sprints.tasks.remove', [props.workspace.id, props.space.id, props.sprint.id]),
         {
-            data: { task_id: task.id },
+            data: { subtask_id: task.id },
             preserveScroll: true,
             onFinish: () => {
                 router.reload({ only: ['sprint', 'backlogTasks', 'statistics', 'burndown'] });

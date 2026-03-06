@@ -157,6 +157,7 @@ const resetForm = () => {
 };
 
 const startTimerInterval = () => {
+    if (timerInterval.value) clearInterval(timerInterval.value);
     timerInterval.value = setInterval(() => {
         elapsedSeconds.value++;
     }, 1000);
@@ -179,6 +180,34 @@ onMounted(() => {
 
 onUnmounted(() => {
     stopTimerInterval();
+});
+
+// Re-fetch entries when date range changes
+watch(dateRange, (range) => {
+    let startDate = null;
+    let endDate = null;
+    const now = new Date();
+
+    if (range === 'today') {
+        startDate = now.toISOString().split('T')[0];
+        endDate = startDate;
+    } else if (range === 'week') {
+        const day = now.getDay();
+        const diff = day === 0 ? 6 : day - 1;
+        const monday = new Date(now);
+        monday.setDate(now.getDate() - diff);
+        startDate = monday.toISOString().split('T')[0];
+        endDate = now.toISOString().split('T')[0];
+    } else if (range === 'month') {
+        startDate = new Date(now.getFullYear(), now.getMonth(), 1).toISOString().split('T')[0];
+        endDate = now.toISOString().split('T')[0];
+    }
+
+    router.reload({
+        preserveScroll: true,
+        data: { start_date: startDate, end_date: endDate },
+        only: ['entries', 'stats'],
+    });
 });
 
 // Re-sync timer display when runningTimer prop changes (e.g. after stop)

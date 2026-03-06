@@ -30,12 +30,17 @@ class TimeEntryController extends Controller
      */
     public function index(Request $request): Response
     {
+        $validated = $request->validate([
+            'start_date' => ['nullable', 'date'],
+            'end_date' => ['nullable', 'date'],
+        ]);
+
         $user = $request->user();
         
         $entries = $this->timeTrackingService->getEntriesForUser(
             $user,
-            $request->start_date,
-            $request->end_date
+            $validated['start_date'] ?? null,
+            $validated['end_date'] ?? null
         );
 
         $runningTimer = $this->timeTrackingService->getRunningTimer($user);
@@ -104,18 +109,20 @@ class TimeEntryController extends Controller
      */
     public function startTimer(Request $request, Workspace $workspace, Space $space, TaskList $list, Task $task)
     {
+        $validated = $request->validate([
+            'subtask_id' => ['nullable', 'integer', 'exists:subtasks,id'],
+            'description' => ['nullable', 'string', 'max:500'],
+        ]);
+
         try {
-            // Note: This route receives task_id; if used with subtasks,
-            // the subtask_id should be passed as request data 
-            $subtaskId = $request->input('subtask_id');
-            $subtask = $subtaskId 
-                ? Subtask::findOrFail($subtaskId)
+            $subtask = !empty($validated['subtask_id'])
+                ? Subtask::where('id', $validated['subtask_id'])->where('task_id', $task->id)->firstOrFail()
                 : Subtask::where('task_id', $task->id)->firstOrFail();
 
             $entry = $this->timeTrackingService->startTimer(
                 $subtask,
                 $request->user(),
-                $request->description
+                $validated['description'] ?? null
             );
 
             if ($request->wantsJson()) {
@@ -224,10 +231,15 @@ class TimeEntryController extends Controller
      */
     public function workspaceReport(Request $request, Workspace $workspace): Response
     {
+        $validated = $request->validate([
+            'start_date' => ['nullable', 'date'],
+            'end_date' => ['nullable', 'date'],
+        ]);
+
         $report = $this->timeTrackingService->getWorkspaceTimeReport(
             $workspace,
-            $request->start_date,
-            $request->end_date
+            $validated['start_date'] ?? null,
+            $validated['end_date'] ?? null
         );
 
         return Inertia::render('TimeTracking/WorkspaceReport', [

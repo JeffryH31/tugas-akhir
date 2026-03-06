@@ -114,7 +114,7 @@ class TimeEntry extends Model
         $this->update([
             'is_running' => false,
             'ended_at' => now(),
-            'duration' => max(1, (int) $this->started_at->diffInMinutes(now())),
+            'duration' => max(1, (int) round($this->started_at->diffInMinutes(now()))),
         ]);
     }
 
