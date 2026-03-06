@@ -71,8 +71,21 @@ class TaskListService
 
         $grouped = [];
         foreach ($statuses as $status) {
-            // Return array of items directly, not wrapped in object
-            $grouped[$status->id] = $items->where('status_id', $status->id)->values()->toArray();
+            $statusItems = $items->where('status_id', $status->id);
+
+            // Sort by due_date ascending (nearest first), nulls at the end
+            $statusItems = $statusItems->sort(function ($a, $b) {
+                $aDate = $a->due_date ?? null;
+                $bDate = $b->due_date ?? null;
+
+                if ($aDate === null && $bDate === null) return $a->position <=> $b->position;
+                if ($aDate === null) return 1;
+                if ($bDate === null) return -1;
+
+                return $aDate <=> $bDate;
+            });
+
+            $grouped[$status->id] = $statusItems->values()->toArray();
         }
 
         return $grouped;

@@ -108,18 +108,9 @@ const createQuickTask = () => {
 // Recent tasks (limit to 10)
 const recentTasks = computed(() => props.myTasks?.slice(0, 10) || []);
 
-// Handle task complete
+// Handle task complete — tasks don't support completion (only subtasks do)
 const handleTaskComplete = (task) => {
-    router.post(
-        route('tasks.complete', [
-            props.activeWorkspace.id,
-            task.task_list.space_id,
-            task.task_list_id,
-            task.id,
-        ]),
-        {},
-        { preserveScroll: true }
-    );
+    // No-op: Task model doesn't have completed_at
 };
 
 // Handle task open

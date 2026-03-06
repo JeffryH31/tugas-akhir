@@ -61,8 +61,8 @@ class DatabaseSeeder extends Seeder
         // 2. WORKSPACE  — Divisi IT perusahaan
         // ================================================================
         $workspace = Workspace::create([
-            'name' => 'PT Nusantara Digital',
-            'slug' => 'pt-nusantara-digital',
+            'name' => 'MIS Department',
+            'slug' => 'mis-department',
             'description' => 'Divisi IT In-House — Mengelola sistem informasi untuk sektor Manufacturing, B2B, dan B2C',
             'owner_id' => $sasya->id,
             'color' => '#6366F1',
@@ -80,7 +80,7 @@ class DatabaseSeeder extends Seeder
         $urgent = Priority::create(['name' => 'Urgent', 'level' => 1, 'color' => '#FF6B6B', 'icon' => 'mdi-alert-circle',   'workspace_id' => $workspace->id]);
         $high   = Priority::create(['name' => 'High',   'level' => 2, 'color' => '#FFB84D', 'icon' => 'mdi-arrow-up-bold',  'workspace_id' => $workspace->id]);
         $normal = Priority::create(['name' => 'Normal', 'level' => 3, 'color' => '#49CCF9', 'icon' => 'mdi-minus',          'workspace_id' => $workspace->id, 'is_default' => true]);
-        $low    = Priority::create(['name' => 'Low',    'level' => 4, 'color' => '#6B7280', 'icon' => 'mdi-arrow-down-bold','workspace_id' => $workspace->id]);
+        $low    = Priority::create(['name' => 'Low',    'level' => 4, 'color' => '#6B7280', 'icon' => 'mdi-arrow-down-bold', 'workspace_id' => $workspace->id]);
 
         // ================================================================
         // 4. LABELS
@@ -174,7 +174,7 @@ class DatabaseSeeder extends Seeder
         $erpFolder = Folder::create(['name' => 'ERP System', 'space_id' => $mfgSpace->id, 'position' => 0, 'created_by' => $sasya->id]);
 
         $inventoryList = TaskList::create(['name' => 'Inventory Module',    'space_id' => $mfgSpace->id, 'folder_id' => $erpFolder->id, 'position' => 0, 'created_by' => $budi->id]);
-        $productionList = TaskList::create(['name' => 'Production Tracking','space_id' => $mfgSpace->id, 'folder_id' => $erpFolder->id, 'position' => 1, 'created_by' => $budi->id]);
+        $productionList = TaskList::create(['name' => 'Production Tracking', 'space_id' => $mfgSpace->id, 'folder_id' => $erpFolder->id, 'position' => 1, 'created_by' => $budi->id]);
 
         $iotFolder = Folder::create(['name' => 'IoT & Monitoring', 'space_id' => $mfgSpace->id, 'position' => 1, 'created_by' => $andi->id]);
 
@@ -237,7 +237,7 @@ class DatabaseSeeder extends Seeder
         $iS7  = Subtask::create(['name' => 'Barcode/QR code scanner',             'task_id' => $invTask->id, 'status_id' => $mfgTodo->id,    'priority_id' => $normal->id, 'time_estimate' => 180, 'position' => 6, 'created_by' => $dian->id,  'sprint_id' => $mfgSprint2->id,                                               'due_date' => now()->addDays(5)]);
         $iS8  = Subtask::create(['name' => 'Laporan stok (PDF/Excel)',            'task_id' => $invTask->id, 'status_id' => $mfgBacklog->id,  'priority_id' => $low->id,    'time_estimate' => 240, 'position' => 7, 'created_by' => $budi->id,  'sprint_id' => $mfgSprint3->id,                                               'due_date' => now()->addWeeks(2)]);
         $iS9  = Subtask::create(['name' => 'Integration testing inventory',       'task_id' => $invTask->id, 'status_id' => $mfgBacklog->id,  'priority_id' => $high->id,   'time_estimate' => 300, 'position' => 8, 'created_by' => $rina->id,  'sprint_id' => $mfgSprint3->id,                                               'due_date' => now()->addWeeks(2)->addDays(3)]);
-        $iS10 = Subtask::create(['name' => 'Deploy modul inventory ke production','task_id' => $invTask->id, 'status_id' => $mfgBacklog->id,  'priority_id' => $urgent->id, 'time_estimate' => 60,  'position' => 9, 'created_by' => $sasya->id, 'sprint_id' => $mfgSprint3->id,                                               'due_date' => now()->addWeeks(3)]);
+        $iS10 = Subtask::create(['name' => 'Deploy modul inventory ke production', 'task_id' => $invTask->id, 'status_id' => $mfgBacklog->id,  'priority_id' => $urgent->id, 'time_estimate' => 60,  'position' => 9, 'created_by' => $sasya->id, 'sprint_id' => $mfgSprint3->id,                                               'due_date' => now()->addWeeks(3)]);
 
         // Assign subtask members
         $iS1->assignees()->attach([$budi->id  => ['assigned_at' => now(), 'assigned_by' => $sasya->id]]);
@@ -655,7 +655,7 @@ class DatabaseSeeder extends Seeder
         $this->command->info('');
         $this->command->info('=== Database Seeded Successfully ===');
         $this->command->info('');
-        $this->command->info('Workspace:    PT Nusantara Digital (IT In-House)');
+        $this->command->info('Workspace:    MIS Department');
         $this->command->info('Users:        5 (IT Manager + 4 developers)');
         $this->command->info('Spaces:       3 (Manufacturing, B2B, B2C)');
         $this->command->info('Sprints:      ' . Sprint::count());

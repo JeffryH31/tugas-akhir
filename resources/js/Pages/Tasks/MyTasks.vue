@@ -129,18 +129,9 @@ const groupedTasks = computed(() => {
 // Task count
 const taskCount = computed(() => filteredTasks.value.length);
 
-// Handle task complete
+// Handle task complete — tasks don't support completion (only subtasks do)
 const handleTaskComplete = (task) => {
-    router.post(
-        route('tasks.complete', [
-            task.task_list.space.workspace_id,
-            task.task_list.space_id,
-            task.task_list_id,
-            task.id,
-        ]),
-        {},
-        { preserveScroll: true }
-    );
+    // No-op: Task model doesn't have completed_at
 };
 
 // Handle task open

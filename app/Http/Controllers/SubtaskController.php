@@ -69,6 +69,26 @@ class SubtaskController extends Controller
     }
 
     /**
+     * Mark subtask as completed.
+     */
+    public function complete(Request $request, Workspace $workspace, Space $space, TaskList $list, Task $task, Subtask $subtask): RedirectResponse
+    {
+        $subtask->markAsCompleted($request->user());
+
+        return redirect()->back()->with('success', 'Subtask completed.');
+    }
+
+    /**
+     * Reopen a completed subtask.
+     */
+    public function reopen(Request $request, Workspace $workspace, Space $space, TaskList $list, Task $task, Subtask $subtask): RedirectResponse
+    {
+        $subtask->markAsIncomplete();
+
+        return redirect()->back()->with('success', 'Subtask reopened.');
+    }
+
+    /**
      * Reorder subtasks.
      */
     public function reorder(Request $request, Workspace $workspace, Space $space, TaskList $list, Task $task): RedirectResponse

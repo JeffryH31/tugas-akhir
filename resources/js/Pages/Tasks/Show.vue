@@ -146,19 +146,7 @@ const updatePriority = (priorityId) => {
 };
 
 const toggleComplete = () => {
-    if (props.task.completed_at) {
-        router.post(
-            route('tasks.reopen', [props.workspace.id, props.space.id, props.list.id, props.task.id]),
-            {},
-            { preserveScroll: true }
-        );
-    } else {
-        router.post(
-            route('tasks.complete', [props.workspace.id, props.space.id, props.list.id, props.task.id]),
-            {},
-            { preserveScroll: true }
-        );
-    }
+    // Tasks don't support completion (only subtasks do)
 };
 
 const duplicateTask = () => {
@@ -301,25 +289,16 @@ const addSubtask = () => {
 };
 
 const toggleSubtask = (subtask) => {
-    if (subtask.completed_at) {
-        router.post(
-            route('tasks.reopen', [props.workspace.id, props.space.id, props.list.id, subtask.id]),
-            {},
-            {
-                preserveScroll: true,
-                onFinish: () => router.reload({ only: ['task'] })
-            }
-        );
-    } else {
-        router.post(
-            route('tasks.complete', [props.workspace.id, props.space.id, props.list.id, subtask.id]),
-            {},
-            {
-                preserveScroll: true,
-                onFinish: () => router.reload({ only: ['task'] })
-            }
-        );
-    }
+    const wasCompleted = !!subtask.completed_at;
+    const routeName = wasCompleted ? 'tasks.subtasks.reopen' : 'tasks.subtasks.complete';
+    router.post(
+        route(routeName, [props.workspace.id, props.space.id, props.list.id, props.task.id, subtask.id]),
+        {},
+        {
+            preserveScroll: true,
+            onFinish: () => router.reload({ only: ['task'] })
+        }
+    );
 };
 
 const editingSubtaskId = ref(null);

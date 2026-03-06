@@ -151,6 +151,8 @@ Route::middleware(['auth:sanctum', config('jetstream.auth_session'), 'verified']
                                         Route::prefix('{subtask}')->group(function () {
                                             Route::patch('/', [SubtaskController::class, 'update'])->name('tasks.subtasks.update');
                                             Route::delete('/', [SubtaskController::class, 'destroy'])->name('tasks.subtasks.destroy');
+                                            Route::post('/complete', [SubtaskController::class, 'complete'])->name('tasks.subtasks.complete');
+                                            Route::post('/reopen', [SubtaskController::class, 'reopen'])->name('tasks.subtasks.reopen');
                                         });
                                     });
 

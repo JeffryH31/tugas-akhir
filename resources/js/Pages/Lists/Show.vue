@@ -125,16 +125,20 @@ const handleTaskMoved = ({ task, statusId, newIndex }) => {
     }
 };
 
-// Handle task complete
+// Handle task/subtask complete toggle
 const handleTaskComplete = (task) => {
+    if (!props.parentTask) return; // Tasks don't support completion
+
+    const wasCompleted = !!task.completed_at;
+    const routeName = wasCompleted ? 'tasks.subtasks.reopen' : 'tasks.subtasks.complete';
     router.post(
-        route('tasks.complete', [props.workspace.id, props.space.id, props.list.id, task.id]),
+        route(routeName, [props.workspace.id, props.space.id, props.list.id, props.parentTask.id, task.id]),
         {},
         {
             preserveScroll: true,
             onSuccess: () => {
                 if (window.showSnackbar) {
-                    window.showSnackbar('Task completed!', 'success');
+                    window.showSnackbar(wasCompleted ? 'Subtask reopened!' : 'Subtask completed!', 'success');
                 }
                 router.reload({ only: ['tasksByStatus'] });
             }

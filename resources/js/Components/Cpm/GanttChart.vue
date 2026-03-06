@@ -61,7 +61,7 @@ const timeMarkers = computed(() => {
     const markers = [];
     const maxHours = Math.ceil(projectDuration.value);
     const interval = zoomLevel.value >= 60 ? 1 : zoomLevel.value >= 30 ? 2 : 4;
-    
+
     for (let h = 0; h <= maxHours; h += interval) {
         markers.push({
             hour: h,
@@ -76,7 +76,7 @@ const timeMarkers = computed(() => {
 const getBarStyle = (subtask) => {
     const left = chartPadding + (subtask.earlyStart * zoomLevel.value);
     const width = Math.max(subtask.duration * zoomLevel.value, 20); // Minimum width of 20px
-    
+
     return {
         left: `${left}px`,
         width: `${width}px`,
@@ -86,10 +86,10 @@ const getBarStyle = (subtask) => {
 // Get slack bar style (shown after the main bar)
 const getSlackStyle = (subtask) => {
     if (subtask.slack <= 0) return null;
-    
+
     const left = chartPadding + (subtask.earlyFinish * zoomLevel.value);
     const width = subtask.slack * zoomLevel.value;
-    
+
     return {
         left: `${left}px`,
         width: `${width}px`,
@@ -133,23 +133,23 @@ const zoomOut = () => {
 // Dependency line drawing
 const getDependencyLines = computed(() => {
     const lines = [];
-    
+
     subtasks.value.forEach((subtask, index) => {
         subtask.dependencies?.forEach(depId => {
             const depSubtask = subtasks.value.find(s => s.id === depId);
             if (!depSubtask) return;
-            
+
             const depIndex = subtasks.value.findIndex(s => s.id === depId);
-            
+
             // Calculate line coordinates
             const startX = chartPadding + (depSubtask.earlyFinish * zoomLevel.value);
             const startY = headerHeight + (depIndex * rowHeight) + (rowHeight / 2);
             const endX = chartPadding + (subtask.earlyStart * zoomLevel.value);
             const endY = headerHeight + (index * rowHeight) + (rowHeight / 2);
-            
+
             // Create path with curve
             const midX = (startX + endX) / 2;
-            
+
             lines.push({
                 id: `${depId}-${subtask.id}`,
                 path: `M ${startX} ${startY} C ${midX} ${startY}, ${midX} ${endY}, ${endX} ${endY}`,
@@ -159,7 +159,7 @@ const getDependencyLines = computed(() => {
             });
         });
     });
-    
+
     return lines;
 });
 
@@ -241,11 +241,10 @@ const scrollContainer = ref(null);
                     </v-chip>
                 </div>
             </div>
-            
+
             <div class="flex items-center gap-2">
                 <!-- Add Dependency (Link) Button -->
-                <v-btn v-if="!linkingMode" variant="tonal" size="small" color="warning"
-                    @click="linkingMode = true">
+                <v-btn v-if="!linkingMode" variant="tonal" size="small" color="warning" @click="linkingMode = true">
                     <v-icon start size="16">mdi-link-plus</v-icon>
                     Add Dependency
                 </v-btn>
@@ -305,25 +304,23 @@ const scrollContainer = ref(null);
         </div>
 
         <!-- Chart container -->
-        <div v-else ref="scrollContainer" class="gantt-scroll-container overflow-auto" style="max-height: calc(100vh - 300px);">
-            <svg 
-                :width="chartWidth" 
-                :height="chartHeight" 
-                class="gantt-svg"
-            >
+        <div v-else ref="scrollContainer" class="gantt-scroll-container overflow-auto"
+            style="max-height: calc(100vh - 300px);">
+            <svg :width="chartWidth" :height="chartHeight" class="gantt-svg">
                 <!-- Background grid -->
                 <defs>
                     <pattern id="grid" :width="zoomLevel" height="48" patternUnits="userSpaceOnUse">
-                        <path :d="`M ${zoomLevel} 0 L 0 0 0 48`" fill="none" stroke="#333" stroke-width="0.5"/>
+                        <path :d="`M ${zoomLevel} 0 L 0 0 0 48`" fill="none" stroke="#333" stroke-width="0.5" />
                     </pattern>
                 </defs>
-                <rect :x="chartPadding" y="0" :width="chartWidth - chartPadding" :height="chartHeight" fill="url(#grid)" />
+                <rect :x="chartPadding" y="0" :width="chartWidth - chartPadding" :height="chartHeight"
+                    fill="url(#grid)" />
 
                 <!-- Time header -->
                 <g class="time-header">
                     <rect x="0" y="0" :width="chartWidth" :height="headerHeight" fill="#1e1e1e" />
                     <line :x1="chartPadding" :y1="headerHeight" :x2="chartWidth" :y2="headerHeight" stroke="#444" />
-                    
+
                     <g v-for="marker in timeMarkers" :key="marker.hour">
                         <line :x1="marker.x" :y1="headerHeight - 10" :x2="marker.x" :y2="headerHeight" stroke="#666" />
                         <text :x="marker.x" :y="headerHeight - 15" fill="#999" text-anchor="middle" font-size="12">
@@ -341,28 +338,14 @@ const scrollContainer = ref(null);
                 <!-- Dependency lines (behind bars) -->
                 <g class="dependency-lines">
                     <!-- Invisible wider path for easier click target -->
-                    <path
-                        v-for="line in getDependencyLines"
-                        :key="'hit-' + line.id"
-                        :d="line.path"
-                        fill="none"
-                        stroke="transparent"
-                        stroke-width="12"
-                        class="cursor-pointer"
-                        @click.stop="handleRemoveDependency(line)"
-                    />
+                    <path v-for="line in getDependencyLines" :key="'hit-' + line.id" :d="line.path" fill="none"
+                        stroke="transparent" stroke-width="12" class="cursor-pointer"
+                        @click.stop="handleRemoveDependency(line)" />
                     <!-- Visible line -->
-                    <path
-                        v-for="line in getDependencyLines"
-                        :key="line.id"
-                        :d="line.path"
-                        fill="none"
-                        :stroke="line.isCritical ? '#ef4444' : '#666'"
-                        stroke-width="2"
+                    <path v-for="line in getDependencyLines" :key="line.id" :d="line.path" fill="none"
+                        :stroke="line.isCritical ? '#ef4444' : '#666'" stroke-width="2"
                         :marker-end="line.isCritical ? 'url(#arrowhead-critical)' : 'url(#arrowhead)'"
-                        class="dependency-line cursor-pointer"
-                        @click.stop="handleRemoveDependency(line)"
-                    >
+                        class="dependency-line cursor-pointer" @click.stop="handleRemoveDependency(line)">
                         <title>Click to remove dependency</title>
                     </path>
                 </g>
@@ -380,19 +363,14 @@ const scrollContainer = ref(null);
                 <!-- Subtask rows -->
                 <g v-for="(subtask, index) in subtasks" :key="subtask.id" class="subtask-row">
                     <!-- Row background -->
-                    <rect 
-                        x="0" 
-                        :y="headerHeight + (index * rowHeight)" 
-                        :width="chartWidth" 
-                        :height="rowHeight"
+                    <rect x="0" :y="headerHeight + (index * rowHeight)" :width="chartWidth" :height="rowHeight"
                         :fill="linkingMode && linkingSource?.id === subtask.id ? '#3d3d00' : (index % 2 === 0 ? '#1e1e1e' : '#252526')"
-                        :class="linkingMode ? 'cursor-crosshair' : 'cursor-pointer'"
-                        class="hover:brightness-110"
-                        @click="linkingMode ? (linkingSource ? completeLinking(subtask) : startLinking(subtask)) : handleSubtaskClick(subtask)"
-                    />
-                    
+                        :class="linkingMode ? 'cursor-crosshair' : 'cursor-pointer'" class="hover:brightness-110"
+                        @click="linkingMode ? (linkingSource ? completeLinking(subtask) : startLinking(subtask)) : handleSubtaskClick(subtask)" />
+
                     <!-- Task name -->
-                    <foreignObject x="10" :y="headerHeight + (index * rowHeight) + 8" :width="chartPadding - 20" :height="rowHeight - 16">
+                    <foreignObject x="10" :y="headerHeight + (index * rowHeight) + 8" :width="chartPadding - 20"
+                        :height="rowHeight - 16">
                         <div class="flex items-center gap-2 h-full">
                             <v-icon v-if="subtask.isCritical" size="16" color="error">mdi-alert-circle</v-icon>
                             <v-icon v-else-if="subtask.completedAt" size="16" color="success">mdi-check-circle</v-icon>
@@ -403,23 +381,16 @@ const scrollContainer = ref(null);
                     </foreignObject>
 
                     <!-- Subtask bar -->
-                    <foreignObject 
-                        :x="chartPadding + (subtask.earlyStart * zoomLevel)" 
-                        :y="headerHeight + (index * rowHeight) + 10" 
-                        :width="Math.max(subtask.duration * zoomLevel, 30)" 
-                        :height="rowHeight - 20"
-                    >
-                        <div 
-                            class="gantt-bar h-full rounded flex items-center justify-center transition-all hover:brightness-110"
+                    <foreignObject :x="chartPadding + (subtask.earlyStart * zoomLevel)"
+                        :y="headerHeight + (index * rowHeight) + 10" :width="Math.max(subtask.duration * zoomLevel, 30)"
+                        :height="rowHeight - 20">
+                        <div class="gantt-bar h-full rounded flex items-center justify-center transition-all hover:brightness-110"
                             :class="[
                                 getBarColor(subtask),
                                 linkingMode ? 'cursor-crosshair' : 'cursor-pointer',
                                 linkingMode && linkingSource?.id === subtask.id ? 'ring-2 ring-yellow-400' : '',
-                            ]"
-                            @mouseenter="showTooltip(subtask, $event)"
-                            @mouseleave="hideTooltip"
-                            @click.stop="linkingMode ? (linkingSource ? completeLinking(subtask) : startLinking(subtask)) : handleSubtaskClick(subtask)"
-                        >
+                            ]" @mouseenter="showTooltip(subtask, $event)" @mouseleave="hideTooltip"
+                            @click.stop="linkingMode ? (linkingSource ? completeLinking(subtask) : startLinking(subtask)) : handleSubtaskClick(subtask)">
                             <span v-if="subtask.duration * zoomLevel > 40" class="text-xs text-white font-medium">
                                 {{ formatDuration(subtask.duration) }}
                             </span>
@@ -427,39 +398,22 @@ const scrollContainer = ref(null);
                     </foreignObject>
 
                     <!-- Slack bar (if any) -->
-                    <rect
-                        v-if="subtask.slack > 0"
-                        :x="chartPadding + (subtask.earlyFinish * zoomLevel)"
-                        :y="headerHeight + (index * rowHeight) + 18"
-                        :width="subtask.slack * zoomLevel"
-                        :height="12"
-                        fill="#4b5563"
-                        rx="2"
-                        opacity="0.6"
-                    />
+                    <rect v-if="subtask.slack > 0" :x="chartPadding + (subtask.earlyFinish * zoomLevel)"
+                        :y="headerHeight + (index * rowHeight) + 18" :width="subtask.slack * zoomLevel" :height="12"
+                        fill="#4b5563" rx="2" opacity="0.6" />
                 </g>
 
                 <!-- Today line (if using real dates) -->
-                <line 
-                    v-if="false"
-                    :x1="chartPadding + 100" 
-                    :y1="headerHeight" 
-                    :x2="chartPadding + 100" 
-                    :y2="chartHeight"
-                    stroke="#f59e0b"
-                    stroke-width="2"
-                    stroke-dasharray="5,5"
-                />
+                <line v-if="false" :x1="chartPadding + 100" :y1="headerHeight" :x2="chartPadding + 100"
+                    :y2="chartHeight" stroke="#f59e0b" stroke-width="2" stroke-dasharray="5,5" />
             </svg>
         </div>
 
         <!-- Tooltip -->
         <Teleport to="body">
-            <div
-                v-if="tooltipSubtask"
+            <div v-if="tooltipSubtask"
                 class="gantt-tooltip fixed z-50 bg-[#2d2d30] border border-gray-600 rounded-lg shadow-xl p-3 max-w-xs"
-                :style="{ left: tooltipPosition.x + 'px', top: tooltipPosition.y + 'px' }"
-            >
+                :style="{ left: tooltipPosition.x + 'px', top: tooltipPosition.y + 'px' }">
                 <div class="font-semibold mb-2" :class="{ 'text-red-400': tooltipSubtask.isCritical }">
                     {{ tooltipSubtask.name }}
                     <v-chip v-if="tooltipSubtask.isCritical" size="x-small" color="error" class="ml-2">Critical</v-chip>

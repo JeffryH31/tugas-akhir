@@ -30,16 +30,19 @@ const isCritical = computed(() => isSubtaskCritical(props.task.id));
 
 // Priority config
 const priorityConfig = {
-    1: { color: 'error', icon: 'mdi-flag', label: 'Urgent' },
-    2: { color: 'warning', icon: 'mdi-flag', label: 'High' },
-    3: { color: 'info', icon: 'mdi-flag', label: 'Normal' },
-    4: { color: 'grey', icon: 'mdi-flag-outline', label: 'Low' },
+    1: { color: '#f87171', icon: 'mdi-flag', label: 'Urgent' },
+    2: { color: '#fb923c', icon: 'mdi-flag', label: 'High' },
+    3: { color: '#60a5fa', icon: 'mdi-flag', label: 'Normal' },
+    4: { color: '#6b7280', icon: 'mdi-flag-outline', label: 'Low' },
 };
 
 const priority = computed(() => {
     if (!props.task.priority) return null;
     return priorityConfig[props.task.priority.level] || priorityConfig[3];
 });
+
+// Status color for left border
+const statusColor = computed(() => props.task.status?.color || '#6b7280');
 
 // Due date formatting
 const dueDate = computed(() => {
@@ -49,15 +52,15 @@ const dueDate = computed(() => {
     const diffDays = Math.ceil((date - now) / (1000 * 60 * 60 * 24));
 
     if (diffDays < 0) {
-        return { text: `${Math.abs(diffDays)}d overdue`, color: 'error', overdue: true };
+        return { text: `${Math.abs(diffDays)}d overdue`, color: '#f87171', overdue: true };
     } else if (diffDays === 0) {
-        return { text: 'Today', color: 'warning', overdue: false };
+        return { text: 'Today', color: '#fbbf24', overdue: false };
     } else if (diffDays === 1) {
-        return { text: 'Tomorrow', color: 'info', overdue: false };
+        return { text: 'Tomorrow', color: '#60a5fa', overdue: false };
     } else if (diffDays <= 7) {
-        return { text: `${diffDays}d`, color: 'grey', overdue: false };
+        return { text: `${diffDays}d`, color: '#9ca3af', overdue: false };
     } else {
-        return { text: date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' }), color: 'grey', overdue: false };
+        return { text: date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' }), color: '#9ca3af', overdue: false };
     }
 });
 
@@ -76,40 +79,30 @@ const subtaskProgress = computed(() => {
     };
 });
 
-// Aggregate assignees from subtasks
-const aggregatedAssignees = computed(() => {
-    if (!props.task.subtasks || props.task.subtasks.length === 0) return [];
+// Display assignees: use direct assignees first, fallback to aggregated from subtasks
+const displayAssignees = computed(() => {
+    if (props.task.assignees?.length) return props.task.assignees;
 
+    if (!props.task.subtasks || props.task.subtasks.length === 0) return [];
     const assigneeMap = new Map();
     props.task.subtasks.forEach(subtask => {
         if (subtask.assignees) {
-            subtask.assignees.forEach(assignee => {
-                if (!assigneeMap.has(assignee.id)) {
-                    assigneeMap.set(assignee.id, assignee);
-                }
+            subtask.assignees.forEach(a => {
+                if (!assigneeMap.has(a.id)) assigneeMap.set(a.id, a);
             });
         }
     });
-
     return Array.from(assigneeMap.values());
 });
 
 // Aggregate time spent from subtasks
 const aggregatedTimeSpent = computed(() => {
     if (!props.task.subtasks || props.task.subtasks.length === 0) return null;
-
-    const totalMinutes = props.task.subtasks.reduce((sum, subtask) => {
-        return sum + (subtask.time_spent || 0);
-    }, 0);
-
+    const totalMinutes = props.task.subtasks.reduce((sum, s) => sum + (s.time_spent || 0), 0);
     if (totalMinutes === 0) return null;
-
     const hours = Math.floor(totalMinutes / 60);
     const minutes = totalMinutes % 60;
-    if (hours > 0) {
-        return `${hours}h ${minutes}m`;
-    }
-    return `${minutes}m`;
+    return hours > 0 ? `${hours}h ${minutes}m` : `${minutes}m`;
 });
 
 // Handle complete toggle
@@ -125,144 +118,307 @@ const openDetail = () => {
 </script>
 
 <template>
-    <v-card class="task-card" :class="{
-        'task-card--completed': isCompleted,
-        'task-card--compact': compact,
-        'task-card--critical': isCritical && !isCompleted,
-    }" variant="outlined" rounded="lg" @click="openDetail">
-        <v-card-text class="pa-3">
-            <div class="flex items-center gap-2">
-                <!-- Critical Path Indicator -->
+    <div class="cu-card" :class="{
+        'cu-card--completed': isCompleted,
+        'cu-card--critical': isCritical && !isCompleted,
+    }" @click="openDetail">
+        <!-- Left status color strip -->
+        <div class="cu-card__status-bar" :style="{ backgroundColor: statusColor }"></div>
+
+        <div class="cu-card__content">
+            <!-- Top: Task ID + Critical indicator -->
+            <div v-if="task.task_id || task.subtask_id || (isCritical && !isCompleted)" class="cu-card__id-row">
+                <span v-if="task.task_id || task.subtask_id" class="cu-card__id">
+                    {{ task.subtask_id || task.task_id }}
+                </span>
                 <v-tooltip v-if="isCritical && !isCompleted" location="top">
-                    <template #activator="{ props: tooltipProps }">
-                        <v-icon v-bind="tooltipProps" size="16" color="error" class="critical-icon">
+                    <template #activator="{ props: tp }">
+                        <v-icon v-bind="tp" size="12" color="error" class="cu-card__critical-badge">
                             mdi-alert-circle
                         </v-icon>
                     </template>
-                    <span>On Critical Path - Any delay affects project deadline</span>
+                    <span>On Critical Path</span>
                 </v-tooltip>
+            </div>
 
-                <!-- Complete Checkbox -->
-                <v-btn :icon="isCompleted ? 'mdi-checkbox-marked' : 'mdi-checkbox-blank-outline'"
-                    :color="isCompleted ? 'success' : 'grey'" variant="text" size="x-small" density="compact"
-                    @click="toggleComplete" />
-
-                <!-- Task Title -->
-                <div class="text-sm font-medium" :class="{ 'line-through text-gray-500': isCompleted }">
+            <!-- Task name row -->
+            <div class="cu-card__name-row">
+                <button class="cu-card__checkbox" :class="{ 'cu-card__checkbox--done': isCompleted }"
+                    :style="!isCompleted ? { borderColor: statusColor } : {}" @click="toggleComplete">
+                    <v-icon v-if="isCompleted" size="12" color="white">mdi-check</v-icon>
+                </button>
+                <span class="cu-card__name" :class="{ 'cu-card__name--done': isCompleted }">
                     {{ task.name }}
-                </div>
+                </span>
+            </div>
 
-                <!-- Task Meta -->
-                <div class="flex flex-wrap items-center gap-2">
-                    <!-- Labels -->
-                    <v-chip v-for="label in task.labels?.slice(0, 2)" :key="label.id" :color="label.color"
-                        size="x-small" variant="tonal">
-                        {{ label.name }}
-                    </v-chip>
-                    <v-chip v-if="task.labels?.length > 2" size="x-small" variant="tonal">
-                        +{{ task.labels.length - 2 }}
-                    </v-chip>
-                </div>
+            <!-- Labels -->
+            <div v-if="task.labels?.length" class="cu-card__labels">
+                <span v-for="label in task.labels.slice(0, 4)" :key="label.id" class="cu-card__label"
+                    :style="{ backgroundColor: label.color + '22', color: label.color, borderColor: label.color + '44' }">
+                    {{ label.name }}
+                </span>
+                <span v-if="task.labels.length > 4" class="cu-card__label cu-card__label--more">
+                    +{{ task.labels.length - 4 }}
+                </span>
+            </div>
 
-                <!-- Bottom Row -->
-                <div v-if="!compact" class="flex items-center gap-3 mt-2">
+            <!-- Bottom meta row -->
+            <div v-if="!compact" class="cu-card__footer">
+                <div class="cu-card__meta">
                     <!-- Priority -->
-                    <div v-if="priority" class="flex items-center gap-1">
-                        <v-icon :color="priority.color" size="14">{{ priority.icon }}</v-icon>
-                    </div>
+                    <v-tooltip v-if="priority" location="top">
+                        <template #activator="{ props: tp }">
+                            <div v-bind="tp" class="cu-card__meta-item">
+                                <v-icon size="14" :style="{ color: priority.color }">{{ priority.icon }}</v-icon>
+                            </div>
+                        </template>
+                        <span>{{ priority.label }}</span>
+                    </v-tooltip>
 
                     <!-- Due Date -->
-                    <div v-if="dueDate" class="flex items-center gap-1 text-xs"
-                        :class="dueDate.overdue ? 'text-red-500' : 'text-gray-500'">
-                        <v-icon size="12">mdi-calendar-outline</v-icon>
-                        {{ dueDate.text }}
+                    <div v-if="dueDate" class="cu-card__meta-item" :style="{ color: dueDate.color }">
+                        <v-icon size="13" :style="{ color: dueDate.color }">mdi-calendar-blank-outline</v-icon>
+                        <span>{{ dueDate.text }}</span>
                     </div>
 
-                    <!-- Subtasks Progress -->
-                    <div v-if="subtaskProgress" class="flex items-center gap-1 text-xs text-gray-500">
-                        <v-icon size="12">mdi-checkbox-multiple-outline</v-icon>
-                        {{ subtaskProgress.completed }}/{{ subtaskProgress.total }}
+                    <!-- Subtask Progress -->
+                    <div v-if="subtaskProgress" class="cu-card__meta-item cu-card__meta-item--subtle">
+                        <v-icon size="13">mdi-file-tree-outline</v-icon>
+                        <span>{{ subtaskProgress.completed }}/{{ subtaskProgress.total }}</span>
                     </div>
 
-                    <!-- Time Spent -->
-                    <div v-if="aggregatedTimeSpent" class="flex items-center gap-1 text-xs text-gray-500">
-                        <v-icon size="12">mdi-timer-outline</v-icon>
-                        {{ aggregatedTimeSpent }}
+                    <!-- Time -->
+                    <div v-if="aggregatedTimeSpent" class="cu-card__meta-item cu-card__meta-item--subtle">
+                        <v-icon size="13">mdi-clock-outline</v-icon>
+                        <span>{{ aggregatedTimeSpent }}</span>
                     </div>
 
-                    <!-- Comments Count -->
-                    <div v-if="task.comments_count" class="flex items-center gap-1 text-xs text-gray-500">
-                        <v-icon size="12">mdi-comment-outline</v-icon>
-                        {{ task.comments_count }}
-                    </div>
-
-                    <v-spacer />
-
-                    <!-- Assignees from Subtasks -->
-                    <div v-if="aggregatedAssignees?.length" class="flex -space-x-1">
-                        <v-avatar v-for="assignee in aggregatedAssignees.slice(0, 3)" :key="assignee.id"
-                            :color="assignee.avatar_color" size="20" class="border border-[#2d2d30]">
-                            <img v-if="assignee.profile_photo_url" :src="assignee.profile_photo_url"
-                                :alt="assignee.name" />
-                            <span v-else class="text-[10px]">{{ assignee.initials }}</span>
-                        </v-avatar>
-                        <v-avatar v-if="aggregatedAssignees.length > 3" color="grey-darken-2" size="20"
-                            class="border border-[#2d2d30]">
-                            <span class="text-[10px]">+{{ aggregatedAssignees.length - 3 }}</span>
-                        </v-avatar>
+                    <!-- Comments -->
+                    <div v-if="task.comments_count" class="cu-card__meta-item cu-card__meta-item--subtle">
+                        <v-icon size="13">mdi-chat-outline</v-icon>
+                        <span>{{ task.comments_count }}</span>
                     </div>
                 </div>
+
+                <!-- Assignees -->
+                <div v-if="displayAssignees.length" class="cu-card__assignees">
+                    <v-tooltip v-for="assignee in displayAssignees.slice(0, 3)" :key="assignee.id" location="top">
+                        <template #activator="{ props: tp }">
+                            <v-avatar v-bind="tp" :color="assignee.avatar_color || '#4f46e5'" size="24"
+                                class="cu-card__avatar">
+                                <img v-if="assignee.profile_photo_url" :src="assignee.profile_photo_url"
+                                    :alt="assignee.name" />
+                                <span v-else class="cu-card__avatar-text">{{ assignee.name?.charAt(0) }}</span>
+                            </v-avatar>
+                        </template>
+                        <span>{{ assignee.name }}</span>
+                    </v-tooltip>
+                    <v-avatar v-if="displayAssignees.length > 3" color="#374151" size="24" class="cu-card__avatar">
+                        <span class="cu-card__avatar-text">+{{ displayAssignees.length - 3 }}</span>
+                    </v-avatar>
+                </div>
             </div>
-        </v-card-text>
-    </v-card>
+        </div>
+    </div>
 </template>
 
 <style scoped>
-.task-card {
-    transition: all 0.15s ease;
+/* ClickUp-style card */
+.cu-card {
+    display: flex;
+    background: #1e1e2e;
+    border: 1px solid #2e2e3e;
+    border-radius: 8px;
     cursor: pointer;
-    background-color: #1e1e1e;
-    border-color: #2d2d30;
+    transition: all 0.15s ease;
+    overflow: hidden;
+    position: relative;
 }
 
-.task-card:hover {
-    border-color: #3d3d40;
-    transform: translateY(-1px);
+.cu-card:hover {
+    background: #242438;
+    border-color: #3e3e52;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
 }
 
-.task-card--completed {
-    opacity: 0.7;
+.cu-card--completed {
+    opacity: 0.55;
 }
 
-.task-card--critical {
-    border-color: #ef4444 !important;
-    border-width: 2px;
-    background: linear-gradient(135deg, rgba(239, 68, 68, 0.1) 0%, transparent 50%);
+.cu-card--critical {
+    border-color: rgba(239, 68, 68, 0.5);
+    background: linear-gradient(135deg, rgba(239, 68, 68, 0.06) 0%, #1e1e2e 40%);
 }
 
-.task-card--critical:hover {
-    border-color: #f87171 !important;
-    box-shadow: 0 0 12px rgba(239, 68, 68, 0.3);
+.cu-card--critical:hover {
+    border-color: rgba(239, 68, 68, 0.7);
+    box-shadow: 0 2px 12px rgba(239, 68, 68, 0.15);
 }
 
-.task-card--compact .v-card-text {
-    padding: 8px 12px !important;
+/* Left colored strip */
+.cu-card__status-bar {
+    width: 4px;
+    flex-shrink: 0;
+    border-radius: 8px 0 0 8px;
 }
 
-.-space-x-1>*+* {
-    margin-left: -4px;
+/* Content area */
+.cu-card__content {
+    flex: 1;
+    min-width: 0;
+    padding: 10px 12px;
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
 }
 
-.critical-icon {
-    animation: pulse 2s infinite;
+/* Task ID */
+.cu-card__id-row {
+    display: flex;
+    align-items: center;
+    gap: 6px;
 }
 
-@keyframes pulse {
-    0%, 100% {
-        opacity: 1;
-    }
-    50% {
-        opacity: 0.5;
-    }
+.cu-card__id {
+    font-size: 10px;
+    color: #6b7280;
+    font-weight: 500;
+    letter-spacing: 0.3px;
+    text-transform: uppercase;
+}
+
+.cu-card__critical-badge {
+    animation: critical-pulse 2s infinite;
+}
+
+@keyframes critical-pulse {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.5; }
+}
+
+/* Name row */
+.cu-card__name-row {
+    display: flex;
+    align-items: flex-start;
+    gap: 8px;
+}
+
+.cu-card__checkbox {
+    width: 16px;
+    height: 16px;
+    min-width: 16px;
+    border-radius: 4px;
+    border: 2px solid #6b7280;
+    background: transparent;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    transition: all 0.15s ease;
+    margin-top: 2px;
+}
+
+.cu-card__checkbox:hover {
+    background: rgba(255, 255, 255, 0.08);
+    transform: scale(1.1);
+}
+
+.cu-card__checkbox--done {
+    background: #22c55e !important;
+    border-color: #22c55e !important;
+}
+
+.cu-card__name {
+    font-size: 13px;
+    font-weight: 500;
+    color: #e5e7eb;
+    line-height: 1.45;
+    word-break: break-word;
+    flex: 1;
+    min-width: 0;
+}
+
+.cu-card__name--done {
+    text-decoration: line-through;
+    color: #6b7280;
+}
+
+/* Labels */
+.cu-card__labels {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 4px;
+    padding-left: 24px;
+}
+
+.cu-card__label {
+    font-size: 10px;
+    font-weight: 600;
+    padding: 1px 8px;
+    border-radius: 10px;
+    border: 1px solid;
+    white-space: nowrap;
+    line-height: 1.6;
+}
+
+.cu-card__label--more {
+    background: rgba(107, 114, 128, 0.15);
+    color: #9ca3af;
+    border-color: rgba(107, 114, 128, 0.3);
+}
+
+/* Footer meta row */
+.cu-card__footer {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+    padding-left: 24px;
+    margin-top: 2px;
+}
+
+.cu-card__meta {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    flex-wrap: wrap;
+}
+
+.cu-card__meta-item {
+    display: flex;
+    align-items: center;
+    gap: 3px;
+    font-size: 11px;
+    font-weight: 500;
+    color: #9ca3af;
+    white-space: nowrap;
+}
+
+.cu-card__meta-item--subtle {
+    color: #6b7280;
+}
+
+/* Assignees */
+.cu-card__assignees {
+    display: flex;
+    flex-shrink: 0;
+}
+
+.cu-card__avatar {
+    border: 2px solid #1e1e2e;
+    margin-left: -6px;
+    cursor: default;
+    font-size: 11px;
+}
+
+.cu-card__avatar:first-child {
+    margin-left: 0;
+}
+
+.cu-card__avatar-text {
+    font-size: 10px;
+    font-weight: 600;
+    text-transform: uppercase;
 }
 </style>

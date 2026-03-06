@@ -329,35 +329,21 @@ const addSubtaskPanel = () => {
 };
 
 const toggleSubtaskPanel = (subtask) => {
-    if (subtask.completed_at) {
-        router.post(
-            route('tasks.reopen', [props.workspace.id, props.space.id, props.list.id, subtask.id]),
-            {},
-            {
-                preserveScroll: true,
-                onSuccess: () => {
-                    router.reload({ only: ['task', 'tasksByStatus'] });
-                    if (window.showSnackbar) {
-                        window.showSnackbar('Subtask reopened!', 'success');
-                    }
+    const wasCompleted = !!subtask.completed_at;
+    const routeName = wasCompleted ? 'tasks.subtasks.reopen' : 'tasks.subtasks.complete';
+    router.post(
+        route(routeName, [props.workspace.id, props.space.id, props.list.id, props.task.id, subtask.id]),
+        {},
+        {
+            preserveScroll: true,
+            onSuccess: () => {
+                router.reload({ only: ['task', 'tasksByStatus'] });
+                if (window.showSnackbar) {
+                    window.showSnackbar(wasCompleted ? 'Subtask reopened!' : 'Subtask completed!', 'success');
                 }
             }
-        );
-    } else {
-        router.post(
-            route('tasks.complete', [props.workspace.id, props.space.id, props.list.id, subtask.id]),
-            {},
-            {
-                preserveScroll: true,
-                onSuccess: () => {
-                    router.reload({ only: ['task', 'tasksByStatus'] });
-                    if (window.showSnackbar) {
-                        window.showSnackbar('Subtask completed!', 'success');
-                    }
-                }
-            }
-        );
-    }
+        }
+    );
 };
 
 const startEditSubtaskPanel = (subtask) => {
@@ -967,37 +953,25 @@ const toggleAssignee = (userId) => {
     }
 };
 
-// Complete task
+// Complete subtask (only subtasks support completion)
 const toggleComplete = () => {
-    if (isCompleted.value) {
-        router.post(
-            route('tasks.reopen', [props.workspace.id, props.space.id, props.list.id, props.task.id]),
-            {},
-            {
-                preserveScroll: true,
-                onSuccess: () => {
-                    if (window.showSnackbar) {
-                        window.showSnackbar('Task reopened!', 'success');
-                    }
-                    router.reload({ only: ['task', 'tasksByStatus'] });
+    if (!isSubtask.value) return; // Tasks don't support completion
+
+    const wasCompleted = isCompleted.value;
+    const routeName = wasCompleted ? 'tasks.subtasks.reopen' : 'tasks.subtasks.complete';
+    router.post(
+        route(routeName, [props.workspace.id, props.space.id, props.list.id, props.parentTask.id, props.task.id]),
+        {},
+        {
+            preserveScroll: true,
+            onSuccess: () => {
+                if (window.showSnackbar) {
+                    window.showSnackbar(wasCompleted ? 'Subtask reopened!' : 'Subtask completed!', 'success');
                 }
+                router.reload({ only: ['task', 'tasksByStatus'] });
             }
-        );
-    } else {
-        router.post(
-            route('tasks.complete', [props.workspace.id, props.space.id, props.list.id, props.task.id]),
-            {},
-            {
-                preserveScroll: true,
-                onSuccess: () => {
-                    if (window.showSnackbar) {
-                        window.showSnackbar('Task completed!', 'success');
-                    }
-                    router.reload({ only: ['task', 'tasksByStatus'] });
-                }
-            }
-        );
-    }
+        }
+    );
 };
 
 // Delete task
@@ -1541,18 +1515,38 @@ const deleteTimeEntry = (entryId) => {
                             </div>
 
                             <!-- Subtasks (Tasks only) -->
-                            <div v-if="!isSubtask" class="detail-row">
-                                <div class="detail-label">
-                                    <v-icon size="18" class="mr-2">mdi-file-tree-outline</v-icon>
-                                    Subtasks
-                                </div>
-                                <div class="detail-value">
+                            <div v-if="!isSubtask" class="mt-1">
+                                <div class="flex items-center justify-between mb-2">
+                                    <div class="detail-label" style="width: auto;">
+                                        <v-icon size="18" class="mr-2">mdi-file-tree-outline</v-icon>
+                                        Subtasks
+                                        <span v-if="localTask.subtasks?.length" class="text-xs text-gray-500 ml-1">
+                                            ({{ localTask.subtasks.filter(s => s.completed_at).length }}/{{ localTask.subtasks.length }})
+                                        </span>
+                                    </div>
                                     <v-btn variant="tonal" size="small" @click="emit('view-subtasks', localTask)">
                                         <v-icon start size="16">mdi-view-dashboard-outline</v-icon>
-                                        View Subtasks
-                                        <v-badge v-if="localTask.subtasks_count" :content="localTask.subtasks_count"
-                                            color="primary" inline class="ml-2" />
+                                        View Board
                                     </v-btn>
+                                </div>
+
+                                <!-- Subtask checklist -->
+                                <div v-if="localTask.subtasks?.length" class="subtask-checklist">
+                                    <div v-for="sub in localTask.subtasks" :key="sub.id" class="subtask-check-item"
+                                        @click="toggleSubtaskPanel(sub)">
+                                        <v-icon :color="sub.completed_at ? 'success' : '#555'" size="18">
+                                            {{ sub.completed_at ? 'mdi-checkbox-marked-circle' : 'mdi-checkbox-blank-circle-outline' }}
+                                        </v-icon>
+                                        <span class="subtask-check-name" :class="{ 'subtask-check-done': sub.completed_at }">
+                                            {{ sub.name }}
+                                        </span>
+                                        <v-icon v-if="sub.priority" :color="sub.priority.level <= 2 ? 'warning' : 'grey'" size="12" class="ml-auto flex-shrink-0">
+                                            mdi-flag
+                                        </v-icon>
+                                    </div>
+                                </div>
+                                <div v-else class="text-sm text-gray-500 pl-7">
+                                    No subtasks yet
                                 </div>
                             </div>
 
@@ -1763,5 +1757,41 @@ const deleteTimeEntry = (entryId) => {
 
 .space-y-2>*+* {
     margin-top: 8px;
+}
+
+.subtask-checklist {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    padding-left: 7px;
+}
+
+.subtask-check-item {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 5px 8px;
+    border-radius: 6px;
+    cursor: pointer;
+    transition: background-color 0.12s;
+}
+
+.subtask-check-item:hover {
+    background-color: #2d2d30;
+}
+
+.subtask-check-name {
+    font-size: 13px;
+    color: #d1d5db;
+    flex: 1;
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.subtask-check-done {
+    text-decoration: line-through;
+    color: #6b7280;
 }
 </style>
