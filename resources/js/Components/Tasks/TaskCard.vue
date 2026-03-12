@@ -4,6 +4,7 @@
  */
 import { computed, inject } from 'vue';
 import { router } from '@inertiajs/vue3';
+import { PRIORITY_MAP } from '@/constants/priorities';
 
 const props = defineProps({
     task: {
@@ -28,17 +29,9 @@ const isSubtaskCritical = inject('isSubtaskCritical', () => false);
 // Check if this task/subtask is on critical path
 const isCritical = computed(() => isSubtaskCritical(props.task.id));
 
-// Priority config
-const priorityConfig = {
-    1: { color: '#f87171', icon: 'mdi-flag', label: 'Urgent' },
-    2: { color: '#fb923c', icon: 'mdi-flag', label: 'High' },
-    3: { color: '#60a5fa', icon: 'mdi-flag', label: 'Normal' },
-    4: { color: '#6b7280', icon: 'mdi-flag-outline', label: 'Low' },
-};
-
 const priority = computed(() => {
-    if (!props.task.priority) return null;
-    return priorityConfig[props.task.priority.level] || priorityConfig[3];
+    if (!props.task.priority_level) return null;
+    return PRIORITY_MAP[props.task.priority_level] || null;
 });
 
 // Status color for left border
@@ -126,12 +119,9 @@ const openDetail = () => {
         <div class="cu-card__status-bar" :style="{ backgroundColor: statusColor }"></div>
 
         <div class="cu-card__content">
-            <!-- Top: Task ID + Critical indicator -->
-            <div v-if="task.task_id || task.subtask_id || (isCritical && !isCompleted)" class="cu-card__id-row">
-                <span v-if="task.task_id || task.subtask_id" class="cu-card__id">
-                    {{ task.subtask_id || task.task_id }}
-                </span>
-                <v-tooltip v-if="isCritical && !isCompleted" location="top">
+            <!-- Top: Critical indicator -->
+            <div v-if="isCritical && !isCompleted" class="cu-card__id-row">
+                <v-tooltip location="top">
                     <template #activator="{ props: tp }">
                         <v-icon v-bind="tp" size="12" color="error" class="cu-card__critical-badge">
                             mdi-alert-circle
@@ -173,7 +163,7 @@ const openDetail = () => {
                                 <v-icon size="14" :style="{ color: priority.color }">{{ priority.icon }}</v-icon>
                             </div>
                         </template>
-                        <span>{{ priority.label }}</span>
+                        <span>{{ priority.name }}</span>
                     </v-tooltip>
 
                     <!-- Due Date -->

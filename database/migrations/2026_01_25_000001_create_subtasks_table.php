@@ -17,7 +17,7 @@ return new class extends Migration
             $table->foreignId('task_id')->constrained()->cascadeOnDelete();
             $table->foreignId('sprint_id')->nullable()->constrained()->nullOnDelete();
             $table->foreignId('status_id')->nullable()->constrained()->nullOnDelete();
-            $table->foreignId('priority_id')->nullable()->constrained()->nullOnDelete();
+            $table->tinyInteger('priority_level')->nullable();
 
             $table->string('name');
             $table->text('description')->nullable();

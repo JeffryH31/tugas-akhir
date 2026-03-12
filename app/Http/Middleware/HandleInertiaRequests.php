@@ -62,7 +62,8 @@ class HandleInertiaRequests extends Middleware
                             'folders.lists',
                             'listsWithoutFolder'
                         ])->orderBy('position');
-                    }
+                    },
+                    'labels' => fn($q) => $q->orderBy('name'),
                 ]);
             }
         }

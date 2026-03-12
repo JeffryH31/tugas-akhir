@@ -61,7 +61,6 @@ class SprintController extends Controller
     {
         $sprint->load([
             'subtasks.status',
-            'subtasks.priority',
             'subtasks.assignees',
             'subtasks.labels',
             'subtasks.task'
@@ -81,7 +80,6 @@ class SprintController extends Controller
             'statistics' => $statistics,
             'burndown' => $burndown,
             'statuses' => $space->statuses,
-            'priorities' => $workspace->priorities,
             'labels' => $workspace->labels,
             'members' => $workspace->members,
         ]);

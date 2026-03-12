@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Enums\PriorityLevel;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
@@ -19,7 +20,7 @@ class Subtask extends Model
         'task_id',
         'sprint_id',
         'status_id',
-        'priority_id',
+        'priority_level',
         'name',
         'description',
         'start_date',
@@ -42,9 +43,10 @@ class Subtask extends Model
         'time_spent' => 'integer',
         'is_archived' => 'boolean',
         'custom_fields' => 'array',
+        'priority_level' => PriorityLevel::class,
     ];
 
-    protected $with = ['status', 'priority'];
+    protected $with = ['status'];
 
     protected static function boot(): void
     {
@@ -77,9 +79,9 @@ class Subtask extends Model
         return $this->belongsTo(Status::class);
     }
 
-    public function priority(): BelongsTo
+    public function getPriorityAttribute(): ?array
     {
-        return $this->belongsTo(Priority::class);
+        return $this->priority_level?->toArray();
     }
 
     public function sprint(): BelongsTo

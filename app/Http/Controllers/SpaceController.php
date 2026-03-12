@@ -54,13 +54,15 @@ class SpaceController extends Controller
         $space = $this->spaceService->getWithHierarchy($space);
         $statistics = $this->spaceService->getStatistics($space);
 
+        // Products (TaskLists) grouped by status for kanban
+        $productsByStatus = $this->spaceService->getProductsByStatus($space);
+
         $workspace->load([
             'spaces' => fn($q) => $q->with([
                 'folders.lists',
                 'listsWithoutFolder',
             ])->orderBy('position'),
             'members',
-            'priorities',
             'labels',
         ]);
 
@@ -68,6 +70,7 @@ class SpaceController extends Controller
             'workspace' => $workspace,
             'space' => $space,
             'statistics' => $statistics,
+            'productsByStatus' => $productsByStatus,
         ]);
     }
 

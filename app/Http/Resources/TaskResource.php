@@ -22,7 +22,7 @@ class TaskResource extends JsonResource
             'position' => $this->position,
             'progress' => $this->progress,
             'status_id' => $this->status_id,
-            'priority_id' => $this->priority_id,
+            'priority_level' => $this->priority_level,
             'due_date' => $this->due_date,
             'start_date' => $this->start_date,
             'completed_at' => $this->completed_at,
@@ -34,7 +34,7 @@ class TaskResource extends JsonResource
             
             // Relationships
             'status' => new StatusResource($this->whenLoaded('status')),
-            'priority' => new PriorityResource($this->whenLoaded('priority')),
+            'priority' => $this->priority,
             'assignees' => UserResource::collection($this->whenLoaded('assignees')),
             'labels' => LabelResource::collection($this->whenLoaded('labels')),
             'creator' => new UserResource($this->whenLoaded('creator')),

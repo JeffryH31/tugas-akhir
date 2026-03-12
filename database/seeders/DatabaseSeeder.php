@@ -6,7 +6,6 @@ use App\Models\Activity;
 use App\Models\Comment;
 use App\Models\Folder;
 use App\Models\Label;
-use App\Models\Priority;
 use App\Models\Space;
 use App\Models\Sprint;
 use App\Models\Status;
@@ -75,15 +74,7 @@ class DatabaseSeeder extends Seeder
         $workspace->addMember($rina, 'member');
 
         // ================================================================
-        // 3. PRIORITIES
-        // ================================================================
-        $urgent = Priority::create(['name' => 'Urgent', 'level' => 1, 'color' => '#FF6B6B', 'icon' => 'mdi-alert-circle',   'workspace_id' => $workspace->id]);
-        $high   = Priority::create(['name' => 'High',   'level' => 2, 'color' => '#FFB84D', 'icon' => 'mdi-arrow-up-bold',  'workspace_id' => $workspace->id]);
-        $normal = Priority::create(['name' => 'Normal', 'level' => 3, 'color' => '#49CCF9', 'icon' => 'mdi-minus',          'workspace_id' => $workspace->id, 'is_default' => true]);
-        $low    = Priority::create(['name' => 'Low',    'level' => 4, 'color' => '#6B7280', 'icon' => 'mdi-arrow-down-bold', 'workspace_id' => $workspace->id]);
-
-        // ================================================================
-        // 4. LABELS
+        // 3. LABELS
         // ================================================================
         $labelBug         = Label::create(['name' => 'Bug',           'color' => '#FF6B6B', 'workspace_id' => $workspace->id]);
         $labelFeature     = Label::create(['name' => 'Feature',       'color' => '#6BC950', 'workspace_id' => $workspace->id]);
@@ -95,7 +86,7 @@ class DatabaseSeeder extends Seeder
         $labelPerformance = Label::create(['name' => 'Performance',   'color' => '#14B8A6', 'workspace_id' => $workspace->id]);
 
         // ================================================================
-        // 5. SPACES  —  Sektor bisnis perusahaan
+        // 4. SPACES  —  Sektor bisnis perusahaan
         //    (boot auto-creates 4 default statuses each)
         // ================================================================
 
@@ -151,7 +142,7 @@ class DatabaseSeeder extends Seeder
         $b2cLive    = Status::create(['name' => 'Live',        'type' => 'closed',      'color' => '#10B981', 'space_id' => $b2cSpace->id, 'position' => 4, 'applies_to' => 'both', 'is_closed' => true]);
 
         // ================================================================
-        // 6. SPRINTS  — per space
+        // 5. SPRINTS  — per space
         // ================================================================
 
         // Manufacturing sprints
@@ -168,49 +159,49 @@ class DatabaseSeeder extends Seeder
         $b2cSprint2 = Sprint::create(['space_id' => $b2cSpace->id, 'name' => 'B2C Sprint 2 — Payment & Shipping', 'goal' => 'Integrasi Midtrans, ongkir RajaOngkir, notif email', 'start_date' => now()->subWeek(), 'end_date' => now()->addWeek(), 'is_active' => true, 'position' => 1]);
 
         // ================================================================
-        // 7. FOLDERS & LISTS — Manufacturing Space
+        // 6. FOLDERS & LISTS — Manufacturing Space
         // ================================================================
 
         $erpFolder = Folder::create(['name' => 'ERP System', 'space_id' => $mfgSpace->id, 'position' => 0, 'created_by' => $sasya->id]);
 
-        $inventoryList = TaskList::create(['name' => 'Inventory Module',    'space_id' => $mfgSpace->id, 'folder_id' => $erpFolder->id, 'position' => 0, 'created_by' => $budi->id]);
-        $productionList = TaskList::create(['name' => 'Production Tracking', 'space_id' => $mfgSpace->id, 'folder_id' => $erpFolder->id, 'position' => 1, 'created_by' => $budi->id]);
+        $inventoryList = TaskList::create(['name' => 'Inventory Module',    'space_id' => $mfgSpace->id, 'folder_id' => $erpFolder->id, 'position' => 0, 'created_by' => $budi->id, 'status_id' => $mfgDev->id]);
+        $productionList = TaskList::create(['name' => 'Production Tracking', 'space_id' => $mfgSpace->id, 'folder_id' => $erpFolder->id, 'position' => 1, 'created_by' => $budi->id, 'status_id' => $mfgDev->id]);
 
         $iotFolder = Folder::create(['name' => 'IoT & Monitoring', 'space_id' => $mfgSpace->id, 'position' => 1, 'created_by' => $andi->id]);
 
-        $sensorList = TaskList::create(['name' => 'Sensor Dashboard', 'space_id' => $mfgSpace->id, 'folder_id' => $iotFolder->id, 'position' => 0, 'created_by' => $andi->id]);
+        $sensorList = TaskList::create(['name' => 'Sensor Dashboard', 'space_id' => $mfgSpace->id, 'folder_id' => $iotFolder->id, 'position' => 0, 'created_by' => $andi->id, 'status_id' => $mfgTodo->id]);
 
-        $mfgReportList = TaskList::create(['name' => 'Reporting', 'space_id' => $mfgSpace->id, 'position' => 2, 'created_by' => $sasya->id]);
+        $mfgReportList = TaskList::create(['name' => 'Reporting', 'space_id' => $mfgSpace->id, 'position' => 2, 'created_by' => $sasya->id, 'status_id' => $mfgBacklog->id]);
 
         // ================================================================
-        // 8. FOLDERS & LISTS — B2B Space
+        // 7. FOLDERS & LISTS — B2B Space
         // ================================================================
 
         $portalFolder = Folder::create(['name' => 'Client Portal', 'space_id' => $b2bSpace->id, 'position' => 0, 'created_by' => $sasya->id]);
 
-        $portalAuthList  = TaskList::create(['name' => 'Authentication & Access', 'space_id' => $b2bSpace->id, 'folder_id' => $portalFolder->id, 'position' => 0, 'created_by' => $budi->id]);
-        $orderMgmtList   = TaskList::create(['name' => 'Order Management',        'space_id' => $b2bSpace->id, 'folder_id' => $portalFolder->id, 'position' => 1, 'created_by' => $budi->id]);
+        $portalAuthList  = TaskList::create(['name' => 'Authentication & Access', 'space_id' => $b2bSpace->id, 'folder_id' => $portalFolder->id, 'position' => 0, 'created_by' => $budi->id, 'status_id' => $b2bDone->id]);
+        $orderMgmtList   = TaskList::create(['name' => 'Order Management',        'space_id' => $b2bSpace->id, 'folder_id' => $portalFolder->id, 'position' => 1, 'created_by' => $budi->id, 'status_id' => $b2bDev->id]);
 
-        $apiIntList   = TaskList::create(['name' => 'API Integrations', 'space_id' => $b2bSpace->id, 'position' => 1, 'created_by' => $andi->id]);
-        $invoiceList  = TaskList::create(['name' => 'Invoice System',   'space_id' => $b2bSpace->id, 'position' => 2, 'created_by' => $budi->id]);
+        $apiIntList   = TaskList::create(['name' => 'API Integrations', 'space_id' => $b2bSpace->id, 'position' => 1, 'created_by' => $andi->id, 'status_id' => $b2bDev->id]);
+        $invoiceList  = TaskList::create(['name' => 'Invoice System',   'space_id' => $b2bSpace->id, 'position' => 2, 'created_by' => $budi->id, 'status_id' => $b2bTodo->id]);
 
         // ================================================================
-        // 9. FOLDERS & LISTS — B2C Space
+        // 8. FOLDERS & LISTS — B2C Space
         // ================================================================
 
         $ecomFolder = Folder::create(['name' => 'E-Commerce', 'space_id' => $b2cSpace->id, 'position' => 0, 'created_by' => $sasya->id]);
 
-        $catalogList  = TaskList::create(['name' => 'Product Catalog',     'space_id' => $b2cSpace->id, 'folder_id' => $ecomFolder->id, 'position' => 0, 'created_by' => $dian->id]);
-        $checkoutList = TaskList::create(['name' => 'Checkout & Payment',  'space_id' => $b2cSpace->id, 'folder_id' => $ecomFolder->id, 'position' => 1, 'created_by' => $budi->id]);
+        $catalogList  = TaskList::create(['name' => 'Product Catalog',     'space_id' => $b2cSpace->id, 'folder_id' => $ecomFolder->id, 'position' => 0, 'created_by' => $dian->id, 'status_id' => $b2cDev->id]);
+        $checkoutList = TaskList::create(['name' => 'Checkout & Payment',  'space_id' => $b2cSpace->id, 'folder_id' => $ecomFolder->id, 'position' => 1, 'created_by' => $budi->id, 'status_id' => $b2cDev->id]);
 
         $mobileFolder = Folder::create(['name' => 'Mobile App', 'space_id' => $b2cSpace->id, 'position' => 1, 'created_by' => $dian->id]);
 
-        $androidList = TaskList::create(['name' => 'Android App', 'space_id' => $b2cSpace->id, 'folder_id' => $mobileFolder->id, 'position' => 0, 'created_by' => $dian->id]);
+        $androidList = TaskList::create(['name' => 'Android App', 'space_id' => $b2cSpace->id, 'folder_id' => $mobileFolder->id, 'position' => 0, 'created_by' => $dian->id, 'status_id' => $b2cTodo->id]);
 
-        $cssList = TaskList::create(['name' => 'Customer Support System', 'space_id' => $b2cSpace->id, 'position' => 2, 'created_by' => $andi->id]);
+        $cssList = TaskList::create(['name' => 'Customer Support System', 'space_id' => $b2cSpace->id, 'position' => 2, 'created_by' => $andi->id, 'status_id' => $b2cTodo->id]);
 
         // ================================================================
-        // 10. TASKS — Manufacturing / Inventory Module
+        // 9. TASKS — Manufacturing / Inventory Module
         //     (full CPM demo — 10 subtasks with dependencies)
         // ================================================================
 
@@ -219,7 +210,7 @@ class DatabaseSeeder extends Seeder
             'description'  => 'Membangun modul inventory lengkap: master barang, stok masuk/keluar, stock opname, dan laporan inventory',
             'task_list_id' => $inventoryList->id,
             'status_id'    => $mfgDev->id,
-            'priority_id'  => $urgent->id,
+            'priority_level' => 1,
             'created_by'   => $sasya->id,
             'position'     => 0,
         ]);
@@ -228,16 +219,16 @@ class DatabaseSeeder extends Seeder
         $invTask->labels()->attach([$labelFeature->id]);
 
         // 10 subtasks — CPM dependency chain
-        $iS1  = Subtask::create(['name' => 'Desain database inventory',           'task_id' => $invTask->id, 'status_id' => $mfgDone->id,    'priority_id' => $high->id,   'time_estimate' => 180, 'position' => 0, 'created_by' => $budi->id,  'sprint_id' => $mfgSprint1->id, 'start_date' => now()->subWeeks(4),           'due_date' => now()->subWeeks(4)->addDay(),   'completed_at' => now()->subWeeks(4)->addDay()]);
-        $iS2  = Subtask::create(['name' => 'API master barang (CRUD)',            'task_id' => $invTask->id, 'status_id' => $mfgDone->id,    'priority_id' => $high->id,   'time_estimate' => 240, 'position' => 1, 'created_by' => $budi->id,  'sprint_id' => $mfgSprint1->id, 'start_date' => now()->subWeeks(4)->addDay(), 'due_date' => now()->subWeeks(4)->addDays(3), 'completed_at' => now()->subWeeks(4)->addDays(3)]);
-        $iS3  = Subtask::create(['name' => 'UI halaman master barang',            'task_id' => $invTask->id, 'status_id' => $mfgDone->id,    'priority_id' => $high->id,   'time_estimate' => 300, 'position' => 2, 'created_by' => $dian->id,  'sprint_id' => $mfgSprint1->id, 'start_date' => now()->subWeeks(3),           'due_date' => now()->subWeeks(3)->addDays(3), 'completed_at' => now()->subWeeks(3)->addDays(3)]);
-        $iS4  = Subtask::create(['name' => 'API stok masuk & keluar',             'task_id' => $invTask->id, 'status_id' => $mfgDone->id,    'priority_id' => $urgent->id, 'time_estimate' => 300, 'position' => 3, 'created_by' => $budi->id,  'sprint_id' => $mfgSprint1->id, 'start_date' => now()->subWeeks(3),           'due_date' => now()->subWeeks(3)->addDays(3), 'completed_at' => now()->subWeeks(3)->addDays(2)]);
-        $iS5  = Subtask::create(['name' => 'UI form stok masuk/keluar',           'task_id' => $invTask->id, 'status_id' => $mfgDev->id,     'priority_id' => $normal->id, 'time_estimate' => 240, 'position' => 4, 'created_by' => $dian->id,  'sprint_id' => $mfgSprint2->id, 'start_date' => now()->subDays(5),            'due_date' => now()->addDay()]);
-        $iS6  = Subtask::create(['name' => 'Fitur stock opname',                  'task_id' => $invTask->id, 'status_id' => $mfgDev->id,     'priority_id' => $normal->id, 'time_estimate' => 360, 'position' => 5, 'created_by' => $budi->id,  'sprint_id' => $mfgSprint2->id, 'start_date' => now()->subDays(3),            'due_date' => now()->addDays(3)]);
-        $iS7  = Subtask::create(['name' => 'Barcode/QR code scanner',             'task_id' => $invTask->id, 'status_id' => $mfgTodo->id,    'priority_id' => $normal->id, 'time_estimate' => 180, 'position' => 6, 'created_by' => $dian->id,  'sprint_id' => $mfgSprint2->id,                                               'due_date' => now()->addDays(5)]);
-        $iS8  = Subtask::create(['name' => 'Laporan stok (PDF/Excel)',            'task_id' => $invTask->id, 'status_id' => $mfgBacklog->id,  'priority_id' => $low->id,    'time_estimate' => 240, 'position' => 7, 'created_by' => $budi->id,  'sprint_id' => $mfgSprint3->id,                                               'due_date' => now()->addWeeks(2)]);
-        $iS9  = Subtask::create(['name' => 'Integration testing inventory',       'task_id' => $invTask->id, 'status_id' => $mfgBacklog->id,  'priority_id' => $high->id,   'time_estimate' => 300, 'position' => 8, 'created_by' => $rina->id,  'sprint_id' => $mfgSprint3->id,                                               'due_date' => now()->addWeeks(2)->addDays(3)]);
-        $iS10 = Subtask::create(['name' => 'Deploy modul inventory ke production', 'task_id' => $invTask->id, 'status_id' => $mfgBacklog->id,  'priority_id' => $urgent->id, 'time_estimate' => 60,  'position' => 9, 'created_by' => $sasya->id, 'sprint_id' => $mfgSprint3->id,                                               'due_date' => now()->addWeeks(3)]);
+        $iS1  = Subtask::create(['name' => 'Desain database inventory',           'task_id' => $invTask->id, 'status_id' => $mfgDone->id,    'priority_level' => 2,   'time_estimate' => 180, 'position' => 0, 'created_by' => $budi->id,  'sprint_id' => $mfgSprint1->id, 'start_date' => now()->subWeeks(4),           'due_date' => now()->subWeeks(4)->addDay(),   'completed_at' => now()->subWeeks(4)->addDay()]);
+        $iS2  = Subtask::create(['name' => 'API master barang (CRUD)',            'task_id' => $invTask->id, 'status_id' => $mfgDone->id,    'priority_level' => 2,   'time_estimate' => 240, 'position' => 1, 'created_by' => $budi->id,  'sprint_id' => $mfgSprint1->id, 'start_date' => now()->subWeeks(4)->addDay(), 'due_date' => now()->subWeeks(4)->addDays(3), 'completed_at' => now()->subWeeks(4)->addDays(3)]);
+        $iS3  = Subtask::create(['name' => 'UI halaman master barang',            'task_id' => $invTask->id, 'status_id' => $mfgDone->id,    'priority_level' => 2,   'time_estimate' => 300, 'position' => 2, 'created_by' => $dian->id,  'sprint_id' => $mfgSprint1->id, 'start_date' => now()->subWeeks(3),           'due_date' => now()->subWeeks(3)->addDays(3), 'completed_at' => now()->subWeeks(3)->addDays(3)]);
+        $iS4  = Subtask::create(['name' => 'API stok masuk & keluar',             'task_id' => $invTask->id, 'status_id' => $mfgDone->id,    'priority_level' => 1, 'time_estimate' => 300, 'position' => 3, 'created_by' => $budi->id,  'sprint_id' => $mfgSprint1->id, 'start_date' => now()->subWeeks(3),           'due_date' => now()->subWeeks(3)->addDays(3), 'completed_at' => now()->subWeeks(3)->addDays(2)]);
+        $iS5  = Subtask::create(['name' => 'UI form stok masuk/keluar',           'task_id' => $invTask->id, 'status_id' => $mfgDev->id,     'priority_level' => 3, 'time_estimate' => 240, 'position' => 4, 'created_by' => $dian->id,  'sprint_id' => $mfgSprint2->id, 'start_date' => now()->subDays(5),            'due_date' => now()->addDay()]);
+        $iS6  = Subtask::create(['name' => 'Fitur stock opname',                  'task_id' => $invTask->id, 'status_id' => $mfgDev->id,     'priority_level' => 3, 'time_estimate' => 360, 'position' => 5, 'created_by' => $budi->id,  'sprint_id' => $mfgSprint2->id, 'start_date' => now()->subDays(3),            'due_date' => now()->addDays(3)]);
+        $iS7  = Subtask::create(['name' => 'Barcode/QR code scanner',             'task_id' => $invTask->id, 'status_id' => $mfgTodo->id,    'priority_level' => 3, 'time_estimate' => 180, 'position' => 6, 'created_by' => $dian->id,  'sprint_id' => $mfgSprint2->id,                                               'due_date' => now()->addDays(5)]);
+        $iS8  = Subtask::create(['name' => 'Laporan stok (PDF/Excel)',            'task_id' => $invTask->id, 'status_id' => $mfgBacklog->id,  'priority_level' => 4,    'time_estimate' => 240, 'position' => 7, 'created_by' => $budi->id,  'sprint_id' => $mfgSprint3->id,                                               'due_date' => now()->addWeeks(2)]);
+        $iS9  = Subtask::create(['name' => 'Integration testing inventory',       'task_id' => $invTask->id, 'status_id' => $mfgBacklog->id,  'priority_level' => 2,   'time_estimate' => 300, 'position' => 8, 'created_by' => $rina->id,  'sprint_id' => $mfgSprint3->id,                                               'due_date' => now()->addWeeks(2)->addDays(3)]);
+        $iS10 = Subtask::create(['name' => 'Deploy modul inventory ke production', 'task_id' => $invTask->id, 'status_id' => $mfgBacklog->id,  'priority_level' => 1, 'time_estimate' => 60,  'position' => 9, 'created_by' => $sasya->id, 'sprint_id' => $mfgSprint3->id,                                               'due_date' => now()->addWeeks(3)]);
 
         // Assign subtask members
         $iS1->assignees()->attach([$budi->id  => ['assigned_at' => now(), 'assigned_by' => $sasya->id]]);
@@ -286,7 +277,7 @@ class DatabaseSeeder extends Seeder
         $this->timeEntry($iS6, $budi, 90,  now()->subDays(3),               'Stock opname backend logic');
 
         // ================================================================
-        // 11. TASKS — Manufacturing / Production Tracking
+        // 10. TASKS — Manufacturing / Production Tracking
         // ================================================================
 
         $prodTask = Task::create([
@@ -294,7 +285,7 @@ class DatabaseSeeder extends Seeder
             'description'  => 'Dashboard monitoring produksi real-time dengan data mesin dan output per shift',
             'task_list_id' => $productionList->id,
             'status_id'    => $mfgDev->id,
-            'priority_id'  => $high->id,
+            'priority_level' => 2,
             'created_by'   => $andi->id,
             'position'     => 0,
         ]);
@@ -302,10 +293,10 @@ class DatabaseSeeder extends Seeder
         $prodTask->assignees()->attach([$dian->id => ['assigned_at' => now(), 'assigned_by' => $sasya->id]]);
         $prodTask->labels()->attach([$labelFeature->id, $labelPerformance->id]);
 
-        $pS1 = Subtask::create(['name' => 'Desain schema data produksi',       'task_id' => $prodTask->id, 'status_id' => $mfgDone->id, 'priority_id' => $high->id,   'time_estimate' => 120, 'position' => 0, 'created_by' => $andi->id, 'sprint_id' => $mfgSprint2->id, 'completed_at' => now()->subDays(7)]);
-        $pS2 = Subtask::create(['name' => 'API data output mesin per shift',   'task_id' => $prodTask->id, 'status_id' => $mfgDone->id, 'priority_id' => $high->id,   'time_estimate' => 240, 'position' => 1, 'created_by' => $budi->id, 'sprint_id' => $mfgSprint2->id, 'completed_at' => now()->subDays(4)]);
-        $pS3 = Subtask::create(['name' => 'Dashboard chart realtime (Vue)',    'task_id' => $prodTask->id, 'status_id' => $mfgDev->id,  'priority_id' => $urgent->id, 'time_estimate' => 360, 'position' => 2, 'created_by' => $dian->id, 'sprint_id' => $mfgSprint2->id, 'start_date' => now()->subDays(3), 'due_date' => now()->addDays(3)]);
-        $pS4 = Subtask::create(['name' => 'Notifikasi downtime mesin',         'task_id' => $prodTask->id, 'status_id' => $mfgTodo->id, 'priority_id' => $normal->id, 'time_estimate' => 180, 'position' => 3, 'created_by' => $andi->id, 'sprint_id' => $mfgSprint2->id, 'due_date' => now()->addDays(5)]);
+        $pS1 = Subtask::create(['name' => 'Desain schema data produksi',       'task_id' => $prodTask->id, 'status_id' => $mfgDone->id, 'priority_level' => 2,   'time_estimate' => 120, 'position' => 0, 'created_by' => $andi->id, 'sprint_id' => $mfgSprint2->id, 'completed_at' => now()->subDays(7)]);
+        $pS2 = Subtask::create(['name' => 'API data output mesin per shift',   'task_id' => $prodTask->id, 'status_id' => $mfgDone->id, 'priority_level' => 2,   'time_estimate' => 240, 'position' => 1, 'created_by' => $budi->id, 'sprint_id' => $mfgSprint2->id, 'completed_at' => now()->subDays(4)]);
+        $pS3 = Subtask::create(['name' => 'Dashboard chart realtime (Vue)',    'task_id' => $prodTask->id, 'status_id' => $mfgDev->id,  'priority_level' => 1, 'time_estimate' => 360, 'position' => 2, 'created_by' => $dian->id, 'sprint_id' => $mfgSprint2->id, 'start_date' => now()->subDays(3), 'due_date' => now()->addDays(3)]);
+        $pS4 = Subtask::create(['name' => 'Notifikasi downtime mesin',         'task_id' => $prodTask->id, 'status_id' => $mfgTodo->id, 'priority_level' => 3, 'time_estimate' => 180, 'position' => 3, 'created_by' => $andi->id, 'sprint_id' => $mfgSprint2->id, 'due_date' => now()->addDays(5)]);
 
         $pS2->dependencies()->attach($pS1->id, ['dependency_type' => 'blocks']);
         $pS3->dependencies()->attach($pS2->id, ['dependency_type' => 'blocks']);
@@ -321,7 +312,7 @@ class DatabaseSeeder extends Seeder
         $this->timeEntry($pS3, $dian, 150, now()->subDays(3), 'Chart.js integration');
 
         // ================================================================
-        // 12. TASKS — Manufacturing / Sensor Dashboard
+        // 11. TASKS — Manufacturing / Sensor Dashboard
         // ================================================================
 
         $sensorTask = Task::create([
@@ -329,16 +320,16 @@ class DatabaseSeeder extends Seeder
             'description'  => 'Dashboard monitoring sensor suhu, kelembaban, dan getaran mesin pabrik',
             'task_list_id' => $sensorList->id,
             'status_id'    => $mfgTodo->id,
-            'priority_id'  => $normal->id,
+            'priority_level' => 3,
             'created_by'   => $andi->id,
             'position'     => 0,
         ]);
         $sensorTask->assignees()->attach([$andi->id => ['assigned_at' => now(), 'assigned_by' => $sasya->id]]);
         $sensorTask->labels()->attach([$labelFeature->id]);
 
-        Subtask::create(['name' => 'API endpoint sensor data (MQTT bridge)',  'task_id' => $sensorTask->id, 'status_id' => $mfgTodo->id, 'priority_id' => $high->id,   'time_estimate' => 300, 'position' => 0, 'created_by' => $andi->id, 'sprint_id' => $mfgSprint2->id]);
-        Subtask::create(['name' => 'Gauge & line chart komponen',             'task_id' => $sensorTask->id, 'status_id' => $mfgTodo->id, 'priority_id' => $normal->id, 'time_estimate' => 240, 'position' => 1, 'created_by' => $dian->id, 'sprint_id' => $mfgSprint2->id]);
-        Subtask::create(['name' => 'Alert threshold config',                  'task_id' => $sensorTask->id, 'status_id' => $mfgBacklog->id, 'priority_id' => $low->id,  'time_estimate' => 120, 'position' => 2, 'created_by' => $andi->id, 'sprint_id' => $mfgSprint3->id]);
+        Subtask::create(['name' => 'API endpoint sensor data (MQTT bridge)',  'task_id' => $sensorTask->id, 'status_id' => $mfgTodo->id, 'priority_level' => 2,   'time_estimate' => 300, 'position' => 0, 'created_by' => $andi->id, 'sprint_id' => $mfgSprint2->id]);
+        Subtask::create(['name' => 'Gauge & line chart komponen',             'task_id' => $sensorTask->id, 'status_id' => $mfgTodo->id, 'priority_level' => 3, 'time_estimate' => 240, 'position' => 1, 'created_by' => $dian->id, 'sprint_id' => $mfgSprint2->id]);
+        Subtask::create(['name' => 'Alert threshold config',                  'task_id' => $sensorTask->id, 'status_id' => $mfgBacklog->id, 'priority_level' => 4,  'time_estimate' => 120, 'position' => 2, 'created_by' => $andi->id, 'sprint_id' => $mfgSprint3->id]);
 
         // Manufacturing Reporting
         $mfgRepTask = Task::create([
@@ -346,18 +337,18 @@ class DatabaseSeeder extends Seeder
             'description'  => 'Generate laporan produksi bulanan otomatis dengan export PDF dan Excel',
             'task_list_id' => $mfgReportList->id,
             'status_id'    => $mfgBacklog->id,
-            'priority_id'  => $normal->id,
+            'priority_level' => 3,
             'created_by'   => $sasya->id,
             'position'     => 0,
         ]);
         $mfgRepTask->labels()->attach([$labelFeature->id, $labelDocs->id]);
 
-        Subtask::create(['name' => 'Template laporan (Blade)',       'task_id' => $mfgRepTask->id, 'status_id' => $mfgBacklog->id, 'priority_id' => $normal->id, 'time_estimate' => 180, 'position' => 0, 'created_by' => $budi->id, 'sprint_id' => $mfgSprint3->id]);
-        Subtask::create(['name' => 'Export PDF (DomPDF)',            'task_id' => $mfgRepTask->id, 'status_id' => $mfgBacklog->id, 'priority_id' => $normal->id, 'time_estimate' => 120, 'position' => 1, 'created_by' => $budi->id, 'sprint_id' => $mfgSprint3->id]);
-        Subtask::create(['name' => 'Export Excel (Maatwebsite)',     'task_id' => $mfgRepTask->id, 'status_id' => $mfgBacklog->id, 'priority_id' => $low->id,    'time_estimate' => 90,  'position' => 2, 'created_by' => $budi->id, 'sprint_id' => $mfgSprint3->id]);
+        Subtask::create(['name' => 'Template laporan (Blade)',       'task_id' => $mfgRepTask->id, 'status_id' => $mfgBacklog->id, 'priority_level' => 3, 'time_estimate' => 180, 'position' => 0, 'created_by' => $budi->id, 'sprint_id' => $mfgSprint3->id]);
+        Subtask::create(['name' => 'Export PDF (DomPDF)',            'task_id' => $mfgRepTask->id, 'status_id' => $mfgBacklog->id, 'priority_level' => 3, 'time_estimate' => 120, 'position' => 1, 'created_by' => $budi->id, 'sprint_id' => $mfgSprint3->id]);
+        Subtask::create(['name' => 'Export Excel (Maatwebsite)',     'task_id' => $mfgRepTask->id, 'status_id' => $mfgBacklog->id, 'priority_level' => 4,    'time_estimate' => 90,  'position' => 2, 'created_by' => $budi->id, 'sprint_id' => $mfgSprint3->id]);
 
         // ================================================================
-        // 13. TASKS — B2B / Authentication & Access
+        // 12. TASKS — B2B / Authentication & Access
         // ================================================================
 
         $b2bAuthTask = Task::create([
@@ -365,17 +356,17 @@ class DatabaseSeeder extends Seeder
             'description'  => 'Sistem login multi-tenant untuk client B2B dengan role-based access control',
             'task_list_id' => $portalAuthList->id,
             'status_id'    => $b2bDone->id,
-            'priority_id'  => $urgent->id,
+            'priority_level' => 1,
             'created_by'   => $budi->id,
             'position'     => 0,
         ]);
         $b2bAuthTask->assignees()->attach([$budi->id => ['assigned_at' => now(), 'assigned_by' => $sasya->id]]);
         $b2bAuthTask->labels()->attach([$labelSecurity->id, $labelFeature->id]);
 
-        $ba1 = Subtask::create(['name' => 'Schema multi-tenant (tenant_id)',    'task_id' => $b2bAuthTask->id, 'status_id' => $b2bDone->id, 'priority_id' => $urgent->id, 'time_estimate' => 180, 'position' => 0, 'created_by' => $budi->id, 'sprint_id' => $b2bSprint1->id, 'completed_at' => now()->subWeeks(3)]);
-        $ba2 = Subtask::create(['name' => 'Login API + JWT token',              'task_id' => $b2bAuthTask->id, 'status_id' => $b2bDone->id, 'priority_id' => $urgent->id, 'time_estimate' => 240, 'position' => 1, 'created_by' => $budi->id, 'sprint_id' => $b2bSprint1->id, 'completed_at' => now()->subWeeks(3)->addDays(2)]);
-        $ba3 = Subtask::create(['name' => 'Role & permission middleware',       'task_id' => $b2bAuthTask->id, 'status_id' => $b2bDone->id, 'priority_id' => $high->id,   'time_estimate' => 180, 'position' => 2, 'created_by' => $budi->id, 'sprint_id' => $b2bSprint1->id, 'completed_at' => now()->subWeeks(2)]);
-        $ba4 = Subtask::create(['name' => 'Login page UI (Vue)',                'task_id' => $b2bAuthTask->id, 'status_id' => $b2bDone->id, 'priority_id' => $high->id,   'time_estimate' => 180, 'position' => 3, 'created_by' => $dian->id, 'sprint_id' => $b2bSprint1->id, 'completed_at' => now()->subWeeks(2)->addDay()]);
+        $ba1 = Subtask::create(['name' => 'Schema multi-tenant (tenant_id)',    'task_id' => $b2bAuthTask->id, 'status_id' => $b2bDone->id, 'priority_level' => 1, 'time_estimate' => 180, 'position' => 0, 'created_by' => $budi->id, 'sprint_id' => $b2bSprint1->id, 'completed_at' => now()->subWeeks(3)]);
+        $ba2 = Subtask::create(['name' => 'Login API + JWT token',              'task_id' => $b2bAuthTask->id, 'status_id' => $b2bDone->id, 'priority_level' => 1, 'time_estimate' => 240, 'position' => 1, 'created_by' => $budi->id, 'sprint_id' => $b2bSprint1->id, 'completed_at' => now()->subWeeks(3)->addDays(2)]);
+        $ba3 = Subtask::create(['name' => 'Role & permission middleware',       'task_id' => $b2bAuthTask->id, 'status_id' => $b2bDone->id, 'priority_level' => 2,   'time_estimate' => 180, 'position' => 2, 'created_by' => $budi->id, 'sprint_id' => $b2bSprint1->id, 'completed_at' => now()->subWeeks(2)]);
+        $ba4 = Subtask::create(['name' => 'Login page UI (Vue)',                'task_id' => $b2bAuthTask->id, 'status_id' => $b2bDone->id, 'priority_level' => 2,   'time_estimate' => 180, 'position' => 3, 'created_by' => $dian->id, 'sprint_id' => $b2bSprint1->id, 'completed_at' => now()->subWeeks(2)->addDay()]);
 
         $ba2->dependencies()->attach($ba1->id, ['dependency_type' => 'blocks']);
         $ba3->dependencies()->attach($ba2->id, ['dependency_type' => 'blocks']);
@@ -387,7 +378,7 @@ class DatabaseSeeder extends Seeder
         $this->timeEntry($ba4, $dian, 160, now()->subWeeks(2),            'Login page + 2FA flow');
 
         // ================================================================
-        // 14. TASKS — B2B / Order Management
+        // 13. TASKS — B2B / Order Management
         // ================================================================
 
         $orderTask = Task::create([
@@ -395,7 +386,7 @@ class DatabaseSeeder extends Seeder
             'description'  => 'Client bisa melihat order history, tracking status, dan repeat order',
             'task_list_id' => $orderMgmtList->id,
             'status_id'    => $b2bDev->id,
-            'priority_id'  => $high->id,
+            'priority_level' => 2,
             'created_by'   => $sasya->id,
             'position'     => 0,
         ]);
@@ -403,10 +394,10 @@ class DatabaseSeeder extends Seeder
         $orderTask->assignees()->attach([$dian->id => ['assigned_at' => now(), 'assigned_by' => $sasya->id]]);
         $orderTask->labels()->attach([$labelFeature->id]);
 
-        $oS1 = Subtask::create(['name' => 'API order list + filter',     'task_id' => $orderTask->id, 'status_id' => $b2bDone->id, 'priority_id' => $high->id,   'time_estimate' => 180, 'position' => 0, 'created_by' => $budi->id, 'sprint_id' => $b2bSprint1->id, 'completed_at' => now()->subWeeks(2)]);
-        $oS2 = Subtask::create(['name' => 'Order detail page',           'task_id' => $orderTask->id, 'status_id' => $b2bDone->id, 'priority_id' => $high->id,   'time_estimate' => 240, 'position' => 1, 'created_by' => $dian->id, 'sprint_id' => $b2bSprint1->id, 'completed_at' => now()->subWeeks(2)->addDays(2)]);
-        $oS3 = Subtask::create(['name' => 'Repeat order feature',        'task_id' => $orderTask->id, 'status_id' => $b2bDev->id,  'priority_id' => $normal->id, 'time_estimate' => 180, 'position' => 2, 'created_by' => $budi->id, 'sprint_id' => $b2bSprint2->id, 'start_date' => now()->subDays(3), 'due_date' => now()->addDays(2)]);
-        $oS4 = Subtask::create(['name' => 'Order status tracking',       'task_id' => $orderTask->id, 'status_id' => $b2bTodo->id, 'priority_id' => $normal->id, 'time_estimate' => 150, 'position' => 3, 'created_by' => $dian->id, 'sprint_id' => $b2bSprint2->id, 'due_date' => now()->addDays(5)]);
+        $oS1 = Subtask::create(['name' => 'API order list + filter',     'task_id' => $orderTask->id, 'status_id' => $b2bDone->id, 'priority_level' => 2,   'time_estimate' => 180, 'position' => 0, 'created_by' => $budi->id, 'sprint_id' => $b2bSprint1->id, 'completed_at' => now()->subWeeks(2)]);
+        $oS2 = Subtask::create(['name' => 'Order detail page',           'task_id' => $orderTask->id, 'status_id' => $b2bDone->id, 'priority_level' => 2,   'time_estimate' => 240, 'position' => 1, 'created_by' => $dian->id, 'sprint_id' => $b2bSprint1->id, 'completed_at' => now()->subWeeks(2)->addDays(2)]);
+        $oS3 = Subtask::create(['name' => 'Repeat order feature',        'task_id' => $orderTask->id, 'status_id' => $b2bDev->id,  'priority_level' => 3, 'time_estimate' => 180, 'position' => 2, 'created_by' => $budi->id, 'sprint_id' => $b2bSprint2->id, 'start_date' => now()->subDays(3), 'due_date' => now()->addDays(2)]);
+        $oS4 = Subtask::create(['name' => 'Order status tracking',       'task_id' => $orderTask->id, 'status_id' => $b2bTodo->id, 'priority_level' => 3, 'time_estimate' => 150, 'position' => 3, 'created_by' => $dian->id, 'sprint_id' => $b2bSprint2->id, 'due_date' => now()->addDays(5)]);
 
         $oS2->dependencies()->attach($oS1->id, ['dependency_type' => 'blocks']);
         $oS3->dependencies()->attach($oS1->id, ['dependency_type' => 'blocks']);
@@ -417,7 +408,7 @@ class DatabaseSeeder extends Seeder
         $this->timeEntry($oS3, $budi, 60,  now()->subDays(2),             'Started repeat order logic');
 
         // ================================================================
-        // 15. TASKS — B2B / API Integrations
+        // 14. TASKS — B2B / API Integrations
         // ================================================================
 
         $apiIntTask = Task::create([
@@ -425,18 +416,18 @@ class DatabaseSeeder extends Seeder
             'description'  => 'Public API agar partner B2B bisa kirim PO, cek stok, dan terima invoice secara otomatis',
             'task_list_id' => $apiIntList->id,
             'status_id'    => $b2bDev->id,
-            'priority_id'  => $high->id,
+            'priority_level' => 2,
             'created_by'   => $andi->id,
             'position'     => 0,
         ]);
         $apiIntTask->assignees()->attach([$andi->id => ['assigned_at' => now(), 'assigned_by' => $sasya->id]]);
         $apiIntTask->labels()->attach([$labelFeature->id, $labelSecurity->id]);
 
-        $ai1 = Subtask::create(['name' => 'API key management',             'task_id' => $apiIntTask->id, 'status_id' => $b2bDone->id, 'priority_id' => $urgent->id, 'time_estimate' => 120, 'position' => 0, 'created_by' => $andi->id, 'sprint_id' => $b2bSprint2->id, 'completed_at' => now()->subDays(5)]);
-        $ai2 = Subtask::create(['name' => 'Endpoint PO submission',         'task_id' => $apiIntTask->id, 'status_id' => $b2bDone->id, 'priority_id' => $high->id,   'time_estimate' => 240, 'position' => 1, 'created_by' => $andi->id, 'sprint_id' => $b2bSprint2->id, 'completed_at' => now()->subDays(3)]);
-        $ai3 = Subtask::create(['name' => 'Endpoint cek stok real-time',    'task_id' => $apiIntTask->id, 'status_id' => $b2bDev->id,  'priority_id' => $high->id,   'time_estimate' => 180, 'position' => 2, 'created_by' => $andi->id, 'sprint_id' => $b2bSprint2->id, 'start_date' => now()->subDays(2), 'due_date' => now()->addDays(3)]);
-        $ai4 = Subtask::create(['name' => 'Webhook notifikasi status',      'task_id' => $apiIntTask->id, 'status_id' => $b2bTodo->id, 'priority_id' => $normal->id, 'time_estimate' => 150, 'position' => 3, 'created_by' => $andi->id, 'sprint_id' => $b2bSprint2->id, 'due_date' => now()->addDays(5)]);
-        $ai5 = Subtask::create(['name' => 'API documentation (Swagger)',    'task_id' => $apiIntTask->id, 'status_id' => $b2bBacklog->id, 'priority_id' => $low->id,  'time_estimate' => 120, 'position' => 4, 'created_by' => $andi->id, 'sprint_id' => $b2bSprint2->id, 'due_date' => now()->addWeek()]);
+        $ai1 = Subtask::create(['name' => 'API key management',             'task_id' => $apiIntTask->id, 'status_id' => $b2bDone->id, 'priority_level' => 1, 'time_estimate' => 120, 'position' => 0, 'created_by' => $andi->id, 'sprint_id' => $b2bSprint2->id, 'completed_at' => now()->subDays(5)]);
+        $ai2 = Subtask::create(['name' => 'Endpoint PO submission',         'task_id' => $apiIntTask->id, 'status_id' => $b2bDone->id, 'priority_level' => 2,   'time_estimate' => 240, 'position' => 1, 'created_by' => $andi->id, 'sprint_id' => $b2bSprint2->id, 'completed_at' => now()->subDays(3)]);
+        $ai3 = Subtask::create(['name' => 'Endpoint cek stok real-time',    'task_id' => $apiIntTask->id, 'status_id' => $b2bDev->id,  'priority_level' => 2,   'time_estimate' => 180, 'position' => 2, 'created_by' => $andi->id, 'sprint_id' => $b2bSprint2->id, 'start_date' => now()->subDays(2), 'due_date' => now()->addDays(3)]);
+        $ai4 = Subtask::create(['name' => 'Webhook notifikasi status',      'task_id' => $apiIntTask->id, 'status_id' => $b2bTodo->id, 'priority_level' => 3, 'time_estimate' => 150, 'position' => 3, 'created_by' => $andi->id, 'sprint_id' => $b2bSprint2->id, 'due_date' => now()->addDays(5)]);
+        $ai5 = Subtask::create(['name' => 'API documentation (Swagger)',    'task_id' => $apiIntTask->id, 'status_id' => $b2bBacklog->id, 'priority_level' => 4,  'time_estimate' => 120, 'position' => 4, 'created_by' => $andi->id, 'sprint_id' => $b2bSprint2->id, 'due_date' => now()->addWeek()]);
 
         $ai2->dependencies()->attach($ai1->id, ['dependency_type' => 'blocks']);
         $ai3->dependencies()->attach($ai1->id, ['dependency_type' => 'blocks']);
@@ -454,18 +445,18 @@ class DatabaseSeeder extends Seeder
             'description'  => 'Generate invoice otomatis dari PO, kirim via email, dan tracking pembayaran',
             'task_list_id' => $invoiceList->id,
             'status_id'    => $b2bTodo->id,
-            'priority_id'  => $normal->id,
+            'priority_level' => 3,
             'created_by'   => $sasya->id,
             'position'     => 0,
         ]);
         $invoiceTask->assignees()->attach([$budi->id => ['assigned_at' => now(), 'assigned_by' => $sasya->id]]);
 
-        Subtask::create(['name' => 'Invoice generator dari PO data',    'task_id' => $invoiceTask->id, 'status_id' => $b2bTodo->id, 'priority_id' => $high->id,   'time_estimate' => 240, 'position' => 0, 'created_by' => $budi->id, 'sprint_id' => $b2bSprint2->id]);
-        Subtask::create(['name' => 'Email notifikasi dengan PDF',       'task_id' => $invoiceTask->id, 'status_id' => $b2bTodo->id, 'priority_id' => $normal->id, 'time_estimate' => 120, 'position' => 1, 'created_by' => $budi->id, 'sprint_id' => $b2bSprint2->id]);
-        Subtask::create(['name' => 'Payment tracking dashboard',        'task_id' => $invoiceTask->id, 'status_id' => $b2bBacklog->id, 'priority_id' => $normal->id, 'time_estimate' => 180, 'position' => 2, 'created_by' => $dian->id]);
+        Subtask::create(['name' => 'Invoice generator dari PO data',    'task_id' => $invoiceTask->id, 'status_id' => $b2bTodo->id, 'priority_level' => 2,   'time_estimate' => 240, 'position' => 0, 'created_by' => $budi->id, 'sprint_id' => $b2bSprint2->id]);
+        Subtask::create(['name' => 'Email notifikasi dengan PDF',       'task_id' => $invoiceTask->id, 'status_id' => $b2bTodo->id, 'priority_level' => 3, 'time_estimate' => 120, 'position' => 1, 'created_by' => $budi->id, 'sprint_id' => $b2bSprint2->id]);
+        Subtask::create(['name' => 'Payment tracking dashboard',        'task_id' => $invoiceTask->id, 'status_id' => $b2bBacklog->id, 'priority_level' => 3, 'time_estimate' => 180, 'position' => 2, 'created_by' => $dian->id]);
 
         // ================================================================
-        // 16. TASKS — B2C / Product Catalog
+        // 15. TASKS — B2C / Product Catalog
         // ================================================================
 
         $catalogTask = Task::create([
@@ -473,7 +464,7 @@ class DatabaseSeeder extends Seeder
             'description'  => 'Halaman katalog produk dengan search, filter kategori, dan detail produk',
             'task_list_id' => $catalogList->id,
             'status_id'    => $b2cDev->id,
-            'priority_id'  => $high->id,
+            'priority_level' => 2,
             'created_by'   => $dian->id,
             'position'     => 0,
         ]);
@@ -481,11 +472,11 @@ class DatabaseSeeder extends Seeder
         $catalogTask->assignees()->attach([$budi->id => ['assigned_at' => now(), 'assigned_by' => $sasya->id]]);
         $catalogTask->labels()->attach([$labelFeature->id, $labelUI->id]);
 
-        $cS1 = Subtask::create(['name' => 'API product + kategori',       'task_id' => $catalogTask->id, 'status_id' => $b2cLive->id,  'priority_id' => $high->id,   'time_estimate' => 240, 'position' => 0, 'created_by' => $budi->id, 'sprint_id' => $b2cSprint1->id, 'completed_at' => now()->subWeeks(2)]);
-        $cS2 = Subtask::create(['name' => 'Product listing page',         'task_id' => $catalogTask->id, 'status_id' => $b2cLive->id,  'priority_id' => $high->id,   'time_estimate' => 300, 'position' => 1, 'created_by' => $dian->id, 'sprint_id' => $b2cSprint1->id, 'completed_at' => now()->subWeeks(2)->addDays(3)]);
-        $cS3 = Subtask::create(['name' => 'Search & filter komponen',     'task_id' => $catalogTask->id, 'status_id' => $b2cDev->id,   'priority_id' => $normal->id, 'time_estimate' => 180, 'position' => 2, 'created_by' => $dian->id, 'sprint_id' => $b2cSprint2->id, 'start_date' => now()->subDays(4), 'due_date' => now()->addDays(2)]);
-        $cS4 = Subtask::create(['name' => 'Product detail + gallery',     'task_id' => $catalogTask->id, 'status_id' => $b2cTodo->id,  'priority_id' => $normal->id, 'time_estimate' => 240, 'position' => 3, 'created_by' => $dian->id, 'sprint_id' => $b2cSprint2->id, 'due_date' => now()->addDays(5)]);
-        $cS5 = Subtask::create(['name' => 'SEO meta tags & SSR',          'task_id' => $catalogTask->id, 'status_id' => $b2cBacklog->id, 'priority_id' => $low->id,  'time_estimate' => 120, 'position' => 4, 'created_by' => $dian->id]);
+        $cS1 = Subtask::create(['name' => 'API product + kategori',       'task_id' => $catalogTask->id, 'status_id' => $b2cLive->id,  'priority_level' => 2,   'time_estimate' => 240, 'position' => 0, 'created_by' => $budi->id, 'sprint_id' => $b2cSprint1->id, 'completed_at' => now()->subWeeks(2)]);
+        $cS2 = Subtask::create(['name' => 'Product listing page',         'task_id' => $catalogTask->id, 'status_id' => $b2cLive->id,  'priority_level' => 2,   'time_estimate' => 300, 'position' => 1, 'created_by' => $dian->id, 'sprint_id' => $b2cSprint1->id, 'completed_at' => now()->subWeeks(2)->addDays(3)]);
+        $cS3 = Subtask::create(['name' => 'Search & filter komponen',     'task_id' => $catalogTask->id, 'status_id' => $b2cDev->id,   'priority_level' => 3, 'time_estimate' => 180, 'position' => 2, 'created_by' => $dian->id, 'sprint_id' => $b2cSprint2->id, 'start_date' => now()->subDays(4), 'due_date' => now()->addDays(2)]);
+        $cS4 = Subtask::create(['name' => 'Product detail + gallery',     'task_id' => $catalogTask->id, 'status_id' => $b2cTodo->id,  'priority_level' => 3, 'time_estimate' => 240, 'position' => 3, 'created_by' => $dian->id, 'sprint_id' => $b2cSprint2->id, 'due_date' => now()->addDays(5)]);
+        $cS5 = Subtask::create(['name' => 'SEO meta tags & SSR',          'task_id' => $catalogTask->id, 'status_id' => $b2cBacklog->id, 'priority_level' => 4,  'time_estimate' => 120, 'position' => 4, 'created_by' => $dian->id]);
 
         $cS2->dependencies()->attach($cS1->id, ['dependency_type' => 'blocks']);
         $cS3->dependencies()->attach($cS2->id, ['dependency_type' => 'blocks']);
@@ -498,7 +489,7 @@ class DatabaseSeeder extends Seeder
         $this->timeEntry($cS3, $dian, 100, now()->subDays(3),             'Algolia-style search component');
 
         // ================================================================
-        // 17. TASKS — B2C / Checkout & Payment
+        // 16. TASKS — B2C / Checkout & Payment
         // ================================================================
 
         $checkoutTask = Task::create([
@@ -506,7 +497,7 @@ class DatabaseSeeder extends Seeder
             'description'  => 'Alur checkout: keranjang → shipping → pembayaran Midtrans → konfirmasi',
             'task_list_id' => $checkoutList->id,
             'status_id'    => $b2cDev->id,
-            'priority_id'  => $urgent->id,
+            'priority_level' => 1,
             'created_by'   => $budi->id,
             'position'     => 0,
         ]);
@@ -514,12 +505,12 @@ class DatabaseSeeder extends Seeder
         $checkoutTask->assignees()->attach([$dian->id => ['assigned_at' => now(), 'assigned_by' => $sasya->id]]);
         $checkoutTask->labels()->attach([$labelFeature->id, $labelSecurity->id]);
 
-        $ch1 = Subtask::create(['name' => 'Shopping cart (session-based)',    'task_id' => $checkoutTask->id, 'status_id' => $b2cLive->id,    'priority_id' => $high->id,   'time_estimate' => 240, 'position' => 0, 'created_by' => $budi->id, 'sprint_id' => $b2cSprint1->id, 'completed_at' => now()->subWeeks(2)]);
-        $ch2 = Subtask::create(['name' => 'Shipping cost (RajaOngkir API)',  'task_id' => $checkoutTask->id, 'status_id' => $b2cLive->id,    'priority_id' => $high->id,   'time_estimate' => 180, 'position' => 1, 'created_by' => $budi->id, 'sprint_id' => $b2cSprint1->id, 'completed_at' => now()->subWeeks(2)->addDays(2)]);
-        $ch3 = Subtask::create(['name' => 'Midtrans payment integration',    'task_id' => $checkoutTask->id, 'status_id' => $b2cDev->id,     'priority_id' => $urgent->id, 'time_estimate' => 360, 'position' => 2, 'created_by' => $budi->id, 'sprint_id' => $b2cSprint2->id, 'start_date' => now()->subDays(5), 'due_date' => now()->addDays(2)]);
-        $ch4 = Subtask::create(['name' => 'Checkout UI multi-step form',     'task_id' => $checkoutTask->id, 'status_id' => $b2cDev->id,     'priority_id' => $high->id,   'time_estimate' => 300, 'position' => 3, 'created_by' => $dian->id, 'sprint_id' => $b2cSprint2->id, 'start_date' => now()->subDays(3), 'due_date' => now()->addDays(3)]);
-        $ch5 = Subtask::create(['name' => 'Payment callback handler',        'task_id' => $checkoutTask->id, 'status_id' => $b2cTodo->id,    'priority_id' => $urgent->id, 'time_estimate' => 180, 'position' => 4, 'created_by' => $budi->id, 'sprint_id' => $b2cSprint2->id, 'due_date' => now()->addDays(4)]);
-        $ch6 = Subtask::create(['name' => 'Email konfirmasi order',          'task_id' => $checkoutTask->id, 'status_id' => $b2cBacklog->id,  'priority_id' => $normal->id, 'time_estimate' => 90,  'position' => 5, 'created_by' => $budi->id, 'sprint_id' => $b2cSprint2->id, 'due_date' => now()->addWeek()]);
+        $ch1 = Subtask::create(['name' => 'Shopping cart (session-based)',    'task_id' => $checkoutTask->id, 'status_id' => $b2cLive->id,    'priority_level' => 2,   'time_estimate' => 240, 'position' => 0, 'created_by' => $budi->id, 'sprint_id' => $b2cSprint1->id, 'completed_at' => now()->subWeeks(2)]);
+        $ch2 = Subtask::create(['name' => 'Shipping cost (RajaOngkir API)',  'task_id' => $checkoutTask->id, 'status_id' => $b2cLive->id,    'priority_level' => 2,   'time_estimate' => 180, 'position' => 1, 'created_by' => $budi->id, 'sprint_id' => $b2cSprint1->id, 'completed_at' => now()->subWeeks(2)->addDays(2)]);
+        $ch3 = Subtask::create(['name' => 'Midtrans payment integration',    'task_id' => $checkoutTask->id, 'status_id' => $b2cDev->id,     'priority_level' => 1, 'time_estimate' => 360, 'position' => 2, 'created_by' => $budi->id, 'sprint_id' => $b2cSprint2->id, 'start_date' => now()->subDays(5), 'due_date' => now()->addDays(2)]);
+        $ch4 = Subtask::create(['name' => 'Checkout UI multi-step form',     'task_id' => $checkoutTask->id, 'status_id' => $b2cDev->id,     'priority_level' => 2,   'time_estimate' => 300, 'position' => 3, 'created_by' => $dian->id, 'sprint_id' => $b2cSprint2->id, 'start_date' => now()->subDays(3), 'due_date' => now()->addDays(3)]);
+        $ch5 = Subtask::create(['name' => 'Payment callback handler',        'task_id' => $checkoutTask->id, 'status_id' => $b2cTodo->id,    'priority_level' => 1, 'time_estimate' => 180, 'position' => 4, 'created_by' => $budi->id, 'sprint_id' => $b2cSprint2->id, 'due_date' => now()->addDays(4)]);
+        $ch6 = Subtask::create(['name' => 'Email konfirmasi order',          'task_id' => $checkoutTask->id, 'status_id' => $b2cBacklog->id,  'priority_level' => 3, 'time_estimate' => 90,  'position' => 5, 'created_by' => $budi->id, 'sprint_id' => $b2cSprint2->id, 'due_date' => now()->addWeek()]);
 
         $ch2->dependencies()->attach($ch1->id, ['dependency_type' => 'blocks']);
         $ch3->dependencies()->attach($ch1->id, ['dependency_type' => 'blocks']);
@@ -534,7 +525,7 @@ class DatabaseSeeder extends Seeder
         $this->timeEntry($ch4, $dian, 150, now()->subDays(3),             'Multi-step checkout form');
 
         // ================================================================
-        // 18. TASKS — B2C / Android App
+        // 17. TASKS — B2C / Android App
         // ================================================================
 
         $androidTask = Task::create([
@@ -542,20 +533,20 @@ class DatabaseSeeder extends Seeder
             'description'  => 'Aplikasi Android untuk browse produk, checkout, dan tracking order',
             'task_list_id' => $androidList->id,
             'status_id'    => $b2cTodo->id,
-            'priority_id'  => $normal->id,
+            'priority_level' => 3,
             'created_by'   => $dian->id,
             'position'     => 0,
         ]);
         $androidTask->assignees()->attach([$dian->id => ['assigned_at' => now(), 'assigned_by' => $sasya->id]]);
         $androidTask->labels()->attach([$labelFeature->id, $labelUI->id]);
 
-        Subtask::create(['name' => 'Setup Flutter project + API client',  'task_id' => $androidTask->id, 'status_id' => $b2cTodo->id,     'priority_id' => $high->id,   'time_estimate' => 180, 'position' => 0, 'created_by' => $dian->id]);
-        Subtask::create(['name' => 'Product list & detail screen',        'task_id' => $androidTask->id, 'status_id' => $b2cTodo->id,     'priority_id' => $normal->id, 'time_estimate' => 300, 'position' => 1, 'created_by' => $dian->id]);
-        Subtask::create(['name' => 'Cart & checkout flow',                'task_id' => $androidTask->id, 'status_id' => $b2cBacklog->id,  'priority_id' => $normal->id, 'time_estimate' => 360, 'position' => 2, 'created_by' => $dian->id]);
-        Subtask::create(['name' => 'Push notification (Firebase)',        'task_id' => $androidTask->id, 'status_id' => $b2cBacklog->id,  'priority_id' => $low->id,    'time_estimate' => 120, 'position' => 3, 'created_by' => $dian->id]);
+        Subtask::create(['name' => 'Setup Flutter project + API client',  'task_id' => $androidTask->id, 'status_id' => $b2cTodo->id,     'priority_level' => 2,   'time_estimate' => 180, 'position' => 0, 'created_by' => $dian->id]);
+        Subtask::create(['name' => 'Product list & detail screen',        'task_id' => $androidTask->id, 'status_id' => $b2cTodo->id,     'priority_level' => 3, 'time_estimate' => 300, 'position' => 1, 'created_by' => $dian->id]);
+        Subtask::create(['name' => 'Cart & checkout flow',                'task_id' => $androidTask->id, 'status_id' => $b2cBacklog->id,  'priority_level' => 3, 'time_estimate' => 360, 'position' => 2, 'created_by' => $dian->id]);
+        Subtask::create(['name' => 'Push notification (Firebase)',        'task_id' => $androidTask->id, 'status_id' => $b2cBacklog->id,  'priority_level' => 4,    'time_estimate' => 120, 'position' => 3, 'created_by' => $dian->id]);
 
         // ================================================================
-        // 19. TASKS — B2C / Customer Support
+        // 18. TASKS — B2C / Customer Support
         // ================================================================
 
         $cssTask = Task::create([
@@ -563,19 +554,19 @@ class DatabaseSeeder extends Seeder
             'description'  => 'Fitur live chat untuk customer dengan auto-assign ke agent CS',
             'task_list_id' => $cssList->id,
             'status_id'    => $b2cTodo->id,
-            'priority_id'  => $normal->id,
+            'priority_level' => 3,
             'created_by'   => $andi->id,
             'position'     => 0,
         ]);
         $cssTask->assignees()->attach([$andi->id => ['assigned_at' => now(), 'assigned_by' => $sasya->id]]);
         $cssTask->labels()->attach([$labelFeature->id]);
 
-        Subtask::create(['name' => 'WebSocket chat server',       'task_id' => $cssTask->id, 'status_id' => $b2cTodo->id,    'priority_id' => $high->id,   'time_estimate' => 300, 'position' => 0, 'created_by' => $andi->id]);
-        Subtask::create(['name' => 'Chat UI widget (floating)',   'task_id' => $cssTask->id, 'status_id' => $b2cTodo->id,    'priority_id' => $normal->id, 'time_estimate' => 240, 'position' => 1, 'created_by' => $dian->id]);
-        Subtask::create(['name' => 'CS agent dashboard',          'task_id' => $cssTask->id, 'status_id' => $b2cBacklog->id, 'priority_id' => $normal->id, 'time_estimate' => 240, 'position' => 2, 'created_by' => $andi->id]);
+        Subtask::create(['name' => 'WebSocket chat server',       'task_id' => $cssTask->id, 'status_id' => $b2cTodo->id,    'priority_level' => 2,   'time_estimate' => 300, 'position' => 0, 'created_by' => $andi->id]);
+        Subtask::create(['name' => 'Chat UI widget (floating)',   'task_id' => $cssTask->id, 'status_id' => $b2cTodo->id,    'priority_level' => 3, 'time_estimate' => 240, 'position' => 1, 'created_by' => $dian->id]);
+        Subtask::create(['name' => 'CS agent dashboard',          'task_id' => $cssTask->id, 'status_id' => $b2cBacklog->id, 'priority_level' => 3, 'time_estimate' => 240, 'position' => 2, 'created_by' => $andi->id]);
 
         // ================================================================
-        // 20. COMMENTS  (with threaded replies)
+        // 19. COMMENTS  (with threaded replies)
         // ================================================================
 
         // Inventory discussion
@@ -603,7 +594,7 @@ class DatabaseSeeder extends Seeder
         Comment::create(['task_id' => $catalogTask->id, 'user_id' => $dian->id, 'content' => 'Search component pakai debounce 300ms supaya nggak spam API. Sudah smooth.', 'created_at' => now()->subDays(2), 'updated_at' => now()->subDays(2)]);
 
         // ================================================================
-        // 21. ACTIVITIES  (workspace activity log)
+        // 20. ACTIVITIES  (workspace activity log)
         // ================================================================
         $activities = [
             [$sasya, $invTask,       'created',   ['name' => 'Sistem Manajemen Inventory'],                                now()->subWeeks(4)],
@@ -640,7 +631,7 @@ class DatabaseSeeder extends Seeder
         }
 
         // ================================================================
-        // 22. VIEWS
+        // 21. VIEWS
         // ================================================================
         View::create(['task_list_id' => $inventoryList->id, 'user_id' => $sasya->id, 'name' => 'Board',     'type' => 'board', 'is_default' => true, 'position' => 0]);
         View::create(['task_list_id' => $inventoryList->id, 'user_id' => $sasya->id, 'name' => 'Gantt',     'type' => 'gantt',                        'position' => 1]);

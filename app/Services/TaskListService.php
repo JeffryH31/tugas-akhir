@@ -19,7 +19,7 @@ class TaskListService
     public function getListsForSpace(Space $space, ?Folder $folder = null): Collection
     {
         $query = $space->lists()
-            ->with(['tasks' => fn($q) => $q->with(['status', 'priority', 'assignees'])])
+            ->with(['tasks' => fn($q) => $q->with(['status', 'assignees'])])
             ->withCount('tasks');
 
         if ($folder) {
@@ -42,7 +42,6 @@ class TaskListService
         if ($taskId) {
             $parentTask = \App\Models\Task::with([
                 'subtasks.status',
-                'subtasks.priority',
                 'subtasks.assignees',
                 'subtasks.labels',
                 'subtasks.dependencies',
@@ -57,7 +56,6 @@ class TaskListService
             $items = $list->tasks()
                 ->with([
                     'status',
-                    'priority',
                     'assignees',
                     'labels',
                     'subtasks.assignees', // For subtask count & assignee aggregation

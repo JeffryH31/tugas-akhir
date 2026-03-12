@@ -16,6 +16,7 @@ import StatusColumn from '@/Components/Tasks/StatusColumn.vue';
 import TaskDetailPanel from '@/Components/Tasks/TaskDetailPanel.vue';
 import GanttChart from '@/Components/Cpm/GanttChart.vue';
 import CpmSummary from '@/Components/Cpm/CpmSummary.vue';
+import { PRIORITIES } from '@/constants/priorities';
 
 const props = defineProps({
     workspace: Object,
@@ -87,7 +88,6 @@ const searchQuery = ref('');
 
 // Members and priorities from workspace
 const members = computed(() => props.workspace?.members || []);
-const priorities = computed(() => props.workspace?.priorities || []);
 const labels = computed(() => props.workspace?.labels || []);
 
 // Handle task moved between columns
@@ -587,7 +587,7 @@ provide('cpmData', cpmData);
 </script>
 
 <template>
-    <MainLayout :title="list?.name || 'List'">
+    <MainLayout :title="list?.name || 'Product'">
         <div class="list-page">
             <!-- Breadcrumb -->
             <div class="breadcrumb-header">
@@ -617,11 +617,11 @@ provide('cpmData', cpmData);
                     <v-icon size="16" class="text-gray-600">mdi-chevron-right</v-icon>
                     <a v-if="parentTask" :href="route('lists.show', [workspace.id, space.id, list.id])"
                         class="flex items-center gap-2 text-gray-400 hover:text-white">
-                        <v-icon size="16">mdi-format-list-bulleted</v-icon>
+                        <v-icon size="16">mdi-package-variant-closed</v-icon>
                         <span>{{ list?.name }}</span>
                     </a>
                     <div v-else class="flex items-center gap-2">
-                        <v-icon size="16" color="primary">mdi-format-list-bulleted</v-icon>
+                        <v-icon size="16" color="primary">mdi-package-variant-closed</v-icon>
                         <span class="font-medium text-white">{{ list?.name }}</span>
                     </div>
                     <template v-if="parentTask">
@@ -687,7 +687,7 @@ provide('cpmData', cpmData);
                         <v-card width="280" color="surface">
                             <v-card-text>
                                 <div class="text-sm font-medium mb-2">Filters</div>
-                                <v-select v-model="filterPriority" :items="priorities" item-title="name" item-value="id"
+                                <v-select v-model="filterPriority" :items="PRIORITIES" item-title="name" item-value="level"
                                     label="Priority" variant="outlined" density="compact" multiple chips closable-chips
                                     hide-details class="mb-3" bg-color="#1e1e1e"
                                     :menu-props="{ contentClass: 'bg-[#1e1e1e]' }" />
@@ -729,16 +729,16 @@ provide('cpmData', cpmData);
                         </template>
                         <v-card color="surface">
                             <v-list density="compact">
-                                <v-list-item prepend-icon="mdi-pencil-outline" title="Edit List"
+                                <v-list-item prepend-icon="mdi-pencil-outline" title="Edit Product"
                                     @click="openEditList" />
                                 <v-list-item prepend-icon="mdi-folder-move-outline" title="Move to Folder"
                                     @click="openMoveToFolder" />
-                                <v-list-item prepend-icon="mdi-content-copy" title="Duplicate List"
+                                <v-list-item prepend-icon="mdi-content-copy" title="Duplicate Product"
                                     @click="duplicateList" />
-                                <v-list-item prepend-icon="mdi-archive-outline" title="Archive List"
+                                <v-list-item prepend-icon="mdi-archive-outline" title="Archive Product"
                                     @click="archiveList" />
                                 <v-divider />
-                                <v-list-item prepend-icon="mdi-delete-outline" title="Delete List" class="text-error"
+                                <v-list-item prepend-icon="mdi-delete-outline" title="Delete Product" class="text-error"
                                     @click="showDeleteList = true" />
                             </v-list>
                         </v-card>
@@ -943,15 +943,15 @@ provide('cpmData', cpmData);
 
         <!-- Task Detail Panel -->
         <TaskDetailPanel v-model="showTaskDetail" :task="selectedTask" :workspace="workspace" :space="space"
-            :list="list" :parent-task="parentTask" :statuses="statuses" :priorities="priorities" :members="members"
+            :list="list" :parent-task="parentTask" :statuses="statuses" :members="members"
             :labels="labels" :sprints="sprints" @view-subtasks="viewSubtasks" @updated="refreshTasks" />
 
-        <!-- Edit List Dialog -->
+        <!-- Edit Product Dialog -->
         <v-dialog v-model="showEditList" max-width="400">
             <v-card>
-                <v-card-title>Edit List</v-card-title>
+                <v-card-title>Edit Product</v-card-title>
                 <v-card-text>
-                    <v-text-field v-model="editListName" label="List Name" variant="outlined" autofocus />
+                    <v-text-field v-model="editListName" label="Product Name" variant="outlined" autofocus />
                 </v-card-text>
                 <v-card-actions>
                     <v-spacer />
@@ -961,13 +961,13 @@ provide('cpmData', cpmData);
             </v-card>
         </v-dialog>
 
-        <!-- Delete List Dialog -->
+        <!-- Delete Product Dialog -->
         <v-dialog v-model="showDeleteList" max-width="400">
             <v-card>
-                <v-card-title class="text-error">Delete List?</v-card-title>
+                <v-card-title class="text-error">Delete Product?</v-card-title>
                 <v-card-text>
                     Are you sure you want to delete "{{ list?.name }}"? This will also delete all tasks within this
-                    list. This
+                    product. This
                     action cannot be undone.
                 </v-card-text>
                 <v-card-actions>
@@ -981,7 +981,7 @@ provide('cpmData', cpmData);
         <!-- Move to Folder Dialog -->
         <v-dialog v-model="showMoveToFolder" max-width="400">
             <v-card>
-                <v-card-title>Move List to Folder</v-card-title>
+                <v-card-title>Move Product to Folder</v-card-title>
                 <v-card-text>
                     <v-select v-model="selectedFolder" :items="availableFolders" item-title="name" item-value="id"
                         label="Select Folder" variant="outlined" hide-details bg-color="#1e1e1e"

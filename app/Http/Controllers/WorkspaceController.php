@@ -52,7 +52,7 @@ class WorkspaceController extends Controller
      */
     public function settings(Request $request, Workspace $workspace): Response
     {
-        $workspace->load('members');
+        $workspace->load(['members', 'labels']);
 
         $members = $workspace->members;
 

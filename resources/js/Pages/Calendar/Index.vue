@@ -309,7 +309,6 @@ const overdueSubtasks = computed(() => {
             :list="selectedTask?.task?.taskList"
             :parent-task="selectedTask?.task"
             :statuses="workspace.spaces?.flatMap(s => s.statuses) || []"
-            :priorities="workspace.priorities || []"
             :members="workspace.members || []"
             :labels="workspace.labels || []"
         />

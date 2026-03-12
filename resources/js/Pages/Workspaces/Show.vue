@@ -81,8 +81,8 @@ const createSpace = () => {
                                 </p>
                                 <div class="flex items-center gap-4 mt-3 text-sm text-gray-400">
                                     <div class="flex items-center gap-1">
-                                        <v-icon size="16">mdi-format-list-bulleted</v-icon>
-                                        <span>{{ space.lists_count || 0 }} lists</span>
+                                        <v-icon size="16">mdi-package-variant-closed</v-icon>
+                                        <span>{{ space.lists_count || 0 }} products</span>
                                     </div>
                                     <div class="flex items-center gap-1">
                                         <v-icon size="16">mdi-checkbox-marked-circle-outline</v-icon>

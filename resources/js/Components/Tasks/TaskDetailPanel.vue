@@ -4,6 +4,7 @@
  */
 import { ref, computed, watch, reactive, nextTick, onMounted, onUnmounted } from 'vue';
 import { router, useForm, usePage } from '@inertiajs/vue3';
+import { PRIORITIES, PRIORITY_MAP } from '@/constants/priorities';
 
 const props = defineProps({
     modelValue: Boolean,
@@ -13,10 +14,6 @@ const props = defineProps({
     list: Object,
     parentTask: Object,
     statuses: {
-        type: Array,
-        default: () => [],
-    },
-    priorities: {
         type: Array,
         default: () => [],
     },
@@ -45,6 +42,27 @@ const page = usePage();
 const deepClone = (obj) => {
     if (!obj) return null;
     return JSON.parse(JSON.stringify(obj));
+};
+
+// Time tracking state (declared early so the watch below can reference them)
+const isTracking = ref(false);
+const trackingDuration = ref(0);
+const trackingInterval = ref(null);
+const runningEntryId = ref(null);
+const isTimerLoading = ref(false);
+
+const startTimerInterval = () => {
+    if (trackingInterval.value) clearInterval(trackingInterval.value);
+    trackingInterval.value = setInterval(() => {
+        trackingDuration.value += 1;
+    }, 1000);
+};
+
+const stopTimerInterval = () => {
+    if (trackingInterval.value) {
+        clearInterval(trackingInterval.value);
+        trackingInterval.value = null;
+    }
 };
 
 // Watch for task prop changes and update local copy
@@ -120,7 +138,7 @@ const form = useForm({
     name: '',
     description: '',
     status_id: null,
-    priority_id: null,
+    priority_level: null,
     due_date: null,
     start_date: null,
     time_estimate: null,
@@ -132,7 +150,7 @@ watch(() => localTask.value, (newTask) => {
         form.name = newTask.name;
         form.description = newTask.description || '';
         form.status_id = newTask.status_id;
-        form.priority_id = newTask.priority_id;
+        form.priority_level = newTask.priority_level;
         form.due_date = newTask.due_date;
         form.start_date = newTask.start_date;
         form.time_estimate = newTask.time_estimate;
@@ -150,17 +168,12 @@ const close = () => {
 const isCompleted = computed(() => localTask.value?.completed_at);
 
 // Priority config
-const priorityConfig = {
-    1: { color: 'error', icon: 'mdi-flag', label: 'Urgent' },
-    2: { color: 'warning', icon: 'mdi-flag', label: 'High' },
-    3: { color: 'info', icon: 'mdi-flag', label: 'Normal' },
-    4: { color: 'grey', icon: 'mdi-flag-outline', label: 'Low' },
-};
+const priorityConfig = PRIORITY_MAP;
 
 // Get current priority
 const currentPriority = computed(() => {
-    if (!localTask.value?.priority) return null;
-    return priorityConfig[localTask.value.priority.level] || null;
+    if (!localTask.value?.priority_level) return null;
+    return PRIORITY_MAP[localTask.value.priority_level] || null;
 });
 
 // Format duration (for time spent in seconds)
@@ -254,10 +267,10 @@ const changeStatus = (statusId) => {
 };
 
 // Change priority
-const changePriority = (priorityId) => {
+const changePriority = (priorityLevel) => {
     router.patch(
         getUpdateRoute(),
-        { priority_id: priorityId },
+        { priority_level: priorityLevel },
         {
             preserveScroll: true,
             onSuccess: () => {
@@ -519,13 +532,6 @@ const openTimeEstimatePicker = () => {
     showTimeEstimatePicker.value = true;
 };
 
-// Time tracking (server-side timer)
-const isTracking = ref(false);
-const trackingDuration = ref(0);
-const trackingInterval = ref(null);
-const runningEntryId = ref(null);
-const isTimerLoading = ref(false);
-
 // Helper: fetch with fresh CSRF token (avoids 419 on long sessions)
 const safeFetch = async (url, options = {}) => {
     const token = document.querySelector('meta[name="csrf-token"]')?.content;
@@ -540,20 +546,6 @@ const safeFetch = async (url, options = {}) => {
         },
         credentials: 'same-origin',
     });
-};
-
-const startTimerInterval = () => {
-    if (trackingInterval.value) clearInterval(trackingInterval.value);
-    trackingInterval.value = setInterval(() => {
-        trackingDuration.value += 1;
-    }, 1000);
-};
-
-const stopTimerInterval = () => {
-    if (trackingInterval.value) {
-        clearInterval(trackingInterval.value);
-        trackingInterval.value = null;
-    }
 };
 
 const startTracking = async () => {
@@ -876,6 +868,60 @@ const formatSubtaskEstimate = (minutes) => {
     return hours >= 1 ? `${hours}h` : `${minutes}m`;
 };
 
+// Available labels (not yet assigned to this task)
+const availableLabels = computed(() => {
+    const taskLabelIds = (localTask.value?.labels || []).map(l => l.id);
+    return props.labels.filter(l => !taskLabelIds.includes(l.id));
+});
+
+// Add label to task
+const addLabel = (label) => {
+    // Optimistic update
+    if (!localTask.value.labels) localTask.value.labels = [];
+    localTask.value.labels.push(label);
+
+    router.post(
+        route('tasks.labels.add', [props.workspace.id, props.space.id, props.list.id, props.task.id]),
+        { label_id: label.id },
+        {
+            preserveScroll: true,
+            preserveState: true,
+            onSuccess: () => {
+                router.reload({ only: ['task', 'tasksByStatus'] });
+                if (window.showSnackbar) window.showSnackbar('Label added!', 'success');
+            },
+            onError: () => {
+                localTask.value.labels = localTask.value.labels.filter(l => l.id !== label.id);
+                if (window.showSnackbar) window.showSnackbar('Failed to add label', 'error');
+            }
+        }
+    );
+};
+
+// Remove label from task
+const removeLabel = (label) => {
+    // Optimistic update
+    const backup = [...(localTask.value.labels || [])];
+    localTask.value.labels = localTask.value.labels.filter(l => l.id !== label.id);
+
+    router.delete(
+        route('tasks.labels.remove', [props.workspace.id, props.space.id, props.list.id, props.task.id]),
+        {
+            data: { label_id: label.id },
+            preserveScroll: true,
+            preserveState: true,
+            onSuccess: () => {
+                router.reload({ only: ['task', 'tasksByStatus'] });
+                if (window.showSnackbar) window.showSnackbar('Label removed!', 'success');
+            },
+            onError: () => {
+                localTask.value.labels = backup;
+                if (window.showSnackbar) window.showSnackbar('Failed to remove label', 'error');
+            }
+        }
+    );
+};
+
 // Toggle assignee
 const toggleAssignee = (userId) => {
     const isAssigned = props.task.assignees?.some(a => a.id === userId);
@@ -1111,28 +1157,32 @@ const deleteTimeEntry = (entryId) => {
 
 <template>
     <v-navigation-drawer :model-value="modelValue" @update:model-value="emit('update:modelValue', $event)"
-        location="right" temporary width="600" class="task-detail-panel">
-        <div v-if="localTask" class="flex flex-col h-full">
-            <!-- Header -->
-            <div class="panel-header">
-                <div class="flex items-center gap-2">
-                    <!-- Complete Button -->
-                    <v-btn :icon="isCompleted ? 'mdi-checkbox-marked-circle' : 'mdi-checkbox-blank-circle-outline'"
-                        :color="isCompleted ? 'success' : 'grey'" variant="text" size="small" @click="toggleComplete" />
+        location="right" temporary width="620" class="task-detail-panel">
+        <div v-if="localTask" class="d-flex flex-column h-100">
 
-                    <!-- Status -->
+            <!-- ===== Header ===== -->
+            <div class="panel-header">
+                <div class="d-flex align-center ga-2">
+                    <!-- Complete Button (subtask only) -->
+                    <v-btn v-if="isSubtask"
+                        :icon="isCompleted ? 'mdi-checkbox-marked-circle' : 'mdi-checkbox-blank-circle-outline'"
+                        :color="isCompleted ? 'success' : 'grey'" variant="text" size="small"
+                        @click="toggleComplete" />
+
+                    <!-- Status Chip -->
                     <v-menu>
                         <template v-slot:activator="{ props: menuProps }">
-                            <v-chip v-bind="menuProps" :color="localTask.status?.color" size="small" variant="tonal"
-                                label>
+                            <v-chip v-bind="menuProps" :color="localTask.status?.color" size="small"
+                                variant="flat" class="cursor-pointer font-weight-medium">
                                 {{ localTask.status?.name || 'No Status' }}
                                 <v-icon end size="14">mdi-chevron-down</v-icon>
                             </v-chip>
                         </template>
-                        <v-card color="surface">
+                        <v-card color="surface" min-width="180">
                             <v-list density="compact">
                                 <v-list-item v-for="status in statuses" :key="status.id"
-                                    :active="status.id === localTask.status_id" @click="changeStatus(status.id)">
+                                    :active="status.id === localTask.status_id"
+                                    @click="changeStatus(status.id)">
                                     <template v-slot:prepend>
                                         <div class="w-3 h-3 rounded-full mr-3"
                                             :style="{ backgroundColor: status.color }" />
@@ -1142,567 +1192,661 @@ const deleteTimeEntry = (entryId) => {
                             </v-list>
                         </v-card>
                     </v-menu>
+
+                    <!-- Task ID badge -->
+                    <v-chip v-if="localTask.task_id" size="x-small" variant="outlined" color="grey">
+                        {{ localTask.task_id }}
+                    </v-chip>
                 </div>
 
-                <div class="flex items-center gap-1">
-                    <v-btn icon variant="text" size="small">
-                        <v-icon>mdi-link-variant</v-icon>
-                    </v-btn>
-                    <v-btn icon variant="text" size="small">
-                        <v-icon>mdi-star-outline</v-icon>
-                    </v-btn>
+                <div class="d-flex align-center">
                     <v-menu>
                         <template v-slot:activator="{ props: menuProps }">
                             <v-btn v-bind="menuProps" icon variant="text" size="small">
-                                <v-icon>mdi-dots-horizontal</v-icon>
+                                <v-icon size="20">mdi-dots-horizontal</v-icon>
                             </v-btn>
                         </template>
-                        <v-card color="surface">
+                        <v-card color="surface" min-width="160">
                             <v-list density="compact">
                                 <v-list-item prepend-icon="mdi-content-copy" title="Duplicate" />
                                 <v-list-item prepend-icon="mdi-archive-outline" title="Archive" />
                                 <v-divider />
-                                <v-list-item prepend-icon="mdi-delete-outline" title="Delete" class="text-error"
-                                    @click="deleteTask" />
+                                <v-list-item prepend-icon="mdi-delete-outline" title="Delete"
+                                    class="text-error" @click="deleteTask" />
                             </v-list>
                         </v-card>
                     </v-menu>
                     <v-btn icon variant="text" size="small" @click="close">
-                        <v-icon>mdi-close</v-icon>
+                        <v-icon size="20">mdi-close</v-icon>
                     </v-btn>
                 </div>
             </div>
-            <!-- Task Name -->
-            <div class="px-4 py-2">
+
+            <!-- ===== Task Name ===== -->
+            <div class="px-5 pt-4 pb-2">
                 <div v-if="!isEditing"
-                    class="text-xl font-semibold cursor-pointer hover:bg-[#2d2d30] rounded px-2 py-1 -mx-2"
+                    class="task-name-display"
                     @click="isEditing = true">
                     {{ localTask.name }}
                 </div>
-                <v-text-field v-else v-model="editedName" variant="outlined" density="compact" hide-details autofocus
+                <v-text-field v-else v-model="editedName" variant="outlined" density="compact"
+                    hide-details autofocus class="task-name-input"
                     @blur="saveName" @keydown.enter="saveName" @keydown.escape="isEditing = false" />
             </div>
 
-            <!-- Tabs -->
-            <v-tabs v-model="activeTab" color="primary" class="flex-shrink-0">
-                <v-tab value="details">Details</v-tab>
-                <v-tab value="comments">
+            <!-- ===== Tabs ===== -->
+            <v-tabs v-model="activeTab" color="primary" class="flex-shrink-0 px-2" height="40">
+                <v-tab value="details" size="small">
+                    <v-icon start size="16">mdi-text-box-outline</v-icon>
+                    Details
+                </v-tab>
+                <v-tab value="comments" size="small">
+                    <v-icon start size="16">mdi-comment-outline</v-icon>
                     Comments
-                    <v-badge v-if="localTask.comments?.length" :content="localTask.comments.length" color="grey" inline
-                        class="ml-1" />
+                    <v-badge v-if="localTask.comments?.length" :content="localTask.comments.length"
+                        color="primary" inline class="ml-1" />
                 </v-tab>
-                <v-tab v-if="isSubtask" value="time">
-                    Time Tracking
-                    <v-badge v-if="localTask.time_entries?.length" :content="localTask.time_entries.length" color="grey"
-                        inline class="ml-1" />
+                <v-tab v-if="isSubtask" value="time" size="small">
+                    <v-icon start size="16">mdi-clock-outline</v-icon>
+                    Time
+                    <v-badge v-if="localTask.time_entries?.length" :content="localTask.time_entries.length"
+                        color="primary" inline class="ml-1" />
                 </v-tab>
-                <v-tab value="activity">Activity</v-tab>
+                <v-tab value="activity" size="small">
+                    <v-icon start size="16">mdi-history</v-icon>
+                    Activity
+                </v-tab>
             </v-tabs>
 
             <v-divider />
 
-            <!-- Tab Content -->
+            <!-- ===== Tab Content ===== -->
             <div class="flex-1 overflow-y-auto">
                 <v-tabs-window v-model="activeTab">
-                    <!-- Details Tab -->
-                    <v-tabs-window-item value="details">
-                        <div class="p-4 space-y-4">
-                            <!-- Priority -->
-                            <div class="detail-row">
-                                <div class="detail-label">
-                                    <v-icon size="18" class="mr-2">mdi-flag-outline</v-icon>
-                                    Priority
-                                </div>
-                                <div class="detail-value">
-                                    <v-menu>
-                                        <template v-slot:activator="{ props: menuProps }">
-                                            <v-btn v-bind="menuProps" :color="currentPriority?.color || 'grey'"
-                                                variant="tonal" size="small">
-                                                <v-icon start size="16">{{ currentPriority?.icon || 'mdi-flag-outline'
-                                                }}</v-icon>
-                                                {{ localTask.priority?.name || 'No Priority' }}
-                                                </ v-btn>
-                                        </template>
-                                        <v-card color="surface">
-                                            <v-list density="compact">
-                                                <v-list-item v-for="priority in priorities" :key="priority.id"
-                                                    :active="priority.id === localTask.priority_id"
-                                                    @click="changePriority(priority.id)">
-                                                    <template v-slot:prepend>
-                                                        <v-icon :color="priorityConfig[priority.level]?.color" size="18"
-                                                            class="mr-2">
-                                                            {{ priorityConfig[priority.level]?.icon }}
-                                                        </v-icon>
-                                                    </template>
-                                                    <v-list-item-title>{{ priority.name }}</v-list-item-title>
-                                                </v-list-item>
-                                                <v-divider v-if="localTask.priority_id" />
-                                                <v-list-item v-if="localTask.priority_id" prepend-icon="mdi-close"
-                                                    title="Clear Priority" @click="changePriority(null)" />
-                                            </v-list>
-                                        </v-card>
-                                    </v-menu>
-                                </div>
-                            </div>
 
-                            <!-- Assignees -->
-                            <div class="detail-row">
-                                <div class="detail-label">
-                                    <v-icon size="18" class="mr-2">mdi-account-outline</v-icon>
-                                    Assignees
+                    <!-- ==================== Details Tab ==================== -->
+                    <v-tabs-window-item value="details">
+                        <div class="pa-5">
+
+                            <!-- Properties Section -->
+                            <div class="section-card">
+                                <!-- Priority -->
+                                <div class="prop-row">
+                                    <div class="prop-label">
+                                        <v-icon size="16" class="prop-icon">mdi-flag-outline</v-icon>
+                                        Priority
+                                    </div>
+                                    <div class="prop-value">
+                                        <v-menu>
+                                            <template v-slot:activator="{ props: menuProps }">
+                                                <v-btn v-bind="menuProps"
+                                                    :color="currentPriority?.color || 'grey'"
+                                                    variant="tonal" size="small" class="text-none">
+                                                    <v-icon start size="14">{{ currentPriority?.icon || 'mdi-flag-outline' }}</v-icon>
+                                                    {{ currentPriority?.name || 'None' }}
+                                                </v-btn>
+                                            </template>
+                                            <v-card color="surface" min-width="160">
+                                                <v-list density="compact">
+                                                    <v-list-item v-for="priority in PRIORITIES" :key="priority.level"
+                                                        :active="priority.level === localTask.priority_level"
+                                                        @click="changePriority(priority.level)">
+                                                        <template v-slot:prepend>
+                                                            <v-icon :color="priority.color"
+                                                                size="16" class="mr-2">
+                                                                {{ priority.icon }}
+                                                            </v-icon>
+                                                        </template>
+                                                        <v-list-item-title>{{ priority.name }}</v-list-item-title>
+                                                    </v-list-item>
+                                                    <v-divider v-if="localTask.priority_level" />
+                                                    <v-list-item v-if="localTask.priority_level"
+                                                        prepend-icon="mdi-close" title="Clear"
+                                                        @click="changePriority(null)" />
+                                                </v-list>
+                                            </v-card>
+                                        </v-menu>
+                                    </div>
                                 </div>
-                                <div class="detail-value">
-                                    <div class="flex items-center gap-2">
-                                        <!-- Current Assignees -->
-                                        <div v-if="localTask.assignees?.length" class="flex -space-x-2">
+
+                                <v-divider class="my-1" />
+
+                                <!-- Assignees -->
+                                <div class="prop-row">
+                                    <div class="prop-label">
+                                        <v-icon size="16" class="prop-icon">mdi-account-outline</v-icon>
+                                        Assignees
+                                    </div>
+                                    <div class="prop-value">
+                                        <div class="d-flex align-center ga-2 flex-wrap">
                                             <v-tooltip v-for="assignee in localTask.assignees" :key="assignee.id"
                                                 location="top">
                                                 <template v-slot:activator="{ props: tooltipProps }">
                                                     <v-avatar v-bind="tooltipProps"
-                                                        :color="assignee.avatar_color || 'primary'" size="32"
-                                                        class="cursor-pointer border-2 border-[#1e1e1e]"
+                                                        :color="assignee.avatar_color || 'primary'" size="28"
+                                                        class="cursor-pointer elevation-1"
                                                         @click="toggleAssignee(assignee.id)">
-                                                        <span class="text-xs">{{ assignee.initials }}</span>
+                                                        <span class="text-xs font-weight-medium">{{ assignee.initials }}</span>
                                                     </v-avatar>
                                                 </template>
                                                 <span>{{ assignee.name }} (click to remove)</span>
                                             </v-tooltip>
-                                        </div>
 
-                                        <!-- Add Assignee Button -->
-                                        <v-menu>
-                                            <template v-slot:activator="{ props: menuProps }">
-                                                <v-btn v-bind="menuProps" icon variant="outlined" size="small">
-                                                    <v-icon>mdi-plus</v-icon>
-                                                </v-btn>
-                                            </template>
-                                            <v-card color="surface" max-width="300">
-                                                <v-card-text class="pa-2">
+                                            <v-menu>
+                                                <template v-slot:activator="{ props: menuProps }">
+                                                    <v-btn v-bind="menuProps" icon variant="tonal"
+                                                        size="x-small" color="grey">
+                                                        <v-icon size="14">mdi-plus</v-icon>
+                                                    </v-btn>
+                                                </template>
+                                                <v-card color="surface" min-width="240">
                                                     <v-list density="compact">
                                                         <v-list-item v-for="member in members" :key="member.id"
                                                             :active="localTask.assignees?.some(a => a.id === member.id)"
                                                             @click="toggleAssignee(member.id)">
                                                             <template v-slot:prepend>
-                                                                <v-avatar :color="member.avatar_color || 'primary'"
-                                                                    size="28" class="mr-2">
-                                                                    <span class="text-xs">{{ member.initials }}</span>
+                                                                <v-avatar
+                                                                    :color="member.avatar_color || 'primary'"
+                                                                    size="24" class="mr-2">
+                                                                    <span class="text-[10px]">{{ member.initials }}</span>
                                                                 </v-avatar>
                                                             </template>
-                                                            <v-list-item-title>{{ member.name }}</v-list-item-title>
+                                                            <v-list-item-title class="text-body-2">{{ member.name }}</v-list-item-title>
                                                             <template v-slot:append>
-                                                                <v-icon
-                                                                    v-if="localTask.assignees?.some(a => a.id === member.id)"
-                                                                    color="primary">
-                                                                    mdi-check
-                                                                </v-icon>
+                                                                <v-icon v-if="localTask.assignees?.some(a => a.id === member.id)"
+                                                                    color="primary" size="16">mdi-check</v-icon>
                                                             </template>
                                                         </v-list-item>
                                                     </v-list>
-                                                </v-card-text>
-                                            </v-card>
-                                        </v-menu>
-                                    </div>
-                                </div>
-                            </div>
-
-                            <!-- Start Date (Subtasks only) -->
-                            <div v-if="isSubtask" class="detail-row">
-                                <div class="detail-label">
-                                    <v-icon size="18" class="mr-2">mdi-calendar-start</v-icon>
-                                    Start Date
-                                </div>
-                                <div class="detail-value">
-                                    <v-menu v-model="showStartDatePicker" :close-on-content-click="false">
-                                        <template v-slot:activator="{ props: menuProps }">
-                                            <v-btn v-bind="menuProps" variant="text" size="small"
-                                                :color="localTask.start_date ? 'primary' : 'default'">
-                                                <v-icon start size="16">mdi-calendar-start</v-icon>
-                                                {{ formatDate(localTask.start_date) }}
-                                            </v-btn>
-                                        </template>
-                                        <v-card color="surface" min-width="300">
-                                            <v-card-text>
-                                                <v-text-field v-model="tempStartDate" type="date" label="Start Date"
-                                                    variant="outlined" density="compact" hide-details
-                                                    bg-color="#1e1e1e" />
-                                            </v-card-text>
-                                            <v-card-actions>
-                                                <v-btn v-if="localTask.start_date" size="small" variant="text"
-                                                    @click="tempStartDate = null; updateStartDate();">
-                                                    Clear
-                                                </v-btn>
-                                                <v-spacer />
-                                                <v-btn size="small" variant="text"
-                                                    @click="showStartDatePicker = false">Cancel</v-btn>
-                                                <v-btn size="small" color="primary"
-                                                    @click="updateStartDate">Save</v-btn>
-                                            </v-card-actions>
-                                        </v-card>
-                                    </v-menu>
-                                </div>
-                            </div>
-
-                            <!-- Due Date (Subtasks only) -->
-                            <div v-if="isSubtask" class="detail-row">
-                                <div class="detail-label">
-                                    <v-icon size="18" class="mr-2">mdi-calendar-outline</v-icon>
-                                    Due Date
-                                </div>
-                                <div class="detail-value">
-                                    <v-menu v-model="showDueDatePicker" :close-on-content-click="false">
-                                        <template v-slot:activator="{ props: menuProps }">
-                                            <v-btn v-bind="menuProps" variant="text" size="small"
-                                                :color="localTask.due_date ? 'primary' : 'default'">
-                                                <v-icon start size="16">mdi-calendar</v-icon>
-                                                {{ formatDate(localTask.due_date) }}
-                                            </v-btn>
-                                        </template>
-                                        <v-card color="surface" min-width="300">
-                                            <v-card-text>
-                                                <v-text-field v-model="tempDueDate" type="date" label="Due Date"
-                                                    variant="outlined" density="compact" hide-details
-                                                    bg-color="#1e1e1e" />
-                                            </v-card-text>
-                                            <v-card-actions>
-                                                <v-btn v-if="localTask.due_date" size="small" variant="text"
-                                                    @click="tempDueDate = null; updateDueDate();">
-                                                    Clear
-                                                </v-btn>
-                                                <v-spacer />
-                                                <v-btn size="small" variant="text"
-                                                    @click="showDueDatePicker = false">Cancel</v-btn>
-                                                <v-btn size="small" color="primary" @click="updateDueDate">Save</v-btn>
-                                            </v-card-actions>
-                                        </v-card>
-                                    </v-menu>
-                                </div>
-                            </div>
-
-                            <!-- Time Estimate (Subtasks only) -->
-                            <div v-if="isSubtask" class="detail-row">
-                                <div class="detail-label">
-                                    <v-icon size="18" class="mr-2">mdi-clock-outline</v-icon>
-                                    Time Estimate
-                                </div>
-                                <div class="detail-value">
-                                    <v-menu v-model="showTimeEstimatePicker" :close-on-content-click="false">
-                                        <template v-slot:activator="{ props: menuProps }">
-                                            <v-btn v-bind="menuProps" variant="text" size="small"
-                                                :color="localTask.time_estimate ? 'primary' : 'default'">
-                                                <v-icon start size="16">mdi-timer-outline</v-icon>
-                                                {{ formatTimeEstimate(localTask.time_estimate) }}
-                                            </v-btn>
-                                        </template>
-                                        <v-card color="surface" min-width="300">
-                                            <v-card-text>
-                                                <v-text-field v-model="tempTimeEstimate" type="number"
-                                                    label="Time Estimate (hours)" variant="outlined" density="compact"
-                                                    hide-details bg-color="#1e1e1e" step="0.5" min="0" />
-                                            </v-card-text>
-                                            <v-card-actions>
-                                                <v-btn v-if="localTask.time_estimate" size="small" variant="text"
-                                                    @click="tempTimeEstimate = 0; updateTimeEstimate();">
-                                                    Clear
-                                                </v-btn>
-                                                <v-spacer />
-                                                <v-btn size="small" variant="text"
-                                                    @click="showTimeEstimatePicker = false">Cancel</v-btn>
-                                                <v-btn size="small" color="primary"
-                                                    @click="updateTimeEstimate">Save</v-btn>
-                                            </v-card-actions>
-                                        </v-card>
-                                    </v-menu>
-                                </div>
-                            </div>
-
-                            <!-- Time Tracker (Subtasks only) -->
-                            <div v-if="isSubtask" class="detail-row">
-                                <div class="detail-label">
-                                    <v-icon size="18" class="mr-2">mdi-timer</v-icon>
-                                    Time Tracker
-                                </div>
-                                <div class="detail-value">
-                                    <div class="flex items-center gap-2">
-                                        <v-chip variant="text" size="small" class="font-mono"
-                                            :color="isTracking ? 'success' : 'default'">
-                                            <v-icon start size="16">mdi-clock</v-icon>
-                                            {{ formatTrackingDuration }}
-                                            <div v-if="isTracking"
-                                                class="w-2 h-2 bg-green-500 rounded-full animate-pulse ml-2" />
-                                        </v-chip>
-                                        <div class="flex gap-1">
-                                            <v-btn v-if="!isTracking" icon="mdi-play" color="success" variant="tonal"
-                                                size="small" @click="startTracking" />
-                                            <v-btn v-else icon="mdi-stop" color="error" variant="tonal" size="small"
-                                                @click="stopTracking" />
+                                                </v-card>
+                                            </v-menu>
                                         </div>
                                     </div>
                                 </div>
-                            </div>
 
-                            <!-- Time Spent (Subtasks only) -->
-                            <div v-if="isSubtask" class="detail-row">
-                                <div class="detail-label">
-                                    <v-icon size="18" class="mr-2">mdi-chart-timeline-variant</v-icon>
-                                    Time Spent
-                                </div>
-                                <div class="detail-value">
-                                    <v-chip variant="text" size="small">
-                                        <v-icon start size="16">mdi-clock</v-icon>
-                                        {{ formatDuration((localTask.time_spent || 0) * 60) }}
-                                    </v-chip>
-                                    <v-progress-linear v-if="localTask.time_estimate && localTask.time_spent"
-                                        :model-value="(localTask.time_spent / localTask.time_estimate) * 100"
-                                        :color="localTask.time_spent > localTask.time_estimate ? 'error' : 'primary'"
-                                        height="4" class="mt-2" />
-                                </div>
-                            </div>
+                                <v-divider class="my-1" />
 
-                            <!-- Dependencies (Subtasks only) -->
-                            <div v-if="isSubtask" class="detail-row">
-                                <div class="detail-label">
-                                    <v-icon size="18" class="mr-2">mdi-link-variant</v-icon>
-                                    Dependencies
-                                </div>
-                                <div class="detail-value">
-                                    <div class="flex flex-wrap gap-1 items-center">
-                                        <!-- Predecessors (depends on) -->
-                                        <v-chip v-for="dep in (localTask?.dependencies || [])" :key="dep.id"
-                                            size="small" color="warning" variant="tonal" closable
-                                            :disabled="dependencyLoading" @click:close="removeDependency(dep)">
-                                            <v-icon start size="12">mdi-arrow-left</v-icon>
-                                            {{ dep.name }}
-                                        </v-chip>
-                                        <!-- Successors (depended by) -->
-                                        <v-chip v-for="dep in (localTask?.dependents || [])" :key="'s-' + dep.id"
-                                            size="small" color="info" variant="tonal">
-                                            <v-icon start size="12">mdi-arrow-right</v-icon>
-                                            {{ dep.name }}
-                                        </v-chip>
-                                        <!-- Add predecessor -->
-                                        <v-menu :close-on-content-click="false">
-                                            <template v-slot:activator="{ props: menuProps }">
-                                                <v-btn v-bind="menuProps" icon="mdi-plus" size="x-small" variant="text"
-                                                    :loading="dependencyLoading" />
-                                            </template>
-                                            <v-card color="surface" min-width="250">
-                                                <v-card-title class="text-sm py-2">Add Predecessor</v-card-title>
-                                                <v-divider />
-                                                <v-list density="compact" max-height="200" class="overflow-auto">
-                                                    <v-list-item v-for="s in getAvailableDependencies" :key="s.id"
-                                                        :disabled="dependencyLoading" @click="addDependency(s)">
-                                                        <template #prepend>
-                                                            <v-icon size="16">mdi-subtitles-outline</v-icon>
-                                                        </template>
-                                                        <v-list-item-title class="text-sm">{{ s.name
-                                                        }}</v-list-item-title>
-                                                        <v-list-item-subtitle v-if="s.time_estimate" class="text-xs">
-                                                            Est: {{ formatSubtaskEstimate(s.time_estimate) }}
-                                                        </v-list-item-subtitle>
-                                                    </v-list-item>
-                                                    <v-list-item v-if="getAvailableDependencies.length === 0" disabled>
-                                                        <v-list-item-title class="text-sm text-gray-500">
-                                                            No available subtasks
-                                                        </v-list-item-title>
-                                                    </v-list-item>
-                                                </v-list>
-                                            </v-card>
-                                        </v-menu>
+                                <!-- Labels -->
+                                <div class="prop-row">
+                                    <div class="prop-label">
+                                        <v-icon size="16" class="prop-icon">mdi-label-outline</v-icon>
+                                        Labels
                                     </div>
-                                    <div v-if="!(localTask?.dependencies || []).length && !(localTask?.dependents || []).length"
-                                        class="text-xs text-gray-500 mt-1">No dependencies</div>
+                                    <div class="prop-value">
+                                        <div class="d-flex align-center ga-1 flex-wrap">
+                                            <v-chip v-for="label in localTask.labels" :key="label.id"
+                                                :color="label.color" size="small" variant="flat"
+                                                closable @click:close="removeLabel(label)">
+                                                {{ label.name }}
+                                            </v-chip>
+
+                                            <v-menu :close-on-content-click="false">
+                                                <template v-slot:activator="{ props: menuProps }">
+                                                    <v-btn v-bind="menuProps" icon variant="tonal"
+                                                        size="x-small" color="grey">
+                                                        <v-icon size="14">mdi-plus</v-icon>
+                                                    </v-btn>
+                                                </template>
+                                                <v-card color="surface" min-width="200">
+                                                    <v-list v-if="availableLabels.length" density="compact">
+                                                        <v-list-item v-for="label in availableLabels"
+                                                            :key="label.id" @click="addLabel(label)">
+                                                            <template v-slot:prepend>
+                                                                <div class="w-3 h-3 rounded-full mr-2"
+                                                                    :style="{ backgroundColor: label.color }" />
+                                                            </template>
+                                                            <v-list-item-title class="text-body-2">{{ label.name }}</v-list-item-title>
+                                                        </v-list-item>
+                                                    </v-list>
+                                                    <div v-else class="pa-3 text-body-2 text-grey">
+                                                        No labels available
+                                                    </div>
+                                                </v-card>
+                                            </v-menu>
+                                        </div>
+                                    </div>
                                 </div>
+
+                                <!-- Subtask-specific properties -->
+                                <template v-if="isSubtask">
+                                    <v-divider class="my-1" />
+
+                                    <!-- Start Date -->
+                                    <div class="prop-row">
+                                        <div class="prop-label">
+                                            <v-icon size="16" class="prop-icon">mdi-calendar-start</v-icon>
+                                            Start Date
+                                        </div>
+                                        <div class="prop-value">
+                                            <v-menu v-model="showStartDatePicker" :close-on-content-click="false">
+                                                <template v-slot:activator="{ props: menuProps }">
+                                                    <v-btn v-bind="menuProps" variant="text" size="small"
+                                                        class="text-none"
+                                                        :color="localTask.start_date ? 'primary' : 'grey'">
+                                                        {{ formatDate(localTask.start_date) }}
+                                                    </v-btn>
+                                                </template>
+                                                <v-card color="surface" min-width="280">
+                                                    <v-card-text class="pb-0">
+                                                        <v-text-field v-model="tempStartDate" type="date"
+                                                            label="Start Date" variant="outlined"
+                                                            density="compact" hide-details />
+                                                    </v-card-text>
+                                                    <v-card-actions>
+                                                        <v-btn v-if="localTask.start_date" size="small"
+                                                            variant="text" color="error"
+                                                            @click="tempStartDate = null; updateStartDate();">
+                                                            Clear
+                                                        </v-btn>
+                                                        <v-spacer />
+                                                        <v-btn size="small" variant="text"
+                                                            @click="showStartDatePicker = false">Cancel</v-btn>
+                                                        <v-btn size="small" color="primary" variant="flat"
+                                                            @click="updateStartDate">Save</v-btn>
+                                                    </v-card-actions>
+                                                </v-card>
+                                            </v-menu>
+                                        </div>
+                                    </div>
+
+                                    <v-divider class="my-1" />
+
+                                    <!-- Due Date -->
+                                    <div class="prop-row">
+                                        <div class="prop-label">
+                                            <v-icon size="16" class="prop-icon">mdi-calendar-end</v-icon>
+                                            Due Date
+                                        </div>
+                                        <div class="prop-value">
+                                            <v-menu v-model="showDueDatePicker" :close-on-content-click="false">
+                                                <template v-slot:activator="{ props: menuProps }">
+                                                    <v-btn v-bind="menuProps" variant="text" size="small"
+                                                        class="text-none"
+                                                        :color="localTask.due_date ? 'primary' : 'grey'">
+                                                        {{ formatDate(localTask.due_date) }}
+                                                    </v-btn>
+                                                </template>
+                                                <v-card color="surface" min-width="280">
+                                                    <v-card-text class="pb-0">
+                                                        <v-text-field v-model="tempDueDate" type="date"
+                                                            label="Due Date" variant="outlined"
+                                                            density="compact" hide-details />
+                                                    </v-card-text>
+                                                    <v-card-actions>
+                                                        <v-btn v-if="localTask.due_date" size="small"
+                                                            variant="text" color="error"
+                                                            @click="tempDueDate = null; updateDueDate();">
+                                                            Clear
+                                                        </v-btn>
+                                                        <v-spacer />
+                                                        <v-btn size="small" variant="text"
+                                                            @click="showDueDatePicker = false">Cancel</v-btn>
+                                                        <v-btn size="small" color="primary" variant="flat"
+                                                            @click="updateDueDate">Save</v-btn>
+                                                    </v-card-actions>
+                                                </v-card>
+                                            </v-menu>
+                                        </div>
+                                    </div>
+
+                                    <v-divider class="my-1" />
+
+                                    <!-- Time Estimate -->
+                                    <div class="prop-row">
+                                        <div class="prop-label">
+                                            <v-icon size="16" class="prop-icon">mdi-timer-sand</v-icon>
+                                            Estimate
+                                        </div>
+                                        <div class="prop-value">
+                                            <v-menu v-model="showTimeEstimatePicker" :close-on-content-click="false">
+                                                <template v-slot:activator="{ props: menuProps }">
+                                                    <v-btn v-bind="menuProps" variant="text" size="small"
+                                                        class="text-none"
+                                                        :color="localTask.time_estimate ? 'primary' : 'grey'">
+                                                        {{ formatTimeEstimate(localTask.time_estimate) }}
+                                                    </v-btn>
+                                                </template>
+                                                <v-card color="surface" min-width="280">
+                                                    <v-card-text class="pb-0">
+                                                        <v-text-field v-model="tempTimeEstimate" type="number"
+                                                            label="Estimate (hours)" variant="outlined"
+                                                            density="compact" hide-details step="0.5" min="0" />
+                                                    </v-card-text>
+                                                    <v-card-actions>
+                                                        <v-btn v-if="localTask.time_estimate" size="small"
+                                                            variant="text" color="error"
+                                                            @click="tempTimeEstimate = 0; updateTimeEstimate();">
+                                                            Clear
+                                                        </v-btn>
+                                                        <v-spacer />
+                                                        <v-btn size="small" variant="text"
+                                                            @click="showTimeEstimatePicker = false">Cancel</v-btn>
+                                                        <v-btn size="small" color="primary" variant="flat"
+                                                            @click="updateTimeEstimate">Save</v-btn>
+                                                    </v-card-actions>
+                                                </v-card>
+                                            </v-menu>
+                                        </div>
+                                    </div>
+
+                                    <v-divider class="my-1" />
+
+                                    <!-- Time Tracker -->
+                                    <div class="prop-row">
+                                        <div class="prop-label">
+                                            <v-icon size="16" class="prop-icon">mdi-timer</v-icon>
+                                            Tracker
+                                        </div>
+                                        <div class="prop-value">
+                                            <div class="d-flex align-center ga-2">
+                                                <code class="timer-display" :class="{ 'timer-display--active': isTracking }">
+                                                    {{ formatTrackingDuration }}
+                                                </code>
+                                                <v-btn v-if="!isTracking" icon="mdi-play" color="success"
+                                                    variant="tonal" size="x-small" @click="startTracking" />
+                                                <v-btn v-else icon="mdi-stop" color="error"
+                                                    variant="tonal" size="x-small" @click="stopTracking" />
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    <v-divider class="my-1" />
+
+                                    <!-- Time Spent -->
+                                    <div class="prop-row">
+                                        <div class="prop-label">
+                                            <v-icon size="16" class="prop-icon">mdi-chart-timeline-variant</v-icon>
+                                            Spent
+                                        </div>
+                                        <div class="prop-value">
+                                            <span class="text-body-2">
+                                                {{ formatDuration((localTask.time_spent || 0) * 60) }}
+                                            </span>
+                                            <v-progress-linear
+                                                v-if="localTask.time_estimate && localTask.time_spent"
+                                                :model-value="(localTask.time_spent / localTask.time_estimate) * 100"
+                                                :color="localTask.time_spent > localTask.time_estimate ? 'error' : 'primary'"
+                                                height="4" rounded class="mt-1" style="max-width: 200px;" />
+                                        </div>
+                                    </div>
+
+                                    <v-divider class="my-1" />
+
+                                    <!-- Dependencies -->
+                                    <div class="prop-row" style="align-items: flex-start; padding-top: 10px; padding-bottom: 10px;">
+                                        <div class="prop-label" style="padding-top: 2px;">
+                                            <v-icon size="16" class="prop-icon">mdi-link-variant</v-icon>
+                                            Dependencies
+                                        </div>
+                                        <div class="prop-value">
+                                            <div class="d-flex flex-wrap ga-1 align-center">
+                                                <v-chip v-for="dep in (localTask?.dependencies || [])"
+                                                    :key="dep.id" size="small" color="warning"
+                                                    variant="tonal" closable :disabled="dependencyLoading"
+                                                    @click:close="removeDependency(dep)">
+                                                    <v-icon start size="12">mdi-arrow-left</v-icon>
+                                                    {{ dep.name }}
+                                                </v-chip>
+                                                <v-chip v-for="dep in (localTask?.dependents || [])"
+                                                    :key="'s-' + dep.id" size="small" color="info" variant="tonal">
+                                                    <v-icon start size="12">mdi-arrow-right</v-icon>
+                                                    {{ dep.name }}
+                                                </v-chip>
+                                                <v-menu :close-on-content-click="false">
+                                                    <template v-slot:activator="{ props: menuProps }">
+                                                        <v-btn v-bind="menuProps" icon variant="tonal"
+                                                            size="x-small" color="grey"
+                                                            :loading="dependencyLoading">
+                                                            <v-icon size="14">mdi-plus</v-icon>
+                                                        </v-btn>
+                                                    </template>
+                                                    <v-card color="surface" min-width="240">
+                                                        <v-card-title class="text-body-2 py-2">
+                                                            Add Predecessor
+                                                        </v-card-title>
+                                                        <v-divider />
+                                                        <v-list density="compact" max-height="200"
+                                                            class="overflow-auto">
+                                                            <v-list-item v-for="s in getAvailableDependencies"
+                                                                :key="s.id" :disabled="dependencyLoading"
+                                                                @click="addDependency(s)">
+                                                                <template #prepend>
+                                                                    <v-icon size="14">mdi-subtitles-outline</v-icon>
+                                                                </template>
+                                                                <v-list-item-title class="text-body-2">{{ s.name }}</v-list-item-title>
+                                                                <v-list-item-subtitle v-if="s.time_estimate" class="text-caption">
+                                                                    Est: {{ formatSubtaskEstimate(s.time_estimate) }}
+                                                                </v-list-item-subtitle>
+                                                            </v-list-item>
+                                                            <v-list-item v-if="getAvailableDependencies.length === 0" disabled>
+                                                                <v-list-item-title class="text-body-2 text-grey">
+                                                                    No available subtasks
+                                                                </v-list-item-title>
+                                                            </v-list-item>
+                                                        </v-list>
+                                                    </v-card>
+                                                </v-menu>
+                                            </div>
+                                            <div v-if="!(localTask?.dependencies || []).length && !(localTask?.dependents || []).length"
+                                                class="text-caption text-grey mt-1">No dependencies</div>
+                                        </div>
+                                    </div>
+                                </template>
                             </div>
 
-                            <!-- Subtasks (Tasks only) -->
-                            <div v-if="!isSubtask" class="mt-1">
-                                <div class="flex items-center justify-between mb-2">
-                                    <div class="detail-label" style="width: auto;">
-                                        <v-icon size="18" class="mr-2">mdi-file-tree-outline</v-icon>
-                                        Subtasks
-                                        <span v-if="localTask.subtasks?.length" class="text-xs text-gray-500 ml-1">
-                                            ({{ localTask.subtasks.filter(s => s.completed_at).length }}/{{ localTask.subtasks.length }})
-                                        </span>
+                            <!-- Subtasks Section (Tasks only) -->
+                            <div v-if="!isSubtask" class="section-card mt-4">
+                                <div class="d-flex align-center justify-space-between pa-3">
+                                    <div class="d-flex align-center ga-2">
+                                        <v-icon size="18" color="grey">mdi-file-tree-outline</v-icon>
+                                        <span class="text-body-2 font-weight-medium">Subtasks</span>
+                                        <v-chip v-if="localTask.subtasks?.length" size="x-small"
+                                            variant="tonal" color="primary">
+                                            {{ localTask.subtasks.filter(s => s.completed_at).length }}/{{ localTask.subtasks.length }}
+                                        </v-chip>
                                     </div>
-                                    <v-btn variant="tonal" size="small" @click="emit('view-subtasks', localTask)">
-                                        <v-icon start size="16">mdi-view-dashboard-outline</v-icon>
-                                        View Board
+                                    <v-btn variant="tonal" size="x-small" color="primary"
+                                        @click="emit('view-subtasks', localTask)">
+                                        <v-icon start size="14">mdi-view-dashboard-outline</v-icon>
+                                        Board
                                     </v-btn>
                                 </div>
 
-                                <!-- Subtask checklist -->
+                                <v-divider />
+
                                 <div v-if="localTask.subtasks?.length" class="subtask-checklist">
-                                    <div v-for="sub in localTask.subtasks" :key="sub.id" class="subtask-check-item"
-                                        @click="toggleSubtaskPanel(sub)">
+                                    <div v-for="sub in localTask.subtasks" :key="sub.id"
+                                        class="subtask-check-item" @click="toggleSubtaskPanel(sub)">
                                         <v-icon :color="sub.completed_at ? 'success' : '#555'" size="18">
                                             {{ sub.completed_at ? 'mdi-checkbox-marked-circle' : 'mdi-checkbox-blank-circle-outline' }}
                                         </v-icon>
-                                        <span class="subtask-check-name" :class="{ 'subtask-check-done': sub.completed_at }">
+                                        <span class="subtask-check-name"
+                                            :class="{ 'subtask-check-done': sub.completed_at }">
                                             {{ sub.name }}
                                         </span>
-                                        <v-icon v-if="sub.priority" :color="sub.priority.level <= 2 ? 'warning' : 'grey'" size="12" class="ml-auto flex-shrink-0">
-                                            mdi-flag
-                                        </v-icon>
+                                        <v-icon v-if="sub.priority"
+                                            :color="sub.priority.level <= 2 ? 'warning' : 'grey'"
+                                            size="12" class="ml-auto flex-shrink-0">mdi-flag</v-icon>
                                     </div>
                                 </div>
-                                <div v-else class="text-sm text-gray-500 pl-7">
+                                <div v-else class="pa-4 text-center text-body-2 text-grey">
                                     No subtasks yet
                                 </div>
                             </div>
 
-                            <v-divider />
-
-                            <!-- Description -->
-                            <div>
-                                <div class="text-sm font-medium mb-2">Description</div>
-                                <v-textarea v-model="editedDescription" placeholder="Add a description..."
-                                    variant="outlined" rows="4" hide-details @blur="saveDescription" />
+                            <!-- Description Section -->
+                            <div class="section-card mt-4">
+                                <div class="d-flex align-center ga-2 pa-3 pb-2">
+                                    <v-icon size="18" color="grey">mdi-text</v-icon>
+                                    <span class="text-body-2 font-weight-medium">Description</span>
+                                </div>
+                                <div class="px-3 pb-3">
+                                    <v-textarea v-model="editedDescription"
+                                        placeholder="Add a description..."
+                                        variant="outlined" rows="3" hide-details auto-grow
+                                        @blur="saveDescription" />
+                                </div>
                             </div>
                         </div>
                     </v-tabs-window-item>
 
-                    <!-- Comments Tab -->
+                    <!-- ==================== Comments Tab ==================== -->
                     <v-tabs-window-item value="comments">
-                        <div class="p-4">
+                        <div class="pa-5">
                             <!-- Comment Input -->
-                            <div class="mb-4">
-                                <v-textarea v-model="newComment" placeholder="Write a comment..." variant="outlined"
-                                    rows="3" hide-details :disabled="isSubmittingComment" />
-                                <div class="flex justify-end mt-2">
-                                    <v-btn color="primary" size="small"
-                                        :disabled="!newComment.trim() || isSubmittingComment"
-                                        :loading="isSubmittingComment" @click="submitComment">
-                                        Comment
-                                    </v-btn>
+                            <div class="section-card mb-4">
+                                <div class="pa-3">
+                                    <v-textarea v-model="newComment"
+                                        placeholder="Write a comment..."
+                                        variant="outlined" rows="3" hide-details auto-grow
+                                        :disabled="isSubmittingComment" />
+                                    <div class="d-flex justify-end mt-2">
+                                        <v-btn color="primary" size="small" variant="flat"
+                                            :disabled="!newComment.trim() || isSubmittingComment"
+                                            :loading="isSubmittingComment" @click="submitComment">
+                                            <v-icon start size="14">mdi-send</v-icon>
+                                            Comment
+                                        </v-btn>
+                                    </div>
                                 </div>
                             </div>
 
                             <!-- Comments List -->
-                            <div v-if="!localTask.comments?.length" class="text-center py-8 text-gray-500">
-                                <v-icon size="48" class="mb-2">mdi-comment-outline</v-icon>
-                                <div>No comments yet</div>
+                            <div v-if="!localTask.comments?.length"
+                                class="d-flex flex-column align-center py-10 text-grey">
+                                <v-icon size="48" class="mb-2" color="grey-darken-1">mdi-comment-outline</v-icon>
+                                <div class="text-body-2">No comments yet</div>
+                                <div class="text-caption">Be the first to leave a comment</div>
                             </div>
-                            <div v-else class="space-y-4">
-                                <div v-for="comment in localTask.comments" :key="comment.id" class="flex gap-3">
+                            <div v-else class="comment-list">
+                                <div v-for="comment in localTask.comments" :key="comment.id"
+                                    class="comment-item">
                                     <v-avatar :color="comment.user?.avatar_color" size="32">
-                                        <span class="text-xs">{{ comment.user?.initials }}</span>
+                                        <span class="text-xs font-weight-medium">{{ comment.user?.initials }}</span>
                                     </v-avatar>
-                                    <div class="flex-1">
-                                        <div class="flex items-center gap-2 mb-1">
-                                            <span class="font-medium text-sm">{{ comment.user?.name }}</span>
-                                            <span class="text-xs text-gray-500">
+                                    <div class="flex-1 min-w-0">
+                                        <div class="d-flex align-center ga-2 mb-1">
+                                            <span class="text-body-2 font-weight-medium">{{ comment.user?.name }}</span>
+                                            <span class="text-caption text-grey">
                                                 {{ new Date(comment.created_at).toLocaleDateString() }}
                                             </span>
                                         </div>
-                                        <div class="text-sm">{{ comment.content }}</div>
+                                        <div class="text-body-2 comment-content">{{ comment.content }}</div>
                                     </div>
                                 </div>
                             </div>
                         </div>
                     </v-tabs-window-item>
 
-                    <!-- Time Tracking Tab (Subtasks only) -->
+                    <!-- ==================== Time Tracking Tab ==================== -->
                     <v-tabs-window-item v-if="isSubtask" value="time">
-                        <div class="p-4">
-                            <!-- Summary Card -->
-                            <v-card variant="tonal" class="mb-4">
-                                <v-card-text class="pb-2">
-                                    <div class="grid grid-cols-2 gap-4 text-sm">
-                                        <div>
-                                            <div class="text-gray-400 mb-1">Time Estimate</div>
-                                            <div class="text-lg font-semibold">
-                                                {{ formatTimeEstimate(localTask.time_estimate) }}
-                                            </div>
-                                        </div>
-                                        <div>
-                                            <div class="text-gray-400 mb-1">Time Spent</div>
-                                            <div class="text-lg font-semibold"
-                                                :class="localTask.time_spent > localTask.time_estimate ? 'text-error' : ''">
-                                                {{ formatDuration((localTask.time_spent || 0) * 60) }}
-                                            </div>
-                                        </div>
+                        <div class="pa-5">
+                            <!-- Summary -->
+                            <div class="time-summary mb-4">
+                                <div class="time-summary-item">
+                                    <div class="text-caption text-grey mb-1">Estimated</div>
+                                    <div class="text-h6 font-weight-bold">
+                                        {{ formatTimeEstimate(localTask.time_estimate) }}
                                     </div>
+                                </div>
+                                <v-divider vertical class="mx-4" />
+                                <div class="time-summary-item">
+                                    <div class="text-caption text-grey mb-1">Spent</div>
+                                    <div class="text-h6 font-weight-bold"
+                                        :class="localTask.time_spent > localTask.time_estimate ? 'text-error' : ''">
+                                        {{ formatDuration((localTask.time_spent || 0) * 60) }}
+                                    </div>
+                                </div>
+                                <v-divider vertical class="mx-4" />
+                                <div class="time-summary-item flex-1">
+                                    <div class="text-caption text-grey mb-1">Progress</div>
                                     <v-progress-linear v-if="localTask.time_estimate"
                                         :model-value="((localTask.time_spent || 0) / localTask.time_estimate) * 100"
                                         :color="(localTask.time_spent || 0) > localTask.time_estimate ? 'error' : 'primary'"
-                                        height="6" rounded class="mt-3" />
-                                </v-card-text>
-                            </v-card>
+                                        height="8" rounded class="mt-1" />
+                                    <span v-else class="text-body-2 text-grey">No estimate</span>
+                                </div>
+                            </div>
 
-                            <!-- Add Time Entry Form -->
-                            <v-card variant="outlined" class="mb-4">
-                                <v-card-text>
-                                    <div class="text-sm font-medium mb-3">Log Time</div>
-                                    <div class="space-y-3">
+                            <!-- Log Time -->
+                            <div class="section-card mb-4">
+                                <div class="d-flex align-center ga-2 pa-3 pb-2">
+                                    <v-icon size="16" color="grey">mdi-plus-circle-outline</v-icon>
+                                    <span class="text-body-2 font-weight-medium">Log Time</span>
+                                </div>
+                                <div class="px-3 pb-3">
+                                    <div class="d-flex ga-2 align-end">
                                         <v-text-field v-model="newTimeEntry.duration" type="number"
-                                            label="Duration (hours)" variant="outlined" density="compact" step="0.25"
-                                            min="0.01" max="24" hide-details />
-                                        <v-textarea v-model="newTimeEntry.description" label="Description (optional)"
-                                            variant="outlined" density="compact" rows="2" hide-details counter
-                                            maxlength="500" />
-                                        <v-btn color="primary" size="small" block :disabled="!newTimeEntry.duration"
+                                            label="Hours" variant="outlined" density="compact"
+                                            step="0.25" min="0.01" max="24" hide-details
+                                            style="max-width: 120px;" />
+                                        <v-text-field v-model="newTimeEntry.description"
+                                            label="Description (optional)" variant="outlined"
+                                            density="compact" hide-details class="flex-1" />
+                                        <v-btn color="primary" variant="flat" size="small"
+                                            :disabled="!newTimeEntry.duration"
                                             @click="addTimeEntry">
-                                            <v-icon start>mdi-plus</v-icon>
-                                            Add Time Entry
+                                            <v-icon size="16">mdi-plus</v-icon>
+                                            Log
                                         </v-btn>
                                     </div>
-                                </v-card-text>
-                            </v-card>
-
-                            <!-- Time Entries List -->
-                            <div v-if="!localTask.time_entries?.length" class="text-center py-8 text-gray-500">
-                                <v-icon size="48" class="mb-2">mdi-clock-outline</v-icon>
-                                <div>No time entries yet</div>
+                                </div>
                             </div>
-                            <div v-else class="space-y-2">
-                                <v-card v-for="entry in localTask.time_entries" :key="entry.id" variant="outlined">
-                                    <v-card-text class="py-2">
-                                        <div class="flex items-start justify-between">
-                                            <div class="flex-1">
-                                                <div class="flex items-center gap-2 mb-1">
-                                                    <v-avatar :color="entry.user?.avatar_color" size="20">
-                                                        <span class="text-[10px]">{{ entry.user?.initials }}</span>
-                                                    </v-avatar>
-                                                    <span class="text-sm font-medium">{{ entry.user?.name }}</span>
-                                                    <v-chip size="x-small" color="primary">
-                                                        {{ formatDuration(entry.duration * 60) }}
-                                                    </v-chip>
-                                                </div>
-                                                <div v-if="entry.description" class="text-sm text-gray-400 ml-7">
-                                                    {{ entry.description }}
-                                                </div>
-                                                <div class="text-xs text-gray-500 ml-7 mt-1">
-                                                    {{ new Date(entry.created_at).toLocaleString() }}
-                                                </div>
-                                            </div>
-                                            <v-btn icon size="x-small" variant="text"
-                                                @click="deleteTimeEntry(entry.id)">
-                                                <v-icon size="16">mdi-delete-outline</v-icon>
-                                            </v-btn>
+
+                            <!-- Time Entries -->
+                            <div v-if="!localTask.time_entries?.length"
+                                class="d-flex flex-column align-center py-10 text-grey">
+                                <v-icon size="48" class="mb-2" color="grey-darken-1">mdi-clock-outline</v-icon>
+                                <div class="text-body-2">No time entries yet</div>
+                            </div>
+                            <div v-else class="time-entry-list">
+                                <div v-for="entry in localTask.time_entries" :key="entry.id"
+                                    class="time-entry-item">
+                                    <v-avatar :color="entry.user?.avatar_color" size="28">
+                                        <span class="text-[10px] font-weight-medium">{{ entry.user?.initials }}</span>
+                                    </v-avatar>
+                                    <div class="flex-1 min-w-0">
+                                        <div class="d-flex align-center ga-2">
+                                            <span class="text-body-2 font-weight-medium">{{ entry.user?.name }}</span>
+                                            <v-chip size="x-small" color="primary" variant="tonal">
+                                                {{ formatDuration(entry.duration * 60) }}
+                                            </v-chip>
                                         </div>
-                                    </v-card-text>
-                                </v-card>
+                                        <div v-if="entry.description"
+                                            class="text-caption text-grey mt-1 text-truncate">
+                                            {{ entry.description }}
+                                        </div>
+                                        <div class="text-caption text-grey-darken-1">
+                                            {{ new Date(entry.created_at).toLocaleString() }}
+                                        </div>
+                                    </div>
+                                    <v-btn icon size="x-small" variant="text" color="grey"
+                                        @click="deleteTimeEntry(entry.id)">
+                                        <v-icon size="14">mdi-delete-outline</v-icon>
+                                    </v-btn>
+                                </div>
                             </div>
                         </div>
                     </v-tabs-window-item>
 
-                    <!-- Activity Tab -->
+                    <!-- ==================== Activity Tab ==================== -->
                     <v-tabs-window-item value="activity">
-                        <div class="p-4">
-                            <div v-if="!localTask.activities?.length" class="text-center py-8 text-gray-500">
-                                <v-icon size="48" class="mb-2">mdi-history</v-icon>
-                                <div>No activity yet</div>
+                        <div class="pa-5">
+                            <div v-if="!localTask.activities?.length"
+                                class="d-flex flex-column align-center py-10 text-grey">
+                                <v-icon size="48" class="mb-2" color="grey-darken-1">mdi-history</v-icon>
+                                <div class="text-body-2">No activity yet</div>
                             </div>
-                            <div v-else class="space-y-3">
+                            <div v-else class="activity-list">
                                 <div v-for="activity in localTask.activities" :key="activity.id"
-                                    class="flex items-start gap-3">
+                                    class="activity-item">
                                     <v-avatar :color="activity.user?.avatar_color" size="24">
                                         <span class="text-[10px]">{{ activity.user?.initials }}</span>
                                     </v-avatar>
-                                    <div class="flex-1 text-sm">
-                                        <span class="font-medium">{{ activity.user?.name }}</span>
-                                        <span class="text-gray-400"> {{ activity.description }}</span>
-                                        <div class="text-xs text-gray-500 mt-0.5">
+                                    <div class="flex-1 text-body-2">
+                                        <span class="font-weight-medium">{{ activity.user?.name }}</span>
+                                        <span class="text-grey"> {{ activity.description }}</span>
+                                        <div class="text-caption text-grey-darken-1 mt-1">
                                             {{ new Date(activity.created_at).toLocaleString() }}
                                         </div>
                                     </div>
@@ -1725,64 +1869,118 @@ const deleteTimeEntry = (entryId) => {
     display: flex;
     align-items: center;
     justify-content: space-between;
-    padding: 12px 16px;
-    border-bottom: 1px solid #2d2d30;
+    padding: 10px 16px;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.06);
 }
 
-.detail-row {
+/* ===== Task Name ===== */
+.task-name-display {
+    font-size: 1.15rem;
+    font-weight: 600;
+    line-height: 1.4;
+    cursor: pointer;
+    padding: 6px 10px;
+    margin: 0 -10px;
+    border-radius: 6px;
+    transition: background-color 0.12s;
+}
+
+.task-name-display:hover {
+    background-color: rgba(255, 255, 255, 0.04);
+}
+
+.task-name-input :deep(.v-field) {
+    font-size: 1.15rem;
+    font-weight: 600;
+}
+
+/* ===== Section Card ===== */
+.section-card {
+    background: rgba(255, 255, 255, 0.02);
+    border: 1px solid rgba(255, 255, 255, 0.06);
+    border-radius: 10px;
+    overflow: hidden;
+}
+
+/* ===== Property Rows ===== */
+.prop-row {
     display: flex;
     align-items: center;
-    gap: 16px;
+    padding: 8px 14px;
+    min-height: 40px;
 }
 
-.detail-label {
+.prop-label {
     display: flex;
     align-items: center;
-    width: 140px;
-    color: #9ca3af;
-    font-size: 14px;
+    width: 130px;
+    flex-shrink: 0;
+    font-size: 13px;
+    color: rgba(255, 255, 255, 0.45);
+    gap: 8px;
+    font-weight: 500;
 }
 
-.detail-value {
+.prop-icon {
+    opacity: 0.6;
+}
+
+.prop-value {
     flex: 1;
+    min-width: 0;
 }
 
-.space-y-4>*+* {
-    margin-top: 16px;
+/* ===== Timer ===== */
+.timer-display {
+    font-family: 'JetBrains Mono', 'Fira Code', monospace;
+    font-size: 13px;
+    padding: 3px 8px;
+    border-radius: 4px;
+    background: rgba(255, 255, 255, 0.04);
+    color: rgba(255, 255, 255, 0.7);
 }
 
-.space-y-3>*+* {
-    margin-top: 12px;
+.timer-display--active {
+    background: rgba(76, 175, 80, 0.12);
+    color: #66bb6a;
 }
 
-.space-y-2>*+* {
-    margin-top: 8px;
+/* ===== Time Summary ===== */
+.time-summary {
+    display: flex;
+    align-items: center;
+    padding: 16px 20px;
+    background: rgba(255, 255, 255, 0.02);
+    border: 1px solid rgba(255, 255, 255, 0.06);
+    border-radius: 10px;
 }
 
+.time-summary-item {
+    text-align: center;
+}
+
+/* ===== Subtask Checklist ===== */
 .subtask-checklist {
     display: flex;
     flex-direction: column;
-    gap: 2px;
-    padding-left: 7px;
 }
 
 .subtask-check-item {
     display: flex;
     align-items: center;
     gap: 8px;
-    padding: 5px 8px;
-    border-radius: 6px;
+    padding: 7px 14px;
     cursor: pointer;
     transition: background-color 0.12s;
 }
 
 .subtask-check-item:hover {
-    background-color: #2d2d30;
+    background-color: rgba(255, 255, 255, 0.04);
 }
 
 .subtask-check-name {
     font-size: 13px;
-    color: #d1d5db;
+    color: rgba(255, 255, 255, 0.8);
     flex: 1;
     min-width: 0;
     overflow: hidden;
@@ -1792,6 +1990,55 @@ const deleteTimeEntry = (entryId) => {
 
 .subtask-check-done {
     text-decoration: line-through;
-    color: #6b7280;
+    color: rgba(255, 255, 255, 0.3);
+}
+
+/* ===== Comment List ===== */
+.comment-list {
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+}
+
+.comment-item {
+    display: flex;
+    gap: 12px;
+    align-items: flex-start;
+}
+
+.comment-content {
+    white-space: pre-wrap;
+    word-break: break-word;
+    line-height: 1.5;
+}
+
+/* ===== Time Entries ===== */
+.time-entry-list {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.time-entry-item {
+    display: flex;
+    align-items: flex-start;
+    gap: 10px;
+    padding: 10px 14px;
+    background: rgba(255, 255, 255, 0.02);
+    border: 1px solid rgba(255, 255, 255, 0.06);
+    border-radius: 8px;
+}
+
+/* ===== Activity List ===== */
+.activity-list {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+}
+
+.activity-item {
+    display: flex;
+    align-items: flex-start;
+    gap: 10px;
 }
 </style>

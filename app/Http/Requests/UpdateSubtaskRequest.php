@@ -19,7 +19,7 @@ class UpdateSubtaskRequest extends FormRequest
             'name' => ['sometimes', 'string', 'max:255'],
             'description' => ['nullable', 'string', 'max:10000'],
             'status_id' => ['sometimes', 'exists:statuses,id'],
-            'priority_id' => ['nullable', 'exists:priorities,id'],
+            'priority_level' => ['nullable', 'integer', 'in:1,2,3,4'],
             'start_date' => ['nullable', 'date'],
             'due_date' => [
                 'nullable',
@@ -48,7 +48,7 @@ class UpdateSubtaskRequest extends FormRequest
             'due_date.date' => 'Due date must be a valid date.',
             'time_estimate.max' => 'Time estimate cannot exceed 1 year.',
             'status_id.exists' => 'Selected status does not exist.',
-            'priority_id.exists' => 'Selected priority does not exist.',
+            'priority_level.in' => 'Selected priority does not exist.',
         ];
     }
 }

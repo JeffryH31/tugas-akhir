@@ -36,11 +36,35 @@ class SpaceService
     {
         return $space->load([
             'workspace',
-            'folders' => fn($q) => $q->with(['children', 'lists'])->orderBy('position'),
-            'listsWithoutFolder' => fn($q) => $q->orderBy('position'),
+            'folders' => fn($q) => $q->with(['children', 'lists.status'])->orderBy('position'),
+            'listsWithoutFolder' => fn($q) => $q->with('status')->orderBy('position'),
             'statuses' => fn($q) => $q->orderBy('position'),
             'labels',
         ]);
+    }
+
+    /**
+     * Get products (TaskLists) grouped by status for kanban board
+     */
+    public function getProductsByStatus(Space $space): array
+    {
+        $lists = $space->lists()
+            ->with(['status', 'folder'])
+            ->withCount('tasks')
+            ->orderBy('position')
+            ->get();
+
+        $statuses = $space->statuses()->orderBy('position')->get();
+
+        $grouped = [];
+        foreach ($statuses as $status) {
+            $grouped[$status->id] = $lists
+                ->where('status_id', $status->id)
+                ->values()
+                ->toArray();
+        }
+
+        return $grouped;
     }
 
     /**

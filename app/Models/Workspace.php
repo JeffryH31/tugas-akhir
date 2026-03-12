@@ -74,11 +74,6 @@ class Workspace extends Model
         return $this->hasMany(Label::class);
     }
 
-    public function priorities(): HasMany
-    {
-        return $this->hasMany(Priority::class)->orderBy('level', 'desc');
-    }
-
     public function activities(): HasMany
     {
         return $this->hasMany(Activity::class)->latest();

@@ -4,6 +4,7 @@ use App\Http\Controllers\CalendarController;
 use App\Http\Controllers\CommentController;
 use App\Http\Controllers\CpmController;
 use App\Http\Controllers\DashboardController;
+use App\Http\Controllers\LabelController;
 use App\Http\Controllers\FolderController;
 use App\Http\Controllers\SpaceController;
 use App\Http\Controllers\SprintController;
@@ -69,6 +70,12 @@ Route::middleware(['auth:sanctum', config('jetstream.auth_session'), 'verified']
                 Route::patch('/role', [WorkspaceController::class, 'updateMemberRole'])->name('workspaces.members.role');
             });
 
+            Route::prefix('labels')->group(function () {
+                Route::post('/', [LabelController::class, 'store'])->name('workspaces.labels.store');
+                Route::patch('/{label}', [LabelController::class, 'update'])->name('workspaces.labels.update');
+                Route::delete('/{label}', [LabelController::class, 'destroy'])->name('workspaces.labels.destroy');
+            });
+
             Route::get('/time-report', [TimeEntryController::class, 'workspaceReport'])->name('workspaces.time-report');
 
             Route::prefix('spaces')->group(function () {
@@ -123,6 +130,7 @@ Route::middleware(['auth:sanctum', config('jetstream.auth_session'), 'verified']
                             Route::post('/unarchive', [TaskListController::class, 'unarchive'])->name('lists.unarchive');
                             Route::post('/move-to-folder', [TaskListController::class, 'moveToFolder'])->name('lists.move-to-folder');
                             Route::post('/duplicate', [TaskListController::class, 'duplicate'])->name('lists.duplicate');
+                            Route::patch('/change-status', [TaskListController::class, 'changeStatus'])->name('lists.change-status');
 
                             Route::prefix('tasks')->group(function () {
                                 Route::post('/', [TaskController::class, 'store'])->name('tasks.store');

@@ -346,7 +346,7 @@ const handleTaskOpen = (task) => {
     display: flex;
     flex-direction: column;
     gap: 8px;
-    min-height: 50px;
+    min-height: 2px;
 }
 
 .task-wrapper {

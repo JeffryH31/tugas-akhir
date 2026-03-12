@@ -3,6 +3,7 @@ import { ref, computed, onMounted, onUnmounted } from 'vue';
 import { Head, router, usePage } from '@inertiajs/vue3';
 import draggable from 'vuedraggable';
 import MainLayout from '@/Layouts/MainLayout.vue';
+import { PRIORITIES } from '@/constants/priorities';
 
 const props = defineProps({
     workspace: Object,
@@ -23,7 +24,7 @@ const localTask = ref({
     name: props.task.name,
     description: props.task.description || '',
     status_id: props.task.status_id,
-    priority_id: props.task.priority_id,
+    priority_level: props.task.priority_level,
     due_date: props.task.due_date,
 });
 
@@ -91,7 +92,6 @@ const elapsedSeconds = ref(0);
 const isTimerLoading = ref(false);
 
 // Computed
-const priorities = computed(() => props.workspace?.priorities || []);
 const labels = computed(() => props.workspace?.labels || []);
 const members = computed(() => props.workspace?.members || []);
 
@@ -137,10 +137,10 @@ const updateStatus = (statusId) => {
     );
 };
 
-const updatePriority = (priorityId) => {
+const updatePriority = (priorityLevel) => {
     router.patch(
         route('tasks.change-priority', [props.workspace.id, props.space.id, props.list.id, props.task.id]),
-        { priority_id: priorityId },
+        { priority_level: priorityLevel },
         { preserveScroll: true }
     );
 };
@@ -809,7 +809,7 @@ onUnmounted(() => {
                     <!-- Priority -->
                     <div class="bg-[#2D2D2D] rounded-lg p-4">
                         <div class="text-sm text-gray-400 mb-2">Priority</div>
-                        <v-select v-model="localTask.priority_id" :items="priorities" item-title="name" item-value="id"
+                        <v-select v-model="localTask.priority_level" :items="PRIORITIES" item-title="name" item-value="level"
                             variant="solo-filled" density="compact" hide-details clearable bg-color="#3D3D3D"
                             @update:model-value="updatePriority">
                             <template #selection="{ item }">

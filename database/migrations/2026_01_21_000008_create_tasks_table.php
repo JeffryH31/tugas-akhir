@@ -16,7 +16,7 @@ return new class extends Migration
             $table->string('task_id')->unique(); // Human-readable ID like "PROJ-123"
             $table->foreignId('task_list_id')->constrained()->cascadeOnDelete();
             $table->foreignId('status_id')->nullable()->constrained()->nullOnDelete();
-            $table->foreignId('priority_id')->nullable()->constrained()->nullOnDelete();
+            $table->tinyInteger('priority_level')->nullable();
 
             $table->string('name');
             $table->text('description')->nullable();

@@ -21,7 +21,7 @@ class SubtaskResource extends JsonResource
             'name' => $this->name,
             'description' => $this->description,
             'status' => new StatusResource($this->whenLoaded('status')),
-            'priority' => new PriorityResource($this->whenLoaded('priority')),
+            'priority' => $this->priority,
             'assignees' => UserResource::collection($this->whenLoaded('assignees')),
             'labels' => LabelResource::collection($this->whenLoaded('labels')),
             'start_date' => $this->start_date?->toISOString(),

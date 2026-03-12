@@ -16,6 +16,7 @@ class TaskList extends Model
     protected $fillable = [
         'space_id',
         'folder_id',
+        'status_id',
         'name',
         'slug',
         'description',
@@ -50,6 +51,11 @@ class TaskList extends Model
                 }
                 $list->position = $query->max('position') + 1;
             }
+
+            if (empty($list->status_id)) {
+                $space = Space::find($list->space_id);
+                $list->status_id = $space?->getDefaultStatus()?->id;
+            }
         });
     }
 
@@ -57,6 +63,11 @@ class TaskList extends Model
     public function space(): BelongsTo
     {
         return $this->belongsTo(Space::class);
+    }
+
+    public function status(): BelongsTo
+    {
+        return $this->belongsTo(Status::class);
     }
 
     public function folder(): BelongsTo

@@ -54,7 +54,6 @@ class TaskListController extends Controller
                 'listsWithoutFolder',
             ])->orderBy('position'),
             'members',
-            'priorities',
             'labels',
         ]);
 
@@ -155,5 +154,19 @@ class TaskListController extends Controller
         return redirect()
             ->route('lists.show', [$workspace, $space, $newList])
             ->with('success', 'List duplicated successfully.');
+    }
+
+    /**
+     * Change product status (for kanban board drag-and-drop).
+     */
+    public function changeStatus(Request $request, Workspace $workspace, Space $space, TaskList $list): RedirectResponse
+    {
+        $request->validate([
+            'status_id' => 'required|exists:statuses,id',
+        ]);
+
+        $list->update(['status_id' => $request->status_id]);
+
+        return back()->with('success', 'Product status updated.');
     }
 }

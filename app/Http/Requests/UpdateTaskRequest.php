@@ -25,7 +25,7 @@ class UpdateTaskRequest extends FormRequest
             'name' => ['sometimes', 'string', 'max:255'],
             'description' => ['nullable', 'string', 'max:10000'],
             'status_id' => ['nullable', 'exists:statuses,id'],
-            'priority_id' => ['nullable', 'exists:priorities,id'],
+            'priority_level' => ['nullable', 'integer', 'in:1,2,3,4'],
             'start_date' => [
                 'nullable',
                 'date',

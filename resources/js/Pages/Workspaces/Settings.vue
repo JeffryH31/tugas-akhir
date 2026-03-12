@@ -9,6 +9,72 @@ const props = defineProps({
     availableUsers: Array,
 });
 
+// ===== Label Management =====
+const showLabelDialog = ref(false);
+const editingLabel = ref(null);
+const labelForm = ref({ name: '', color: '#6366F1' });
+
+const presetColors = [
+    '#ef4444', '#f97316', '#f59e0b', '#22c55e', '#14b8a6',
+    '#3b82f6', '#6366f1', '#8b5cf6', '#ec4899', '#6b7280',
+];
+
+const openCreateLabel = () => {
+    editingLabel.value = null;
+    labelForm.value = { name: '', color: '#6366F1' };
+    showLabelDialog.value = true;
+};
+
+const openEditLabel = (label) => {
+    editingLabel.value = label;
+    labelForm.value = { name: label.name, color: label.color };
+    showLabelDialog.value = true;
+};
+
+const saveLabel = () => {
+    if (!labelForm.value.name.trim()) return;
+
+    if (editingLabel.value) {
+        router.patch(
+            route('workspaces.labels.update', [props.workspace.id, editingLabel.value.id]),
+            labelForm.value,
+            {
+                preserveScroll: true,
+                onSuccess: () => {
+                    showLabelDialog.value = false;
+                    if (window.showSnackbar) window.showSnackbar('Label updated!', 'success');
+                },
+            }
+        );
+    } else {
+        router.post(
+            route('workspaces.labels.store', props.workspace.id),
+            labelForm.value,
+            {
+                preserveScroll: true,
+                onSuccess: () => {
+                    showLabelDialog.value = false;
+                    if (window.showSnackbar) window.showSnackbar('Label created!', 'success');
+                },
+            }
+        );
+    }
+};
+
+const deleteLabel = (label) => {
+    if (!confirm(`Delete label "${label.name}"? It will be removed from all tasks.`)) return;
+
+    router.delete(
+        route('workspaces.labels.destroy', [props.workspace.id, label.id]),
+        {
+            preserveScroll: true,
+            onSuccess: () => {
+                if (window.showSnackbar) window.showSnackbar('Label deleted!', 'success');
+            },
+        }
+    );
+};
+
 // Add member dialog
 const showAddMember = ref(false);
 const selectedUser = ref(null);
@@ -182,6 +248,72 @@ const deleteWorkspace = () => {
                 </v-table>
             </v-card>
 
+            <!-- Labels Management -->
+            <v-card variant="outlined" rounded="lg" class="mt-6">
+                <v-card-title class="d-flex align-center justify-space-between">
+                    <div class="d-flex align-center ga-2">
+                        <v-icon color="primary">mdi-label-multiple-outline</v-icon>
+                        <span>Labels</span>
+                        <v-chip size="x-small" variant="tonal" color="primary">{{ workspace?.labels?.length || 0
+                        }}</v-chip>
+                    </div>
+                    <v-btn color="primary" size="small" variant="tonal" @click="openCreateLabel">
+                        <v-icon start size="16">mdi-plus</v-icon>
+                        Add Label
+                    </v-btn>
+                </v-card-title>
+                <v-divider />
+
+                <!-- Empty state -->
+                <div v-if="!workspace?.labels?.length" class="pa-8 text-center">
+                    <v-icon size="48" color="grey" class="mb-3">mdi-label-off-outline</v-icon>
+                    <div class="text-body-1 text-grey mb-1">No labels yet</div>
+                    <div class="text-body-2 text-grey-darken-1 mb-4">Create labels to categorize and filter your tasks
+                    </div>
+                    <v-btn color="primary" variant="tonal" size="small" @click="openCreateLabel">
+                        <v-icon start size="16">mdi-plus</v-icon>
+                        Create First Label
+                    </v-btn>
+                </div>
+
+                <!-- Labels list -->
+                <v-list v-else lines="two" class="pa-0">
+                    <template v-for="(label, index) in workspace?.labels" :key="label.id">
+                        <v-list-item class="px-4 py-2">
+                            <template #prepend>
+                                <div class="w-10 h-10 rounded-lg d-flex align-center justify-center mr-3"
+                                    :style="{ backgroundColor: label.color + '22' }">
+                                    <v-icon :color="label.color" size="20">mdi-label</v-icon>
+                                </div>
+                            </template>
+
+                            <v-list-item-title class="font-weight-medium">
+                                {{ label.name }}
+                            </v-list-item-title>
+                            <v-list-item-subtitle>
+                                <v-chip :color="label.color" size="x-small" variant="flat" class="mt-1">
+                                    {{ label.color }}
+                                </v-chip>
+                            </v-list-item-subtitle>
+
+                            <template #append>
+                                <div class="d-flex ga-1">
+                                    <v-btn icon variant="text" size="small" @click="openEditLabel(label)">
+                                        <v-icon size="18">mdi-pencil-outline</v-icon>
+                                        <v-tooltip activator="parent" location="top">Edit</v-tooltip>
+                                    </v-btn>
+                                    <v-btn icon variant="text" size="small" color="error" @click="deleteLabel(label)">
+                                        <v-icon size="18">mdi-delete-outline</v-icon>
+                                        <v-tooltip activator="parent" location="top">Delete</v-tooltip>
+                                    </v-btn>
+                                </div>
+                            </template>
+                        </v-list-item>
+                        <v-divider v-if="index < workspace.labels.length - 1" />
+                    </template>
+                </v-list>
+            </v-card>
+
             <!-- Danger Zone -->
             <v-card variant="outlined" rounded="lg" class="mt-6 border-error">
                 <v-card-title class="text-error">
@@ -213,7 +345,8 @@ const deleteWorkspace = () => {
                 <v-card-title>Add Member</v-card-title>
                 <v-card-text>
                     <v-select v-model="selectedUser" :items="availableUsers" item-title="name" item-value="id"
-                        label="Select User" variant="outlined" class="mb-4" bg-color="#1e1e1e" :menu-props="{ contentClass: 'bg-[#1e1e1e]' }">
+                        label="Select User" variant="outlined" class="mb-4" bg-color="#1e1e1e"
+                        :menu-props="{ contentClass: 'bg-[#1e1e1e]' }">
                         <template v-slot:item="{ props: itemProps, item }">
                             <v-list-item v-bind="itemProps">
                                 <template v-slot:prepend>
@@ -231,12 +364,79 @@ const deleteWorkspace = () => {
                         { title: 'Admin', value: 'admin' },
                         { title: 'Member', value: 'member' },
                         { title: 'Guest', value: 'guest' },
-                    ]" label="Role" variant="outlined" bg-color="#1e1e1e" :menu-props="{ contentClass: 'bg-[#1e1e1e]' }" />
+                    ]" label="Role" variant="outlined" bg-color="#1e1e1e"
+                        :menu-props="{ contentClass: 'bg-[#1e1e1e]' }" />
                 </v-card-text>
                 <v-card-actions>
                     <v-spacer />
                     <v-btn variant="text" @click="showAddMember = false">Cancel</v-btn>
                     <v-btn color="primary" @click="addMember">Add Member</v-btn>
+                </v-card-actions>
+            </v-card>
+        </v-dialog>
+
+        <!-- Label Dialog -->
+        <v-dialog v-model="showLabelDialog" max-width="480">
+            <v-card rounded="lg">
+                <v-card-title class="d-flex align-center ga-2 pa-5 pb-2">
+                    <v-icon :color="editingLabel ? 'warning' : 'primary'">{{ editingLabel ? 'mdi-pencil' :
+                        'mdi-label-outline'
+                    }}</v-icon>
+                    {{ editingLabel ? 'Edit Label' : 'New Label' }}
+                </v-card-title>
+
+                <v-card-text class="pa-5">
+                    <!-- Name input -->
+                    <v-text-field v-model="labelForm.name" label="Label Name" variant="outlined"
+                        placeholder="e.g. Bug, Feature, Enhancement" density="comfortable" autofocus
+                        @keyup.enter="saveLabel">
+                        <template #prepend-inner>
+                            <v-icon :color="labelForm.color" size="20">mdi-label</v-icon>
+                        </template>
+                    </v-text-field>
+
+                    <!-- Color picker -->
+                    <div class="mt-4">
+                        <div class="text-body-2 text-grey mb-3">Choose a color</div>
+                        <div class="d-flex flex-wrap ga-2">
+                            <div v-for="c in presetColors" :key="c" class="label-color-option"
+                                :class="{ 'label-color-option--active': labelForm.color === c }"
+                                :style="{ backgroundColor: c }" @click="labelForm.color = c">
+                                <v-icon v-if="labelForm.color === c" size="16" color="white">mdi-check</v-icon>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Custom color -->
+                    <v-text-field v-model="labelForm.color" label="Hex Color" variant="outlined" density="compact"
+                        placeholder="#6366F1" class="mt-4" hide-details>
+                        <template #prepend-inner>
+                            <div class="w-5 h-5 rounded border mr-1" style="border-color: rgba(255,255,255,0.2);"
+                                :style="{ backgroundColor: labelForm.color }" />
+                        </template>
+                    </v-text-field>
+
+                    <!-- Preview -->
+                    <div class="mt-5 pa-3 rounded-lg d-flex align-center ga-3"
+                        style="background: rgba(255,255,255,0.04);">
+                        <span class="text-body-2 text-grey">Preview:</span>
+                        <v-chip :color="labelForm.color" size="small" variant="flat">
+                            {{ labelForm.name || 'Label Name' }}
+                        </v-chip>
+                        <v-chip :color="labelForm.color" size="small" variant="tonal">
+                            {{ labelForm.name || 'Label Name' }}
+                        </v-chip>
+                    </div>
+                </v-card-text>
+
+                <v-divider />
+                <v-card-actions class="pa-4">
+                    <v-spacer />
+                    <v-btn variant="text" @click="showLabelDialog = false">Cancel</v-btn>
+                    <v-btn color="primary" variant="flat" :disabled="!labelForm.name.trim()" @click="saveLabel">
+                        <v-icon start size="16">{{ editingLabel ? 'mdi-check' : 'mdi-plus' }}</v-icon>
+                        {{ editingLabel ? 'Save Changes' : 'Create Label' }}
+                    </v-btn>
                 </v-card-actions>
             </v-card>
         </v-dialog>
@@ -293,5 +493,28 @@ const deleteWorkspace = () => {
 
 .settings-header {
     margin-bottom: 24px;
+}
+
+.label-color-option {
+    width: 36px;
+    height: 36px;
+    border-radius: 8px;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border: 2px solid transparent;
+    transition: all 0.15s ease;
+}
+
+.label-color-option:hover {
+    transform: scale(1.1);
+    border-color: rgba(255, 255, 255, 0.3);
+}
+
+.label-color-option--active {
+    border-color: #fff;
+    transform: scale(1.1);
+    box-shadow: 0 0 0 2px rgba(255, 255, 255, 0.2);
 }
 </style>

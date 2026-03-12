@@ -35,7 +35,7 @@ class StoreTaskRequest extends FormRequest
                     }
                 },
             ],
-            'priority_id' => ['nullable', 'exists:priorities,id'],
+            'priority_level' => ['nullable', 'integer', 'in:1,2,3,4'],
             'start_date' => ['nullable', 'date'],
             'due_date' => ['nullable', 'date', 'after_or_equal:start_date'],
             'time_estimate' => ['nullable', 'integer', 'min:0', 'max:525600'],
@@ -56,7 +56,7 @@ class StoreTaskRequest extends FormRequest
             'name.max' => 'Task name must not exceed 255 characters.',
             'due_date.after_or_equal' => 'Due date must be after or equal to start date.',
             'status_id.exists' => 'Selected status does not exist.',
-            'priority_id.exists' => 'Selected priority does not exist.',
+            'priority_level.in' => 'Selected priority does not exist.',
             'parent_id.exists' => 'Parent task does not exist.',
             'time_estimate.max' => 'Time estimate cannot exceed 1 year.',
         ];

@@ -16,7 +16,7 @@ class CpmService
     {
         // Load subtasks with dependencies
         $subtasks = $task->subtasks()
-            ->with(['dependencies', 'dependents', 'status', 'priority', 'assignees'])
+            ->with(['dependencies', 'dependents', 'status', 'assignees'])
             ->get();
 
         if ($subtasks->isEmpty()) {

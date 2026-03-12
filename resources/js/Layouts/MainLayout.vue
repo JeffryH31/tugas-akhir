@@ -274,18 +274,26 @@ const formatDuration = (seconds) => {
             width="280" class="border-r border-[#2d2d30]">
             <div class="flex flex-col h-full">
                 <!-- Workspace Selector -->
-                <div class="px-3 py-3 border-b border-[#2d2d30]">
+                <div class="border-b border-[#2d2d30]" :class="isSidebarMini ? 'px-1 py-3' : 'px-3 py-3'">
                     <v-menu>
                         <template v-slot:activator="{ props: menuProps }">
-                            <v-btn v-bind="menuProps" variant="text" block class="justify-start text-left">
-                                <div class="flex items-center gap-2 w-full">
-                                    <div class="w-8 h-8 rounded-lg flex items-center justify-center text-white font-bold text-sm"
+                            <v-btn v-bind="menuProps" variant="text" :block="!isSidebarMini"
+                                :icon="isSidebarMini" :class="isSidebarMini ? 'mx-auto' : 'justify-start text-left'">
+                                <div class="flex items-center gap-2" :class="{ 'w-full': !isSidebarMini }">
+                                    <v-tooltip v-if="isSidebarMini" location="right" :text="activeWorkspace?.name || 'Select Workspace'">
+                                        <template #activator="{ props: tipProps }">
+                                            <div v-bind="tipProps" class="w-8 h-8 rounded-lg flex items-center justify-center text-white font-bold text-sm"
+                                                :style="{ backgroundColor: activeWorkspace?.color || '#6366F1' }">
+                                                {{ activeWorkspace?.name?.charAt(0)?.toUpperCase() || 'W' }}
+                                            </div>
+                                        </template>
+                                    </v-tooltip>
+                                    <div v-else class="w-8 h-8 rounded-lg flex items-center justify-center text-white font-bold text-sm"
                                         :style="{ backgroundColor: activeWorkspace?.color || '#6366F1' }">
                                         {{ activeWorkspace?.name?.charAt(0)?.toUpperCase() || 'W' }}
                                     </div>
                                     <div v-if="!isSidebarMini" class="flex-1 min-w-0">
-                                        <div class="font-medium truncate">{{ activeWorkspace?.name || 'Select Workspace'
-                                        }}</div>
+                                        <div class="font-medium truncate">{{ activeWorkspace?.name || 'Select Workspace' }}</div>
                                     </div>
                                     <v-icon v-if="!isSidebarMini" size="18">mdi-chevron-down</v-icon>
                                 </div>
@@ -314,47 +322,49 @@ const formatDuration = (seconds) => {
                 </div>
 
                 <!-- Navigation Links -->
-                <div class="px-2 py-2">
+                <div :class="isSidebarMini ? 'px-1 py-2' : 'px-2 py-2'">
                     <v-list density="compact" nav>
-                        <v-list-item :href="route('dashboard')" :active="route().current('dashboard')"
-                            prepend-icon="mdi-home-outline" title="Home" rounded="lg" />
-                        <v-list-item :href="route('my-tasks')" :active="route().current('my-tasks')"
-                            prepend-icon="mdi-checkbox-marked-circle-outline" title="My Tasks" rounded="lg" />
-                        <v-list-item 
-                            v-if="activeWorkspace"
-                            :href="route('calendar.index', activeWorkspace.id)" 
-                            :active="route().current('calendar.*')"
-                            prepend-icon="mdi-calendar-month-outline" 
-                            title="Calendar" 
-                            rounded="lg" 
-                        />
-                        <v-list-item :href="route('time-tracking.index')" :active="route().current('time-tracking.*')"
-                            prepend-icon="mdi-timer-outline" title="Time Tracking" rounded="lg" />
+                        <v-tooltip v-for="navItem in [
+                            { href: route('dashboard'), active: route().current('dashboard'), icon: 'mdi-home-outline', label: 'Home', show: true },
+                            { href: route('my-tasks'), active: route().current('my-tasks'), icon: 'mdi-checkbox-marked-circle-outline', label: 'My Tasks', show: true },
+                            { href: activeWorkspace ? route('calendar.index', activeWorkspace.id) : undefined, active: route().current('calendar.*'), icon: 'mdi-calendar-month-outline', label: 'Calendar', show: !!activeWorkspace },
+                            { href: route('time-tracking.index'), active: route().current('time-tracking.*'), icon: 'mdi-timer-outline', label: 'Time Tracking', show: true },
+                        ]" :key="navItem.label" location="right" :text="navItem.label" :disabled="!isSidebarMini">
+                            <template #activator="{ props: tipProps }">
+                                <v-list-item v-if="navItem.show" v-bind="tipProps" :href="navItem.href" :active="navItem.active"
+                                    :prepend-icon="navItem.icon" :title="isSidebarMini ? undefined : navItem.label" rounded="lg" />
+                            </template>
+                        </v-tooltip>
                     </v-list>
                 </div>
 
                 <v-divider class="my-1" />
 
                 <!-- Favorites -->
-                <div v-if="activeWorkspace?.starred_spaces?.length" class="px-2 py-2">
-                    <div class="px-3 py-1 text-xs font-medium text-gray-500 uppercase">
+                <div v-if="activeWorkspace?.starred_spaces?.length" :class="isSidebarMini ? 'px-1 py-2' : 'px-2 py-2'">
+                    <div v-if="!isSidebarMini" class="px-3 py-1 text-xs font-medium text-gray-500 uppercase">
                         Favorites
                     </div>
                     <v-list density="compact" nav>
-                        <v-list-item v-for="space in activeWorkspace?.starred_spaces || []" :key="space.id"
-                            :href="route('spaces.show', [activeWorkspace.id, space.id])" rounded="lg">
-                            <template v-slot:prepend>
-                                <div class="w-2 h-2 rounded-full mr-3"
-                                    :style="{ backgroundColor: space.color || '#6366F1' }" />
+                        <v-tooltip v-for="space in activeWorkspace?.starred_spaces || []" :key="space.id"
+                            location="right" :text="space.name" :disabled="!isSidebarMini">
+                            <template #activator="{ props: tipProps }">
+                                <v-list-item v-bind="tipProps"
+                                    :href="route('spaces.show', [activeWorkspace.id, space.id])" rounded="lg">
+                                    <template v-slot:prepend>
+                                        <div class="w-2 h-2 rounded-full" :class="isSidebarMini ? '' : 'mr-3'"
+                                            :style="{ backgroundColor: space.color || '#6366F1' }" />
+                                    </template>
+                                    <v-list-item-title v-if="!isSidebarMini" class="text-sm">{{ space.name }}</v-list-item-title>
+                                </v-list-item>
                             </template>
-                            <v-list-item-title class="text-sm">{{ space.name }}</v-list-item-title>
-                        </v-list-item>
+                        </v-tooltip>
                     </v-list>
                 </div>
 
                 <!-- Spaces -->
-                <div class="flex-1 overflow-y-auto px-2 py-2">
-                    <div class="flex items-center justify-between px-3 py-1">
+                <div class="flex-1 overflow-y-auto py-2" :class="isSidebarMini ? 'px-1' : 'px-2'">
+                    <div v-if="!isSidebarMini" class="flex items-center justify-between px-3 py-1">
                         <span class="text-xs font-medium text-gray-500 uppercase">Spaces</span>
                         <v-btn icon variant="text" size="x-small" @click="showCreateSpace = true">
                             <v-icon size="16">mdi-plus</v-icon>
@@ -363,11 +373,36 @@ const formatDuration = (seconds) => {
 
                     <!-- View All Spaces Link -->
                     <v-list density="compact" nav class="mb-2">
-                        <v-list-item v-if="activeWorkspace" :href="route('workspaces.show', activeWorkspace.id)"
-                            prepend-icon="mdi-view-grid-outline" title="View All Spaces" rounded="lg" class="text-sm" />
+                        <v-tooltip location="right" text="View All Spaces" :disabled="!isSidebarMini">
+                            <template #activator="{ props: tipProps }">
+                                <v-list-item v-if="activeWorkspace" v-bind="tipProps"
+                                    :href="route('workspaces.show', activeWorkspace.id)"
+                                    prepend-icon="mdi-view-grid-outline"
+                                    :title="isSidebarMini ? undefined : 'View All Spaces'" rounded="lg" class="text-sm" />
+                            </template>
+                        </v-tooltip>
                     </v-list>
 
-                    <v-list density="compact" nav>
+                    <!-- Mini mode: icon-only space list -->
+                    <v-list v-if="isSidebarMini" density="compact" nav>
+                        <v-tooltip v-for="space in activeWorkspace?.spaces || []" :key="space.id"
+                            location="right" :text="space.name">
+                            <template #activator="{ props: tipProps }">
+                                <v-list-item v-bind="tipProps"
+                                    :href="route('spaces.show', [activeWorkspace.id, space.id])" rounded="lg">
+                                    <template v-slot:prepend>
+                                        <div class="w-6 h-6 rounded flex items-center justify-center text-white text-xs"
+                                            :style="{ backgroundColor: space.color || '#6366F1' }">
+                                            <v-icon size="14">{{ space.icon || 'mdi-folder-outline' }}</v-icon>
+                                        </div>
+                                    </template>
+                                </v-list-item>
+                            </template>
+                        </v-tooltip>
+                    </v-list>
+
+                    <!-- Full mode: expandable space tree -->
+                    <v-list v-else density="compact" nav>
                         <template v-for="space in activeWorkspace?.spaces || []" :key="space.id">
                             <v-list-group :value="space.id">
                                 <template v-slot:activator="{ props: groupProps }">
@@ -378,8 +413,7 @@ const formatDuration = (seconds) => {
                                                 <v-icon size="14">{{ space.icon || 'mdi-folder-outline' }}</v-icon>
                                             </div>
                                         </template>
-                                        <v-list-item-title class="text-sm font-medium">{{ space.name
-                                        }}</v-list-item-title>
+                                        <v-list-item-title class="text-sm font-medium">{{ space.name }}</v-list-item-title>
                                     </v-list-item>
                                 </template>
 
@@ -404,23 +438,23 @@ const formatDuration = (seconds) => {
                                             </v-list-item>
                                         </template>
 
-                                        <!-- Lists in Folder -->
+                                        <!-- Products in Folder -->
                                         <v-list-item v-for="list in folder.lists || []" :key="list.id"
                                             :href="route('lists.show', [activeWorkspace?.id, space.id, list.id])"
                                             rounded="lg" class="pl-12">
                                             <template v-slot:prepend>
-                                                <v-icon size="14" class="mr-1">mdi-format-list-bulleted</v-icon>
+                                                <v-icon size="14" class="mr-1">mdi-package-variant-closed</v-icon>
                                             </template>
                                             <v-list-item-title class="text-sm">{{ list.name }}</v-list-item-title>
                                         </v-list-item>
                                     </v-list-group>
                                 </template>
 
-                                <!-- Lists without Folder -->
+                                <!-- Products without Folder -->
                                 <v-list-item v-for="list in space.lists_without_folder || []" :key="list.id"
                                     :href="route('lists.show', [activeWorkspace?.id, space.id, list.id])" rounded="lg" class="pl-8">
                                     <template v-slot:prepend>
-                                        <v-icon size="14" class="mr-1">mdi-format-list-bulleted</v-icon>
+                                        <v-icon size="14" class="mr-1">mdi-package-variant-closed</v-icon>
                                     </template>
                                     <v-list-item-title class="text-sm">{{ list.name }}</v-list-item-title>
                                 </v-list-item>
@@ -430,12 +464,17 @@ const formatDuration = (seconds) => {
                 </div>
 
                 <!-- Sidebar Footer -->
-                <div class="px-3 py-2 border-t border-[#2d2d30]">
-                    <v-btn variant="text" block size="small" class="justify-start"
-                        @click="isSidebarMini = !isSidebarMini">
-                        <v-icon>{{ isSidebarMini ? 'mdi-chevron-right' : 'mdi-chevron-left' }}</v-icon>
-                        <span v-if="!isSidebarMini" class="ml-2 text-sm">Collapse</span>
-                    </v-btn>
+                <div class="border-t border-[#2d2d30]" :class="isSidebarMini ? 'px-1 py-2' : 'px-3 py-2'">
+                    <v-tooltip location="right" text="Expand" :disabled="!isSidebarMini">
+                        <template #activator="{ props: tipProps }">
+                            <v-btn v-bind="tipProps" variant="text" :block="!isSidebarMini" size="small"
+                                :icon="isSidebarMini" :class="isSidebarMini ? 'mx-auto' : 'justify-start'"
+                                @click="isSidebarMini = !isSidebarMini">
+                                <v-icon>{{ isSidebarMini ? 'mdi-chevron-right' : 'mdi-chevron-left' }}</v-icon>
+                                <span v-if="!isSidebarMini" class="ml-2 text-sm">Collapse</span>
+                            </v-btn>
+                        </template>
+                    </v-tooltip>
                 </div>
             </div>
         </v-navigation-drawer>
@@ -448,7 +487,7 @@ const formatDuration = (seconds) => {
         <!-- Search Dialog -->
         <v-dialog v-model="searchDialog" max-width="700" scrollable>
             <v-card>
-                <v-text-field v-model="searchQuery" placeholder="Search tasks, lists, spaces..."
+                <v-text-field v-model="searchQuery" placeholder="Search tasks, products, spaces..."
                     prepend-inner-icon="mdi-magnify" variant="solo" single-line hide-details autofocus
                     class="search-dialog-input" :loading="isSearching" />
                 <v-divider />
@@ -480,12 +519,12 @@ const formatDuration = (seconds) => {
                             </v-list-item>
                         </v-list>
 
-                        <!-- Lists -->
+                        <!-- Products -->
                         <v-list v-if="searchResults.lists.length">
-                            <v-list-subheader>LISTS ({{ searchResults.lists.length }})</v-list-subheader>
+                            <v-list-subheader>PRODUCTS ({{ searchResults.lists.length }})</v-list-subheader>
                             <v-list-item v-for="list in searchResults.lists" :key="list.id" @click="goToList(list)">
                                 <template v-slot:prepend>
-                                    <v-icon>mdi-format-list-bulleted</v-icon>
+                                    <v-icon>mdi-package-variant-closed</v-icon>
                                 </template>
                                 <v-list-item-title>{{ list.name }}</v-list-item-title>
                                 <v-list-item-subtitle>{{ list.space?.name }}</v-list-item-subtitle>
@@ -594,6 +633,15 @@ const formatDuration = (seconds) => {
 
 :deep(.v-list-item__prepend) {
     width: auto !important;
+}
+
+/* Rail mode overrides */
+:deep(.v-navigation-drawer--rail) .v-list-item {
+    justify-content: center;
+}
+
+:deep(.v-navigation-drawer--rail) .v-list-item__prepend {
+    margin-right: 0 !important;
 }
 
 .search-dialog-input :deep(.v-field) {

@@ -34,7 +34,7 @@ class SubtaskController extends Controller
 
             return redirect()->back()->with([
                 'success' => 'Subtask created successfully.',
-                'subtask' => new SubtaskResource($subtask->load(['status', 'priority', 'assignees', 'labels']))
+                'subtask' => new SubtaskResource($subtask->load(['status', 'assignees', 'labels']))
             ]);
         } catch (\Exception $e) {
             return redirect()->back()->withErrors(['error' => 'Failed to create subtask: ' . $e->getMessage()]);

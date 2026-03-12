@@ -22,7 +22,6 @@ class CalendarController extends Controller
 
         $workspace->load([
             'spaces.statuses',
-            'priorities',
             'labels',
             'members',
         ]);
@@ -37,7 +36,6 @@ class CalendarController extends Controller
             })
             ->with([
                 'status',
-                'priority',
                 'assignees',
                 'labels',
                 'task.taskList.space',

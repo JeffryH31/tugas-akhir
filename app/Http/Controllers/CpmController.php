@@ -63,7 +63,6 @@ class CpmController extends Controller
                 'listsWithoutFolder',
             ])->orderBy('position'),
             'members',
-            'priorities',
             'labels',
         ]);
 
@@ -76,7 +75,7 @@ class CpmController extends Controller
             'workspace' => $workspace,
             'space' => $space,
             'list' => $list,
-            'task' => $task->load(['status', 'priority', 'assignees']),
+            'task' => $task->load(['status', 'assignees']),
             'statuses' => $statuses,
             'cpm' => $cpmResult,
         ]);

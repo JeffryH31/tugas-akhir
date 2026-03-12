@@ -220,7 +220,7 @@ const openCreateSpace = () => {
                                     class="text-sm">
                                     <div class="flex items-center justify-between">
                                         <span v-if="!hasSpaces">No spaces available. Create a space first.</span>
-                                        <span v-else>No lists available. Go to a space to create a list.</span>
+                                        <span v-else>No products available. Go to a space to create a product.</span>
                                         <v-btn v-if="!hasSpaces" size="small" variant="text" color="primary"
                                             @click="openCreateSpace">
                                             Create a Space
@@ -233,9 +233,9 @@ const openCreateSpace = () => {
                                 </v-alert>
 
                                 <v-select v-model="quickTaskList" :items="availableLists" item-title="display"
-                                    item-value="id" return-object label="Select List" variant="outlined"
+                                    item-value="id" return-object label="Select Product" variant="outlined"
                                     density="compact" hide-details :disabled="!availableLists.length"
-                                    placeholder="Choose a list..." bg-color="#1e1e1e" base-color="white" color="primary"
+                                    placeholder="Choose a product..." bg-color="#1e1e1e" base-color="white" color="primary"
                                     :menu-props="{ contentClass: 'bg-[#1e1e1e]' }" />
                                 <div class="flex gap-2">
                                     <v-btn color="primary" size="small" @click="createQuickTask"

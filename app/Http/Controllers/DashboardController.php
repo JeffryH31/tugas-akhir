@@ -37,7 +37,6 @@ class DashboardController extends Controller
                     'statuses' => fn($sq) => $sq->orderBy('position'),
                 ])->orderBy('position'),
                 'members',
-                'priorities',
                 'labels',
             ]);
         }

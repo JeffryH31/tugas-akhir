@@ -15,6 +15,7 @@ return new class extends Migration
             $table->id();
             $table->foreignId('space_id')->constrained()->cascadeOnDelete();
             $table->foreignId('folder_id')->nullable()->constrained()->cascadeOnDelete();
+            $table->foreignId('status_id')->nullable()->constrained('statuses')->nullOnDelete();
             $table->string('name');
             $table->string('slug');
             $table->text('description')->nullable();

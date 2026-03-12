@@ -3,7 +3,6 @@
 namespace App\Services;
 
 use App\Models\Activity;
-use App\Models\Priority;
 use App\Models\User;
 use App\Models\Workspace;
 use Illuminate\Support\Collection;
@@ -39,8 +38,6 @@ class WorkspaceService
                 'owner_id' => $owner->id,
                 'is_personal' => $data['is_personal'] ?? false,
             ]);
-
-            $this->createDefaultPriorities($workspace);
 
             Activity::log($workspace, $owner, $workspace, 'created', [
                 'name' => $workspace->name,
@@ -180,22 +177,5 @@ class WorkspaceService
             'overdue_subtasks_count' => $subtaskCounts->overdue ?? 0,
             'members_count' => $workspace->members()->count(),
         ];
-    }
-
-    /**
-     * Create default priorities for workspace
-     */
-    protected function createDefaultPriorities(Workspace $workspace): void
-    {
-        $priorities = [
-            ['name' => 'Urgent', 'color' => '#EF4444', 'level' => 4, 'icon' => 'mdi-flag'],
-            ['name' => 'High', 'color' => '#F59E0B', 'level' => 3, 'icon' => 'mdi-flag'],
-            ['name' => 'Normal', 'color' => '#3B82F6', 'level' => 2, 'icon' => 'mdi-flag', 'is_default' => true],
-            ['name' => 'Low', 'color' => '#6B7280', 'level' => 1, 'icon' => 'mdi-flag'],
-        ];
-
-        foreach ($priorities as $priority) {
-            $workspace->priorities()->create($priority);
-        }
     }
 }

@@ -2,9 +2,9 @@
 
 namespace App\Services;
 
+use App\Enums\PriorityLevel;
 use App\Models\Activity;
 use App\Models\Label;
-use App\Models\Priority;
 use App\Models\Status;
 use App\Models\Task;
 use App\Models\TaskList;
@@ -28,7 +28,6 @@ class TaskService
         $query = $list->tasks()
             ->with([
                 'status',
-                'priority',
                 'assignees',
                 'labels',
                 'subtasks' => fn($q) => $q->with(['status', 'assignees']),
@@ -56,7 +55,6 @@ class TaskService
         return $task->load([
             'taskList.space.workspace',
             'status',
-            'priority',
             'assignees',
             'labels',
             'subtasks' => fn($q) => $q->with(['status', 'assignees', 'dependencies', 'dependents', 'timeEntries.user'])->orderBy('position'),
@@ -79,7 +77,7 @@ class TaskService
                 'name' => $data['name'],
                 'description' => $data['description'] ?? null,
                 'status_id' => $data['status_id'] ?? null,
-                'priority_id' => $data['priority_id'] ?? null,
+                'priority_level' => $data['priority_level'] ?? null,
                 'created_by' => $user->id,
             ]);
 
@@ -99,7 +97,7 @@ class TaskService
                 'name' => $task->name,
             ]);
 
-            return $task->fresh(['status', 'priority', 'assignees', 'labels']);
+            return $task->fresh(['status', 'assignees', 'labels']);
         });
     }
 
@@ -114,14 +112,14 @@ class TaskService
                 'name',
                 'description',
                 'status_id',
-                'priority_id'
+                'priority_level'
             ]);
 
             $task->update([
                 'name' => $data['name'] ?? $task->name,
                 'description' => $data['description'] ?? $task->description,
                 'status_id' => $data['status_id'] ?? $task->status_id,
-                'priority_id' => $data['priority_id'] ?? $task->priority_id,
+                'priority_level' => $data['priority_level'] ?? $task->priority_level,
             ]);
 
             foreach ($oldValues as $key => $oldValue) {
@@ -195,17 +193,17 @@ class TaskService
     /**
      * Change task priority
      */
-    public function changePriority(Task $task, ?Priority $priority, User $user): Task
+    public function changePriority(Task $task, ?int $priorityLevel, User $user): Task
     {
-        $oldPriority = $task->priority;
-        $task->update(['priority_id' => $priority?->id]);
+        $oldPriority = $task->priority_level;
+        $task->update(['priority_level' => $priorityLevel]);
 
         Activity::log($task->taskList->space->workspace, $user, $task, 'priority_changed', [
             'name' => $task->name,
         ], [
             'priority' => [
-                'old' => $oldPriority?->name,
-                'new' => $priority?->name,
+                'old' => $oldPriority?->label(),
+                'new' => $priorityLevel ? PriorityLevel::from($priorityLevel)->label() : null,
             ],
         ]);
 
@@ -353,8 +351,8 @@ class TaskService
             $query->whereIn('status_id', $filters['status_ids']);
         }
 
-        if (!empty($filters['priority_ids'])) {
-            $query->whereIn('priority_id', $filters['priority_ids']);
+        if (!empty($filters['priority_levels'])) {
+            $query->whereIn('priority_level', $filters['priority_levels']);
         }
 
         if (!empty($filters['assignee_ids'])) {

@@ -11,7 +11,6 @@ const props = defineProps({
     statistics: Object,
     burndown: Object,
     statuses: Array,
-    priorities: Array,
     labels: Array,
     members: Array,
 });

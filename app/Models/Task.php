@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Enums\PriorityLevel;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
@@ -18,7 +19,7 @@ class Task extends Model
         'task_id',
         'task_list_id',
         'status_id',
-        'priority_id',
+        'priority_level',
         'name',
         'description',
         'position',
@@ -32,6 +33,7 @@ class Task extends Model
         'is_archived' => 'boolean',
         'is_template' => 'boolean',
         'custom_fields' => 'array',
+        'priority_level' => PriorityLevel::class,
     ];
 
     protected $appends = [
@@ -89,9 +91,9 @@ class Task extends Model
         return $this->belongsTo(Status::class);
     }
 
-    public function priority(): BelongsTo
+    public function getPriorityAttribute(): ?array
     {
-        return $this->belongsTo(Priority::class);
+        return $this->priority_level?->toArray();
     }
 
     public function creator(): BelongsTo

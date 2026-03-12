@@ -54,8 +54,8 @@ const filteredTasks = computed(() => {
             return new Date(a.due_date) - new Date(b.due_date);
         }
         if (sortBy.value === 'priority') {
-            const aPriority = a.priority?.level || 999;
-            const bPriority = b.priority?.level || 999;
+            const aPriority = a.priority_level || 999;
+            const bPriority = b.priority_level || 999;
             return aPriority - bPriority;
         }
         return new Date(b.created_at) - new Date(a.created_at);
@@ -176,7 +176,7 @@ const handleTaskOpen = (task) => {
                     <!-- Group By -->
                     <v-select v-model="groupBy" :items="[
                         { title: 'Status', value: 'status' },
-                        { title: 'List', value: 'list' },
+                        { title: 'Product', value: 'list' },
                         { title: 'Due Date', value: 'due_date' },
                     ]" label="Group by" variant="outlined" density="compact" hide-details style="width: 140px;"
                         bg-color="#1e1e1e" :menu-props="{ contentClass: 'bg-[#1e1e1e]' }" />
