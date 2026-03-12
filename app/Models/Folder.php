@@ -35,7 +35,15 @@ class Folder extends Model
 
         static::creating(function ($folder) {
             if (empty($folder->slug)) {
-                $folder->slug = Str::slug($folder->name);
+                $baseSlug = Str::slug($folder->name);
+                $slug = $baseSlug;
+                $counter = 1;
+                while (static::where('space_id', $folder->space_id)
+                    ->where('slug', $slug)
+                    ->exists()) {
+                    $slug = $baseSlug . '-' . $counter++;
+                }
+                $folder->slug = $slug;
             }
 
             if (empty($folder->position)) {

@@ -17,10 +17,14 @@ class AttachmentResource extends JsonResource
         return [
             'id' => $this->id,
             'name' => $this->name,
-            'file_path' => $this->file_path,
-            'file_size' => $this->file_size,
+            'original_name' => $this->original_name,
+            'path' => $this->path,
+            'size' => $this->size,
+            'size_formatted' => $this->size_formatted,
             'mime_type' => $this->mime_type,
-            'url' => $this->url ?? null,
+            'url' => $this->url,
+            'is_image' => $this->is_image,
+            'icon' => $this->icon,
             'created_at' => $this->created_at?->format('Y-m-d H:i:s'),
             'user' => new UserResource($this->whenLoaded('user')),
         ];

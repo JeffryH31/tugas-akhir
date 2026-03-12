@@ -13,6 +13,7 @@ import { ref, computed } from 'vue';
 import { Head, router } from '@inertiajs/vue3';
 import MainLayout from '@/Layouts/MainLayout.vue';
 import TaskCard from '@/Components/Tasks/TaskCard.vue';
+import { useSnackbar } from '@/composables/useSnackbar';
 
 const props = defineProps({
     workspaces: Array,
@@ -25,6 +26,7 @@ const props = defineProps({
 
 // Active tab for tasks
 const activeTaskTab = ref('my-tasks');
+const { showSnackbar } = useSnackbar();
 
 // Format duration (input is in minutes from backend)
 const formatDuration = (minutes) => {
@@ -38,6 +40,7 @@ const formatDuration = (minutes) => {
 const showQuickCreate = ref(false);
 const quickTaskName = ref('');
 const quickTaskList = ref(null);
+const isProcessing = ref(false);
 
 // Get all lists from active workspace
 const availableLists = computed(() => {
@@ -85,7 +88,8 @@ const hasSpaces = computed(() => {
 });
 
 const createQuickTask = () => {
-    if (!quickTaskName.value.trim() || !quickTaskList.value) return;
+    if (!quickTaskName.value.trim() || !quickTaskList.value || isProcessing.value) return;
+    isProcessing.value = true;
 
     router.post(
         route('tasks.store', [
@@ -100,7 +104,8 @@ const createQuickTask = () => {
                 quickTaskName.value = '';
                 quickTaskList.value = null;
                 showQuickCreate.value = false;
-            }
+            },
+            onFinish: () => { isProcessing.value = false; }
         }
     );
 };
@@ -110,7 +115,7 @@ const recentTasks = computed(() => props.myTasks?.slice(0, 10) || []);
 
 // Handle task complete — tasks don't support completion (only subtasks do)
 const handleTaskComplete = (task) => {
-    // No-op: Task model doesn't have completed_at
+    showSnackbar('Tasks cannot be completed directly. Complete subtasks instead.', 'info');
 };
 
 // Handle task open
@@ -128,7 +133,8 @@ const showCreateWorkspace = ref(false);
 const newWorkspaceName = ref('');
 
 const createWorkspace = () => {
-    if (!newWorkspaceName.value.trim()) return;
+    if (!newWorkspaceName.value.trim() || isProcessing.value) return;
+    isProcessing.value = true;
     router.post(route('workspaces.store'), {
         name: newWorkspaceName.value.trim(),
     }, {
@@ -136,11 +142,10 @@ const createWorkspace = () => {
         onSuccess: () => {
             newWorkspaceName.value = '';
             showCreateWorkspace.value = false;
-            if (window.showSnackbar) {
-                window.showSnackbar('Workspace created successfully!', 'success');
-            }
+                showSnackbar('Workspace created successfully!', 'success');
             router.reload({ only: ['workspaces', 'activeWorkspace'] });
-        }
+        },
+        onFinish: () => { isProcessing.value = false; }
     });
 };
 
@@ -157,9 +162,7 @@ const goToFirstSpaceOrWorkspaces = () => {
         router.visit(route('spaces.show', [props.activeWorkspace.id, spaces[0].id]));
     } else {
         // No spaces exist, create a space
-        if (window.showSnackbar) {
-            window.showSnackbar('Create a space first to start organizing your work', 'info');
-        }
+        showSnackbar('Create a space first to start organizing your work', 'info');
         // Redirect to workspace to create spaces
         router.visit(route('workspaces.show', props.activeWorkspace.id));
     }
@@ -239,6 +242,7 @@ const openCreateSpace = () => {
                                     :menu-props="{ contentClass: 'bg-[#1e1e1e]' }" />
                                 <div class="flex gap-2">
                                     <v-btn color="primary" size="small" @click="createQuickTask"
+                                        :loading="isProcessing"
                                         :disabled="!quickTaskName.trim() || !quickTaskList">
                                         Create Task
                                     </v-btn>
@@ -411,7 +415,7 @@ const openCreateSpace = () => {
                 <v-card-actions>
                     <v-spacer />
                     <v-btn variant="text" @click="showCreateWorkspace = false">Cancel</v-btn>
-                    <v-btn color="primary" @click="createWorkspace">Create</v-btn>
+                    <v-btn color="primary" :loading="isProcessing" @click="createWorkspace">Create</v-btn>
                 </v-card-actions>
             </v-card>
         </v-dialog>

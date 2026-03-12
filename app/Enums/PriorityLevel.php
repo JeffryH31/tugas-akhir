@@ -29,18 +29,12 @@ enum PriorityLevel: int
         };
     }
 
-    public function icon(): string
-    {
-        return 'mdi-flag';
-    }
-
     public function toArray(): array
     {
         return [
             'level' => $this->value,
             'name' => $this->label(),
             'color' => $this->color(),
-            'icon' => $this->icon(),
         ];
     }
 

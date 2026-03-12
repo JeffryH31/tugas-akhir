@@ -66,15 +66,18 @@ class SubtaskService
     public function update(Subtask $subtask, array $data, User $user): Subtask
     {
         return DB::transaction(function () use ($subtask, $data, $user) {
-            $subtask->update(array_filter([
-                'name' => $data['name'] ?? $subtask->name,
-                'description' => $data['description'] ?? $subtask->description,
-                'status_id' => $data['status_id'] ?? $subtask->status_id,
-                'priority_level' => $data['priority_level'] ?? $subtask->priority_level,
-                'start_date' => $data['start_date'] ?? $subtask->start_date,
-                'due_date' => $data['due_date'] ?? $subtask->due_date,
-                'time_estimate' => $data['time_estimate'] ?? $subtask->time_estimate,
-            ], fn($value) => !is_null($value)));
+            $updateData = [];
+            $fields = ['name', 'description', 'status_id', 'priority_level', 'start_date', 'due_date', 'time_estimate'];
+
+            foreach ($fields as $field) {
+                if (array_key_exists($field, $data)) {
+                    $updateData[$field] = $data[$field];
+                }
+            }
+
+            if (!empty($updateData)) {
+                $subtask->update($updateData);
+            }
 
             // Update assignees if provided
             if (isset($data['assignee_ids'])) {

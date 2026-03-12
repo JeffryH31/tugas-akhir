@@ -53,10 +53,16 @@ class Task extends Model
             if (empty($task->task_id)) {
                 $list = TaskList::with('space.workspace')->find($task->task_list_id);
                 $prefix = strtoupper(substr($list->space->workspace->name, 0, 3));
-                $count = Task::whereHas('taskList.space', function ($q) use ($list) {
+                $count = Task::withTrashed()->whereHas('taskList.space', function ($q) use ($list) {
                     $q->where('workspace_id', $list->space->workspace_id);
                 })->count() + 1;
                 $task->task_id = $prefix . '-' . $count;
+
+                // Ensure uniqueness
+                while (Task::withTrashed()->where('task_id', $task->task_id)->exists()) {
+                    $count++;
+                    $task->task_id = $prefix . '-' . $count;
+                }
             }
 
             if (empty($task->position)) {
@@ -72,6 +78,15 @@ class Task extends Model
         });
 
         static::saved(function ($task) {
+        });
+
+        static::deleting(function ($task) {
+            if ($task->isForceDeleting()) return;
+            $task->subtasks()->each(fn($subtask) => $subtask->delete());
+        });
+
+        static::restoring(function ($task) {
+            $task->subtasks()->onlyTrashed()->each(fn($subtask) => $subtask->restore());
         });
     }
 
@@ -152,13 +167,18 @@ class Task extends Model
 
     public function getProgressAttribute(): float
     {
-        $subtasks = $this->subtasks;
-        if ($subtasks->isEmpty()) {
-            return 0;
+        // Use loaded subtasks if available, otherwise use count queries to avoid N+1
+        if ($this->relationLoaded('subtasks')) {
+            $subtasks = $this->subtasks;
+            if ($subtasks->isEmpty()) return 0;
+            $completed = $subtasks->filter(fn($t) => $t->isCompleted())->count();
+            return round(($completed / $subtasks->count()) * 100, 1);
         }
 
-        $completed = $subtasks->filter(fn($t) => $t->isCompleted())->count();
-        return round(($completed / $subtasks->count()) * 100, 1);
+        $total = $this->subtasks()->count();
+        if ($total === 0) return 0;
+        $completed = $this->subtasks()->whereNotNull('completed_at')->count();
+        return round(($completed / $total) * 100, 1);
     }
 
 

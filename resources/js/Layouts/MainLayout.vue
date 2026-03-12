@@ -2,6 +2,8 @@
 import { ref, computed, onMounted, onUnmounted, watch } from 'vue';
 import { Head, Link, router, usePage } from '@inertiajs/vue3';
 import { useDisplay } from 'vuetify';
+import { useSnackbar } from '@/composables/useSnackbar';
+import { useConfirmDialog } from '@/composables/useConfirmDialog';
 
 const props = defineProps({
     title: String,
@@ -10,16 +12,9 @@ const props = defineProps({
 const page = usePage();
 const { mobile, smAndDown } = useDisplay();
 
-// Snackbar for notifications
-const snackbar = ref(false);
-const snackbarText = ref('');
-const snackbarColor = ref('success');
-
-const showSnackbar = (message, color = 'success') => {
-    snackbarText.value = message;
-    snackbarColor.value = color;
-    snackbar.value = true;
-};
+// Snackbar — use composable for global state
+const { snackbar, snackbarText, snackbarColor, showSnackbar } = useSnackbar();
+const { isOpen: confirmOpen, dialogTitle, dialogMessage, dialogColor, onConfirm, onCancel } = useConfirmDialog();
 
 // Sidebar state
 const isSidebarOpen = ref(!mobile.value);
@@ -127,9 +122,11 @@ const showCreateSpace = ref(false);
 const newSpaceName = ref('');
 const newSpaceDescription = ref('');
 const newSpaceColor = ref('#6366F1');
+const isCreatingSpace = ref(false);
 
 const createSpace = () => {
-    if (!newSpaceName.value.trim() || !activeWorkspace.value) return;
+    if (!newSpaceName.value.trim() || !activeWorkspace.value || isCreatingSpace.value) return;
+    isCreatingSpace.value = true;
 
     router.post(
         route('spaces.store', activeWorkspace.value.id),
@@ -148,6 +145,7 @@ const createSpace = () => {
                 showSnackbar('Space created successfully!', 'success');
                 router.reload({ only: ['activeWorkspace'] });
             },
+            onFinish: () => { isCreatingSpace.value = false; }
         }
     );
 };
@@ -217,17 +215,26 @@ const formatDuration = (seconds) => {
             </v-chip>
 
             <!-- Create Button -->
-            <v-btn color="primary" size="small" rounded="lg" class="mr-2">
-                <v-icon start size="18">mdi-plus</v-icon>
-                <span v-if="!smAndDown">Create</span>
-            </v-btn>
+            <v-menu location="bottom end">
+                <template v-slot:activator="{ props: createMenuProps }">
+                    <v-btn v-bind="createMenuProps" color="primary" size="small" rounded="lg" class="mr-2">
+                        <v-icon start size="18">mdi-plus</v-icon>
+                        <span v-if="!smAndDown">Create</span>
+                    </v-btn>
+                </template>
+                <v-list density="compact" min-width="180">
+                    <v-list-item prepend-icon="mdi-folder-plus-outline" title="New Space" @click="showCreateSpace = true" />
+                </v-list>
+            </v-menu>
 
             <!-- Notifications -->
-            <v-btn icon variant="text" size="small" class="mr-1">
-                <v-badge color="error" dot>
-                    <v-icon>mdi-bell-outline</v-icon>
-                </v-badge>
-            </v-btn>
+            <v-tooltip text="Notifications coming soon" location="bottom">
+                <template v-slot:activator="{ props: tooltipProps }">
+                    <v-btn v-bind="tooltipProps" icon variant="text" size="small" class="mr-1">
+                        <v-icon>mdi-bell-outline</v-icon>
+                    </v-btn>
+                </template>
+            </v-tooltip>
 
             <!-- User Menu -->
             <v-menu v-model="userMenuOpen" :close-on-content-click="false" location="bottom end">
@@ -574,7 +581,7 @@ const formatDuration = (seconds) => {
                 <v-card-actions>
                     <v-spacer />
                     <v-btn variant="text" @click="showCreateSpace = false">Cancel</v-btn>
-                    <v-btn color="primary" @click="createSpace">Create Space</v-btn>
+                    <v-btn color="primary" :loading="isCreatingSpace" @click="createSpace">Create Space</v-btn>
                 </v-card-actions>
             </v-card>
         </v-dialog>
@@ -588,6 +595,19 @@ const formatDuration = (seconds) => {
                 </v-btn>
             </template>
         </v-snackbar>
+
+        <!-- Global Confirm Dialog -->
+        <v-dialog v-model="confirmOpen" max-width="400" persistent>
+            <v-card>
+                <v-card-title :class="`text-${dialogColor}`">{{ dialogTitle }}</v-card-title>
+                <v-card-text>{{ dialogMessage }}</v-card-text>
+                <v-card-actions>
+                    <v-spacer />
+                    <v-btn variant="text" @click="onCancel">Cancel</v-btn>
+                    <v-btn :color="dialogColor" @click="onConfirm">Confirm</v-btn>
+                </v-card-actions>
+            </v-card>
+        </v-dialog>
     </v-app>
 </template>
 

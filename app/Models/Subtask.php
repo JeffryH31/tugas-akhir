@@ -55,8 +55,14 @@ class Subtask extends Model
         static::creating(function ($subtask) {
             if (empty($subtask->subtask_id)) {
                 $task = Task::find($subtask->task_id);
-                $count = static::where('task_id', $subtask->task_id)->count();
-                $subtask->subtask_id = $task->task_id . '-' . ($count + 1);
+                $count = static::withTrashed()->where('task_id', $subtask->task_id)->count() + 1;
+                $subtask->subtask_id = $task->task_id . '-' . $count;
+
+                // Ensure uniqueness
+                while (static::withTrashed()->where('subtask_id', $subtask->subtask_id)->exists()) {
+                    $count++;
+                    $subtask->subtask_id = $task->task_id . '-' . $count;
+                }
             }
 
             if (is_null($subtask->position)) {
@@ -65,6 +71,15 @@ class Subtask extends Model
                     ->max('position');
                 $subtask->position = $maxPosition !== null ? $maxPosition + 1 : 0;
             }
+        });
+
+        static::deleting(function ($subtask) {
+            if ($subtask->isForceDeleting()) return;
+            $subtask->timeEntries()->each(fn($entry) => $entry->delete());
+        });
+
+        static::restoring(function ($subtask) {
+            $subtask->timeEntries()->onlyTrashed()->each(fn($entry) => $entry->restore());
         });
     }
 

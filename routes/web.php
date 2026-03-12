@@ -161,6 +161,11 @@ Route::middleware(['auth:sanctum', config('jetstream.auth_session'), 'verified']
                                             Route::delete('/', [SubtaskController::class, 'destroy'])->name('tasks.subtasks.destroy');
                                             Route::post('/complete', [SubtaskController::class, 'complete'])->name('tasks.subtasks.complete');
                                             Route::post('/reopen', [SubtaskController::class, 'reopen'])->name('tasks.subtasks.reopen');
+
+                                            Route::prefix('labels')->group(function () {
+                                                Route::post('/', [SubtaskController::class, 'addLabel'])->name('tasks.subtasks.labels.add');
+                                                Route::delete('/', [SubtaskController::class, 'removeLabel'])->name('tasks.subtasks.labels.remove');
+                                            });
                                         });
                                     });
 

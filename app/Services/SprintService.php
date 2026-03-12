@@ -4,6 +4,7 @@ namespace App\Services;
 
 use App\Models\Space;
 use App\Models\Sprint;
+use App\Models\Subtask;
 use Illuminate\Support\Facades\DB;
 
 class SprintService
@@ -80,8 +81,7 @@ class SprintService
      */
     public function addSubtaskToSprint(Sprint $sprint, int $subtaskId): void
     {
-        DB::table('subtasks')
-            ->where('id', $subtaskId)
+        Subtask::where('id', $subtaskId)
             ->update(['sprint_id' => $sprint->id]);
     }
 
@@ -90,8 +90,7 @@ class SprintService
      */
     public function removeSubtaskFromSprint(int $subtaskId): void
     {
-        DB::table('subtasks')
-            ->where('id', $subtaskId)
+        Subtask::where('id', $subtaskId)
             ->update(['sprint_id' => null]);
     }
 
@@ -132,13 +131,8 @@ class SprintService
      */
     public function getBacklogSubtasks(Space $space): \Illuminate\Support\Collection
     {
-        return DB::table('subtasks')
-            ->join('tasks', 'subtasks.task_id', '=', 'tasks.id')
-            ->join('task_lists', 'tasks.task_list_id', '=', 'task_lists.id')
-            ->where('task_lists.space_id', $space->id)
-            ->whereNull('subtasks.sprint_id')
-            ->whereNull('subtasks.deleted_at')
-            ->select('subtasks.*')
+        return Subtask::whereNull('sprint_id')
+            ->whereHas('task.taskList', fn($q) => $q->where('space_id', $space->id))
             ->get();
     }
 

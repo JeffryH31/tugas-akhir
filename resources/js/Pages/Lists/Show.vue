@@ -76,6 +76,8 @@ const viewMode = ref('board'); // board, list, calendar, gantt
 // CPM data for Gantt chart (only for subtasks)
 const cpmData = ref(null);
 const loadingCpm = ref(false);
+const isAddingTask = ref(false);
+const isDeleting = ref(false);
 
 // Calendar state
 const currentCalendarDate = ref(new Date());
@@ -89,6 +91,32 @@ const searchQuery = ref('');
 // Members and priorities from workspace
 const members = computed(() => props.workspace?.members || []);
 const labels = computed(() => props.workspace?.labels || []);
+
+// Filtered tasks by status — applies search, priority, and assignee filters
+const filteredTasksByStatus = computed(() => {
+    const result = {};
+    for (const statusId in localTasksByStatus.value) {
+        let tasks = localTasksByStatus.value[statusId] || [];
+
+        if (searchQuery.value) {
+            const q = searchQuery.value.toLowerCase();
+            tasks = tasks.filter(t => t.name?.toLowerCase().includes(q));
+        }
+
+        if (filterPriority.value.length > 0) {
+            tasks = tasks.filter(t => filterPriority.value.includes(t.priority_level));
+        }
+
+        if (filterAssignee.value.length > 0) {
+            tasks = tasks.filter(t =>
+                t.assignees?.some(a => filterAssignee.value.includes(a.id))
+            );
+        }
+
+        result[statusId] = tasks;
+    }
+    return result;
+});
 
 // Handle task moved between columns
 const handleTaskMoved = ({ task, statusId, newIndex }) => {
@@ -164,6 +192,9 @@ const refreshTasks = () => {
 
 // Handle add task
 const handleAddTask = ({ name, status_id }) => {
+    if (isAddingTask.value) return;
+    isAddingTask.value = true;
+
     // If we're viewing subtasks, use subtask route
     if (props.parentTask) {
         const data = {
@@ -190,7 +221,8 @@ const handleAddTask = ({ name, status_id }) => {
                     if (window.showSnackbar) {
                         window.showSnackbar('Failed to add subtask', 'error');
                     }
-                }
+                },
+                onFinish: () => { isAddingTask.value = false; }
             }
         );
     } else {
@@ -215,7 +247,8 @@ const handleAddTask = ({ name, status_id }) => {
                     if (window.showSnackbar) {
                         window.showSnackbar('Failed to add task', 'error');
                     }
-                }
+                },
+                onFinish: () => { isAddingTask.value = false; }
             }
         );
     }
@@ -307,12 +340,15 @@ const archiveList = () => {
 const showDeleteList = ref(false);
 
 const confirmDeleteList = () => {
+    if (isDeleting.value) return;
+    isDeleting.value = true;
     router.delete(
         route('lists.destroy', [props.workspace.id, props.space.id, props.list.id]),
         {
             onSuccess: () => {
                 router.visit(route('spaces.show', [props.workspace.id, props.space.id]));
-            }
+            },
+            onFinish: () => { isDeleting.value = false; }
         }
     );
 };
@@ -397,7 +433,7 @@ const calendarDays = computed(() => {
 
 // Get all items (tasks or subtasks) for calendar view
 const allItems = computed(() => {
-    return Object.values(localTasksByStatus.value).flat();
+    return Object.values(filteredTasksByStatus.value).flat();
 });
 
 // Get items for a specific date
@@ -752,7 +788,7 @@ provide('cpmData', cpmData);
                 <div class="board-columns">
                     <!-- Status Columns -->
                     <StatusColumn v-for="status in statuses" :key="status.id" :status="status" :statuses="statuses"
-                        :tasks="localTasksByStatus[status.id] || []" :workspace="workspace" :space="space" :list="list"
+                        :tasks="filteredTasksByStatus[status.id] || []" :workspace="workspace" :space="space" :list="list"
                         :parent-task="parentTask" @task-moved="handleTaskMoved" @task-complete="handleTaskComplete"
                         @task-open="handleTaskOpen" @add-task="handleAddTask" />
 
@@ -799,7 +835,7 @@ provide('cpmData', cpmData);
                         </thead>
                         <tbody>
                             <template v-for="status in statuses" :key="status.id">
-                                <tr v-for="task in localTasksByStatus[status.id] || []" :key="task.id" class="task-row"
+                                <tr v-for="task in filteredTasksByStatus[status.id] || []" :key="task.id" class="task-row"
                                     @click="handleTaskOpen(task)">
                                     <td>
                                         <v-checkbox-btn :model-value="!!task.completed_at"
@@ -844,7 +880,7 @@ provide('cpmData', cpmData);
                                     </td>
                                 </tr>
                             </template>
-                            <tr v-if="!Object.values(localTasksByStatus).some(tasks => tasks.length)">
+                            <tr v-if="!Object.values(filteredTasksByStatus).some(tasks => tasks.length)">
                                 <td colspan="6" class="text-center py-12 text-gray-500">
                                     <v-icon size="48" class="mb-2">mdi-checkbox-marked-circle-outline</v-icon>
                                     <div>No tasks yet</div>

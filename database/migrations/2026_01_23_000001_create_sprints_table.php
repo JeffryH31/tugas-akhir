@@ -22,6 +22,8 @@ return new class extends Migration
             $table->integer('position')->default(0);
             $table->timestamps();
             $table->softDeletes();
+
+            $table->index('is_active');
         });
     }
 

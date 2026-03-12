@@ -2,6 +2,9 @@
 import { ref, computed } from 'vue';
 import { router } from '@inertiajs/vue3';
 import MainLayout from '@/Layouts/MainLayout.vue';
+import { useConfirmDialog } from '@/composables/useConfirmDialog';
+
+const { confirm: confirmDialog } = useConfirmDialog();
 
 const props = defineProps({
     workspace: Object,
@@ -14,6 +17,7 @@ const props = defineProps({
 
 const showCreateSprint = ref(false);
 const editingSprintId = ref(null);
+const isSaving = ref(false);
 const sprintForm = ref({
     name: '',
     goal: '',
@@ -86,10 +90,11 @@ const editSprint = (sprint) => {
 };
 
 const saveSprint = () => {
-    if (!validateForm()) {
-        window.showSnackbar('Please fill in all required fields', 'error');
+    if (!validateForm() || isSaving.value) {
+        if (!validateForm()) window.showSnackbar('Please fill in all required fields', 'error');
         return;
     }
+    isSaving.value = true;
 
     if (editingSprintId.value) {
         router.patch(
@@ -102,6 +107,7 @@ const saveSprint = () => {
                     resetForm();
                     window.showSnackbar('Sprint updated!', 'success');
                 },
+                onFinish: () => { isSaving.value = false; }
             }
         );
     } else {
@@ -115,6 +121,7 @@ const saveSprint = () => {
                     resetForm();
                     window.showSnackbar('Sprint created!', 'success');
                 },
+                onFinish: () => { isSaving.value = false; }
             }
         );
     }
@@ -135,8 +142,8 @@ const isSprintCompleted = (sprint) => {
     return today > end;
 };
 
-const deleteSprint = (sprint) => {
-    if (confirm('Are you sure you want to delete this sprint? All tasks will be moved to backlog.')) {
+const deleteSprint = async (sprint) => {
+    if (await confirmDialog('Are you sure you want to delete this sprint? All tasks will be moved to backlog.', 'Delete Sprint')) {
         router.delete(
             route('sprints.destroy', [props.workspace.id, props.space.id, sprint.id]),
             {
@@ -301,7 +308,7 @@ const formatDate = (dateString) => {
                 <v-card-actions>
                     <v-spacer />
                     <v-btn variant="text" @click="showCreateSprint = false">Cancel</v-btn>
-                    <v-btn color="primary" @click="saveSprint">
+                    <v-btn color="primary" :loading="isSaving" @click="saveSprint">
                         {{ editingSprintId ? 'Update' : 'Create' }}
                     </v-btn>
                 </v-card-actions>

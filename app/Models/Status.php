@@ -45,6 +45,16 @@ class Status extends Model
         return $this->belongsTo(Space::class);
     }
 
+    public function tasks(): \Illuminate\Database\Eloquent\Relations\HasMany
+    {
+        return $this->hasMany(Task::class);
+    }
+
+    public function subtasks(): \Illuminate\Database\Eloquent\Relations\HasMany
+    {
+        return $this->hasMany(Subtask::class);
+    }
+
 
     public function scopeOpen($query)
     {

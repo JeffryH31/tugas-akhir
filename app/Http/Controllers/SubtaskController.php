@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Http\Requests\StoreSubtaskRequest;
 use App\Http\Requests\UpdateSubtaskRequest;
 use App\Http\Resources\SubtaskResource;
+use App\Models\Label;
 use App\Models\Space;
 use App\Models\Subtask;
 use App\Models\Task;
@@ -103,6 +104,44 @@ class SubtaskController extends Controller
             return redirect()->back()->with('success', 'Subtasks reordered successfully.');
         } catch (\Exception $e) {
             return redirect()->back()->withErrors(['error' => 'Failed to reorder subtasks: ' . $e->getMessage()]);
+        }
+    }
+
+    /**
+     * Add label to subtask.
+     */
+    public function addLabel(Request $request, Workspace $workspace, Space $space, TaskList $list, Task $task, Subtask $subtask): RedirectResponse
+    {
+        $validated = $request->validate([
+            'label_id' => 'required|exists:labels,id',
+        ]);
+
+        try {
+            $label = Label::findOrFail($validated['label_id']);
+            $subtask->labels()->syncWithoutDetaching([$label->id]);
+
+            return redirect()->back()->with('success', 'Label added successfully.');
+        } catch (\Exception $e) {
+            return redirect()->back()->withErrors(['error' => 'Failed to add label: ' . $e->getMessage()]);
+        }
+    }
+
+    /**
+     * Remove label from subtask.
+     */
+    public function removeLabel(Request $request, Workspace $workspace, Space $space, TaskList $list, Task $task, Subtask $subtask): RedirectResponse
+    {
+        $validated = $request->validate([
+            'label_id' => 'required|exists:labels,id',
+        ]);
+
+        try {
+            $label = Label::findOrFail($validated['label_id']);
+            $subtask->labels()->detach($label->id);
+
+            return redirect()->back()->with('success', 'Label removed successfully.');
+        } catch (\Exception $e) {
+            return redirect()->back()->withErrors(['error' => 'Failed to remove label: ' . $e->getMessage()]);
         }
     }
 }

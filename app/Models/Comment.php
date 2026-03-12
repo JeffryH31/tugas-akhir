@@ -31,6 +31,17 @@ class Comment extends Model
         'edited_at' => 'datetime',
     ];
 
+    protected static function boot(): void
+    {
+        parent::boot();
+
+        static::saving(function ($comment) {
+            if ($comment->isDirty('content')) {
+                $comment->content = strip_tags($comment->content, '<p><br><b><i><u><strong><em><ul><ol><li><a><code><pre><blockquote>');
+            }
+        });
+    }
+
 
     public function task(): BelongsTo
     {

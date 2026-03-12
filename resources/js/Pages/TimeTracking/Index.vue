@@ -2,6 +2,7 @@
 import { ref, computed, watch, onMounted, onUnmounted } from 'vue';
 import { Head, router, usePage } from '@inertiajs/vue3';
 import MainLayout from '@/Layouts/MainLayout.vue';
+import { useConfirmDialog } from '@/composables/useConfirmDialog';
 
 const props = defineProps({
     activeWorkspace: Object,
@@ -139,8 +140,9 @@ const saveEntry = () => {
     }
 };
 
-const deleteEntry = (entry) => {
-    if (confirm('Are you sure you want to delete this time entry?')) {
+const deleteEntry = async (entry) => {
+    const { confirm } = useConfirmDialog();
+    if (await confirm('Are you sure you want to delete this time entry?', 'Delete Time Entry')) {
         router.delete(route('time-entries.destroy', entry.id), {
             preserveScroll: true
         });

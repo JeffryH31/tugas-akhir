@@ -26,9 +26,11 @@ return new class extends Migration
             $table->boolean('is_running')->default(false);
             
             $table->timestamps();
+            $table->softDeletes();
 
             $table->index(['subtask_id', 'user_id']);
             $table->index(['user_id', 'started_at']);
+            $table->index('is_running');
         });
     }
 

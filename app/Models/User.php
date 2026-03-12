@@ -143,7 +143,7 @@ class User extends Authenticatable
     public function getMyTasks()
     {
         return $this->assignedTasks()
-            ->with(['taskList.space', 'status', 'priority'])
+            ->with(['taskList.space', 'status'])
             ->orderBy('position')
             ->get();
     }

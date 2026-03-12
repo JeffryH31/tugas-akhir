@@ -5,10 +5,11 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\SoftDeletes;
 
 class TimeEntry extends Model
 {
-    use HasFactory;
+    use HasFactory, SoftDeletes;
 
     protected $fillable = [
         'subtask_id',
@@ -32,29 +33,17 @@ class TimeEntry extends Model
     {
         parent::boot();
 
-        static::created(function ($entry) {
-            if ($entry->subtask) {
-                $entry->subtask->update([
-                    'time_spent' => $entry->subtask->timeEntries()->sum('duration')
+        $recalcTimeSpent = function ($entry) {
+            if ($entry->subtask_id) {
+                Subtask::where('id', $entry->subtask_id)->update([
+                    'time_spent' => TimeEntry::where('subtask_id', $entry->subtask_id)->sum('duration'),
                 ]);
             }
-        });
+        };
 
-        static::updated(function ($entry) {
-            if ($entry->subtask) {
-                $entry->subtask->update([
-                    'time_spent' => $entry->subtask->timeEntries()->sum('duration')
-                ]);
-            }
-        });
-
-        static::deleted(function ($entry) {
-            if ($entry->subtask) {
-                $entry->subtask->update([
-                    'time_spent' => $entry->subtask->timeEntries()->sum('duration')
-                ]);
-            }
-        });
+        static::created($recalcTimeSpent);
+        static::updated($recalcTimeSpent);
+        static::deleted($recalcTimeSpent);
     }
 
 

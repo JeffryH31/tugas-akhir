@@ -20,7 +20,6 @@ class CommentService
             ->with([
                 'user',
                 'replies' => fn($q) => $q->with('user')->orderBy('created_at'),
-                'reactions' => fn($q) => $q->with('user'),
             ])
             ->orderBy('created_at', 'desc')
             ->get();

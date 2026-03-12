@@ -4,6 +4,9 @@ import { Head, router, usePage } from '@inertiajs/vue3';
 import draggable from 'vuedraggable';
 import MainLayout from '@/Layouts/MainLayout.vue';
 import { PRIORITIES } from '@/constants/priorities';
+import { useConfirmDialog } from '@/composables/useConfirmDialog';
+
+const { confirm: confirmDialog } = useConfirmDialog();
 
 const props = defineProps({
     workspace: Object,
@@ -57,6 +60,7 @@ const isSubmittingComment = ref(false);
 const showAddSubtask = ref(false);
 const newSubtaskName = ref('');
 const subtasksDragging = ref(false);
+const isProcessing = ref(false);
 
 // Local subtasks list for drag-drop reactivity
 const localSubtasks = computed({
@@ -157,8 +161,8 @@ const duplicateTask = () => {
     );
 };
 
-const deleteTask = () => {
-    if (confirm('Are you sure you want to delete this task?')) {
+const deleteTask = async () => {
+    if (await confirmDialog('Are you sure you want to delete this task?', 'Delete Task')) {
         router.delete(
             route('tasks.destroy', [props.workspace.id, props.space.id, props.list.id, props.task.id]),
             {
@@ -265,7 +269,8 @@ const getReactionCount = (comment, emoji) => {
 };
 
 const addSubtask = () => {
-    if (!newSubtaskName.value.trim()) return;
+    if (!newSubtaskName.value.trim() || isProcessing.value) return;
+    isProcessing.value = true;
 
     router.post(
         route('tasks.store', [props.workspace.id, props.space.id, props.list.id]),
@@ -281,6 +286,7 @@ const addSubtask = () => {
                 showAddSubtask.value = false;
             },
             onFinish: () => {
+                isProcessing.value = false;
                 router.reload({ only: ['task'] });
                 window.showSnackbar('Subtask added!', 'success');
             }
@@ -333,14 +339,14 @@ const saveSubtaskEdit = (subtask) => {
     );
 };
 
-const deleteSubtask = (subtask) => {
+const deleteSubtask = async (subtask) => {
     // Prevent deleting the last subtask
     if (props.task.subtasks?.length <= 1) {
         window.showSnackbar('Cannot delete the last subtask. Tasks must have at least one subtask.', 'error');
         return;
     }
 
-    if (confirm(`Delete subtask "${subtask.name}"?`)) {
+    if (await confirmDialog(`Delete subtask "${subtask.name}"?`, 'Delete Subtask')) {
         router.delete(
             route('tasks.destroy', [props.workspace.id, props.space.id, props.list.id, subtask.id]),
             {

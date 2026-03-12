@@ -160,7 +160,7 @@ const openDetail = () => {
                     <v-tooltip v-if="priority" location="top">
                         <template #activator="{ props: tp }">
                             <div v-bind="tp" class="cu-card__meta-item">
-                                <v-icon size="14" :style="{ color: priority.color }">{{ priority.icon }}</v-icon>
+                                <v-icon size="14" :style="{ color: priority.color }">mdi-flag</v-icon>
                             </div>
                         </template>
                         <span>{{ priority.name }}</span>

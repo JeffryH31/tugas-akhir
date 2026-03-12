@@ -75,7 +75,15 @@ class Attachment extends Model
 
     public function delete(): bool
     {
-        Storage::disk($this->disk)->delete($this->path);
-        return parent::delete();
+        $disk = $this->disk;
+        $path = $this->path;
+
+        $result = parent::delete();
+
+        if ($result) {
+            Storage::disk($disk)->delete($path);
+        }
+
+        return $result;
     }
 }

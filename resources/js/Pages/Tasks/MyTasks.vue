@@ -131,7 +131,9 @@ const taskCount = computed(() => filteredTasks.value.length);
 
 // Handle task complete — tasks don't support completion (only subtasks do)
 const handleTaskComplete = (task) => {
-    // No-op: Task model doesn't have completed_at
+    if (window.showSnackbar) {
+        window.showSnackbar('Tasks cannot be completed directly. Complete subtasks instead.', 'info');
+    }
 };
 
 // Handle task open
