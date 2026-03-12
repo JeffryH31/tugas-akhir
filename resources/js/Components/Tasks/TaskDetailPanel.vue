@@ -357,6 +357,11 @@ const toggleSubtaskPanel = (subtask) => {
                 if (window.showSnackbar) {
                     window.showSnackbar(wasCompleted ? 'Subtask reopened!' : 'Subtask completed!', 'success');
                 }
+            },
+            onError: (errors) => {
+                if (errors.dependency && window.showSnackbar) {
+                    window.showSnackbar(errors.dependency, 'error');
+                }
             }
         }
     );
@@ -1104,6 +1109,11 @@ const toggleComplete = () => {
                     window.showSnackbar(wasCompleted ? 'Subtask reopened!' : 'Subtask completed!', 'success');
                 }
                 router.reload({ only: ['task', 'tasksByStatus'] });
+            },
+            onError: (errors) => {
+                if (errors.dependency && window.showSnackbar) {
+                    window.showSnackbar(errors.dependency, 'error');
+                }
             }
         }
     );

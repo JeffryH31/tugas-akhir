@@ -208,6 +208,23 @@ class Subtask extends Model
         return !is_null($this->completed_at);
     }
 
+    public function hasUncompletedDependencies(): bool
+    {
+        return $this->dependencies()
+            ->whereNull('completed_at')
+            ->wherePivotIn('dependency_type', ['blocks', 'blocked_by'])
+            ->exists();
+    }
+
+    public function getUncompletedDependencyNames(): array
+    {
+        return $this->dependencies()
+            ->whereNull('completed_at')
+            ->wherePivotIn('dependency_type', ['blocks', 'blocked_by'])
+            ->pluck('name')
+            ->toArray();
+    }
+
     public function markAsCompleted(User $user): void
     {
         $this->update([

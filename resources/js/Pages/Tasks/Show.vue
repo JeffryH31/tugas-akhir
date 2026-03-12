@@ -302,7 +302,12 @@ const toggleSubtask = (subtask) => {
         {},
         {
             preserveScroll: true,
-            onFinish: () => router.reload({ only: ['task'] })
+            onSuccess: () => router.reload({ only: ['task'] }),
+            onError: (errors) => {
+                if (errors.dependency) {
+                    window.showSnackbar(errors.dependency, 'error');
+                }
+            }
         }
     );
 };

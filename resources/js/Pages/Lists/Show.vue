@@ -169,6 +169,11 @@ const handleTaskComplete = (task) => {
                     window.showSnackbar(wasCompleted ? 'Subtask reopened!' : 'Subtask completed!', 'success');
                 }
                 router.reload({ only: ['tasksByStatus'] });
+            },
+            onError: (errors) => {
+                if (errors.dependency && window.showSnackbar) {
+                    window.showSnackbar(errors.dependency, 'error');
+                }
             }
         }
     );
@@ -727,9 +732,10 @@ provide('cpmData', cpmData);
                                     label="Priority" variant="outlined" density="compact" multiple chips closable-chips
                                     hide-details class="mb-3" bg-color="#1e1e1e"
                                     :menu-props="{ contentClass: 'bg-[#1e1e1e]' }" />
-                                <v-select v-model="filterAssignee" :items="members" item-title="name" item-value="id"
-                                    label="Assignee" variant="outlined" density="compact" multiple chips closable-chips
-                                    hide-details bg-color="#1e1e1e" :menu-props="{ contentClass: 'bg-[#1e1e1e]' }" />
+                                <v-autocomplete v-model="filterAssignee" :items="members" item-title="name"
+                                    item-value="id" label="Assignee" variant="outlined" density="compact" multiple
+                                    chips closable-chips hide-details bg-color="#1e1e1e"
+                                    :menu-props="{ contentClass: 'bg-[#1e1e1e]' }" />
                             </v-card-text>
                             <v-card-actions>
                                 <v-btn variant="text" size="small" @click="filterPriority = []; filterAssignee = []">

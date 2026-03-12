@@ -23,7 +23,7 @@ class WorkspacePolicy
     public function update(User $user, Workspace $workspace): bool
     {
         return $workspace->members()
-            ->wherePivot('user_id', $user->id)
+            ->wherePivot('user_id', $user->id)  
             ->wherePivot('role', 'admin')
             ->exists();
     }

@@ -74,6 +74,14 @@ class SubtaskController extends Controller
      */
     public function complete(Request $request, Workspace $workspace, Space $space, TaskList $list, Task $task, Subtask $subtask): RedirectResponse
     {
+        if ($subtask->hasUncompletedDependencies()) {
+            $names = $subtask->getUncompletedDependencyNames();
+            $nameList = implode(', ', $names);
+            return redirect()->back()->withErrors([
+                'dependency' => "Cannot complete this subtask. It depends on uncompleted subtasks: {$nameList}"
+            ]);
+        }
+
         $subtask->markAsCompleted($request->user());
 
         return redirect()->back()->with('success', 'Subtask completed.');
