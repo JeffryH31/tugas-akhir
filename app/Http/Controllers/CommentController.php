@@ -10,6 +10,7 @@ use App\Models\Space;
 use App\Models\Task;
 use App\Models\TaskList;
 use App\Models\Workspace;
+use App\Services\AccessService;
 use App\Services\CommentService;
 use Illuminate\Foundation\Auth\Access\AuthorizesRequests;
 use Illuminate\Http\RedirectResponse;
@@ -20,7 +21,8 @@ class CommentController extends Controller
     use AuthorizesRequests;
 
     public function __construct(
-        protected CommentService $commentService
+        protected CommentService $commentService,
+        protected AccessService $accessService,
     ) {}
 
     /**
@@ -28,6 +30,7 @@ class CommentController extends Controller
      */
     public function store(StoreCommentRequest $request, Workspace $workspace, Space $space, TaskList $list, Task $task): RedirectResponse
     {
+        abort_unless($this->accessService->canComment($request->user(), $list), 403);
         try {
             $comment = $this->commentService->create($task, $request->user(), $request->validated());
 

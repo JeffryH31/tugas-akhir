@@ -93,6 +93,9 @@ class CpmService
             // dependencies() returns subtasks that THIS subtask depends on
             // meaning this subtask cannot start until those are finished
             foreach ($subtask->dependencies as $dependency) {
+                if (!$this->isSchedulingDependency($dependency->pivot?->dependency_type ?? null)) {
+                    continue;
+                }
                 // Only include dependencies that are part of this task's subtasks
                 if ($subtasks->contains('id', $dependency->id)) {
                     // dependency must finish before subtask can start
@@ -107,6 +110,14 @@ class CpmService
             'forward' => $graph,      // predecessors -> successors
             'reverse' => $reverseGraph // successors -> predecessors (for backward pass)
         ];
+    }
+
+    /**
+     * Only blocking-style dependencies should affect CPM scheduling.
+     */
+    protected function isSchedulingDependency(?string $type): bool
+    {
+        return in_array($type, ['blocks', 'blocked_by'], true);
     }
 
     /**
@@ -193,14 +204,16 @@ class CpmService
 
         // Initialize all subtasks
         foreach ($subtasks as $subtask) {
-            $duration = ($subtask->time_estimate ?? 0) / 60; // Convert minutes to hours
+            $plannedMinutes = $subtask->planned_estimate ?? 0;
+            $duration = $plannedMinutes / 60; // Convert minutes to hours
             
             $cpmData[$subtask->id] = [
                 'id' => $subtask->id,
                 'subtask_id' => $subtask->subtask_id,
                 'name' => $subtask->name,
                 'duration' => $duration,
-                'durationMinutes' => $subtask->time_estimate ?? 0,
+                'durationMinutes' => $plannedMinutes,
+                'durationSource' => $subtask->pert_expected_estimate ? 'pert' : 'manual',
                 'earlyStart' => 0,
                 'earlyFinish' => 0,
                 'lateStart' => 0,
@@ -215,6 +228,13 @@ class CpmService
                 'completedAt' => $subtask->completed_at?->format('Y-m-d H:i:s'),
                 'dependencies' => $subtask->dependencies->pluck('id')->toArray(),
                 'dependents' => $subtask->dependents->pluck('id')->toArray(),
+                'pert' => [
+                    'optimistic' => $subtask->optimistic_estimate,
+                    'mostLikely' => $subtask->most_likely_estimate,
+                    'pessimistic' => $subtask->pessimistic_estimate,
+                    'expected' => $subtask->pert_expected_estimate,
+                    'variance' => $subtask->pert_variance,
+                ],
             ];
         }
 

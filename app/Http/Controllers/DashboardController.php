@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Models\TimeEntry;
 use App\Models\Workspace;
+use App\Services\AccessService;
 use App\Services\TaskService;
 use App\Services\WorkspaceService;
 use Illuminate\Http\Request;
@@ -14,7 +15,8 @@ class DashboardController extends Controller
 {
     public function __construct(
         protected WorkspaceService $workspaceService,
-        protected TaskService $taskService
+        protected TaskService $taskService,
+        protected AccessService $accessService,
     ) {}
 
     /**
@@ -53,6 +55,13 @@ class DashboardController extends Controller
         // Time stats
         $todayTimeSpent = $user->getTodayTimeSpent();
         $weekTimeSpent = $user->getWeekTimeSpent();
+        $workdayStart = now()->copy()->setTime(8, 0);
+        $workdayEnd = now()->copy()->setTime(17, 0);
+        $todayCapacity = now()->lessThanOrEqualTo($workdayStart)
+            ? 0
+            : $workdayStart->diffInMinutes(now()->min($workdayEnd));
+        $weekCapacity = now()->startOfWeek()->diffInWeekdays(now()->endOfDay()->min(now())) * 8 * 60;
+        $todoCount = collect($myTasks)->filter(fn($task) => ($task->subtasks ?? collect())->contains(fn($subtask) => is_null($subtask->completed_at)))->count();
 
         return Inertia::render('Dashboard', [
             'workspaces' => $workspaces,
@@ -63,6 +72,9 @@ class DashboardController extends Controller
             'timeStats' => [
                 'today' => $todayTimeSpent,
                 'week' => $weekTimeSpent,
+                'idle_today' => max(0, $todayCapacity - $todayTimeSpent),
+                'idle_week' => max(0, $weekCapacity - $weekTimeSpent),
+                'todo_count' => $todoCount,
             ],
         ]);
     }
@@ -75,5 +87,12 @@ class DashboardController extends Controller
         session(['active_workspace_id' => $workspace->id]);
 
         return redirect()->route('dashboard');
+    }
+
+    public function markNotificationsRead(Request $request)
+    {
+        $request->user()->markNotificationsRead();
+
+        return back()->with('success', 'Notifications marked as read.');
     }
 }

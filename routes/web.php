@@ -12,6 +12,8 @@ use App\Http\Controllers\SubtaskController;
 use App\Http\Controllers\TaskController;
 use App\Http\Controllers\TaskListController;
 use App\Http\Controllers\TimeEntryController;
+use App\Http\Controllers\RecycleBinController;
+use App\Http\Controllers\WorkspaceAnalyticsController;
 use App\Http\Controllers\WorkspaceController;
 use Illuminate\Foundation\Application;
 use Illuminate\Support\Facades\Route;
@@ -36,6 +38,7 @@ Route::get('/', function () {
 Route::middleware(['auth:sanctum', config('jetstream.auth_session'), 'verified'])->group(function () {
 
     Route::get('/dashboard', [DashboardController::class, 'index'])->name('dashboard');
+    Route::post('/notifications/read', [DashboardController::class, 'markNotificationsRead'])->name('notifications.read');
 
     Route::get('/search', [TaskController::class, 'search'])->name('search');
 
@@ -77,6 +80,10 @@ Route::middleware(['auth:sanctum', config('jetstream.auth_session'), 'verified']
             });
 
             Route::get('/time-report', [TimeEntryController::class, 'workspaceReport'])->name('workspaces.time-report');
+            Route::get('/analytics', [WorkspaceAnalyticsController::class, 'index'])->name('workspaces.analytics');
+            Route::get('/analytics/export', [WorkspaceAnalyticsController::class, 'export'])->name('workspaces.analytics.export');
+            Route::get('/recycle-bin', [RecycleBinController::class, 'index'])->name('workspaces.recycle-bin.index');
+            Route::post('/recycle-bin/restore', [RecycleBinController::class, 'restore'])->name('workspaces.recycle-bin.restore');
 
             Route::prefix('spaces')->group(function () {
                 Route::post('/', [SpaceController::class, 'store'])->name('spaces.store');
@@ -131,6 +138,9 @@ Route::middleware(['auth:sanctum', config('jetstream.auth_session'), 'verified']
                             Route::post('/move-to-folder', [TaskListController::class, 'moveToFolder'])->name('lists.move-to-folder');
                             Route::post('/duplicate', [TaskListController::class, 'duplicate'])->name('lists.duplicate');
                             Route::patch('/change-status', [TaskListController::class, 'changeStatus'])->name('lists.change-status');
+                            Route::post('/members', [TaskListController::class, 'addMember'])->name('lists.members.add');
+                            Route::patch('/members/role', [TaskListController::class, 'updateMemberRole'])->name('lists.members.role');
+                            Route::delete('/members', [TaskListController::class, 'removeMember'])->name('lists.members.remove');
 
                             Route::prefix('tasks')->group(function () {
                                 Route::post('/', [TaskController::class, 'store'])->name('tasks.store');

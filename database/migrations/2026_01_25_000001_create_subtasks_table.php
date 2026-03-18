@@ -24,9 +24,14 @@ return new class extends Migration
 
             $table->timestamp('start_date')->nullable();
             $table->timestamp('due_date')->nullable();
+            $table->timestamp('baseline_start_date')->nullable();
+            $table->timestamp('baseline_due_date')->nullable();
             $table->timestamp('completed_at')->nullable();
 
             $table->integer('time_estimate')->nullable(); // in minutes
+            $table->integer('optimistic_estimate')->nullable(); // in minutes
+            $table->integer('most_likely_estimate')->nullable(); // in minutes
+            $table->integer('pessimistic_estimate')->nullable(); // in minutes
             $table->integer('time_spent')->default(0); // in minutes (denormalized for performance)
 
             $table->integer('position')->default(0);

@@ -5,6 +5,7 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\SoftDeletes;
 use Illuminate\Support\Str;
@@ -80,6 +81,13 @@ class TaskList extends Model
         return $this->belongsTo(User::class, 'created_by');
     }
 
+    public function members(): BelongsToMany
+    {
+        return $this->belongsToMany(User::class, 'task_list_members')
+            ->withPivot('role')
+            ->withTimestamps();
+    }
+
     public function tasks(): HasMany
     {
         return $this->hasMany(Task::class)->orderBy('position');
@@ -93,6 +101,13 @@ class TaskList extends Model
     public function views(): HasMany
     {
         return $this->hasMany(View::class);
+    }
+
+    public function addMember(User $user, string $role = 'development_team'): void
+    {
+        $this->members()->syncWithoutDetaching([
+            $user->id => ['role' => $role],
+        ]);
     }
 
 

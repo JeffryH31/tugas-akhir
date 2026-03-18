@@ -31,6 +31,8 @@ class User extends Authenticatable
         'name',
         'email',
         'password',
+        'hourly_rate',
+        'last_notifications_read_at',
     ];
 
     /**
@@ -65,6 +67,8 @@ class User extends Authenticatable
     {
         return [
             'email_verified_at' => 'datetime',
+            'hourly_rate' => 'decimal:2',
+            'last_notifications_read_at' => 'datetime',
             'password' => 'hashed',
         ];
     }
@@ -85,6 +89,13 @@ class User extends Authenticatable
     public function spaces(): BelongsToMany
     {
         return $this->belongsToMany(Space::class, 'space_members')
+            ->withPivot('role')
+            ->withTimestamps();
+    }
+
+    public function projectLists(): BelongsToMany
+    {
+        return $this->belongsToMany(TaskList::class, 'task_list_members')
             ->withPivot('role')
             ->withTimestamps();
     }
@@ -173,5 +184,12 @@ class User extends Authenticatable
         return $this->timeEntries()
             ->whereBetween('started_at', [now()->startOfWeek(), now()->endOfWeek()])
             ->sum('duration');
+    }
+
+    public function markNotificationsRead(): void
+    {
+        $this->forceFill([
+            'last_notifications_read_at' => now(),
+        ])->save();
     }
 }

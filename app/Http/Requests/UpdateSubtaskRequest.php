@@ -32,7 +32,12 @@ class UpdateSubtaskRequest extends FormRequest
                     }
                 },
             ],
+            'baseline_start_date' => ['nullable', 'date'],
+            'baseline_due_date' => ['nullable', 'date', 'after_or_equal:baseline_start_date'],
             'time_estimate' => ['nullable', 'integer', 'min:0', 'max:525600'],
+            'optimistic_estimate' => ['nullable', 'integer', 'min:0', 'max:525600'],
+            'most_likely_estimate' => ['nullable', 'integer', 'min:0', 'max:525600'],
+            'pessimistic_estimate' => ['nullable', 'integer', 'min:0', 'max:525600'],
             'sprint_id' => ['nullable', 'exists:sprints,id'],
             'assignee_ids' => ['sometimes', 'array'],
             'assignee_ids.*' => ['exists:users,id'],
@@ -47,6 +52,7 @@ class UpdateSubtaskRequest extends FormRequest
             'name.max' => 'Subtask name must not exceed 255 characters.',
             'due_date.date' => 'Due date must be a valid date.',
             'time_estimate.max' => 'Time estimate cannot exceed 1 year.',
+            'baseline_due_date.after_or_equal' => 'Baseline due date must be after or equal to baseline start date.',
             'status_id.exists' => 'Selected status does not exist.',
             'priority_level.in' => 'Selected priority does not exist.',
         ];

@@ -141,6 +141,19 @@ const getStatusColor = (status) => {
     return status?.color || '#6366F1';
 };
 
+const hasBaselineVariance = (subtask) => {
+    if (!subtask?.baseline_start_date && !subtask?.baseline_due_date) return false;
+
+    return subtask.baseline_start_date !== subtask.start_date || subtask.baseline_due_date !== subtask.due_date;
+};
+
+const formatScheduleRange = (startDate, dueDate) => {
+    const start = startDate ? startDate.split('T')[0] : 'N/A';
+    const end = dueDate ? dueDate.split('T')[0] : 'N/A';
+
+    return `${start} -> ${end}`;
+};
+
 // Summary stats
 const totalSubtasks = computed(() => props.subtasks.length);
 const completedSubtasks = computed(() => props.subtasks.filter(s => s.completed_at).length);
@@ -256,7 +269,7 @@ const overdueSubtasks = computed(() => {
                                             v-bind="tooltipProps"
                                             size="small" 
                                             :color="getStatusColor(subtask.status)"
-                                            variant="flat"
+                                            :variant="hasBaselineVariance(subtask) ? 'outlined' : 'flat'"
                                             class="w-full text-left"
                                         >
                                             <div class="flex items-center gap-1 w-full overflow-hidden">
@@ -268,6 +281,7 @@ const overdueSubtasks = computed(() => {
                                                     mdi-flag
                                                 </v-icon>
                                                 <span class="text-xs truncate flex-1">{{ subtask.name }}</span>
+                                                <v-icon v-if="hasBaselineVariance(subtask)" size="12" color="warning">mdi-source-branch-alert</v-icon>
                                                 <v-icon v-if="subtask.completed_at" size="12" color="success">
                                                     mdi-check-circle
                                                 </v-icon>
@@ -282,6 +296,14 @@ const overdueSubtasks = computed(() => {
                                         <div v-if="subtask.time_estimate" class="text-xs opacity-80 mt-1">
                                             <v-icon size="12">mdi-clock-outline</v-icon>
                                             Estimate: {{ Math.round(subtask.time_estimate / 60 * 10) / 10 }}h
+                                        </div>
+                                        <div v-if="subtask.baseline_start_date || subtask.baseline_due_date" class="text-xs opacity-80 mt-1">
+                                            <v-icon size="12">mdi-chart-timeline-variant</v-icon>
+                                            Baseline: {{ formatScheduleRange(subtask.baseline_start_date, subtask.baseline_due_date) }}
+                                        </div>
+                                        <div class="text-xs opacity-80 mt-1">
+                                            <v-icon size="12">mdi-calendar-range</v-icon>
+                                            Actual: {{ formatScheduleRange(subtask.start_date, subtask.due_date) }}
                                         </div>
                                     </div>
                                 </v-tooltip>

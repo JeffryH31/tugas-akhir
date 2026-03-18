@@ -13,6 +13,7 @@ use App\Models\Task;
 use App\Models\TaskList;
 use App\Models\User;
 use App\Models\Workspace;
+use App\Services\AccessService;
 use App\Services\TaskService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
@@ -23,7 +24,8 @@ use Inertia\Response;
 class TaskController extends Controller
 {
     public function __construct(
-        protected TaskService $taskService
+        protected TaskService $taskService,
+        protected AccessService $accessService,
     ) {}
 
     /**
@@ -31,6 +33,7 @@ class TaskController extends Controller
      */
     public function store(StoreTaskRequest $request, Workspace $workspace, Space $space, TaskList $list): RedirectResponse
     {
+        abort_unless($this->accessService->canManageTaskStructure($request->user(), $list), 403);
         try {
             $task = $this->taskService->create(
                 $request->validated(),
@@ -52,6 +55,7 @@ class TaskController extends Controller
      */
     public function show(Request $request, Workspace $workspace, Space $space, TaskList $list, Task $task): Response
     {
+        abort_unless($this->accessService->canViewProject($request->user(), $list), 403);
         $task = $this->taskService->getTaskWithRelations($task);
 
         $workspace->load([
@@ -78,6 +82,7 @@ class TaskController extends Controller
      */
     public function update(UpdateTaskRequest $request, Workspace $workspace, Space $space, TaskList $list, Task $task): RedirectResponse
     {
+        abort_unless($this->accessService->canManageTaskStructure($request->user(), $list), 403);
         try {
             $updatedTask = $this->taskService->update($task, $request->validated(), $request->user());
 
@@ -95,6 +100,7 @@ class TaskController extends Controller
      */
     public function destroy(Request $request, Workspace $workspace, Space $space, TaskList $list, Task $task): RedirectResponse
     {
+        abort_unless($this->accessService->canManageTaskStructure($request->user(), $list), 403);
         try {
             $this->taskService->delete($task, $request->user());
 
@@ -112,6 +118,7 @@ class TaskController extends Controller
      */
     public function changeStatus(Request $request, Workspace $workspace, Space $space, TaskList $list, Task $task): RedirectResponse
     {
+        abort_unless($this->accessService->canOperateTasks($request->user(), $list), 403);
         $validated = $request->validate([
             'status_id' => 'required|exists:statuses,id',
         ]);
@@ -134,6 +141,7 @@ class TaskController extends Controller
      */
     public function changePriority(Request $request, Workspace $workspace, Space $space, TaskList $list, Task $task): RedirectResponse
     {
+        abort_unless($this->accessService->canManageTaskStructure($request->user(), $list), 403);
         $validated = $request->validate([
             'priority_level' => 'nullable|integer|in:1,2,3,4',
         ]);
@@ -155,6 +163,7 @@ class TaskController extends Controller
      */
     public function assign(Request $request, Workspace $workspace, Space $space, TaskList $list, Task $task): RedirectResponse
     {
+        abort_unless($this->accessService->canAssignTasks($request->user(), $list), 403);
         $validated = $request->validate([
             'user_id' => 'required|exists:users,id',
         ]);
@@ -177,6 +186,7 @@ class TaskController extends Controller
      */
     public function unassign(Request $request, Workspace $workspace, Space $space, TaskList $list, Task $task): RedirectResponse
     {
+        abort_unless($this->accessService->canAssignTasks($request->user(), $list), 403);
         $validated = $request->validate([
             'user_id' => 'required|exists:users,id',
         ]);
@@ -199,6 +209,7 @@ class TaskController extends Controller
      */
     public function move(Request $request, Workspace $workspace, Space $space, TaskList $list, Task $task): RedirectResponse
     {
+        abort_unless($this->accessService->canManageTaskStructure($request->user(), $list), 403);
         $validated = $request->validate([
             'list_id' => 'required|exists:task_lists,id',
             'position' => 'nullable|integer|min:0',
@@ -222,6 +233,7 @@ class TaskController extends Controller
      */
     public function reorder(ReorderRequest $request, Workspace $workspace, Space $space, TaskList $list): RedirectResponse
     {
+        abort_unless($this->accessService->canManageTaskStructure($request->user(), $list), 403);
         try {
             $this->taskService->reorder($list, $request->validated('order'));
 
@@ -236,6 +248,7 @@ class TaskController extends Controller
      */
     public function addLabel(Request $request, Workspace $workspace, Space $space, TaskList $list, Task $task): RedirectResponse
     {
+        abort_unless($this->accessService->canManageLabels($request->user(), $list), 403);
         $validated = $request->validate([
             'label_id' => 'required|exists:labels,id',
         ]);
@@ -258,6 +271,7 @@ class TaskController extends Controller
      */
     public function removeLabel(Request $request, Workspace $workspace, Space $space, TaskList $list, Task $task): RedirectResponse
     {
+        abort_unless($this->accessService->canManageLabels($request->user(), $list), 403);
         $validated = $request->validate([
             'label_id' => 'required|exists:labels,id',
         ]);
@@ -280,6 +294,7 @@ class TaskController extends Controller
      */
     public function duplicate(Request $request, Workspace $workspace, Space $space, TaskList $list, Task $task): RedirectResponse
     {
+        abort_unless($this->accessService->canManageTaskStructure($request->user(), $list), 403);
         try {
             $newTask = $this->taskService->duplicate($task, $request->user());
 
@@ -322,9 +337,17 @@ class TaskController extends Controller
     {
         $validated = $request->validate([
             'q' => ['nullable', 'string', 'max:200'],
+            'workspace_id' => ['nullable', 'integer', 'exists:workspaces,id'],
+            'status_id' => ['nullable', 'integer', 'exists:statuses,id'],
+            'assignee_id' => ['nullable', 'integer', 'exists:users,id'],
+            'type' => ['nullable', 'in:all,tasks,lists,spaces'],
+            'limit' => ['nullable', 'integer', 'min:1', 'max:50'],
         ]);
 
         $query = $validated['q'] ?? '';
+        $type = $validated['type'] ?? 'all';
+        $limit = $validated['limit'] ?? 20;
+        $workspaceId = $validated['workspace_id'] ?? null;
 
         if (strlen($query) < 2) {
             return response()->json(['tasks' => [], 'lists' => [], 'spaces' => []]);
@@ -334,49 +357,67 @@ class TaskController extends Controller
 
         $user = $request->user();
         
-        // Search tasks
-        $tasks = Task::whereHas('taskList.space.workspace', function ($q) use ($user) {
+        $tasksQuery = Task::whereHas('taskList.space.workspace', function ($q) use ($user, $workspaceId) {
                 $q->where('created_by', $user->id)
                   ->orWhereHas('members', function ($q2) use ($user) {
                       $q2->where('users.id', $user->id);
                   });
             })
+            ->when($workspaceId, fn($q) => $q->whereHas('taskList.space', fn($q2) => $q2->where('workspace_id', $workspaceId)))
             ->where(function ($q) use ($query) {
                 $q->where('name', 'like', "%{$query}%")
                   ->orWhere('description', 'like', "%{$query}%");
             })
+            ->when(!empty($validated['status_id']), fn($q) => $q->where('status_id', $validated['status_id']))
+            ->when(!empty($validated['assignee_id']), fn($q) => $q->whereHas('assignees', fn($q2) => $q2->where('users.id', $validated['assignee_id'])))
             ->with(['taskList.space', 'status', 'assignees'])
-            ->limit(20)
-            ->get();
+            ->limit($limit);
+
+        // Search tasks
+        $tasks = $type === 'all' || $type === 'tasks' ? $tasksQuery->get() : collect();
 
         // Search lists
-        $lists = TaskList::whereHas('space.workspace', function ($q) use ($user) {
+        $listsQuery = TaskList::whereHas('space.workspace', function ($q) use ($user) {
                 $q->where('created_by', $user->id)
                   ->orWhereHas('members', function ($q2) use ($user) {
                       $q2->where('users.id', $user->id);
                   });
             })
+            ->when($workspaceId, fn($q) => $q->whereHas('space', fn($q2) => $q2->where('workspace_id', $workspaceId)))
             ->where('name', 'like', "%{$query}%")
             ->with('space')
-            ->limit(10)
-            ->get();
+            ->limit(min($limit, 15));
+
+        $lists = $type === 'all' || $type === 'lists' ? $listsQuery->get() : collect();
 
         // Search spaces
-        $spaces = Space::whereHas('workspace', function ($q) use ($user) {
+        $spacesQuery = Space::whereHas('workspace', function ($q) use ($user, $workspaceId) {
                 $q->where('created_by', $user->id)
                   ->orWhereHas('members', function ($q2) use ($user) {
                       $q2->where('users.id', $user->id);
                   });
             })
+            ->when($workspaceId, fn($q) => $q->where('workspace_id', $workspaceId))
             ->where('name', 'like', "%{$query}%")
             ->with('workspace')
-            ->limit(10)
-            ->get();
+            ->limit(min($limit, 15));
+
+        $spaces = $type === 'all' || $type === 'spaces' ? $spacesQuery->get() : collect();
 
         return response()->json([
             'tasks' => TaskResource::collection($tasks),
             'lists' => $lists,
             'spaces' => $spaces,
+            'meta' => [
+                'query' => $query,
+                'type' => $type,
+                'workspace_id' => $workspaceId,
+                'count' => [
+                    'tasks' => $tasks->count(),
+                    'lists' => $lists->count(),
+                    'spaces' => $spaces->count(),
+                ],
+            ],
         ]);
     }
 }

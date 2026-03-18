@@ -128,6 +128,23 @@ const handleTaskOpen = (task) => {
     ]));
 };
 
+// Navigate to the task containing the running timer's subtask
+const goToTimerTask = () => {
+    const subtask = props.runningTimer?.subtask;
+    const t = subtask?.task;
+    if (!t) return;
+
+    const baseUrl = route('lists.show', [
+        t.task_list.space.workspace_id,
+        t.task_list.space.id,
+        t.task_list.id,
+    ]);
+
+    // Open subtask board and auto-open running subtask detail panel
+    const url = `${baseUrl}?task_id=${t.id}&open_subtask_id=${subtask?.id}`;
+    router.visit(url);
+};
+
 // Create workspace dialog
 const showCreateWorkspace = ref(false);
 const newWorkspaceName = ref('');
@@ -142,7 +159,7 @@ const createWorkspace = () => {
         onSuccess: () => {
             newWorkspaceName.value = '';
             showCreateWorkspace.value = false;
-                showSnackbar('Workspace created successfully!', 'success');
+            showSnackbar('Workspace created successfully!', 'success');
             router.reload({ only: ['workspaces', 'activeWorkspace'] });
         },
         onFinish: () => { isProcessing.value = false; }
@@ -238,11 +255,10 @@ const openCreateSpace = () => {
                                 <v-select v-model="quickTaskList" :items="availableLists" item-title="display"
                                     item-value="id" return-object label="Select Product" variant="outlined"
                                     density="compact" hide-details :disabled="!availableLists.length"
-                                    placeholder="Choose a product..." bg-color="#1e1e1e" base-color="white" color="primary"
-                                    :menu-props="{ contentClass: 'bg-[#1e1e1e]' }" />
+                                    placeholder="Choose a product..." bg-color="#1e1e1e" base-color="white"
+                                    color="primary" :menu-props="{ contentClass: 'bg-[#1e1e1e]' }" />
                                 <div class="flex gap-2">
-                                    <v-btn color="primary" size="small" @click="createQuickTask"
-                                        :loading="isProcessing"
+                                    <v-btn color="primary" size="small" @click="createQuickTask" :loading="isProcessing"
                                         :disabled="!quickTaskName.trim() || !quickTaskList">
                                         Create Task
                                     </v-btn>
@@ -346,16 +362,28 @@ const openCreateSpace = () => {
                                     <div class="text-2xl font-bold">{{ formatDuration(timeStats?.week) }}</div>
                                     <div class="text-xs text-gray-500">This Week</div>
                                 </div>
+                                <div>
+                                    <div class="text-2xl font-bold text-warning">{{
+                                        formatDuration(timeStats?.idle_today) }}</div>
+                                    <div class="text-xs text-gray-500">Idle Today</div>
+                                </div>
+                                <div>
+                                    <div class="text-2xl font-bold text-info">{{ timeStats?.todo_count || 0 }}</div>
+                                    <div class="text-xs text-gray-500">To-do Items</div>
+                                </div>
                             </div>
 
                             <!-- Running Timer -->
-                            <div v-if="runningTimer" class="mt-4 p-3 bg-success/10 rounded-lg">
+                            <div v-if="runningTimer"
+                                class="mt-4 p-3 bg-success/10 rounded-lg cursor-pointer hover:bg-success/20 transition-colors"
+                                @click="goToTimerTask">
                                 <div class="flex items-center gap-2 mb-2">
                                     <v-icon color="success" size="16">mdi-timer-outline</v-icon>
                                     <span class="text-sm font-medium text-success">Timer Running</span>
                                 </div>
                                 <div class="text-sm truncate">{{ runningTimer.subtask?.name }}</div>
-                                <div class="text-xs text-gray-500">{{ runningTimer.subtask?.task?.name }} &middot; {{ runningTimer.subtask?.task?.task_list?.space?.name }}</div>
+                                <div class="text-xs text-gray-500">{{ runningTimer.subtask?.task?.name }} &middot; {{
+                                    runningTimer.subtask?.task?.task_list?.space?.name }}</div>
                             </div>
                         </v-card-text>
                     </v-card>
@@ -395,6 +423,9 @@ const openCreateSpace = () => {
                                 :href="route('my-tasks')" rounded="lg" />
                             <v-list-item prepend-icon="mdi-timer-outline" title="Time Tracking"
                                 :href="route('time-tracking.index')" rounded="lg" />
+                            <v-list-item prepend-icon="mdi-chart-box-outline" title="Analytics"
+                                :href="activeWorkspace ? route('workspaces.analytics', activeWorkspace.id) : undefined"
+                                rounded="lg" />
                             <v-list-item prepend-icon="mdi-cog-outline" title="Settings"
                                 :href="activeWorkspace ? route('workspaces.settings', activeWorkspace.id) : undefined"
                                 rounded="lg" />

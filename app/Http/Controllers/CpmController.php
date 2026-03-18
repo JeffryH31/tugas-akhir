@@ -7,6 +7,7 @@ use App\Models\Subtask;
 use App\Models\Task;
 use App\Models\TaskList;
 use App\Models\Workspace;
+use App\Services\AccessService;
 use App\Services\CpmService;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
@@ -15,7 +16,8 @@ use Inertia\Response;
 class CpmController extends Controller
 {
     public function __construct(
-        protected CpmService $cpmService
+        protected CpmService $cpmService,
+        protected AccessService $accessService,
     ) {}
 
     /**
@@ -28,6 +30,7 @@ class CpmController extends Controller
         TaskList $list,
         Task $task
     ) {
+        abort_unless($this->accessService->canViewProject($request->user(), $list), 403);
         if ($task->task_list_id !== $list->id) {
             abort(404);
         }
@@ -51,6 +54,7 @@ class CpmController extends Controller
         TaskList $list,
         Task $task
     ): Response {
+        abort_unless($this->accessService->canViewProject($request->user(), $list), 403);
         if ($task->task_list_id !== $list->id) {
             abort(404);
         }
@@ -91,6 +95,7 @@ class CpmController extends Controller
         TaskList $list,
         Task $task
     ) {
+        abort_unless($this->accessService->canManageDependencies($request->user(), $list), 403);
         $validated = $request->validate([
             'subtask_id' => 'required|exists:subtasks,id',
             'depends_on_id' => 'required|exists:subtasks,id',
@@ -134,6 +139,7 @@ class CpmController extends Controller
         TaskList $list,
         Task $task
     ) {
+        abort_unless($this->accessService->canManageDependencies($request->user(), $list), 403);
         $validated = $request->validate([
             'subtask_id' => 'required|exists:subtasks,id',
             'depends_on_id' => 'required|exists:subtasks,id',

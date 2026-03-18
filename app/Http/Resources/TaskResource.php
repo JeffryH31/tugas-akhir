@@ -26,7 +26,7 @@ class TaskResource extends JsonResource
             'is_archived' => $this->is_archived,
             'created_at' => $this->created_at?->format('Y-m-d H:i:s'),
             'updated_at' => $this->updated_at?->format('Y-m-d H:i:s'),
-            
+
             // Relationships
             'status' => new StatusResource($this->whenLoaded('status')),
             'priority' => $this->priority,
@@ -38,9 +38,10 @@ class TaskResource extends JsonResource
             'dependents' => TaskResource::collection($this->whenLoaded('dependents')),
             'parent' => new TaskResource($this->whenLoaded('parent')),
             'comments' => CommentResource::collection($this->whenLoaded('comments')),
+            'activities' => ActivityResource::collection($this->whenLoaded('activities')),
             'time_entries' => TimeEntryResource::collection($this->whenLoaded('timeEntries')),
             'attachments' => AttachmentResource::collection($this->whenLoaded('attachments')),
-            
+
             // Counts
             'comments_count' => $this->comments_count ?? $this->comments?->count() ?? 0,
             'subtasks_count' => $this->subtasks_count ?? $this->subtasks?->count() ?? 0,

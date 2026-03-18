@@ -10,6 +10,7 @@ use App\Http\Requests\UpdateStatusRequest;
 use App\Models\Space;
 use App\Models\Status;
 use App\Models\Workspace;
+use App\Services\AccessService;
 use App\Services\SpaceService;
 use Illuminate\Foundation\Auth\Access\AuthorizesRequests;
 use Illuminate\Http\RedirectResponse;
@@ -22,7 +23,8 @@ class SpaceController extends Controller
     use AuthorizesRequests;
 
     public function __construct(
-        protected SpaceService $spaceService
+        protected SpaceService $spaceService,
+        protected AccessService $accessService,
     ) {}
 
     /**
@@ -30,6 +32,7 @@ class SpaceController extends Controller
      */
     public function store(StoreSpaceRequest $request, Workspace $workspace): RedirectResponse
     {
+        abort_unless($this->accessService->canManageWorkspace($request->user(), $workspace), 403);
         try {
             $space = $this->spaceService->create(
                 $request->validated(),
@@ -51,6 +54,7 @@ class SpaceController extends Controller
      */
     public function show(Request $request, Workspace $workspace, Space $space): Response
     {
+        abort_unless($this->accessService->canViewSpace($request->user(), $space), 403);
         $space = $this->spaceService->getWithHierarchy($space);
         $statistics = $this->spaceService->getStatistics($space);
 
@@ -79,6 +83,7 @@ class SpaceController extends Controller
      */
     public function update(UpdateSpaceRequest $request, Workspace $workspace, Space $space): RedirectResponse
     {
+        abort_unless($this->accessService->canManageWorkspace($request->user(), $workspace), 403);
         try {
             $updatedSpace = $this->spaceService->update($space, $request->validated(), $request->user());
 
@@ -96,6 +101,7 @@ class SpaceController extends Controller
      */
     public function destroy(Request $request, Workspace $workspace, Space $space): RedirectResponse
     {
+        abort_unless($this->accessService->canManageWorkspace($request->user(), $workspace), 403);
         try {
             $this->spaceService->delete($space, $request->user());
 

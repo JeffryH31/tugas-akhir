@@ -185,6 +185,48 @@ const handleTaskOpen = (task) => {
     showTaskDetail.value = true;
 };
 
+const findTaskInBoard = (id) => {
+    if (!id) return null;
+    for (const statusId in localTasksByStatus.value) {
+        const found = (localTasksByStatus.value[statusId] || []).find(t => t.id === id);
+        if (found) return found;
+    }
+    return null;
+};
+
+let openedFromQuery = false;
+const openDetailFromQuery = () => {
+    if (openedFromQuery) return;
+    const queryString = page.url?.split('?')[1] || '';
+    if (!queryString) return;
+
+    const params = new URLSearchParams(queryString);
+    const openTaskId = Number(params.get('open_task_id') || 0);
+    const openSubtaskId = Number(params.get('open_subtask_id') || 0);
+
+    if (openSubtaskId > 0) {
+        const subtask = findTaskInBoard(openSubtaskId);
+        if (subtask) {
+            handleTaskOpen(subtask);
+            openedFromQuery = true;
+            return;
+        }
+    }
+
+    // Only open task directly when viewing main task board (not subtask board)
+    if (!props.parentTask && openTaskId > 0) {
+        const task = findTaskInBoard(openTaskId);
+        if (task) {
+            handleTaskOpen(task);
+            openedFromQuery = true;
+        }
+    }
+};
+
+watch(() => localTasksByStatus.value, () => {
+    openDetailFromQuery();
+}, { deep: true, immediate: true });
+
 // Handle view subtasks
 const viewSubtasks = (task) => {
     router.visit(route('lists.show', [props.workspace.id, props.space.id, props.list.id]) + `?task_id=${task.id}`);
@@ -625,6 +667,10 @@ const isSubtaskCritical = (subtaskId) => {
 // Provide critical path info to child components
 provide('isSubtaskCritical', isSubtaskCritical);
 provide('cpmData', cpmData);
+
+onMounted(() => {
+    openDetailFromQuery();
+});
 </script>
 
 <template>

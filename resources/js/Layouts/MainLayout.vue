@@ -28,17 +28,32 @@ watch(mobile, (val) => {
 
 // User menu
 const userMenuOpen = ref(false);
+const notificationMenuOpen = ref(false);
 
 // Computed
 const user = computed(() => page.props.auth?.user);
 const workspaces = computed(() => page.props.workspaces || []);
 const activeWorkspace = computed(() => page.props.activeWorkspace);
+const notifications = computed(() => page.props.notifications || []);
+const unreadNotificationsCount = computed(() => page.props.unreadNotificationsCount || 0);
 
 // Search
 const searchQuery = ref('');
 const searchDialog = ref(false);
 const searchResults = ref({ tasks: [], lists: [], spaces: [] });
 const isSearching = ref(false);
+const searchType = ref('all');
+const searchWorkspaceId = ref(null);
+const searchTypeOptions = [
+    { title: 'All', value: 'all' },
+    { title: 'Tasks', value: 'tasks' },
+    { title: 'Products', value: 'lists' },
+    { title: 'Spaces', value: 'spaces' },
+];
+const searchWorkspaceOptions = computed(() => [
+    { title: 'All Workspaces', value: null },
+    ...workspaces.value.map((w) => ({ title: w.name, value: w.id })),
+]);
 
 // Debounced search function
 let searchTimeout = null;
@@ -50,20 +65,43 @@ const performSearch = async () => {
 
     isSearching.value = true;
     try {
-        const response = await fetch(route('search') + '?q=' + encodeURIComponent(searchQuery.value));
+        const params = new URLSearchParams();
+        params.set('q', searchQuery.value);
+        params.set('type', searchType.value);
+        if (searchWorkspaceId.value) params.set('workspace_id', String(searchWorkspaceId.value));
+
+        const response = await fetch(route('search') + '?' + params.toString());
         const data = await response.json();
         searchResults.value = data;
     } catch (error) {
-        console.error('Search error:', error);
+        showSnackbar('Search failed. Please try again.', 'error');
     } finally {
         isSearching.value = false;
     }
 };
 
-watch(searchQuery, () => {
+watch([searchQuery, searchType, searchWorkspaceId], () => {
     clearTimeout(searchTimeout);
     searchTimeout = setTimeout(performSearch, 300);
 });
+
+watch(
+    () => page.props.flash,
+    (flash) => {
+        if (flash?.success) showSnackbar(flash.success, 'success');
+        if (flash?.error) showSnackbar(flash.error, 'error');
+    },
+    { deep: true }
+);
+
+watch(
+    () => page.props.validationErrors,
+    (errors) => {
+        if (Array.isArray(errors) && errors.length > 0) {
+            showSnackbar(errors[0], 'error');
+        }
+    }
+);
 
 const goToTask = (task) => {
     router.visit(route('tasks.show', [
@@ -74,6 +112,8 @@ const goToTask = (task) => {
     ]));
     searchDialog.value = false;
     searchQuery.value = '';
+    searchType.value = 'all';
+    searchWorkspaceId.value = null;
 };
 
 const goToList = (list) => {
@@ -84,6 +124,8 @@ const goToList = (list) => {
     ]));
     searchDialog.value = false;
     searchQuery.value = '';
+    searchType.value = 'all';
+    searchWorkspaceId.value = null;
 };
 
 const goToSpace = (space) => {
@@ -93,6 +135,18 @@ const goToSpace = (space) => {
     ]));
     searchDialog.value = false;
     searchQuery.value = '';
+    searchType.value = 'all';
+    searchWorkspaceId.value = null;
+};
+
+const markNotificationsRead = () => {
+    if (!unreadNotificationsCount.value) return;
+
+    router.post(route('notifications.read'), {}, {
+        preserveScroll: true,
+        preserveState: true,
+        only: ['notifications', 'unreadNotificationsCount', 'flash'],
+    });
 };
 
 // Running timer from shared props
@@ -228,13 +282,31 @@ const formatDuration = (seconds) => {
             </v-menu>
 
             <!-- Notifications -->
-            <v-tooltip text="Notifications coming soon" location="bottom">
-                <template v-slot:activator="{ props: tooltipProps }">
-                    <v-btn v-bind="tooltipProps" icon variant="text" size="small" class="mr-1">
-                        <v-icon>mdi-bell-outline</v-icon>
+            <v-menu v-model="notificationMenuOpen" location="bottom end" @update:model-value="(open) => open && markNotificationsRead()">
+                <template v-slot:activator="{ props: notificationProps }">
+                    <v-btn v-bind="notificationProps" icon variant="text" size="small" class="mr-1">
+                        <v-badge :content="unreadNotificationsCount" :model-value="unreadNotificationsCount > 0" color="error">
+                            <v-icon>mdi-bell-outline</v-icon>
+                        </v-badge>
                     </v-btn>
                 </template>
-            </v-tooltip>
+                <v-card min-width="340" max-width="420">
+                    <v-card-title class="d-flex align-center justify-space-between">
+                        <span>Notifications</span>
+                        <v-chip size="x-small" variant="tonal">{{ unreadNotificationsCount }} unread</v-chip>
+                    </v-card-title>
+                    <v-divider />
+                    <v-list density="compact" max-height="360" class="overflow-auto">
+                        <v-list-item v-for="notification in notifications" :key="notification.id">
+                            <v-list-item-title class="text-body-2">{{ notification.description }}</v-list-item-title>
+                            <v-list-item-subtitle>{{ notification.created_at }}</v-list-item-subtitle>
+                        </v-list-item>
+                        <v-list-item v-if="!notifications.length" disabled>
+                            <v-list-item-title>No notifications yet.</v-list-item-title>
+                        </v-list-item>
+                    </v-list>
+                </v-card>
+            </v-menu>
 
             <!-- User Menu -->
             <v-menu v-model="userMenuOpen" :close-on-content-click="false" location="bottom end">
@@ -265,6 +337,12 @@ const formatDuration = (seconds) => {
                         <v-list-item prepend-icon="mdi-account-outline" title="Profile" :href="route('profile.show')" />
                         <v-list-item prepend-icon="mdi-cog-outline" title="Settings"
                             :href="activeWorkspace ? route('workspaces.settings', activeWorkspace.id) : undefined"
+                            :disabled="!activeWorkspace" />
+                        <v-list-item prepend-icon="mdi-chart-box-outline" title="Analytics"
+                            :href="activeWorkspace ? route('workspaces.analytics', activeWorkspace.id) : undefined"
+                            :disabled="!activeWorkspace" />
+                        <v-list-item prepend-icon="mdi-delete-clock-outline" title="Recycle Bin"
+                            :href="activeWorkspace ? route('workspaces.recycle-bin.index', activeWorkspace.id) : undefined"
                             :disabled="!activeWorkspace" />
                         <v-list-item prepend-icon="mdi-theme-light-dark" title="Theme" />
                     </v-list>
@@ -497,6 +575,12 @@ const formatDuration = (seconds) => {
                 <v-text-field v-model="searchQuery" placeholder="Search tasks, products, spaces..."
                     prepend-inner-icon="mdi-magnify" variant="solo" single-line hide-details autofocus
                     class="search-dialog-input" :loading="isSearching" />
+                <div class="px-4 py-3 d-flex ga-3 flex-wrap">
+                    <v-select v-model="searchType" :items="searchTypeOptions" item-title="title" item-value="value"
+                        label="Type" hide-details density="compact" variant="outlined" style="min-width: 180px;" />
+                    <v-select v-model="searchWorkspaceId" :items="searchWorkspaceOptions" item-title="title" item-value="value"
+                        label="Workspace" hide-details density="compact" variant="outlined" clearable style="min-width: 220px;" />
+                </div>
                 <v-divider />
                 <v-card-text class="pa-0" style="max-height: 500px;">
                     <div v-if="!searchQuery || searchQuery.length < 2" class="pa-8 text-center text-gray-500">

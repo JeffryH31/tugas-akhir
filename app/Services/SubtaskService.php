@@ -2,7 +2,9 @@
 
 namespace App\Services;
 
+use App\Enums\PriorityLevel;
 use App\Models\Activity;
+use App\Models\Status;
 use App\Models\Subtask;
 use App\Models\Task;
 use App\Models\User;
@@ -24,7 +26,12 @@ class SubtaskService
                 'priority_level' => $data['priority_level'] ?? null,
                 'start_date' => $data['start_date'] ?? null,
                 'due_date' => $data['due_date'] ?? null,
+                'baseline_start_date' => $data['baseline_start_date'] ?? ($data['start_date'] ?? null),
+                'baseline_due_date' => $data['baseline_due_date'] ?? ($data['due_date'] ?? null),
                 'time_estimate' => $data['time_estimate'] ?? null,
+                'optimistic_estimate' => $data['optimistic_estimate'] ?? null,
+                'most_likely_estimate' => $data['most_likely_estimate'] ?? null,
+                'pessimistic_estimate' => $data['pessimistic_estimate'] ?? null,
                 'created_by' => $user->id,
             ]);
 
@@ -67,7 +74,28 @@ class SubtaskService
     {
         return DB::transaction(function () use ($subtask, $data, $user) {
             $updateData = [];
-            $fields = ['name', 'description', 'status_id', 'priority_level', 'start_date', 'due_date', 'time_estimate'];
+            $fields = [
+                'name',
+                'description',
+                'status_id',
+                'priority_level',
+                'start_date',
+                'due_date',
+                'baseline_start_date',
+                'baseline_due_date',
+                'time_estimate',
+                'optimistic_estimate',
+                'most_likely_estimate',
+                'pessimistic_estimate',
+            ];
+
+            // Capture status/priority before update for readable activity descriptions
+            $oldStatusId     = $subtask->status_id;
+            $oldStatusName   = $subtask->status?->name;
+            $oldPriorityEnum = $subtask->priority_level; // PriorityLevel enum|null
+
+            // Capture old values for change tracking (status/priority logged separately below)
+            $oldValues = $subtask->only(array_diff($fields, ['status_id', 'priority_level']));
 
             foreach ($fields as $field) {
                 if (array_key_exists($field, $data)) {
@@ -79,16 +107,52 @@ class SubtaskService
                 $subtask->update($updateData);
             }
 
+            // Track changes for activity
+            $changes = [];
+            foreach ($oldValues as $key => $oldValue) {
+                $newValue = $data[$key] ?? $subtask->$key;
+                if ($newValue != $oldValue) {
+                    $changes[$key] = ['old' => $oldValue, 'new' => $newValue];
+                }
+            }
+
             // Update assignees if provided
             if (isset($data['assignee_ids'])) {
-                $assignees = [];
-                foreach ($data['assignee_ids'] as $assigneeId) {
-                    $assignees[$assigneeId] = [
-                        'assigned_at' => now(),
-                        'assigned_by' => $user->id,
-                    ];
+                $oldAssigneeIds = $subtask->assignees->pluck('id')->toArray();
+                $newAssigneeIds  = $data['assignee_ids'];
+
+                $pivotData = [];
+                foreach ($newAssigneeIds as $assigneeId) {
+                    $pivotData[$assigneeId] = ['assigned_at' => now(), 'assigned_by' => $user->id];
                 }
-                $subtask->assignees()->sync($assignees);
+                $subtask->assignees()->sync($pivotData);
+
+                $addedIds   = array_diff($newAssigneeIds, $oldAssigneeIds);
+                $removedIds = array_diff($oldAssigneeIds, $newAssigneeIds);
+
+                $workspace = $subtask->task->taskList->space->workspace;
+                foreach ($addedIds as $id) {
+                    $assignee = User::find($id);
+                    if ($assignee) {
+                        Activity::log($workspace, $user, $subtask, 'assigned', [
+                            'name'          => $subtask->name,
+                            'assignee_name' => $assignee->name,
+                            'assignee_id'   => $assignee->id,
+                        ]);
+                    }
+                }
+
+                foreach ($removedIds as $id) {
+                    $assignee = User::find($id);
+                    if ($assignee) {
+                        Activity::log($workspace, $user, $subtask, 'unassigned', [
+                            'name'          => $subtask->name,
+                            'assignee_name' => $assignee->name,
+                            'assignee_id'   => $assignee->id,
+                        ]);
+                    }
+                }
+                // Assignee changes are logged separately above – don't add to generic $changes
             }
 
             // Update labels if provided
@@ -96,13 +160,40 @@ class SubtaskService
                 $subtask->labels()->sync($data['label_ids']);
             }
 
-            Activity::log(
-                $subtask->task->taskList->space->workspace,
-                $user,
-                $subtask,
-                'updated',
-                ['name' => $subtask->name]
-            );
+            // Log activity with changes
+            if (!empty($changes)) {
+                Activity::log(
+                    $subtask->task->taskList->space->workspace,
+                    $user,
+                    $subtask,
+                    'updated',
+                    ['name' => $subtask->name],
+                    $changes
+                );
+            }
+
+            $workspace = $subtask->task->taskList->space->workspace;
+
+            // Log status change with readable names
+            if (isset($data['status_id']) && (int) $data['status_id'] !== (int) $oldStatusId) {
+                $newStatus = Status::find($data['status_id']);
+                Activity::log($workspace, $user, $subtask, 'status_changed', [
+                    'name' => $subtask->name,
+                ], [
+                    'status' => ['old' => $oldStatusName, 'new' => $newStatus?->name],
+                ]);
+            }
+
+            // Log priority change with readable labels
+            if (array_key_exists('priority_level', $data) && $data['priority_level'] !== $oldPriorityEnum?->value) {
+                $oldLabel = $oldPriorityEnum?->label();
+                $newLabel = $data['priority_level'] !== null ? PriorityLevel::from((int) $data['priority_level'])->label() : null;
+                Activity::log($workspace, $user, $subtask, 'priority_changed', [
+                    'name' => $subtask->name,
+                ], [
+                    'priority' => ['old' => $oldLabel, 'new' => $newLabel],
+                ]);
+            }
 
             return $subtask->fresh();
         });
@@ -115,13 +206,15 @@ class SubtaskService
     {
         DB::transaction(function () use ($subtask, $user) {
             $subtaskName = $subtask->name;
+            $task        = $subtask->task;
+            $workspace   = $task->taskList->space->workspace;
 
             $subtask->delete();
 
             Activity::log(
-                $subtask->task->taskList->space->workspace,
+                $workspace,
                 $user,
-                $subtask->task,
+                $task,
                 'deleted_subtask',
                 ['name' => $subtaskName]
             );

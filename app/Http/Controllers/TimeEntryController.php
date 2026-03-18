@@ -10,6 +10,7 @@ use App\Models\Task;
 use App\Models\TaskList;
 use App\Models\TimeEntry;
 use App\Models\Workspace;
+use App\Services\AccessService;
 use App\Services\TimeTrackingService;
 use Illuminate\Foundation\Auth\Access\AuthorizesRequests;
 use Illuminate\Http\RedirectResponse;
@@ -22,7 +23,8 @@ class TimeEntryController extends Controller
     use AuthorizesRequests;
 
     public function __construct(
-        protected TimeTrackingService $timeTrackingService
+        protected TimeTrackingService $timeTrackingService,
+        protected AccessService $accessService,
     ) {}
 
     /**
@@ -88,6 +90,7 @@ class TimeEntryController extends Controller
      */
     public function store(StoreTimeEntryRequest $request, Workspace $workspace, Space $space, TaskList $list, Task $task, Subtask $subtask): RedirectResponse
     {
+        abort_unless($this->accessService->canTrackTime($request->user(), $list), 403);
         try {
             $entry = $this->timeTrackingService->logTime(
                 $subtask,
@@ -109,6 +112,7 @@ class TimeEntryController extends Controller
      */
     public function startTimer(Request $request, Workspace $workspace, Space $space, TaskList $list, Task $task)
     {
+        abort_unless($this->accessService->canTrackTime($request->user(), $list), 403);
         $validated = $request->validate([
             'subtask_id' => ['nullable', 'integer', 'exists:subtasks,id'],
             'description' => ['nullable', 'string', 'max:500'],
@@ -150,6 +154,7 @@ class TimeEntryController extends Controller
      */
     public function stopTimer(Request $request, Workspace $workspace, Space $space, TaskList $list, Task $task, TimeEntry $entry)
     {
+        abort_unless($this->accessService->canManageTimeEntry($request->user(), $entry), 403);
         try {
             $stoppedEntry = $this->timeTrackingService->stopTimer($entry, $request->user());
 
@@ -197,7 +202,7 @@ class TimeEntryController extends Controller
     public function update(UpdateTimeEntryRequest $request, TimeEntry $entry): RedirectResponse
     {
         try {
-            $this->authorize('update', $entry);
+            abort_unless($this->accessService->canManageTimeEntry($request->user(), $entry), 403);
             
             $updatedEntry = $this->timeTrackingService->updateEntry($entry, $request->validated(), $request->user());
 
@@ -216,7 +221,7 @@ class TimeEntryController extends Controller
     public function destroy(Request $request, TimeEntry $entry): RedirectResponse
     {
         try {
-            $this->authorize('delete', $entry);
+            abort_unless($this->accessService->canManageTimeEntry($request->user(), $entry), 403);
             
             $this->timeTrackingService->deleteEntry($entry, $request->user());
 
@@ -231,6 +236,7 @@ class TimeEntryController extends Controller
      */
     public function workspaceReport(Request $request, Workspace $workspace): Response
     {
+        abort_unless($this->accessService->canViewAnalytics($request->user(), $workspace), 403);
         $validated = $request->validate([
             'start_date' => ['nullable', 'date'],
             'end_date' => ['nullable', 'date'],

@@ -25,8 +25,13 @@ class Subtask extends Model
         'description',
         'start_date',
         'due_date',
+        'baseline_start_date',
+        'baseline_due_date',
         'completed_at',
         'time_estimate',
+        'optimistic_estimate',
+        'most_likely_estimate',
+        'pessimistic_estimate',
         'time_spent',
         'position',
         'is_archived',
@@ -38,8 +43,13 @@ class Subtask extends Model
     protected $casts = [
         'start_date' => 'datetime',
         'due_date' => 'datetime',
+        'baseline_start_date' => 'datetime',
+        'baseline_due_date' => 'datetime',
         'completed_at' => 'datetime',
         'time_estimate' => 'integer',
+        'optimistic_estimate' => 'integer',
+        'most_likely_estimate' => 'integer',
+        'pessimistic_estimate' => 'integer',
         'time_spent' => 'integer',
         'is_archived' => 'boolean',
         'custom_fields' => 'array',
@@ -206,6 +216,37 @@ class Subtask extends Model
     public function isCompleted(): bool
     {
         return !is_null($this->completed_at);
+    }
+
+    public function getPertExpectedEstimateAttribute(): ?float
+    {
+        if (
+            is_null($this->optimistic_estimate) ||
+            is_null($this->most_likely_estimate) ||
+            is_null($this->pessimistic_estimate)
+        ) {
+            return null;
+        }
+
+        return round((
+            $this->optimistic_estimate +
+            (4 * $this->most_likely_estimate) +
+            $this->pessimistic_estimate
+        ) / 6, 2);
+    }
+
+    public function getPertVarianceAttribute(): ?float
+    {
+        if (is_null($this->optimistic_estimate) || is_null($this->pessimistic_estimate)) {
+            return null;
+        }
+
+        return round(pow(($this->pessimistic_estimate - $this->optimistic_estimate) / 6, 2), 2);
+    }
+
+    public function getPlannedEstimateAttribute(): ?float
+    {
+        return $this->pert_expected_estimate ?? $this->time_estimate;
     }
 
     public function hasUncompletedDependencies(): bool

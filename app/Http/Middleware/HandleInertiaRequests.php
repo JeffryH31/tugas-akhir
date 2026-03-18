@@ -2,8 +2,11 @@
 
 namespace App\Http\Middleware;
 
+use App\Http\Resources\ActivityResource;
+use App\Models\Activity;
 use App\Models\TimeEntry;
 use Illuminate\Http\Request;
+use Illuminate\Support\ViewErrorBag;
 use Inertia\Middleware;
 
 class HandleInertiaRequests extends Middleware
@@ -41,6 +44,7 @@ class HandleInertiaRequests extends Middleware
         $workspaces = collect([]);
 
         if ($request->user()) {
+            $notificationWorkspaceIds = $request->user()->workspaces()->pluck('workspaces.id');
             $workspaces = $request->user()
                 ->workspaces()
                 ->orderBy('created_at', 'desc')
@@ -68,10 +72,40 @@ class HandleInertiaRequests extends Middleware
             }
         }
 
+        $notifications = $request->user()
+            ? Activity::query()
+                ->whereIn('workspace_id', $notificationWorkspaceIds ?? [])
+                ->where('user_id', '!=', $request->user()->id)
+                ->with('user')
+                ->latest()
+                ->limit(10)
+                ->get()
+            : collect();
+
+        $unreadNotificationsCount = $request->user()
+            ? Activity::query()
+                ->whereIn('workspace_id', $notificationWorkspaceIds ?? [])
+                ->where('user_id', '!=', $request->user()->id)
+                ->when(
+                    $request->user()->last_notifications_read_at,
+                    fn($q) => $q->where('created_at', '>', $request->user()->last_notifications_read_at)
+                )
+                ->count()
+            : 0;
+
         return [
             ...parent::share($request),
             'activeWorkspace' => $activeWorkspace,
             'workspaces' => $workspaces,
+            'flash' => [
+                'success' => fn() => $request->session()->get('success'),
+                'error' => fn() => $request->session()->get('error'),
+            ],
+            'validationErrors' => fn() => collect(($request->session()->get('errors') instanceof ViewErrorBag)
+                ? $request->session()->get('errors')->getBag('default')->getMessages()
+                : [])->map(fn($messages) => $messages[0] ?? null)->filter()->values(),
+            'notifications' => ActivityResource::collection($notifications),
+            'unreadNotificationsCount' => $unreadNotificationsCount,
             'runningTimer' => fn () => $request->user() ? TimeEntry::where('user_id', $request->user()->id)
                 ->where('is_running', true)
                 ->with('subtask.task.taskList.space')

@@ -5,6 +5,7 @@ namespace App\Services;
 use App\Models\Activity;
 use App\Models\Folder;
 use App\Models\Space;
+use App\Models\Task;
 use App\Models\TaskList;
 use App\Models\User;
 use Illuminate\Support\Collection;
@@ -40,7 +41,7 @@ class TaskListService
 
         // If viewing subtasks, load from parent task
         if ($taskId) {
-            $parentTask = \App\Models\Task::with([
+            $parentTask = Task::with([
                 'subtasks.status',
                 'subtasks.assignees',
                 'subtasks.labels',
@@ -48,8 +49,9 @@ class TaskListService
                 'subtasks.dependents',
                 'subtasks.timeEntries.user',
                 'subtasks.comments.user', // Include comments
+                'subtasks.activities' => fn($q) => $q->with('user')->latest()->limit(50),
             ])->findOrFail($taskId);
-            
+
             $items = $parentTask->subtasks;
         } else {
             // Load tasks for the list
@@ -60,6 +62,7 @@ class TaskListService
                     'labels',
                     'subtasks.assignees', // For subtask count & assignee aggregation
                     'comments.user', // Include comments
+                    'activities' => fn($q) => $q->with('user')->latest()->limit(50),
                 ])
                 ->orderBy('position')
                 ->get();
@@ -106,6 +109,8 @@ class TaskListService
                 'created_by' => $user->id,
             ]);
 
+            $list->addMember($user, 'project_owner');
+
             Activity::log($space->workspace, $user, $list, 'created', [
                 'name' => $list->name,
                 'space_name' => $space->name,
@@ -114,6 +119,38 @@ class TaskListService
 
             return $list;
         });
+    }
+
+    public function addMember(TaskList $list, User $user, string $role, User $addedBy): void
+    {
+        $list->addMember($user, $role);
+
+        Activity::log($list->space->workspace, $addedBy, $list, 'member_added', [
+            'name' => $list->name,
+            'member_name' => $user->name,
+            'role' => $role,
+        ]);
+    }
+
+    public function updateMemberRole(TaskList $list, User $user, string $role, User $updatedBy): void
+    {
+        $list->members()->updateExistingPivot($user->id, ['role' => $role]);
+
+        Activity::log($list->space->workspace, $updatedBy, $list, 'member_role_updated', [
+            'name' => $list->name,
+            'member_name' => $user->name,
+            'role' => $role,
+        ]);
+    }
+
+    public function removeMember(TaskList $list, User $user, User $removedBy): void
+    {
+        $list->members()->detach($user->id);
+
+        Activity::log($list->space->workspace, $removedBy, $list, 'member_removed', [
+            'name' => $list->name,
+            'member_name' => $user->name,
+        ]);
     }
 
     /**
@@ -252,7 +289,7 @@ class TaskListService
                     $newSubtask->task_id = $newTask->id;
                     $newSubtask->subtask_id = null; // Will be auto-generated
                     $newSubtask->save();
-                    
+
                     $newSubtask->assignees()->sync($subtask->assignees->pluck('id'));
                     $newSubtask->labels()->sync($subtask->labels->pluck('id'));
                 }

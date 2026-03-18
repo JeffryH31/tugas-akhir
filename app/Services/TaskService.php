@@ -60,7 +60,8 @@ class TaskService
             'subtasks' => fn($q) => $q->with(['status', 'assignees', 'dependencies', 'dependents', 'timeEntries.user'])->orderBy('position'),
             'dependencies',
             'dependents',
-            'comments' => fn($q) => $q->whereNull('parent_id')->with(['user', 'replies.user', 'reactions.user'])->latest(),
+            'comments' => fn($q) => $q->whereNull('parent_id')->with(['user', 'replies.user'])->latest(),
+            'activities' => fn($q) => $q->with('user')->latest()->limit(50),
             'attachments',
             'creator',
         ]);
@@ -108,17 +109,17 @@ class TaskService
     {
         return DB::transaction(function () use ($task, $data, $user) {
             $changes = [];
-            $oldValues = $task->only([
-                'name',
-                'description',
-                'status_id',
-                'priority_level'
-            ]);
+            // Capture before update – needed for readable activity descriptions
+            $oldStatusId     = $task->status_id;
+            $oldStatusName   = $task->status?->name;
+            $oldPriorityEnum = $task->priority_level; // PriorityLevel enum|null
+
+            $oldValues = $task->only(['name', 'description']);
 
             $task->update([
-                'name' => $data['name'] ?? $task->name,
-                'description' => $data['description'] ?? $task->description,
-                'status_id' => $data['status_id'] ?? $task->status_id,
+                'name'           => $data['name'] ?? $task->name,
+                'description'    => $data['description'] ?? $task->description,
+                'status_id'      => $data['status_id'] ?? $task->status_id,
                 'priority_level' => $data['priority_level'] ?? $task->priority_level,
             ]);
 
@@ -131,12 +132,35 @@ class TaskService
 
             // Update assignees if provided
             if (isset($data['assignee_ids'])) {
-                $oldAssignees = $task->assignees->pluck('id')->toArray();
-                $task->assignees()->sync($data['assignee_ids']);
+                $oldAssigneeIds = $task->assignees->pluck('id')->toArray();
+                $newAssigneeIds  = $data['assignee_ids'];
+                $task->assignees()->sync($newAssigneeIds);
 
-                if ($oldAssignees != $data['assignee_ids']) {
-                    $changes['assignees'] = ['old' => $oldAssignees, 'new' => $data['assignee_ids']];
+                $addedIds   = array_diff($newAssigneeIds, $oldAssigneeIds);
+                $removedIds = array_diff($oldAssigneeIds, $newAssigneeIds);
+
+                foreach ($addedIds as $id) {
+                    $assignee = User::find($id);
+                    if ($assignee) {
+                        Activity::log($task->taskList->space->workspace, $user, $task, 'assigned', [
+                            'name'          => $task->name,
+                            'assignee_name' => $assignee->name,
+                            'assignee_id'   => $assignee->id,
+                        ]);
+                    }
                 }
+
+                foreach ($removedIds as $id) {
+                    $assignee = User::find($id);
+                    if ($assignee) {
+                        Activity::log($task->taskList->space->workspace, $user, $task, 'unassigned', [
+                            'name'          => $task->name,
+                            'assignee_name' => $assignee->name,
+                            'assignee_id'   => $assignee->id,
+                        ]);
+                    }
+                }
+                // Assignee changes are logged separately above – don't add to generic $changes
             }
 
             // Update labels if provided
@@ -148,6 +172,27 @@ class TaskService
                 Activity::log($task->taskList->space->workspace, $user, $task, 'updated', [
                     'name' => $task->name,
                 ], $changes);
+            }
+
+            // Log status change with readable names
+            if (isset($data['status_id']) && (int) $data['status_id'] !== (int) $oldStatusId) {
+                $newStatus = Status::find($data['status_id']);
+                Activity::log($task->taskList->space->workspace, $user, $task, 'status_changed', [
+                    'name' => $task->name,
+                ], [
+                    'status' => ['old' => $oldStatusName, 'new' => $newStatus?->name],
+                ]);
+            }
+
+            // Log priority change with readable labels
+            if (array_key_exists('priority_level', $data) && $data['priority_level'] !== $oldPriorityEnum?->value) {
+                $oldLabel = $oldPriorityEnum?->label();
+                $newLabel = $data['priority_level'] !== null ? PriorityLevel::from((int) $data['priority_level'])->label() : null;
+                Activity::log($task->taskList->space->workspace, $user, $task, 'priority_changed', [
+                    'name' => $task->name,
+                ], [
+                    'priority' => ['old' => $oldLabel, 'new' => $newLabel],
+                ]);
             }
 
             return $task->fresh();
@@ -416,7 +461,7 @@ class TaskService
     public function getMyTasks(User $user, array $filters = []): Collection
     {
         $query = $user->assignedTasks()
-            ->with(['taskList.space.workspace', 'status', 'priority', 'labels', 'subtasks'])
+            ->with(['taskList.space.workspace', 'status', 'labels', 'subtasks'])
             ->orderBy('position');
 
         return $this->applyFilters($query, $filters)->get();

@@ -31,6 +31,17 @@ return new class extends Migration
             $table->index(['space_id', 'folder_id', 'position']);
             $table->index(['folder_id', 'is_archived']);
         });
+
+        Schema::create('task_list_members', function (Blueprint $table) {
+            $table->id();
+            $table->foreignId('task_list_id')->constrained()->cascadeOnDelete();
+            $table->foreignId('user_id')->constrained()->cascadeOnDelete();
+            $table->string('role')->default('development_team'); // project_owner, project_manager, development_team, guest
+            $table->timestamps();
+
+            $table->unique(['task_list_id', 'user_id']);
+            $table->index(['user_id', 'role']);
+        });
     }
 
     /**
@@ -38,6 +49,7 @@ return new class extends Migration
      */
     public function down(): void
     {
+        Schema::dropIfExists('task_list_members');
         Schema::dropIfExists('task_lists');
     }
 };
