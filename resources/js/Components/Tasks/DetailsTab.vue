@@ -57,6 +57,10 @@ const formatSubtaskEstimate = (m) => {
     const h = m / 60;
     return h >= 1 ? `${h}h` : `${m}m`;
 };
+const getSpentPercentage = (spentMinutes, estimateMinutes) => {
+    if (!estimateMinutes) return null;
+    return Math.round(((spentMinutes || 0) / estimateMinutes) * 100);
+};
 
 // ===== Priority =====
 const currentPriority = computed(() => {
@@ -685,10 +689,16 @@ const removeSuccessor = (suc) => depFetch('DELETE', { subtask_id: suc.id, depend
                         Spent
                     </div>
                     <div class="prop-value">
-                        <span class="text-body-2">
+                        <div class="d-flex align-center ga-2">
+                            <span class="text-body-2">
                             {{ formatDuration((localTask.time_spent || 0) * 60) }}
-                        </span>
-                        <v-progress-linear v-if="localTask.time_estimate && localTask.time_spent"
+                            </span>
+                            <v-chip v-if="localTask.time_estimate" size="x-small" variant="tonal"
+                                :color="(localTask.time_spent || 0) > localTask.time_estimate ? 'error' : 'primary'">
+                                {{ getSpentPercentage(localTask.time_spent, localTask.time_estimate) }}%
+                            </v-chip>
+                        </div>
+                        <v-progress-linear v-if="localTask.time_estimate"
                             :model-value="(localTask.time_spent / localTask.time_estimate) * 100"
                             :color="localTask.time_spent > localTask.time_estimate ? 'error' : 'primary'" height="4"
                             rounded class="mt-1" style="max-width: 200px;" />

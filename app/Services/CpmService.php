@@ -29,7 +29,7 @@ class CpmService
 
         // Check if any subtask has time estimate
         $subtasksWithEstimate = $subtasks->filter(fn($s) => $s->time_estimate > 0);
-        
+
         if ($subtasksWithEstimate->isEmpty()) {
             return [
                 'success' => false,
@@ -206,7 +206,7 @@ class CpmService
         foreach ($subtasks as $subtask) {
             $plannedMinutes = $subtask->planned_estimate ?? 0;
             $duration = $plannedMinutes / 60; // Convert minutes to hours
-            
+
             $cpmData[$subtask->id] = [
                 'id' => $subtask->id,
                 'subtask_id' => $subtask->subtask_id,
@@ -241,7 +241,7 @@ class CpmService
         // Process in topological order
         foreach ($sortedIds as $id) {
             $predecessors = $graph['reverse'][$id] ?? [];
-            
+
             if (empty($predecessors)) {
                 // No dependencies - starts at time 0
                 $cpmData[$id]['earlyStart'] = 0;
@@ -285,10 +285,10 @@ class CpmService
 
         // Process in reverse topological order
         $reverseSorted = array_reverse($sortedIds);
-        
+
         foreach ($reverseSorted as $id) {
             $successors = $graph['forward'][$id] ?? [];
-            
+
             if (!empty($successors)) {
                 // LF = min(LS of all successors)
                 $minLS = PHP_INT_MAX;
@@ -313,7 +313,7 @@ class CpmService
         foreach ($cpmData as $id => &$data) {
             // Slack (Total Float) = LS - ES = LF - EF
             $data['slack'] = round($data['lateStart'] - $data['earlyStart'], 2);
-            
+
             // Critical path = activities with zero slack
             $data['isCritical'] = abs($data['slack']) < 0.001; // Use small epsilon for float comparison
         }
@@ -327,10 +327,10 @@ class CpmService
     protected function getCriticalPathSubtasks(array $cpmData): array
     {
         $criticalSubtasks = array_filter($cpmData, fn($data) => $data['isCritical']);
-        
+
         // Sort by early start
         uasort($criticalSubtasks, fn($a, $b) => $a['earlyStart'] <=> $b['earlyStart']);
-        
+
         return array_values($criticalSubtasks);
     }
 
@@ -358,9 +358,9 @@ class CpmService
         $projectStart = $task->subtasks()
             ->whereNotNull('start_date')
             ->min('start_date');
-        
+
         $startDate = $projectStart ? Carbon::parse($projectStart) : Carbon::today();
-        
+
         // Assuming 8 working hours per day
         $workingHoursPerDay = 8;
         $workingDays = ceil($projectDuration / $workingHoursPerDay);
@@ -436,21 +436,27 @@ class CpmService
      */
     protected function wouldCreateCycle(Subtask $subtask, Subtask $dependsOn): bool
     {
-        // If dependsOn depends on subtask (directly or indirectly), adding this would create a cycle
+        // Edge direction is: dependency -> dependent.
+        // Adding "subtask depends on dependsOn" means adding edge: dependsOn -> subtask.
+        // This creates a cycle iff subtask can already reach dependsOn.
+        if ($subtask->id === $dependsOn->id) {
+            return true;
+        }
+
         $visited = [];
-        $queue = [$dependsOn->id];
+        $queue = [$subtask->id];
 
         while (!empty($queue)) {
             $current = array_shift($queue);
-            
-            if ($current === $subtask->id) {
-                return true; // Found a path back to subtask - would create cycle
+
+            if ($current === $dependsOn->id) {
+                return true; // Found path subtask -> ... -> dependsOn; adding dependsOn -> subtask closes a loop
             }
 
             if (in_array($current, $visited)) {
                 continue;
             }
-            
+
             $visited[] = $current;
 
             $dependents = Subtask::find($current)?->dependents ?? collect();

@@ -26,6 +26,11 @@ const formatTimeEstimate = (minutes) => {
     return h % 1 === 0 ? `${h}h` : `${h.toFixed(1)}h`;
 };
 
+const getSpentPercentage = (spentMinutes, estimateMinutes) => {
+    if (!estimateMinutes) return null;
+    return Math.round(((spentMinutes || 0) / estimateMinutes) * 100);
+};
+
 const newEntry = ref({ duration: null, description: '' });
 
 const addEntry = () => {
@@ -75,9 +80,15 @@ const deleteEntry = async (entryId) => {
             <v-divider vertical class="mx-4" />
             <div class="time-summary-item">
                 <div class="text-caption text-grey mb-1">Spent</div>
-                <div class="text-h6 font-weight-bold"
-                    :class="task.time_spent > task.time_estimate ? 'text-error' : ''">
-                    {{ formatDuration((task.time_spent || 0) * 60) }}
+                <div class="d-flex align-center ga-2 justify-center">
+                    <div class="text-h6 font-weight-bold"
+                        :class="task.time_spent > task.time_estimate ? 'text-error' : ''">
+                        {{ formatDuration((task.time_spent || 0) * 60) }}
+                    </div>
+                    <v-chip v-if="task.time_estimate" size="x-small" variant="tonal"
+                        :color="(task.time_spent || 0) > task.time_estimate ? 'error' : 'primary'">
+                        {{ getSpentPercentage(task.time_spent, task.time_estimate) }}%
+                    </v-chip>
                 </div>
             </div>
             <v-divider vertical class="mx-4" />

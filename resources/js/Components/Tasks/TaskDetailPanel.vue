@@ -242,49 +242,23 @@ onUnmounted(() => stopTimerInterval());
                 <v-tabs-window v-model="activeTab">
 
                     <v-tabs-window-item value="details">
-                        <DetailsTab
-                            :local-task="localTask"
-                            :task="task"
-                            :is-subtask="isSubtask"
-                            :workspace="workspace"
-                            :space="space"
-                            :list="list"
-                            :parent-task="parentTask"
-                            :statuses="statuses"
-                            :members="members"
-                            :labels="labels"
-                            :sprints="sprints"
-                            :is-tracking="isTracking"
-                            :format-tracking-duration="formatTrackingDuration"
-                            :is-timer-loading="isTimerLoading"
-                            @start-tracking="startTracking"
-                            @stop-tracking="stopTracking"
-                            @updated="emit('updated')"
-                            @view-subtasks="emit('view-subtasks', $event)"
-                        />
+                        <DetailsTab :local-task="localTask" :task="task" :is-subtask="isSubtask" :workspace="workspace"
+                            :space="space" :list="list" :parent-task="parentTask" :statuses="statuses"
+                            :members="members" :labels="labels" :sprints="sprints" :is-tracking="isTracking"
+                            :format-tracking-duration="formatTrackingDuration" :is-timer-loading="isTimerLoading"
+                            @start-tracking="startTracking" @stop-tracking="stopTracking" @updated="emit('updated')"
+                            @view-subtasks="emit('view-subtasks', $event)" />
                     </v-tabs-window-item>
 
                     <v-tabs-window-item value="comments">
-                        <CommentsTab
-                            :comments="localTask.comments || []"
-                            :is-subtask="isSubtask"
-                            :workspace="workspace"
-                            :space="space"
-                            :list="list"
-                            :main-task-id="mainTaskId"
-                            :subtask-id="isSubtask ? task?.id : null"
-                            @updated="emit('updated')"
-                        />
+                        <CommentsTab :comments="localTask.comments || []" :is-subtask="isSubtask" :workspace="workspace"
+                            :space="space" :list="list" :main-task-id="mainTaskId"
+                            :subtask-id="isSubtask ? task?.id : null" @updated="emit('updated')" />
                     </v-tabs-window-item>
 
                     <v-tabs-window-item v-if="isSubtask" value="time">
-                        <TimeTab
-                            :task="localTask"
-                            :workspace="workspace"
-                            :space="space"
-                            :list="list"
-                            :parent-task="parentTask"
-                        />
+                        <TimeTab :task="localTask" :workspace="workspace" :space="space" :list="list"
+                            :parent-task="parentTask" />
                     </v-tabs-window-item>
 
                     <v-tabs-window-item value="activity">
@@ -298,8 +272,7 @@ onUnmounted(() => stopTimerInterval());
 </template>
 
 <style scoped>
-.task-detail-panel {
-}
+.task-detail-panel {}
 
 .panel-header {
     display: flex;

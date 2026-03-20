@@ -166,7 +166,6 @@ class Subtask extends Model
             ->withTimestamps();
     }
 
-
     public function scopeActive($query)
     {
         return $query->where('is_archived', false);

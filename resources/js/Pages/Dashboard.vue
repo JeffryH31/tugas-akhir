@@ -219,7 +219,7 @@ const openCreateSpace = () => {
                     <!-- Overdue Alert -->
                     <v-alert v-if="overdueTasks?.length" type="warning" variant="tonal" class="mb-4" closable>
                         <v-alert-title>{{ overdueTasks.length }} Overdue Task{{ overdueTasks.length > 1 ? 's' : ''
-                        }}</v-alert-title>
+                            }}</v-alert-title>
                         You have tasks that need your attention.
                     </v-alert>
 
