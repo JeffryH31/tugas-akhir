@@ -2,13 +2,31 @@
 /**
  * My Tasks Page - All tasks assigned to current user
  */
-import { ref, computed } from 'vue';
-import { Head, router } from '@inertiajs/vue3';
+import { ref, computed, onMounted, onUnmounted } from 'vue';
+import { Head, router, usePage } from '@inertiajs/vue3';
 import MainLayout from '@/Layouts/MainLayout.vue';
 import TaskCard from '@/Components/Tasks/TaskCard.vue';
+import { useSnackbar } from '@/composables/useSnackbar';
+
+const { showSnackbar } = useSnackbar();
+const page = usePage();
+
+const currentUserId = computed(() => page.props?.auth?.user?.id || null);
 
 const props = defineProps({
-    tasks: Array,
+    tasks: [Array, Object],
+});
+
+const taskItems = computed(() => {
+    if (Array.isArray(props.tasks)) {
+        return props.tasks;
+    }
+
+    if (Array.isArray(props.tasks?.data)) {
+        return props.tasks.data;
+    }
+
+    return [];
 });
 
 // Filter and sort state
@@ -21,11 +39,7 @@ const groupBy = ref('status'); // status, list, due_date
 
 // Filtered tasks
 const filteredTasks = computed(() => {
-    if (!props.tasks || !Array.isArray(props.tasks)) {
-        return [];
-    }
-
-    let result = [...props.tasks];
+    let result = [...taskItems.value];
 
     // Search filter
     if (searchQuery.value) {
@@ -131,19 +145,42 @@ const taskCount = computed(() => filteredTasks.value.length);
 
 // Handle task complete — tasks don't support completion (only subtasks do)
 const handleTaskComplete = (task) => {
-    if (window.showSnackbar) {
-        window.showSnackbar('Tasks cannot be completed directly. Complete subtasks instead.', 'info');
-    }
+    showSnackbar('Tasks cannot be completed directly. Complete subtasks instead.', 'info');
 };
+
+// Auto-refresh tasks when returning from task detail/edit
+const handleWindowFocus = () => {
+    router.reload({ only: ['tasks'] });
+};
+
+onMounted(() => {
+    window.addEventListener('focus', handleWindowFocus);
+});
+
+onUnmounted(() => {
+    window.removeEventListener('focus', handleWindowFocus);
+});
 
 // Handle task open
 const handleTaskOpen = (task) => {
-    router.visit(route('tasks.show', [
+    const baseUrl = route('lists.show', [
         task.task_list.space.workspace_id,
         task.task_list.space_id,
         task.task_list_id,
-        task.id,
-    ]));
+    ]);
+
+    const assignedSubtaskId = Array.isArray(task?.subtasks)
+        ? task.subtasks.find((subtask) =>
+            Array.isArray(subtask?.assignees)
+            && subtask.assignees.some((assignee) => assignee.id === currentUserId.value)
+        )?.id
+        : null;
+
+    const url = assignedSubtaskId
+        ? `${baseUrl}?task_id=${task.id}&open_subtask_id=${assignedSubtaskId}`
+        : `${baseUrl}?open_task_id=${task.id}`;
+
+    router.visit(url);
 };
 </script>
 
@@ -216,7 +253,7 @@ const handleTaskOpen = (task) => {
 
                         <!-- Tasks -->
                         <div class="task-list">
-                            <TaskCard v-for="task in group.tasks" :key="task.id" :task="task" show-list
+                            <TaskCard v-for="task in group.tasks" :key="task.id" :task="task" show-list :show-checkbox="false"
                                 @complete="handleTaskComplete" @open-detail="handleTaskOpen" />
                         </div>
                     </div>

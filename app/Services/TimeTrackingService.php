@@ -19,13 +19,24 @@ class TimeTrackingService
     public function logTime(Subtask $subtask, User $user, array $data): TimeEntry
     {
         return DB::transaction(function () use ($subtask, $user, $data) {
+            $startedAt = isset($data['started_at']) ? now()->parse($data['started_at']) : now();
+            $endedAt = isset($data['ended_at']) ? now()->parse($data['ended_at']) : null;
+
+            $duration = $data['duration'] ?? null;
+            if (!is_null($endedAt)) {
+                $duration = max(1, (int) $startedAt->diffInMinutes($endedAt));
+            }
+            if (is_null($duration)) {
+                $duration = 1;
+            }
+
             $entry = TimeEntry::create([
                 'subtask_id' => $subtask->id,
                 'user_id' => $user->id,
-                'duration' => $data['duration'], // in minutes
+                'duration' => $duration, // in minutes
                 'description' => $data['description'] ?? null,
-                'started_at' => $data['started_at'] ?? now(),
-                'ended_at' => $data['ended_at'] ?? now()->addMinutes($data['duration']),
+                'started_at' => $startedAt,
+                'ended_at' => $endedAt ?? $startedAt->copy()->addMinutes($duration),
                 'is_billable' => $data['is_billable'] ?? false,
             ]);
 

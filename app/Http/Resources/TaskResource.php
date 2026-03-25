@@ -14,13 +14,24 @@ class TaskResource extends JsonResource
      */
     public function toArray(Request $request): array
     {
+        $earliestDueDate = null;
+
+        if ($this->relationLoaded('subtasks')) {
+            $earliestDueDate = $this->subtasks
+                ->filter(fn($subtask) => !empty($subtask->due_date))
+                ->sortBy('due_date')
+                ->first()?->due_date;
+        }
+
         return [
             'id' => $this->id,
             'task_id' => $this->task_id,
+            'task_list_id' => $this->task_list_id,
             'name' => $this->name,
             'description' => $this->description,
             'position' => $this->position,
             'progress' => $this->progress,
+            'due_date' => $earliestDueDate,
             'status_id' => $this->status_id,
             'priority_level' => $this->priority_level,
             'is_archived' => $this->is_archived,
@@ -30,6 +41,19 @@ class TaskResource extends JsonResource
             // Relationships
             'status' => new StatusResource($this->whenLoaded('status')),
             'priority' => $this->priority,
+            'task_list' => $this->whenLoaded('taskList', function () {
+                return [
+                    'id' => $this->taskList->id,
+                    'name' => $this->taskList->name,
+                    'space_id' => $this->taskList->space_id,
+                    'space' => $this->taskList->relationLoaded('space') && $this->taskList->space
+                        ? [
+                            'id' => $this->taskList->space->id,
+                            'workspace_id' => $this->taskList->space->workspace_id,
+                        ]
+                        : null,
+                ];
+            }),
             'assignees' => UserResource::collection($this->whenLoaded('assignees')),
             'labels' => LabelResource::collection($this->whenLoaded('labels')),
             'creator' => new UserResource($this->whenLoaded('creator')),

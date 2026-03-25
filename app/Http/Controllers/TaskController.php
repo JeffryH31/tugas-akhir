@@ -356,17 +356,17 @@ class TaskController extends Controller
         $query = str_replace(['%', '_'], ['\%', '\_'], $query);
 
         $user = $request->user();
-        
+
         $tasksQuery = Task::whereHas('taskList.space.workspace', function ($q) use ($user, $workspaceId) {
-                $q->where('created_by', $user->id)
-                  ->orWhereHas('members', function ($q2) use ($user) {
-                      $q2->where('users.id', $user->id);
-                  });
-            })
+            $q->where('created_by', $user->id)
+                ->orWhereHas('members', function ($q2) use ($user) {
+                    $q2->where('users.id', $user->id);
+                });
+        })
             ->when($workspaceId, fn($q) => $q->whereHas('taskList.space', fn($q2) => $q2->where('workspace_id', $workspaceId)))
             ->where(function ($q) use ($query) {
                 $q->where('name', 'like', "%{$query}%")
-                  ->orWhere('description', 'like', "%{$query}%");
+                    ->orWhere('description', 'like', "%{$query}%");
             })
             ->when(!empty($validated['status_id']), fn($q) => $q->where('status_id', $validated['status_id']))
             ->when(!empty($validated['assignee_id']), fn($q) => $q->whereHas('assignees', fn($q2) => $q2->where('users.id', $validated['assignee_id'])))
@@ -378,11 +378,11 @@ class TaskController extends Controller
 
         // Search lists
         $listsQuery = TaskList::whereHas('space.workspace', function ($q) use ($user) {
-                $q->where('created_by', $user->id)
-                  ->orWhereHas('members', function ($q2) use ($user) {
-                      $q2->where('users.id', $user->id);
-                  });
-            })
+            $q->where('created_by', $user->id)
+                ->orWhereHas('members', function ($q2) use ($user) {
+                    $q2->where('users.id', $user->id);
+                });
+        })
             ->when($workspaceId, fn($q) => $q->whereHas('space', fn($q2) => $q2->where('workspace_id', $workspaceId)))
             ->where('name', 'like', "%{$query}%")
             ->with('space')
@@ -392,11 +392,11 @@ class TaskController extends Controller
 
         // Search spaces
         $spacesQuery = Space::whereHas('workspace', function ($q) use ($user, $workspaceId) {
-                $q->where('created_by', $user->id)
-                  ->orWhereHas('members', function ($q2) use ($user) {
-                      $q2->where('users.id', $user->id);
-                  });
-            })
+            $q->where('created_by', $user->id)
+                ->orWhereHas('members', function ($q2) use ($user) {
+                    $q2->where('users.id', $user->id);
+                });
+        })
             ->when($workspaceId, fn($q) => $q->where('workspace_id', $workspaceId))
             ->where('name', 'like', "%{$query}%")
             ->with('workspace')

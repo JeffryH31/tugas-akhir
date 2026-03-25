@@ -7,7 +7,7 @@ const props = defineProps({
     workspace: Object,
     space: Object,
     sprint: Object,
-    backlogTasks: Array,
+    backlogSubtasks: Array,
     statistics: Object,
     burndown: Object,
     statuses: Array,
@@ -30,8 +30,16 @@ const isSprintCompleted = computed(() => {
     return today > end;
 });
 
-const openTask = (task) => {
-    router.visit(route('tasks.show', [props.workspace.id, props.space.id, task.task_list_id, task.id]));
+const openTask = (subtask) => {
+    const parentTask = subtask.task;
+    if (!parentTask) return;
+
+    router.visit(route('tasks.show', [
+        props.workspace.id,
+        props.space.id,
+        parentTask.task_list_id,
+        parentTask.id,
+    ]));
 };
 
 const addTaskToSprint = (task) => {
@@ -41,7 +49,7 @@ const addTaskToSprint = (task) => {
         {
             preserveScroll: true,
             onFinish: () => {
-                router.reload({ only: ['sprint', 'backlogTasks', 'statistics', 'burndown'] });
+                router.reload({ only: ['sprint', 'backlogSubtasks', 'statistics', 'burndown'] });
                 window.showSnackbar('Task added to sprint!', 'success');
             },
         }
@@ -55,7 +63,7 @@ const removeTaskFromSprint = (task) => {
             data: { subtask_id: task.id },
             preserveScroll: true,
             onFinish: () => {
-                router.reload({ only: ['sprint', 'backlogTasks', 'statistics', 'burndown'] });
+                router.reload({ only: ['sprint', 'backlogSubtasks', 'statistics', 'burndown'] });
                 window.showSnackbar('Task removed from sprint!', 'success');
             },
         }
@@ -91,15 +99,15 @@ const removeTaskFromSprint = (task) => {
                 <div class="grid grid-cols-5 gap-4 mt-6">
                     <div class="bg-[#2D2D2D] rounded-lg p-4">
                         <div class="text-sm text-gray-400">Total Tasks</div>
-                        <div class="text-2xl font-bold text-white mt-1">{{ statistics.total_tasks }}</div>
+                        <div class="text-2xl font-bold text-white mt-1">{{ statistics.total_subtasks }}</div>
                     </div>
                     <div class="bg-[#2D2D2D] rounded-lg p-4">
                         <div class="text-sm text-gray-400">Completed</div>
-                        <div class="text-2xl font-bold text-success mt-1">{{ statistics.completed_tasks }}</div>
+                        <div class="text-2xl font-bold text-success mt-1">{{ statistics.completed_subtasks }}</div>
                     </div>
                     <div class="bg-[#2D2D2D] rounded-lg p-4">
                         <div class="text-sm text-gray-400">In Progress</div>
-                        <div class="text-2xl font-bold text-info mt-1">{{ statistics.in_progress_tasks }}</div>
+                        <div class="text-2xl font-bold text-info mt-1">{{ statistics.in_progress_subtasks }}</div>
                     </div>
                     <div class="bg-[#2D2D2D] rounded-lg p-4">
                         <div class="text-sm text-gray-400">Completion Rate</div>
@@ -120,35 +128,35 @@ const removeTaskFromSprint = (task) => {
                         <div class="flex items-center justify-between mb-4">
                             <h3 class="text-lg font-semibold text-white">
                                 Backlog
-                                <span class="text-gray-400 text-sm ml-2">({{ backlogTasks.length }})</span>
+                                <span class="text-gray-400 text-sm ml-2">({{ backlogSubtasks.length }})</span>
                             </h3>
                         </div>
                         <div class="flex-1 bg-[#2D2D2D] rounded-lg p-4 overflow-auto">
                             <div class="space-y-2">
                                 <div
-                                    v-for="task in backlogTasks"
-                                    :key="task.id"
+                                    v-for="subtask in backlogSubtasks"
+                                    :key="subtask.id"
                                     class="bg-[#1e1e1e] rounded-lg p-4 hover:bg-[#252526] transition-colors cursor-pointer"
-                                    @click="openTask(task)"
+                                    @click="openTask(subtask)"
                                 >
                                     <div class="flex items-start justify-between mb-2">
                                         <div class="flex-1">
-                                            <div class="font-medium text-white">{{ task.name }}</div>
+                                            <div class="font-medium text-white">{{ subtask.name }}</div>
                                             <div class="flex items-center gap-2 mt-2">
                                                 <v-chip
-                                                    v-if="task.status"
-                                                    :color="task.status.color"
+                                                    v-if="subtask.status"
+                                                    :color="subtask.status.color"
                                                     size="x-small"
                                                 >
-                                                    {{ task.status.name }}
+                                                    {{ subtask.status.name }}
                                                 </v-chip>
                                                 <v-chip
-                                                    v-if="task.priority"
-                                                    :color="task.priority.color"
+                                                    v-if="subtask.priority"
+                                                    :color="subtask.priority.color"
                                                     size="x-small"
                                                 >
                                                     <v-icon start size="12">mdi-flag</v-icon>
-                                                    {{ task.priority.name }}
+                                                    {{ subtask.priority.name }}
                                                 </v-chip>
                                             </div>
                                         </div>
@@ -157,12 +165,12 @@ const removeTaskFromSprint = (task) => {
                                             size="x-small"
                                             variant="text"
                                             color="primary"
-                                            @click.stop="addTaskToSprint(task)"
+                                            @click.stop="addTaskToSprint(subtask)"
                                         />
                                     </div>
-                                    <div v-if="task.assignees && task.assignees.length > 0" class="flex gap-1 mt-2">
+                                    <div v-if="subtask.assignees && subtask.assignees.length > 0" class="flex gap-1 mt-2">
                                         <v-avatar
-                                            v-for="assignee in task.assignees"
+                                            v-for="assignee in subtask.assignees"
                                             :key="assignee.id"
                                             size="24"
                                             :image="assignee.profile_photo_url"
@@ -171,7 +179,7 @@ const removeTaskFromSprint = (task) => {
                                         </v-avatar>
                                     </div>
                                 </div>
-                                <div v-if="backlogTasks.length === 0" class="text-center py-8 text-gray-500">
+                                <div v-if="backlogSubtasks.length === 0" class="text-center py-8 text-gray-500">
                                     <p>No tasks in backlog</p>
                                 </div>
                             </div>
@@ -183,35 +191,35 @@ const removeTaskFromSprint = (task) => {
                         <div class="flex items-center justify-between mb-4">
                             <h3 class="text-lg font-semibold text-white">
                                 Sprint Tasks
-                                <span class="text-gray-400 text-sm ml-2">({{ sprint.tasks.length }})</span>
+                                <span class="text-gray-400 text-sm ml-2">({{ sprint.subtasks?.length || 0 }})</span>
                             </h3>
                         </div>
                         <div class="flex-1 bg-[#2D2D2D] rounded-lg p-4 overflow-auto">
                             <div class="space-y-2">
                                 <div
-                                    v-for="task in sprint.tasks"
-                                    :key="task.id"
+                                    v-for="subtask in sprint.subtasks || []"
+                                    :key="subtask.id"
                                     class="bg-[#1e1e1e] rounded-lg p-4 hover:bg-[#252526] transition-colors cursor-pointer"
-                                    @click="openTask(task)"
+                                    @click="openTask(subtask)"
                                 >
                                     <div class="flex items-start justify-between mb-2">
                                         <div class="flex-1">
-                                            <div class="font-medium text-white">{{ task.name }}</div>
+                                            <div class="font-medium text-white">{{ subtask.name }}</div>
                                             <div class="flex items-center gap-2 mt-2">
                                                 <v-chip
-                                                    v-if="task.status"
-                                                    :color="task.status.color"
+                                                    v-if="subtask.status"
+                                                    :color="subtask.status.color"
                                                     size="x-small"
                                                 >
-                                                    {{ task.status.name }}
+                                                    {{ subtask.status.name }}
                                                 </v-chip>
                                                 <v-chip
-                                                    v-if="task.priority"
-                                                    :color="task.priority.color"
+                                                    v-if="subtask.priority"
+                                                    :color="subtask.priority.color"
                                                     size="x-small"
                                                 >
                                                     <v-icon start size="12">mdi-flag</v-icon>
-                                                    {{ task.priority.name }}
+                                                    {{ subtask.priority.name }}
                                                 </v-chip>
                                             </div>
                                         </div>
@@ -220,12 +228,12 @@ const removeTaskFromSprint = (task) => {
                                             size="x-small"
                                             variant="text"
                                             color="error"
-                                            @click.stop="removeTaskFromSprint(task)"
+                                            @click.stop="removeTaskFromSprint(subtask)"
                                         />
                                     </div>
-                                    <div v-if="task.assignees && task.assignees.length > 0" class="flex gap-1 mt-2">
+                                    <div v-if="subtask.assignees && subtask.assignees.length > 0" class="flex gap-1 mt-2">
                                         <v-avatar
-                                            v-for="assignee in task.assignees"
+                                            v-for="assignee in subtask.assignees"
                                             :key="assignee.id"
                                             size="24"
                                             :image="assignee.profile_photo_url"
@@ -234,7 +242,7 @@ const removeTaskFromSprint = (task) => {
                                         </v-avatar>
                                     </div>
                                 </div>
-                                <div v-if="sprint.tasks.length === 0" class="text-center py-8 text-gray-500">
+                                <div v-if="(sprint.subtasks?.length || 0) === 0" class="text-center py-8 text-gray-500">
                                     <p>No tasks in sprint</p>
                                     <p class="text-sm mt-2">Add tasks from backlog</p>
                                 </div>
@@ -256,12 +264,12 @@ const removeTaskFromSprint = (task) => {
                                 <!-- Ideal line -->
                                 <div
                                     class="w-2 bg-gray-600 rounded-t"
-                                    :style="{ height: `${(burndown.ideal[index]?.remaining / statistics.total_tasks) * 100}%` }"
+                                    :style="{ height: `${(burndown.ideal[index]?.remaining / statistics.total_subtasks) * 100}%` }"
                                 />
                                 <!-- Actual line -->
                                 <div
                                     class="w-2 bg-primary rounded-t"
-                                    :style="{ height: `${(point.remaining / statistics.total_tasks) * 100}%` }"
+                                    :style="{ height: `${(point.remaining / statistics.total_subtasks) * 100}%` }"
                                 />
                             </div>
                             <div class="text-xs text-gray-400 mt-2">Day {{ point.day }}</div>

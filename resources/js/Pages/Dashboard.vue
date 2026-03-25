@@ -10,7 +10,7 @@
  * - Quick actions
  */
 import { ref, computed } from 'vue';
-import { Head, router } from '@inertiajs/vue3';
+import { Head, router, usePage } from '@inertiajs/vue3';
 import MainLayout from '@/Layouts/MainLayout.vue';
 import TaskCard from '@/Components/Tasks/TaskCard.vue';
 import { useSnackbar } from '@/composables/useSnackbar';
@@ -27,6 +27,34 @@ const props = defineProps({
 // Active tab for tasks
 const activeTaskTab = ref('my-tasks');
 const { showSnackbar } = useSnackbar();
+const page = usePage();
+
+const currentUserId = computed(() => page.props?.auth?.user?.id || null);
+
+const getAssignedSubtaskId = (task) => {
+    if (!currentUserId.value || !Array.isArray(task?.subtasks)) return null;
+    const assigned = task.subtasks.find((subtask) =>
+        Array.isArray(subtask?.assignees) && subtask.assignees.some((assignee) => assignee.id === currentUserId.value)
+    );
+
+    return assigned?.id || null;
+};
+
+const buildTaskDeepLink = (task) => {
+    const workspaceId = task.task_list?.space?.workspace_id || props.activeWorkspace?.id;
+    const spaceId = task.task_list?.space_id;
+    const listId = task.task_list_id;
+    const taskId = task.id;
+
+    const baseUrl = route('lists.show', [workspaceId, spaceId, listId]);
+    const assignedSubtaskId = getAssignedSubtaskId(task);
+
+    if (assignedSubtaskId) {
+        return `${baseUrl}?task_id=${taskId}&open_subtask_id=${assignedSubtaskId}`;
+    }
+
+    return `${baseUrl}?open_task_id=${taskId}`;
+};
 
 // Format duration (input is in minutes from backend)
 const formatDuration = (minutes) => {
@@ -120,12 +148,7 @@ const handleTaskComplete = (task) => {
 
 // Handle task open
 const handleTaskOpen = (task) => {
-    router.visit(route('tasks.show', [
-        props.activeWorkspace.id,
-        task.task_list.space_id,
-        task.task_list_id,
-        task.id,
-    ]));
+    router.visit(buildTaskDeepLink(task));
 };
 
 // Navigate to the task containing the running timer's subtask
@@ -298,7 +321,7 @@ const openCreateSpace = () => {
                                 </div>
                                 <div v-else class="pa-2">
                                     <div class="space-y-2">
-                                        <TaskCard v-for="task in recentTasks" :key="task.id" :task="task" show-list
+                                        <TaskCard v-for="task in recentTasks" :key="task.id" :task="task" show-list :show-checkbox="false"
                                             @complete="handleTaskComplete" @open-detail="handleTaskOpen" />
                                     </div>
                                 </div>
@@ -311,7 +334,7 @@ const openCreateSpace = () => {
                                 </div>
                                 <div v-else class="pa-2">
                                     <div class="space-y-2">
-                                        <TaskCard v-for="task in overdueTasks" :key="task.id" :task="task" show-list
+                                        <TaskCard v-for="task in overdueTasks" :key="task.id" :task="task" show-list :show-checkbox="false"
                                             @complete="handleTaskComplete" @open-detail="handleTaskOpen" />
                                     </div>
                                 </div>

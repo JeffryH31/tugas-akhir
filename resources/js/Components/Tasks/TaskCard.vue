@@ -19,6 +19,10 @@ const props = defineProps({
         type: Boolean,
         default: false,
     },
+    showCheckbox: {
+        type: Boolean,
+        default: true,
+    },
 });
 
 const emit = defineEmits(['click', 'complete', 'open-detail']);
@@ -74,13 +78,24 @@ const subtaskProgress = computed(() => {
 
 // Display assignees: use direct assignees first, fallback to aggregated from subtasks
 const displayAssignees = computed(() => {
-    if (props.task.assignees?.length) return props.task.assignees;
+    const toList = (value) => {
+        if (Array.isArray(value)) return value;
+        if (Array.isArray(value?.data)) return value.data;
+        if (value && typeof value === 'object') return Object.values(value).filter(Boolean);
+        return [];
+    };
 
-    if (!props.task.subtasks || props.task.subtasks.length === 0) return [];
+    const directAssignees = toList(props.task.assignees);
+    if (directAssignees.length) return directAssignees;
+
+    const subtasks = toList(props.task.subtasks);
+    if (subtasks.length === 0) return [];
+
     const assigneeMap = new Map();
-    props.task.subtasks.forEach(subtask => {
-        if (subtask.assignees) {
-            subtask.assignees.forEach(a => {
+    subtasks.forEach(subtask => {
+        const subtaskAssignees = toList(subtask?.assignees);
+        if (subtaskAssignees.length) {
+            subtaskAssignees.forEach(a => {
                 if (!assigneeMap.has(a.id)) assigneeMap.set(a.id, a);
             });
         }
@@ -114,6 +129,7 @@ const openDetail = () => {
     <div class="cu-card" :class="{
         'cu-card--completed': isCompleted,
         'cu-card--critical': isCritical && !isCompleted,
+        'cu-card--no-checkbox': !showCheckbox,
     }" @click="openDetail">
         <!-- Left status color strip -->
         <div class="cu-card__status-bar" :style="{ backgroundColor: statusColor }"></div>
@@ -133,7 +149,8 @@ const openDetail = () => {
 
             <!-- Task name row -->
             <div class="cu-card__name-row">
-                <button class="cu-card__checkbox" :class="{ 'cu-card__checkbox--done': isCompleted }"
+                <button v-if="showCheckbox" class="cu-card__checkbox"
+                    :class="{ 'cu-card__checkbox--done': isCompleted }"
                     :style="!isCompleted ? { borderColor: statusColor } : {}" @click="toggleComplete">
                     <v-icon v-if="isCompleted" size="12" color="white">mdi-check</v-icon>
                 </button>
@@ -283,8 +300,15 @@ const openDetail = () => {
 }
 
 @keyframes critical-pulse {
-    0%, 100% { opacity: 1; }
-    50% { opacity: 0.5; }
+
+    0%,
+    100% {
+        opacity: 1;
+    }
+
+    50% {
+        opacity: 0.5;
+    }
 }
 
 /* Name row */
@@ -410,5 +434,10 @@ const openDetail = () => {
     font-size: 10px;
     font-weight: 600;
     text-transform: uppercase;
+}
+
+.cu-card--no-checkbox .cu-card__labels,
+.cu-card--no-checkbox .cu-card__footer {
+    padding-left: 0;
 }
 </style>

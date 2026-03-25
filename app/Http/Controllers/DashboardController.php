@@ -43,8 +43,8 @@ class DashboardController extends Controller
             ]);
         }
 
-        $myTasks = $user->getMyTasks();
-        $overdueTasks = $user->getOverdueTasks();
+        $myTasks = $this->taskService->getMyTasks($user);
+        $overdueTasks = $this->taskService->getMyTasks($user, ['is_overdue' => true]);
 
         // Get running timer if any
         $runningTimer = TimeEntry::where('user_id', $user->id)

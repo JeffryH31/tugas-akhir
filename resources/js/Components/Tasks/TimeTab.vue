@@ -1,5 +1,5 @@
 <script setup>
-import { ref } from 'vue';
+import { computed, ref } from 'vue';
 import { router } from '@inertiajs/vue3';
 import { useConfirmDialog } from '@/composables/useConfirmDialog';
 
@@ -31,22 +31,110 @@ const getSpentPercentage = (spentMinutes, estimateMinutes) => {
     return Math.round(((spentMinutes || 0) / estimateMinutes) * 100);
 };
 
-const newEntry = ref({ duration: null, description: '' });
+const newEntry = ref({
+    startDate: '',
+    startTime: '',
+    endDate: '',
+    endTime: '',
+    description: '',
+});
+
+const showStartDatePicker = ref(false);
+const showStartTimePicker = ref(false);
+const showEndDatePicker = ref(false);
+const showEndTimePicker = ref(false);
+
+const sortedTimeEntries = computed(() => {
+    const entries = Array.isArray(props.task?.time_entries) ? [...props.task.time_entries] : [];
+    return entries.sort((a, b) => {
+        const aTime = new Date(a.started_at || a.created_at || 0).getTime();
+        const bTime = new Date(b.started_at || b.created_at || 0).getTime();
+        return bTime - aTime;
+    });
+});
+
+const formatPickerDate = (value) => {
+    if (!value) return 'Select date';
+    const d = new Date(`${value}T00:00:00`);
+    if (Number.isNaN(d.getTime())) return 'Select date';
+    return d.toLocaleDateString();
+};
+
+const formatPickerTime = (value) => {
+    if (!value) return 'Select time';
+    const [hour = '00', minute = '00'] = String(value).split(':');
+    const d = new Date();
+    d.setHours(Number(hour), Number(minute), 0, 0);
+    return d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+};
+
+const buildDateTime = (dateValue, timeValue) => {
+    if (!dateValue || !timeValue) return null;
+    const normalizedTime = String(timeValue).slice(0, 5);
+    const dt = new Date(`${dateValue}T${normalizedTime}:00`);
+    return Number.isNaN(dt.getTime()) ? null : dt;
+};
+
+const startDateTime = computed(() => buildDateTime(newEntry.value.startDate, newEntry.value.startTime));
+const endDateTime = computed(() => buildDateTime(newEntry.value.endDate, newEntry.value.endTime));
+
+const durationMinutes = computed(() => {
+    if (!startDateTime.value || !endDateTime.value) return null;
+    return Math.round((endDateTime.value.getTime() - startDateTime.value.getTime()) / 60000);
+});
+
+const durationPreview = computed(() => {
+    if (!durationMinutes.value || durationMinutes.value <= 0) return null;
+    const h = Math.floor(durationMinutes.value / 60);
+    const m = durationMinutes.value % 60;
+    return h > 0 ? `${h}h ${m}m` : `${m}m`;
+});
 
 const addEntry = () => {
-    if (!newEntry.value.duration) return;
-    const hours = parseFloat(newEntry.value.duration);
-    if (isNaN(hours) || hours <= 0) { window.showSnackbar?.('Duration must be greater than 0.', 'error'); return; }
-    if (hours > 24) { window.showSnackbar?.('Duration cannot exceed 24 hours.', 'error'); return; }
+    if (!startDateTime.value || !endDateTime.value) return;
+
+    const start = startDateTime.value;
+    const end = endDateTime.value;
+
+    if (Number.isNaN(start.getTime()) || Number.isNaN(end.getTime())) {
+        window.showSnackbar?.('Start and end time are required.', 'error');
+        return;
+    }
+
+    if (end <= start) {
+        window.showSnackbar?.('End time must be after start time.', 'error');
+        return;
+    }
+
+    if ((durationMinutes.value || 0) <= 0) {
+        window.showSnackbar?.('End time must be after start time.', 'error');
+        return;
+    }
+
+    if ((durationMinutes.value || 0) > 1440) {
+        window.showSnackbar?.('Duration cannot exceed 24 hours.', 'error');
+        return;
+    }
+
     if (newEntry.value.description?.length > 500) { window.showSnackbar?.('Description cannot exceed 500 characters.', 'error'); return; }
 
     router.post(
         route('tasks.subtasks.time-entries.store', [props.workspace.id, props.space.id, props.list.id, props.parentTask.id, props.task.id]),
-        { duration: hours * 60, description: newEntry.value.description },
+        {
+            started_at: `${newEntry.value.startDate} ${newEntry.value.startTime}:00`,
+            ended_at: `${newEntry.value.endDate} ${newEntry.value.endTime}:00`,
+            description: newEntry.value.description,
+        },
         {
             preserveScroll: true,
             onSuccess: () => {
-                newEntry.value = { duration: null, description: '' };
+                newEntry.value = {
+                    startDate: '',
+                    startTime: '',
+                    endDate: '',
+                    endTime: '',
+                    description: '',
+                };
                 window.showSnackbar?.('Time entry added!', 'success');
                 router.reload({ only: ['task', 'tasksByStatus'] });
             },
@@ -96,8 +184,8 @@ const deleteEntry = async (entryId) => {
                 <div class="text-caption text-grey mb-1">Progress</div>
                 <v-progress-linear v-if="task.time_estimate"
                     :model-value="((task.time_spent || 0) / task.time_estimate) * 100"
-                    :color="(task.time_spent || 0) > task.time_estimate ? 'error' : 'primary'"
-                    height="8" rounded class="mt-1" />
+                    :color="(task.time_spent || 0) > task.time_estimate ? 'error' : 'primary'" height="8" rounded
+                    class="mt-1" />
                 <span v-else class="text-body-2 text-grey">No estimate</span>
             </div>
         </div>
@@ -109,28 +197,87 @@ const deleteEntry = async (entryId) => {
                 <span class="text-body-2 font-weight-medium">Log Time</span>
             </div>
             <div class="px-3 pb-3">
-                <div class="d-flex ga-2 align-end">
-                    <v-text-field v-model="newEntry.duration" type="number" label="Hours" variant="outlined"
-                        density="compact" step="0.25" min="0.01" max="24" hide-details style="max-width: 120px;" />
-                    <v-text-field v-model="newEntry.description" label="Description (optional)" variant="outlined"
-                        density="compact" hide-details class="flex-1" />
-                    <v-btn color="primary" variant="flat" size="small" :disabled="!newEntry.duration" @click="addEntry">
-                        <v-icon size="16">mdi-plus</v-icon>
-                        Log
-                    </v-btn>
+                <div class="log-time-grid">
+                    <div class="time-row">
+                        <div class="time-row-label">Start</div>
+                        <v-menu v-model="showStartDatePicker" :close-on-content-click="false">
+                            <template #activator="{ props: menuProps }">
+                                <v-text-field v-bind="menuProps" :model-value="formatPickerDate(newEntry.startDate)"
+                                    label="Date" prepend-inner-icon="mdi-calendar" variant="outlined" density="compact"
+                                    readonly hide-details class="picker-field" />
+                            </template>
+                            <v-card color="surface">
+                                <v-date-picker v-model="newEntry.startDate" hide-header
+                                    @update:model-value="showStartDatePicker = false" />
+                            </v-card>
+                        </v-menu>
+
+                        <v-menu v-model="showStartTimePicker" :close-on-content-click="false">
+                            <template #activator="{ props: menuProps }">
+                                <v-text-field v-bind="menuProps" :model-value="formatPickerTime(newEntry.startTime)"
+                                    label="Time" prepend-inner-icon="mdi-clock-outline" variant="outlined"
+                                    density="compact" readonly hide-details class="picker-field" />
+                            </template>
+                            <v-card color="surface" min-width="260">
+                                <v-time-picker v-model="newEntry.startTime" format="24hr"
+                                    @update:model-value="showStartTimePicker = false" />
+                            </v-card>
+                        </v-menu>
+                    </div>
+
+                    <div class="time-row">
+                        <div class="time-row-label">End</div>
+                        <v-menu v-model="showEndDatePicker" :close-on-content-click="false">
+                            <template #activator="{ props: menuProps }">
+                                <v-text-field v-bind="menuProps" :model-value="formatPickerDate(newEntry.endDate)"
+                                    label="Date" prepend-inner-icon="mdi-calendar" variant="outlined" density="compact"
+                                    readonly hide-details class="picker-field" />
+                            </template>
+                            <v-card color="surface">
+                                <v-date-picker v-model="newEntry.endDate" hide-header
+                                    @update:model-value="showEndDatePicker = false" />
+                            </v-card>
+                        </v-menu>
+
+                        <v-menu v-model="showEndTimePicker" :close-on-content-click="false">
+                            <template #activator="{ props: menuProps }">
+                                <v-text-field v-bind="menuProps" :model-value="formatPickerTime(newEntry.endTime)"
+                                    label="Time" prepend-inner-icon="mdi-clock-outline" variant="outlined"
+                                    density="compact" readonly hide-details class="picker-field" />
+                            </template>
+                            <v-card color="surface" min-width="260">
+                                <v-time-picker v-model="newEntry.endTime" format="24hr"
+                                    @update:model-value="showEndTimePicker = false" />
+                            </v-card>
+                        </v-menu>
+                    </div>
+
+                    <div class="time-row time-row--full">
+                        <v-text-field v-model="newEntry.description" label="Description (optional)" variant="outlined"
+                            density="compact" hide-details class="flex-1" />
+                        <v-chip v-if="durationPreview" size="small" color="primary" variant="tonal">
+                            Duration: {{ durationPreview }}
+                        </v-chip>
+                        <v-btn color="primary" variant="flat" size="small"
+                            :disabled="!newEntry.startDate || !newEntry.startTime || !newEntry.endDate || !newEntry.endTime"
+                            @click="addEntry">
+                            <v-icon size="16">mdi-plus</v-icon>
+                            Log
+                        </v-btn>
+                    </div>
                 </div>
             </div>
         </div>
 
         <!-- Empty state -->
-        <div v-if="!task.time_entries?.length" class="d-flex flex-column align-center py-10 text-grey">
+        <div v-if="!sortedTimeEntries.length" class="d-flex flex-column align-center py-10 text-grey">
             <v-icon size="48" class="mb-2" color="grey-darken-1">mdi-clock-outline</v-icon>
             <div class="text-body-2">No time entries yet</div>
         </div>
 
         <!-- Time Entries list -->
         <div v-else class="time-entry-list">
-            <div v-for="entry in task.time_entries" :key="entry.id" class="time-entry-item">
+            <div v-for="entry in sortedTimeEntries" :key="entry.id" class="time-entry-item">
                 <v-avatar :color="entry.user?.avatar_color" size="28">
                     <span class="text-[10px] font-weight-medium">{{ entry.user?.initials }}</span>
                 </v-avatar>
@@ -189,6 +336,40 @@ const deleteEntry = async (entryId) => {
     border: 1px solid rgba(255, 255, 255, 0.06);
     border-radius: 10px;
     overflow: hidden;
+}
+
+.log-time-grid {
+    display: grid;
+    gap: 10px;
+}
+
+.time-row {
+    display: grid;
+    grid-template-columns: 52px minmax(0, 1fr) minmax(0, 1fr);
+    gap: 8px;
+    align-items: center;
+}
+
+.time-row--full {
+    grid-template-columns: minmax(0, 1fr) auto auto;
+}
+
+.time-row-label {
+    font-size: 12px;
+    color: #9ca3af;
+    font-weight: 600;
+}
+
+.picker-field {
+    min-width: 0;
+}
+
+@media (max-width: 900px) {
+
+    .time-row,
+    .time-row--full {
+        grid-template-columns: 1fr;
+    }
 }
 
 .time-entry-list {
