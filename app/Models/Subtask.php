@@ -265,19 +265,87 @@ class Subtask extends Model
             ->toArray();
     }
 
-    public function markAsCompleted(User $user): void
+    public function markAsCompleted(User $user, ?int $targetStatusId = null): void
     {
-        $this->update([
+        $resolvedStatusId = $this->resolveCompletionStatusId($targetStatusId);
+
+        $payload = [
             'completed_at' => now(),
             'completed_by' => $user->id,
-        ]);
+        ];
+
+        if ($resolvedStatusId) {
+            $payload['status_id'] = $resolvedStatusId;
+        }
+
+        $this->update($payload);
     }
 
     public function markAsIncomplete(): void
     {
-        $this->update([
+        $defaultOpenStatusId = $this->resolveDefaultOpenStatusId();
+
+        $payload = [
             'completed_at' => null,
             'completed_by' => null,
-        ]);
+        ];
+
+        if ($defaultOpenStatusId) {
+            $payload['status_id'] = $defaultOpenStatusId;
+        }
+
+        $this->update($payload);
+    }
+
+    protected function resolveCompletionStatusId(?int $targetStatusId): ?int
+    {
+        if (!$targetStatusId) {
+            return null;
+        }
+
+        return $this->resolveCustomCompletionStatusId($targetStatusId);
+    }
+
+    protected function resolveCustomCompletionStatusId(int $targetStatusId): ?int
+    {
+        $spaceId = $this->task?->taskList?->space_id;
+        if (!$spaceId) {
+            return null;
+        }
+
+        return Status::query()
+            ->whereKey($targetStatusId)
+            ->where('space_id', $spaceId)
+            ->whereIn('applies_to', ['subtasks', 'both'])
+            ->value('id');
+    }
+
+    protected function resolveDefaultOpenStatusId(): ?int
+    {
+        $spaceId = $this->task?->taskList?->space_id;
+        if (!$spaceId) {
+            return null;
+        }
+
+        $baseQuery = Status::query()
+            ->where('space_id', $spaceId)
+            ->whereIn('applies_to', ['subtasks', 'both']);
+
+        $defaultStatusId = (clone $baseQuery)
+            ->where('is_default', true)
+            ->orderBy('position')
+            ->value('id');
+
+        if ($defaultStatusId) {
+            return $defaultStatusId;
+        }
+
+        return (clone $baseQuery)
+            ->where(function ($query) {
+                $query->where('is_closed', false)
+                    ->where('type', '!=', 'closed');
+            })
+            ->orderBy('position')
+            ->value('id');
     }
 }

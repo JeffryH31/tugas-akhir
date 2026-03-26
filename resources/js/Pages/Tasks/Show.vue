@@ -5,6 +5,9 @@ import draggable from 'vuedraggable';
 import MainLayout from '@/Layouts/MainLayout.vue';
 import { PRIORITIES } from '@/constants/priorities';
 import { useConfirmDialog } from '@/composables/useConfirmDialog';
+import {
+    getStoredSubtaskCompletionTarget,
+} from '@/utils/subtaskCompletionAutomation';
 
 const { confirm: confirmDialog } = useConfirmDialog();
 
@@ -297,9 +300,12 @@ const addSubtask = () => {
 const toggleSubtask = (subtask) => {
     const wasCompleted = !!subtask.completed_at;
     const routeName = wasCompleted ? 'tasks.subtasks.reopen' : 'tasks.subtasks.complete';
+    const targetStatusId = getStoredSubtaskCompletionTarget(props.space?.id, props.statuses);
+    const payload = !wasCompleted && targetStatusId ? { target_status_id: targetStatusId } : {};
+
     router.post(
         route(routeName, [props.workspace.id, props.space.id, props.list.id, props.task.id, subtask.id]),
-        {},
+        payload,
         {
             preserveScroll: true,
             onSuccess: () => router.reload({ only: ['task'] }),

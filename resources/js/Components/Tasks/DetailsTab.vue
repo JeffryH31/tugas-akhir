@@ -3,6 +3,9 @@ import { ref, computed, watch } from 'vue';
 import { router } from '@inertiajs/vue3';
 import { PRIORITIES, PRIORITY_MAP } from '@/constants/priorities';
 import { useConfirmDialog } from '@/composables/useConfirmDialog';
+import {
+    getStoredSubtaskCompletionTarget,
+} from '@/utils/subtaskCompletionAutomation';
 
 const { confirm: confirmDialog } = useConfirmDialog();
 
@@ -301,7 +304,10 @@ const addSubtask = () => {
 };
 const toggleSubtask = (subtask) => {
     const done = !!subtask.completed_at;
-    router.post(route(done ? 'tasks.subtasks.reopen' : 'tasks.subtasks.complete', [props.workspace.id, props.space.id, props.list.id, props.task.id, subtask.id]), {}, {
+    const targetStatusId = getStoredSubtaskCompletionTarget(props.space?.id, props.statuses);
+    const payload = !done && targetStatusId ? { target_status_id: targetStatusId } : {};
+
+    router.post(route(done ? 'tasks.subtasks.reopen' : 'tasks.subtasks.complete', [props.workspace.id, props.space.id, props.list.id, props.task.id, subtask.id]), payload, {
         preserveScroll: true,
         onSuccess: () => { router.reload({ only: ['task', 'tasksByStatus'] }); window.showSnackbar?.(done ? 'Subtask reopened!' : 'Subtask completed!', 'success'); },
         onError: (errors) => { if (errors.dependency) window.showSnackbar?.(errors.dependency, 'error'); },

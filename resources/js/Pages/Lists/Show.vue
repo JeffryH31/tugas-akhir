@@ -17,6 +17,9 @@ import TaskDetailPanel from '@/Components/Tasks/TaskDetailPanel.vue';
 import GanttChart from '@/Components/Cpm/GanttChart.vue';
 import CpmSummary from '@/Components/Cpm/CpmSummary.vue';
 import { PRIORITIES } from '@/constants/priorities';
+import {
+    getStoredSubtaskCompletionTarget,
+} from '@/utils/subtaskCompletionAutomation';
 
 const props = defineProps({
     workspace: Object,
@@ -160,9 +163,12 @@ const handleTaskComplete = (task) => {
 
     const wasCompleted = !!task.completed_at;
     const routeName = wasCompleted ? 'tasks.subtasks.reopen' : 'tasks.subtasks.complete';
+    const targetStatusId = getStoredSubtaskCompletionTarget(props.space?.id, props.statuses);
+    const payload = !wasCompleted && targetStatusId ? { target_status_id: targetStatusId } : {};
+
     router.post(
         route(routeName, [props.workspace.id, props.space.id, props.list.id, props.parentTask.id, task.id]),
-        {},
+        payload,
         {
             preserveScroll: true,
             onSuccess: () => {

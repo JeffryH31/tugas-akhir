@@ -16,6 +16,7 @@ use App\Services\AccessService;
 use App\Services\SubtaskService;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Validation\Rule;
 
 class SubtaskController extends Controller
 {
@@ -81,6 +82,16 @@ class SubtaskController extends Controller
     public function complete(Request $request, Workspace $workspace, Space $space, TaskList $list, Task $task, Subtask $subtask): RedirectResponse
     {
         abort_unless($this->accessService->canEditTasks($request->user(), $list), 403);
+        $validated = $request->validate([
+            'target_status_id' => [
+                'nullable',
+                Rule::exists('statuses', 'id')->where(function ($query) use ($space) {
+                    $query->where('space_id', $space->id)
+                        ->whereIn('applies_to', ['subtasks', 'both']);
+                }),
+            ],
+        ]);
+
         if ($subtask->hasUncompletedDependencies()) {
             $names = $subtask->getUncompletedDependencyNames();
             $nameList = implode(', ', $names);
@@ -89,7 +100,7 @@ class SubtaskController extends Controller
             ]);
         }
 
-        $subtask->markAsCompleted($request->user());
+        $subtask->markAsCompleted($request->user(), $validated['target_status_id'] ?? null);
 
         Activity::log($workspace, $request->user(), $subtask, 'completed', [
             'name' => $subtask->name,
