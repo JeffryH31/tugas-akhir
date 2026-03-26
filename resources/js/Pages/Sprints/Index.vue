@@ -128,18 +128,14 @@ const saveSprint = () => {
 };
 
 const isSprintActive = (sprint) => {
-    const today = new Date();
-    today.setHours(0, 0, 0, 0);
-    const start = new Date(sprint.start_date);
-    const end = new Date(sprint.end_date);
-    return today >= start && today <= end;
+    return !!sprint.is_active;
 };
 
 const isSprintCompleted = (sprint) => {
     const today = new Date();
     today.setHours(0, 0, 0, 0);
     const end = new Date(sprint.end_date);
-    return today > end;
+    return !sprint.is_active && today > end;
 };
 
 const deleteSprint = async (sprint) => {
@@ -193,7 +189,7 @@ const formatDate = (dateString) => {
                     <div class="bg-[#2D2D2D] rounded-lg p-4">
                         <div class="text-sm text-gray-400">Tasks</div>
                         <div class="text-xl font-bold text-white mt-1">
-                            {{ statistics?.completed_tasks }} / {{ statistics?.total_tasks }}
+                            {{ statistics?.completed_subtasks }} / {{ statistics?.total_subtasks }}
                         </div>
                     </div>
                     <div class="bg-[#2D2D2D] rounded-lg p-4">
@@ -236,7 +232,7 @@ const formatDate = (dateString) => {
                                     </div>
                                     <div class="flex items-center gap-2">
                                         <v-icon size="16">mdi-checkbox-marked-circle-outline</v-icon>
-                                        {{ sprint.tasks_count }} tasks
+                                        {{ sprint.subtasks_count }} tasks
                                     </div>
                                 </div>
                             </div>
@@ -280,9 +276,9 @@ const formatDate = (dateString) => {
                             <div class="text-sm text-gray-400 mb-2">{{ sprint.sprint_name }}</div>
                             <div class="bg-[#1e1e1e] rounded h-32 flex items-end p-2">
                                 <div class="w-full bg-primary rounded-t"
-                                    :style="{ height: `${(sprint.completed_tasks / Math.max(...velocity.sprints.map(s => s.completed_tasks))) * 100}%` }" />
+                                    :style="{ height: `${(sprint.completed_subtasks / Math.max(...velocity.sprints.map(s => s.completed_subtasks))) * 100}%` }" />
                             </div>
-                            <div class="text-center mt-2 text-white font-semibold">{{ sprint.completed_tasks }}</div>
+                            <div class="text-center mt-2 text-white font-semibold">{{ sprint.completed_subtasks }}</div>
                         </div>
                     </div>
                 </div>

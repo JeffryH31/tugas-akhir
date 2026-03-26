@@ -23,7 +23,6 @@ class DatabaseSeeder extends Seeder
             LabelsSeeder::class,
             SpacesSeeder::class,
             StatusesSeeder::class,
-            SprintsSeeder::class,
             FoldersSeeder::class,
             TaskListsSeeder::class,
             TasksSeeder::class,

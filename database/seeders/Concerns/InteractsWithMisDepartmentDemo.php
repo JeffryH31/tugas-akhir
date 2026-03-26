@@ -41,7 +41,8 @@ trait InteractsWithMisDepartmentDemo
 
     protected function demoSprint(string $name): Sprint
     {
-        return Sprint::where('name', $name)->firstOrFail();
+        // If sprint seeding is disabled, return an empty model so `->id` resolves to null.
+        return Sprint::where('name', $name)->first() ?? new Sprint();
     }
 
     protected function demoFolder(string $name): Folder

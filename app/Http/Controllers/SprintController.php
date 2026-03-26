@@ -30,13 +30,18 @@ class SprintController extends Controller
             ->orderBy('start_date', 'desc')
             ->get();
 
+        // Prefer explicit active flag (Jira-like), fallback to date-range for legacy data.
+        $activeSprint = $sprints->firstWhere('is_active', true);
+
         // Find active sprint based on current date
         $today = now()->startOfDay();
-        $activeSprint = $sprints->first(function ($sprint) use ($today) {
-            $startDate = \Carbon\Carbon::parse($sprint->start_date)->startOfDay();
-            $endDate = \Carbon\Carbon::parse($sprint->end_date)->endOfDay();
-            return $today->between($startDate, $endDate);
-        });
+        if (!$activeSprint) {
+            $activeSprint = $sprints->first(function ($sprint) use ($today) {
+                $startDate = \Carbon\Carbon::parse($sprint->start_date)->startOfDay();
+                $endDate = \Carbon\Carbon::parse($sprint->end_date)->endOfDay();
+                return $today->between($startDate, $endDate);
+            });
+        }
 
         $statistics = $activeSprint 
             ? $this->sprintService->getSprintStatistics($activeSprint)
@@ -59,6 +64,8 @@ class SprintController extends Controller
      */
     public function show(Workspace $workspace, Space $space, Sprint $sprint)
     {
+        abort_unless((int) $sprint->space_id === (int) $space->id, 404);
+
         $sprint->load([
             'subtasks.status',
             'subtasks.assignees',
@@ -100,6 +107,8 @@ class SprintController extends Controller
      */
     public function update(UpdateSprintRequest $request, Workspace $workspace, Space $space, Sprint $sprint)
     {
+        abort_unless((int) $sprint->space_id === (int) $space->id, 404);
+
         $this->sprintService->updateSprint($sprint, $request->validated());
 
         return redirect()->back()->with('success', 'Sprint updated successfully!');
@@ -110,6 +119,8 @@ class SprintController extends Controller
      */
     public function start(Workspace $workspace, Space $space, Sprint $sprint)
     {
+        abort_unless((int) $sprint->space_id === (int) $space->id, 404);
+
         $this->sprintService->startSprint($sprint);
 
         return redirect()->back()->with('success', 'Sprint started!');
@@ -120,6 +131,8 @@ class SprintController extends Controller
      */
     public function complete(Workspace $workspace, Space $space, Sprint $sprint)
     {
+        abort_unless((int) $sprint->space_id === (int) $space->id, 404);
+
         $this->sprintService->completeSprint($sprint);
 
         return redirect()->back()->with('success', 'Sprint completed!');
@@ -130,6 +143,8 @@ class SprintController extends Controller
      */
     public function addTask(Request $request, Workspace $workspace, Space $space, Sprint $sprint)
     {
+        abort_unless((int) $sprint->space_id === (int) $space->id, 404);
+
         $validated = $request->validate([
             'subtask_id' => 'required|exists:subtasks,id',
         ]);
@@ -144,11 +159,13 @@ class SprintController extends Controller
      */
     public function removeTask(Request $request, Workspace $workspace, Space $space, Sprint $sprint)
     {
+        abort_unless((int) $sprint->space_id === (int) $space->id, 404);
+
         $validated = $request->validate([
             'subtask_id' => 'required|exists:subtasks,id',
         ]);
 
-        $this->sprintService->removeSubtaskFromSprint($validated['subtask_id']);
+        $this->sprintService->removeSubtaskFromSprint($sprint, $validated['subtask_id']);
 
         return redirect()->back()->with('success', 'Subtask removed from sprint!');
     }
@@ -158,6 +175,8 @@ class SprintController extends Controller
      */
     public function destroy(Workspace $workspace, Space $space, Sprint $sprint)
     {
+        abort_unless((int) $sprint->space_id === (int) $space->id, 404);
+
         $this->sprintService->deleteSprint($sprint);
 
         return redirect()->route('sprints.index', [$workspace->id, $space->id])

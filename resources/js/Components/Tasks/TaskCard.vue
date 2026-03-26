@@ -250,7 +250,34 @@ const openDetail = () => {
 }
 
 .cu-card--completed {
-    opacity: 0.55;
+    opacity: 1;
+    background: linear-gradient(135deg, rgba(34, 197, 94, 0.08) 0%, #1e2430 55%);
+    border-color: #35506a;
+}
+
+.cu-card--completed:hover {
+    background: linear-gradient(135deg, rgba(34, 197, 94, 0.12) 0%, #222a38 55%);
+    border-color: #3f6282;
+}
+
+.cu-card--completed .cu-card__status-bar {
+    opacity: 0.7;
+}
+
+.cu-card--completed .cu-card__name {
+    color: #d1d9e5;
+}
+
+.cu-card--completed .cu-card__name--done {
+    color: #9fb0c4;
+}
+
+.cu-card--completed .cu-card__meta-item {
+    color: #9fb0c4;
+}
+
+.cu-card--completed .cu-card__meta-item--subtle {
+    color: #89a0b8;
 }
 
 .cu-card--critical {

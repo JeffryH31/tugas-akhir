@@ -6,6 +6,7 @@ use App\Models\Space;
 use App\Models\Sprint;
 use App\Models\Subtask;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Validation\ValidationException;
 
 class SprintService
 {
@@ -81,17 +82,31 @@ class SprintService
      */
     public function addSubtaskToSprint(Sprint $sprint, int $subtaskId): void
     {
-        Subtask::where('id', $subtaskId)
+        $updated = Subtask::where('id', $subtaskId)
+            ->whereHas('task.taskList', fn($q) => $q->where('space_id', $sprint->space_id))
             ->update(['sprint_id' => $sprint->id]);
+
+        if ($updated === 0) {
+            throw ValidationException::withMessages([
+                'subtask_id' => ['Subtask is not part of this space.'],
+            ]);
+        }
     }
 
     /**
      * Remove subtask from sprint.
      */
-    public function removeSubtaskFromSprint(int $subtaskId): void
+    public function removeSubtaskFromSprint(Sprint $sprint, int $subtaskId): void
     {
-        Subtask::where('id', $subtaskId)
+        $updated = Subtask::where('id', $subtaskId)
+            ->where('sprint_id', $sprint->id)
             ->update(['sprint_id' => null]);
+
+        if ($updated === 0) {
+            throw ValidationException::withMessages([
+                'subtask_id' => ['Subtask is not in this sprint.'],
+            ]);
+        }
     }
 
     /**
@@ -133,6 +148,7 @@ class SprintService
     {
         return Subtask::whereNull('sprint_id')
             ->whereHas('task.taskList', fn($q) => $q->where('space_id', $space->id))
+            ->with(['status', 'assignees', 'task'])
             ->get();
     }
 
