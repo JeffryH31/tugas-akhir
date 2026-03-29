@@ -18,6 +18,9 @@ const props = defineProps({
 const showCreateSprint = ref(false);
 const editingSprintId = ref(null);
 const isSaving = ref(false);
+const searchQuery = ref('');
+const filterState = ref('all');
+const sortBy = ref('start_desc');
 const sprintForm = ref({
     name: '',
     goal: '',
@@ -159,6 +162,69 @@ const formatDate = (dateString) => {
         year: 'numeric',
     });
 };
+
+const sprintStateOptions = [
+    { title: 'All States', value: 'all' },
+    { title: 'Active', value: 'active' },
+    { title: 'Planned', value: 'planned' },
+    { title: 'Completed', value: 'completed' },
+];
+
+const sprintSortOptions = [
+    { title: 'Start Date (Newest)', value: 'start_desc' },
+    { title: 'Start Date (Oldest)', value: 'start_asc' },
+    { title: 'End Date (Soonest)', value: 'end_asc' },
+    { title: 'End Date (Latest)', value: 'end_desc' },
+    { title: 'Most Tasks', value: 'tasks_desc' },
+    { title: 'Name A-Z', value: 'name_asc' },
+];
+
+const filteredSprints = computed(() => {
+    let result = [...(props.sprints || [])];
+    const q = searchQuery.value.trim().toLowerCase();
+
+    if (q) {
+        result = result.filter((sprint) => {
+            return `${sprint.name || ''} ${sprint.goal || ''}`.toLowerCase().includes(q);
+        });
+    }
+
+    if (filterState.value !== 'all') {
+        result = result.filter((sprint) => {
+            if (filterState.value === 'active') return isSprintActive(sprint);
+            if (filterState.value === 'completed') return isSprintCompleted(sprint);
+            if (filterState.value === 'planned') return !isSprintActive(sprint) && !isSprintCompleted(sprint);
+            return true;
+        });
+    }
+
+    const byStart = (a, b) => new Date(a.start_date) - new Date(b.start_date);
+    const byEnd = (a, b) => new Date(a.end_date) - new Date(b.end_date);
+
+    switch (sortBy.value) {
+        case 'start_asc':
+            result.sort(byStart);
+            break;
+        case 'end_asc':
+            result.sort(byEnd);
+            break;
+        case 'end_desc':
+            result.sort((a, b) => byEnd(b, a));
+            break;
+        case 'tasks_desc':
+            result.sort((a, b) => (b.subtasks_count || 0) - (a.subtasks_count || 0));
+            break;
+        case 'name_asc':
+            result.sort((a, b) => (a.name || '').localeCompare(b.name || ''));
+            break;
+        case 'start_desc':
+        default:
+            result.sort((a, b) => byStart(b, a));
+            break;
+    }
+
+    return result;
+});
 </script>
 
 <template>
@@ -201,8 +267,20 @@ const formatDate = (dateString) => {
 
             <!-- Sprint List -->
             <div class="flex-1 overflow-auto p-6">
+                <div class="grid grid-cols-1 md:grid-cols-4 gap-3 mb-5">
+                    <v-text-field v-model="searchQuery" density="compact" variant="outlined" hide-details
+                        prepend-inner-icon="mdi-magnify" label="Search sprint" />
+                    <v-select v-model="filterState" :items="sprintStateOptions" item-title="title" item-value="value"
+                        density="compact" variant="outlined" hide-details label="Filter status" />
+                    <v-select v-model="sortBy" :items="sprintSortOptions" item-title="title" item-value="value"
+                        density="compact" variant="outlined" hide-details label="Sort by" />
+                    <v-chip variant="outlined" class="self-center justify-self-start md:justify-self-end">
+                        {{ filteredSprints.length }} sprint(s)
+                    </v-chip>
+                </div>
+
                 <div class="grid gap-4">
-                    <div v-for="sprint in sprints" :key="sprint.id"
+                    <div v-for="sprint in filteredSprints" :key="sprint.id"
                         class="bg-[#2D2D2D] rounded-lg p-6 hover:bg-[#333333] transition-colors cursor-pointer"
                         @click="router.visit(route('sprints.show', [workspace.id, space.id, sprint.id]))">
                         <div class="flex items-start justify-between">
@@ -257,10 +335,10 @@ const formatDate = (dateString) => {
                         </div>
                     </div>
 
-                    <div v-if="sprints.length === 0" class="text-center py-12 text-gray-500">
+                    <div v-if="filteredSprints.length === 0" class="text-center py-12 text-gray-500">
                         <v-icon size="64" class="mb-4">mdi-calendar-clock</v-icon>
-                        <p class="text-lg">No sprints yet</p>
-                        <p class="text-sm mt-2">Create your first sprint to start planning</p>
+                        <p class="text-lg">No sprint found</p>
+                        <p class="text-sm mt-2">Try changing your filter or create a new sprint</p>
                     </div>
                 </div>
 

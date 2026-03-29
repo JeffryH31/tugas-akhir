@@ -10,6 +10,15 @@ const props = defineProps({
 
 const activeTab = ref('tasks');
 const restoring = ref(false);
+const searchQuery = ref('');
+const sortBy = ref('deleted_desc');
+
+const sortOptions = [
+    { title: 'Newest Deleted', value: 'deleted_desc' },
+    { title: 'Oldest Deleted', value: 'deleted_asc' },
+    { title: 'Name A-Z', value: 'name_asc' },
+    { title: 'Name Z-A', value: 'name_desc' },
+];
 
 const totals = computed(() => ({
     lists: props.trash?.lists?.length || 0,
@@ -27,6 +36,70 @@ const restoreItem = (type, id) => {
         onFinish: () => { restoring.value = false; },
     });
 };
+
+const getItemName = (item, type) => {
+    if (type === 'time_entries') {
+        return item.subtask?.name || item.user?.name || '';
+    }
+    return item.name || '';
+};
+
+const getItemContext = (item, type) => {
+    if (type === 'tasks') {
+        return `${item.task_list?.name || ''} ${item.task_list?.space?.name || ''}`.trim();
+    }
+    if (type === 'subtasks') {
+        return item.task?.name || '';
+    }
+    if (type === 'lists') {
+        return item.space?.name || '';
+    }
+    if (type === 'time_entries') {
+        return `${item.user?.name || ''} ${item.subtask?.name || ''}`.trim();
+    }
+    return '';
+};
+
+const normalizeDeletedAt = (item) => {
+    const ts = Date.parse(item.deleted_at || '');
+    return Number.isNaN(ts) ? 0 : ts;
+};
+
+const sortedFilteredItems = computed(() => {
+    const type = activeTab.value;
+    const source = props.trash?.[type] || [];
+    const query = searchQuery.value.trim().toLowerCase();
+
+    let result = [...source];
+
+    if (query) {
+        result = result.filter((item) => {
+            const haystack = `${getItemName(item, type)} ${getItemContext(item, type)}`.toLowerCase();
+            return haystack.includes(query);
+        });
+    }
+
+    const byName = (a, b) => getItemName(a, type).localeCompare(getItemName(b, type));
+    const byDeletedAt = (a, b) => normalizeDeletedAt(a) - normalizeDeletedAt(b);
+
+    switch (sortBy.value) {
+        case 'deleted_asc':
+            result.sort(byDeletedAt);
+            break;
+        case 'name_asc':
+            result.sort(byName);
+            break;
+        case 'name_desc':
+            result.sort((a, b) => byName(b, a));
+            break;
+        case 'deleted_desc':
+        default:
+            result.sort((a, b) => byDeletedAt(b, a));
+            break;
+    }
+
+    return result;
+});
 </script>
 
 <template>
@@ -61,6 +134,16 @@ const restoreItem = (type, id) => {
                 <v-tab value="time_entries">Time Entries</v-tab>
             </v-tabs>
 
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-3 mb-4">
+                <v-text-field v-model="searchQuery" density="compact" variant="outlined" hide-details
+                    prepend-inner-icon="mdi-magnify" label="Search deleted items" />
+                <v-select v-model="sortBy" :items="sortOptions" item-title="title" item-value="value" density="compact"
+                    variant="outlined" hide-details label="Sort by" />
+                <v-chip variant="outlined" class="justify-self-start md:justify-self-end self-center">
+                    {{ sortedFilteredItems.length }} item(s)
+                </v-chip>
+            </div>
+
             <v-window v-model="activeTab">
                 <v-window-item value="tasks">
                     <v-card>
@@ -74,12 +157,16 @@ const restoreItem = (type, id) => {
                                 </tr>
                             </thead>
                             <tbody>
-                                <tr v-for="task in (trash?.tasks || [])" :key="task.id">
+                                <tr v-for="task in sortedFilteredItems" :key="task.id">
                                     <td>{{ task.name }}</td>
                                     <td>{{ task.task_list?.name }} / {{ task.task_list?.space?.name }}</td>
                                     <td>{{ task.deleted_at }}</td>
                                     <td><v-btn size="small" color="primary" :loading="restoring"
                                             @click="restoreItem('task', task.id)">Restore</v-btn></td>
+                                </tr>
+                                <tr v-if="sortedFilteredItems.length === 0">
+                                    <td colspan="4" class="text-center text-gray-500 py-6">No deleted tasks match your
+                                        filter.</td>
                                 </tr>
                             </tbody>
                         </v-table>
@@ -98,12 +185,16 @@ const restoreItem = (type, id) => {
                                 </tr>
                             </thead>
                             <tbody>
-                                <tr v-for="subtask in (trash?.subtasks || [])" :key="subtask.id">
+                                <tr v-for="subtask in sortedFilteredItems" :key="subtask.id">
                                     <td>{{ subtask.name }}</td>
                                     <td>{{ subtask.task?.name }}</td>
                                     <td>{{ subtask.deleted_at }}</td>
                                     <td><v-btn size="small" color="primary" :loading="restoring"
                                             @click="restoreItem('subtask', subtask.id)">Restore</v-btn></td>
+                                </tr>
+                                <tr v-if="sortedFilteredItems.length === 0">
+                                    <td colspan="4" class="text-center text-gray-500 py-6">No deleted subtasks match
+                                        your filter.</td>
                                 </tr>
                             </tbody>
                         </v-table>
@@ -122,12 +213,16 @@ const restoreItem = (type, id) => {
                                 </tr>
                             </thead>
                             <tbody>
-                                <tr v-for="list in (trash?.lists || [])" :key="list.id">
+                                <tr v-for="list in sortedFilteredItems" :key="list.id">
                                     <td>{{ list.name }}</td>
                                     <td>{{ list.space?.name }}</td>
                                     <td>{{ list.deleted_at }}</td>
                                     <td><v-btn size="small" color="primary" :loading="restoring"
                                             @click="restoreItem('list', list.id)">Restore</v-btn></td>
+                                </tr>
+                                <tr v-if="sortedFilteredItems.length === 0">
+                                    <td colspan="4" class="text-center text-gray-500 py-6">No deleted lists match your
+                                        filter.</td>
                                 </tr>
                             </tbody>
                         </v-table>
@@ -147,13 +242,17 @@ const restoreItem = (type, id) => {
                                 </tr>
                             </thead>
                             <tbody>
-                                <tr v-for="entry in (trash?.time_entries || [])" :key="entry.id">
+                                <tr v-for="entry in sortedFilteredItems" :key="entry.id">
                                     <td>{{ entry.user?.name }}</td>
                                     <td>{{ entry.subtask?.name }}</td>
                                     <td>{{ entry.duration }}</td>
                                     <td>{{ entry.deleted_at }}</td>
                                     <td><v-btn size="small" color="primary" :loading="restoring"
                                             @click="restoreItem('time_entry', entry.id)">Restore</v-btn></td>
+                                </tr>
+                                <tr v-if="sortedFilteredItems.length === 0">
+                                    <td colspan="5" class="text-center text-gray-500 py-6">No deleted time entries match
+                                        your filter.</td>
                                 </tr>
                             </tbody>
                         </v-table>

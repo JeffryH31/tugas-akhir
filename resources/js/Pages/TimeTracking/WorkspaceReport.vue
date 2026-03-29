@@ -8,6 +8,18 @@ const props = defineProps({
     report: Object,
 });
 
+const memberSearch = ref('');
+const memberSortBy = ref('minutes_desc');
+const spaceSearch = ref('');
+const spaceSortBy = ref('minutes_desc');
+
+const sortOptions = [
+    { title: 'Most Time', value: 'minutes_desc' },
+    { title: 'Least Time', value: 'minutes_asc' },
+    { title: 'Name A-Z', value: 'name_asc' },
+    { title: 'Name Z-A', value: 'name_desc' },
+];
+
 // Format duration (input is in minutes)
 const formatDuration = (minutes) => {
     if (!minutes) return '0h 0m';
@@ -34,6 +46,44 @@ const getUserPercentage = (minutes) => {
 const getSpacePercentage = (minutes) => {
     return (minutes / maxSpaceMinutes.value) * 100;
 };
+
+const sortTimeItems = (items, sortKey) => {
+    const result = [...items];
+    switch (sortKey) {
+        case 'minutes_asc':
+            result.sort((a, b) => (a.total_minutes || 0) - (b.total_minutes || 0));
+            break;
+        case 'name_asc':
+            result.sort((a, b) => (a.name || '').localeCompare(b.name || ''));
+            break;
+        case 'name_desc':
+            result.sort((a, b) => (b.name || '').localeCompare(a.name || ''));
+            break;
+        case 'minutes_desc':
+        default:
+            result.sort((a, b) => (b.total_minutes || 0) - (a.total_minutes || 0));
+            break;
+    }
+    return result;
+};
+
+const filteredUsers = computed(() => {
+    let result = [...(props.report?.by_user || [])];
+    const query = memberSearch.value.trim().toLowerCase();
+    if (query) {
+        result = result.filter((user) => (user.name || '').toLowerCase().includes(query));
+    }
+    return sortTimeItems(result, memberSortBy.value);
+});
+
+const filteredSpaces = computed(() => {
+    let result = [...(props.report?.by_space || [])];
+    const query = spaceSearch.value.trim().toLowerCase();
+    if (query) {
+        result = result.filter((space) => (space.name || '').toLowerCase().includes(query));
+    }
+    return sortTimeItems(result, spaceSortBy.value);
+});
 </script>
 
 <template>
@@ -77,8 +127,14 @@ const getSpacePercentage = (minutes) => {
                             By Member
                         </v-card-title>
                         <v-card-text>
-                            <div v-if="report?.by_user?.length" class="space-y-4">
-                                <div v-for="user in report.by_user" :key="user.id">
+                            <div class="grid grid-cols-1 md:grid-cols-2 gap-2 mb-4">
+                                <v-text-field v-model="memberSearch" density="compact" variant="outlined" hide-details
+                                    prepend-inner-icon="mdi-magnify" label="Filter members" />
+                                <v-select v-model="memberSortBy" :items="sortOptions" item-title="title" item-value="value"
+                                    density="compact" variant="outlined" hide-details label="Sort members" />
+                            </div>
+                            <div v-if="filteredUsers.length" class="space-y-4">
+                                <div v-for="user in filteredUsers" :key="user.id">
                                     <div class="flex justify-between text-sm mb-1">
                                         <span class="text-white">{{ user.name }}</span>
                                         <span class="text-gray-400 font-mono">{{ formatDuration(user.total_minutes) }}</span>
@@ -92,7 +148,7 @@ const getSpacePercentage = (minutes) => {
                                 </div>
                             </div>
                             <div v-else class="text-center text-gray-500 py-8">
-                                No data available
+                                No members match your filter
                             </div>
                         </v-card-text>
                     </v-card>
@@ -104,8 +160,14 @@ const getSpacePercentage = (minutes) => {
                             By Space
                         </v-card-title>
                         <v-card-text>
-                            <div v-if="report?.by_space?.length" class="space-y-4">
-                                <div v-for="space in report.by_space" :key="space.id">
+                            <div class="grid grid-cols-1 md:grid-cols-2 gap-2 mb-4">
+                                <v-text-field v-model="spaceSearch" density="compact" variant="outlined" hide-details
+                                    prepend-inner-icon="mdi-magnify" label="Filter spaces" />
+                                <v-select v-model="spaceSortBy" :items="sortOptions" item-title="title" item-value="value"
+                                    density="compact" variant="outlined" hide-details label="Sort spaces" />
+                            </div>
+                            <div v-if="filteredSpaces.length" class="space-y-4">
+                                <div v-for="space in filteredSpaces" :key="space.id">
                                     <div class="flex justify-between text-sm mb-1">
                                         <span class="text-white">{{ space.name }}</span>
                                         <span class="text-gray-400 font-mono">{{ formatDuration(space.total_minutes) }}</span>
@@ -119,7 +181,7 @@ const getSpacePercentage = (minutes) => {
                                 </div>
                             </div>
                             <div v-else class="text-center text-gray-500 py-8">
-                                No data available
+                                No spaces match your filter
                             </div>
                         </v-card-text>
                     </v-card>
