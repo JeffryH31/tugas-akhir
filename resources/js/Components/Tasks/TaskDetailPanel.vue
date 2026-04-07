@@ -8,10 +8,7 @@ import { router, usePage } from '@inertiajs/vue3';
 import { useConfirmDialog } from '@/composables/useConfirmDialog';
 import { useTaskTimer } from '@/composables/useTaskTimer';
 import {
-    getFallbackCompletionTarget,
     getStoredSubtaskCompletionTarget,
-    getSubtaskCompletionStatusOptions,
-    setStoredSubtaskCompletionTarget,
 } from '@/utils/subtaskCompletionAutomation';
 import DetailsTab from './DetailsTab.vue';
 import CommentsTab from './CommentsTab.vue';
@@ -92,20 +89,12 @@ const saveName = () => {
 // Panel close
 const close = () => emit('update:modelValue', false);
 
+const dismissOnOutside = () => {
+    close();
+};
+
 // Completion state
 const isCompleted = computed(() => localTask.value?.completed_at);
-const completionStatusOptions = computed(() => getSubtaskCompletionStatusOptions(props.statuses));
-const storedCompletionStatusId = computed(() => getStoredSubtaskCompletionTarget(props.space?.id, props.statuses));
-const completionTargetStatusId = computed(() => storedCompletionStatusId.value ?? getFallbackCompletionTarget(props.statuses));
-const completionTargetStatusName = computed(() => {
-    const target = completionStatusOptions.value.find((status) => status.id === completionTargetStatusId.value);
-    return target?.name || 'Off';
-});
-
-const setCompletionTargetStatus = (statusId) => {
-    setStoredSubtaskCompletionTarget(props.space?.id, statusId);
-    window.showSnackbar?.(statusId ? 'Automation status updated!' : 'Automation disabled!', 'success');
-};
 
 // Change status (used in header)
 const changeStatus = (statusId) => {
@@ -119,8 +108,9 @@ const changeStatus = (statusId) => {
 const toggleComplete = () => {
     if (!isSubtask.value) return;
     const wasCompleted = isCompleted.value;
-    const payload = !wasCompleted && completionTargetStatusId.value
-        ? { target_status_id: completionTargetStatusId.value }
+    const targetStatusId = getStoredSubtaskCompletionTarget(props.space?.id, props.statuses);
+    const payload = !wasCompleted && targetStatusId
+        ? { target_status_id: targetStatusId }
         : {};
 
     router.post(
@@ -160,7 +150,8 @@ onUnmounted(() => stopTimerInterval());
 
 <template>
     <v-navigation-drawer :model-value="modelValue" @update:model-value="emit('update:modelValue', $event)"
-        location="right" temporary width="620" class="task-detail-panel">
+        @click:outside="dismissOnOutside" location="right" temporary :scrim="true" width="620"
+        class="task-detail-panel">
         <div v-if="localTask" class="d-flex flex-column h-100">
 
             <!-- ===== Header ===== -->
@@ -170,32 +161,6 @@ onUnmounted(() => stopTimerInterval());
                     <v-btn v-if="isSubtask"
                         :icon="isCompleted ? 'mdi-checkbox-marked-circle' : 'mdi-checkbox-blank-circle-outline'"
                         :color="isCompleted ? 'success' : 'grey'" variant="text" size="small" @click="toggleComplete" />
-
-                    <v-menu v-if="isSubtask">
-                        <template v-slot:activator="{ props: menuProps }">
-                            <v-chip v-bind="menuProps" size="x-small" variant="outlined" color="primary"
-                                class="cursor-pointer font-weight-medium">
-                                Auto: {{ completionTargetStatusName }}
-                            </v-chip>
-                        </template>
-                        <v-card color="surface" min-width="180">
-                            <v-list density="compact">
-                                <v-list-item :active="!completionTargetStatusId" @click="setCompletionTargetStatus(null)">
-                                    <v-list-item-title>Off (no status move)</v-list-item-title>
-                                </v-list-item>
-                                <v-divider />
-                                <v-list-item v-for="status in completionStatusOptions" :key="status.id"
-                                    :active="status.id === completionTargetStatusId"
-                                    @click="setCompletionTargetStatus(status.id)">
-                                    <template v-slot:prepend>
-                                        <div class="w-3 h-3 rounded-full mr-3"
-                                            :style="{ backgroundColor: status.color }" />
-                                    </template>
-                                    <v-list-item-title>{{ status.name }}</v-list-item-title>
-                                </v-list-item>
-                            </v-list>
-                        </v-card>
-                    </v-menu>
 
                     <!-- Status Chip -->
                     <v-menu>

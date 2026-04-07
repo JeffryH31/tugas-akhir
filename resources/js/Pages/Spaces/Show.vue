@@ -335,15 +335,6 @@ const onProductDragChange = (evt, statusId) => {
                 </div>
 
                 <div class="flex items-center gap-2">
-                    <v-btn
-                        color="primary"
-                        prepend-icon="mdi-calendar-clock"
-                        variant="tonal"
-                        @click="router.visit(route('sprints.index', [workspace.id, space.id]))"
-                    >
-                        Sprints
-                    </v-btn>
-
                     <v-btn v-if="space?.is_starred" icon variant="text"
                         @click="router.post(route('spaces.star', [workspace.id, space.id]))">
                         <v-icon color="warning">mdi-star</v-icon>
@@ -589,8 +580,7 @@ const onProductDragChange = (evt, statusId) => {
                     <v-text-field v-model="newListName" label="Product Name" placeholder="e.g., Product A" variant="outlined"
                         autofocus class="mb-3" @keydown.enter="createList" />
                     <v-select v-model="selectedFolderId" :items="space?.folders || []" item-title="name" item-value="id"
-                        label="Folder (optional)" variant="outlined" clearable bg-color="#1e1e1e"
-                        :menu-props="{ contentClass: 'bg-[#1e1e1e]' }" />
+                        label="Folder (optional)" variant="outlined" clearable bg-color="#1e1e1e" />
                 </v-card-text>
                 <v-card-actions>
                     <v-spacer />
@@ -685,8 +675,7 @@ const onProductDragChange = (evt, statusId) => {
                         movingList?.name
                             }}</span></div>
                     <v-select v-model="targetFolderId" :items="availableFolders" item-title="name" item-value="id"
-                        label="Select Folder" variant="outlined" hide-details bg-color="#1e1e1e"
-                        :menu-props="{ contentClass: 'bg-[#1e1e1e]' }" />
+                        label="Select Folder" variant="outlined" hide-details bg-color="#1e1e1e" />
                 </v-card-text>
                 <v-card-actions>
                     <v-spacer />

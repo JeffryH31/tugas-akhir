@@ -218,7 +218,7 @@ const handleTaskOpen = (task) => {
                         { title: 'Product', value: 'list' },
                         { title: 'Due Date', value: 'due_date' },
                     ]" label="Group by" variant="outlined" density="compact" hide-details style="width: 140px;"
-                        bg-color="#1e1e1e" :menu-props="{ contentClass: 'bg-[#1e1e1e]' }" />
+                        bg-color="#1e1e1e" />
 
                     <!-- Sort By -->
                     <v-select v-model="sortBy" :items="[
@@ -226,7 +226,7 @@ const handleTaskOpen = (task) => {
                         { title: 'Priority', value: 'priority' },
                         { title: 'Created', value: 'created_at' },
                     ]" label="Sort by" variant="outlined" density="compact" hide-details style="width: 130px;"
-                        bg-color="#1e1e1e" :menu-props="{ contentClass: 'bg-[#1e1e1e]' }" />
+                        bg-color="#1e1e1e" />
                 </div>
             </div>
 

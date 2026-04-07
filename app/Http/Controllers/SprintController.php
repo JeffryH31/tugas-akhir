@@ -6,6 +6,7 @@ use App\Http\Requests\StoreSprintRequest;
 use App\Http\Requests\UpdateSprintRequest;
 use App\Models\Space;
 use App\Models\Sprint;
+use App\Models\TaskList;
 use App\Models\Workspace;
 use App\Services\SprintService;
 use Illuminate\Http\Request;
@@ -23,39 +24,32 @@ class SprintController extends Controller
     /**
      * Display a listing of sprints.
      */
-    public function index(Workspace $workspace, Space $space)
+    public function index(Request $request, Workspace $workspace, Space $space)
     {
-        $sprints = $space->sprints()
-            ->withCount('subtasks')
-            ->orderBy('start_date', 'desc')
+        $products = $space->lists()
+            ->select('id', 'name', 'space_id')
+            ->orderBy('position')
             ->get();
 
-        // Prefer explicit active flag (Jira-like), fallback to date-range for legacy data.
-        $activeSprint = $sprints->firstWhere('is_active', true);
-
-        // Find active sprint based on current date
-        $today = now()->startOfDay();
-        if (!$activeSprint) {
-            $activeSprint = $sprints->first(function ($sprint) use ($today) {
-                $startDate = \Carbon\Carbon::parse($sprint->start_date)->startOfDay();
-                $endDate = \Carbon\Carbon::parse($sprint->end_date)->endOfDay();
-                return $today->between($startDate, $endDate);
-            });
+        $selectedList = null;
+        if ($products->isNotEmpty()) {
+            $requestedListId = (int) $request->integer('list_id');
+            $selectedList = $requestedListId
+                ? $products->firstWhere('id', $requestedListId)
+                : $products->first();
         }
 
-        $statistics = $activeSprint 
-            ? $this->sprintService->getSprintStatistics($activeSprint)
-            : null;
+        if (!$selectedList) {
+            return redirect()
+                ->route('spaces.show', [$workspace, $space])
+                ->with('error', 'No product available for sprint view.');
+        }
 
-        $velocity = $this->sprintService->calculateVelocity($space);
-
-        return Inertia::render('Sprints/Index', [
+        return redirect()->route('lists.show', [
             'workspace' => $workspace,
             'space' => $space,
-            'sprints' => $sprints,
-            'activeSprint' => $activeSprint,
-            'statistics' => $statistics,
-            'velocity' => $velocity,
+            'list' => $selectedList,
+            'view' => 'sprint',
         ]);
     }
 
@@ -64,7 +58,12 @@ class SprintController extends Controller
      */
     public function show(Workspace $workspace, Space $space, Sprint $sprint)
     {
-        abort_unless((int) $sprint->space_id === (int) $space->id, 404);
+        $this->ensureSprintBelongsToSpace($sprint, $space);
+
+        $list = $sprint->taskList;
+        if (!$list) {
+            $list = TaskList::where('space_id', $space->id)->orderBy('position')->first();
+        }
 
         $sprint->load([
             'subtasks.status',
@@ -73,8 +72,8 @@ class SprintController extends Controller
             'subtasks.task'
         ]);
 
-        // Get backlog subtasks (subtasks without sprint in this space)
-        $backlogSubtasks = $this->sprintService->getBacklogSubtasks($space);
+        // Get backlog subtasks (subtasks without sprint in this product/list)
+        $backlogSubtasks = $list ? $this->sprintService->getBacklogSubtasks($list) : collect();
 
         $statistics = $this->sprintService->getSprintStatistics($sprint);
         $burndown = $this->sprintService->getBurndownData($sprint);
@@ -82,6 +81,7 @@ class SprintController extends Controller
         return Inertia::render('Sprints/Show', [
             'workspace' => $workspace,
             'space' => $space,
+            'list' => $list,
             'sprint' => $sprint,
             'backlogSubtasks' => $backlogSubtasks,
             'statistics' => $statistics,
@@ -97,7 +97,10 @@ class SprintController extends Controller
      */
     public function store(StoreSprintRequest $request, Workspace $workspace, Space $space)
     {
-        $sprint = $this->sprintService->createSprint($space, $request->validated());
+        $validated = $request->validated();
+
+        $list = TaskList::where('space_id', $space->id)->findOrFail((int) $validated['list_id']);
+        $this->sprintService->createSprint($list, $validated);
 
         return redirect()->back()->with('success', 'Sprint created successfully!');
     }
@@ -107,9 +110,14 @@ class SprintController extends Controller
      */
     public function update(UpdateSprintRequest $request, Workspace $workspace, Space $space, Sprint $sprint)
     {
-        abort_unless((int) $sprint->space_id === (int) $space->id, 404);
+        $this->ensureSprintBelongsToSpace($sprint, $space);
 
-        $this->sprintService->updateSprint($sprint, $request->validated());
+        $validated = $request->validated();
+        if (isset($validated['list_id'])) {
+            TaskList::where('space_id', $space->id)->findOrFail((int) $validated['list_id']);
+        }
+
+        $this->sprintService->updateSprint($sprint, $validated);
 
         return redirect()->back()->with('success', 'Sprint updated successfully!');
     }
@@ -119,7 +127,7 @@ class SprintController extends Controller
      */
     public function start(Workspace $workspace, Space $space, Sprint $sprint)
     {
-        abort_unless((int) $sprint->space_id === (int) $space->id, 404);
+        $this->ensureSprintBelongsToSpace($sprint, $space);
 
         $this->sprintService->startSprint($sprint);
 
@@ -131,7 +139,7 @@ class SprintController extends Controller
      */
     public function complete(Workspace $workspace, Space $space, Sprint $sprint)
     {
-        abort_unless((int) $sprint->space_id === (int) $space->id, 404);
+        $this->ensureSprintBelongsToSpace($sprint, $space);
 
         $this->sprintService->completeSprint($sprint);
 
@@ -143,7 +151,7 @@ class SprintController extends Controller
      */
     public function addTask(Request $request, Workspace $workspace, Space $space, Sprint $sprint)
     {
-        abort_unless((int) $sprint->space_id === (int) $space->id, 404);
+        $this->ensureSprintBelongsToSpace($sprint, $space);
 
         $validated = $request->validate([
             'subtask_id' => 'required|exists:subtasks,id',
@@ -159,7 +167,7 @@ class SprintController extends Controller
      */
     public function removeTask(Request $request, Workspace $workspace, Space $space, Sprint $sprint)
     {
-        abort_unless((int) $sprint->space_id === (int) $space->id, 404);
+        $this->ensureSprintBelongsToSpace($sprint, $space);
 
         $validated = $request->validate([
             'subtask_id' => 'required|exists:subtasks,id',
@@ -175,11 +183,23 @@ class SprintController extends Controller
      */
     public function destroy(Workspace $workspace, Space $space, Sprint $sprint)
     {
-        abort_unless((int) $sprint->space_id === (int) $space->id, 404);
+        $this->ensureSprintBelongsToSpace($sprint, $space);
 
         $this->sprintService->deleteSprint($sprint);
 
-        return redirect()->route('sprints.index', [$workspace->id, $space->id])
-            ->with('success', 'Sprint deleted successfully!');
+        return redirect()->back()->with('success', 'Sprint deleted successfully!');
+    }
+
+    private function ensureSprintBelongsToSpace(Sprint $sprint, Space $space): void
+    {
+        if ($sprint->task_list_id) {
+            $belongs = TaskList::where('id', $sprint->task_list_id)
+                ->where('space_id', $space->id)
+                ->exists();
+            abort_unless($belongs, 404);
+            return;
+        }
+
+        abort_unless((int) $sprint->space_id === (int) $space->id, 404);
     }
 }

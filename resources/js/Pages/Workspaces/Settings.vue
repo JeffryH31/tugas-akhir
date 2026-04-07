@@ -345,8 +345,7 @@ const deleteWorkspace = () => {
                 <v-card-title>Add Member</v-card-title>
                 <v-card-text>
                     <v-select v-model="selectedUser" :items="availableUsers" item-title="name" item-value="id"
-                        label="Select User" variant="outlined" class="mb-4" bg-color="#1e1e1e"
-                        :menu-props="{ contentClass: 'bg-[#1e1e1e]' }">
+                        label="Select User" variant="outlined" class="mb-4" bg-color="#1e1e1e">
                         <template v-slot:item="{ props: itemProps, item }">
                             <v-list-item v-bind="itemProps">
                                 <template v-slot:prepend>
@@ -365,7 +364,7 @@ const deleteWorkspace = () => {
                         { title: 'Member', value: 'member' },
                         { title: 'Guest', value: 'guest' },
                     ]" label="Role" variant="outlined" bg-color="#1e1e1e"
-                        :menu-props="{ contentClass: 'bg-[#1e1e1e]' }" />
+                    />
                 </v-card-text>
                 <v-card-actions>
                     <v-spacer />

@@ -39,9 +39,11 @@ class TaskListService
         // Load space with statuses first
         $list->load('space.statuses');
 
+        $parentTask = null;
+
         // If viewing subtasks, load from parent task
         if ($taskId) {
-            $parentTask = Task::with([
+            $parentTask = Task::where('task_list_id', $list->id)->with([
                 'subtasks.status',
                 'subtasks.assignees',
                 'subtasks.labels',
@@ -50,8 +52,10 @@ class TaskListService
                 'subtasks.timeEntries.user',
                 'subtasks.comments.user', // Include comments
                 'subtasks.activities' => fn($q) => $q->with('user')->latest()->limit(50),
-            ])->findOrFail($taskId);
+            ])->find($taskId);
+        }
 
+        if ($parentTask) {
             $items = $parentTask->subtasks;
         } else {
             // Load tasks for the list

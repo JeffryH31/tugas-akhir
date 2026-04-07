@@ -1,8 +1,8 @@
-const STORAGE_KEY = 'subtask_completion_target_by_space';
+const STORAGE_KEY = "subtask_completion_target_by_space";
 
 const isSubtaskStatus = (status) => {
     const appliesTo = status?.applies_to;
-    return !appliesTo || appliesTo === 'subtasks' || appliesTo === 'both';
+    return !appliesTo || appliesTo === "subtasks" || appliesTo === "both";
 };
 
 const parseStorage = () => {

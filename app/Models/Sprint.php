@@ -12,6 +12,7 @@ class Sprint extends Model
 
     protected $fillable = [
         'space_id',
+        'task_list_id',
         'name',
         'goal',
         'start_date',
@@ -32,6 +33,14 @@ class Sprint extends Model
     public function space()
     {
         return $this->belongsTo(Space::class);
+    }
+
+    /**
+     * Get the product/list that owns the sprint.
+     */
+    public function taskList()
+    {
+        return $this->belongsTo(TaskList::class);
     }
 
     /**
@@ -71,7 +80,15 @@ class Sprint extends Model
      */
     public function isInProgress(): bool
     {
-        return now()->between($this->start_date, $this->end_date);
+        $today = now()->startOfDay();
+        $start = $this->start_date?->copy()->startOfDay();
+        $end = $this->end_date?->copy()->endOfDay();
+
+        if (!$start || !$end) {
+            return false;
+        }
+
+        return $today->between($start, $end);
     }
 
     /**
@@ -79,7 +96,12 @@ class Sprint extends Model
      */
     public function isCompleted(): bool
     {
-        return now()->greaterThan($this->end_date);
+        $end = $this->end_date?->copy()->endOfDay();
+        if (!$end) {
+            return false;
+        }
+
+        return now()->greaterThan($end);
     }
 
     /**
@@ -95,9 +117,16 @@ class Sprint extends Model
      */
     public function getRemainingDays(): int
     {
-        if ($this->isCompleted()) {
+        $end = $this->end_date?->copy()->startOfDay();
+        if (!$end) {
             return 0;
         }
-        return now()->diffInDays($this->end_date, false);
+
+        $today = now()->startOfDay();
+        if ($today->greaterThan($end)) {
+            return 0;
+        }
+
+        return $today->diffInDays($end, false);
     }
 }

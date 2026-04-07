@@ -4,7 +4,10 @@ import { router } from '@inertiajs/vue3';
 import { PRIORITIES, PRIORITY_MAP } from '@/constants/priorities';
 import { useConfirmDialog } from '@/composables/useConfirmDialog';
 import {
+    getFallbackCompletionTarget,
     getStoredSubtaskCompletionTarget,
+    getSubtaskCompletionStatusOptions,
+    setStoredSubtaskCompletionTarget,
 } from '@/utils/subtaskCompletionAutomation';
 
 const { confirm: confirmDialog } = useConfirmDialog();
@@ -71,6 +74,33 @@ const currentPriority = computed(() => {
     return PRIORITY_MAP[props.localTask.priority_level] || null;
 });
 
+// ===== Completion automation (subtask) =====
+const completionStatusOptions = computed(() => getSubtaskCompletionStatusOptions(props.statuses));
+const completionTargetStatusIdState = ref(null);
+
+const syncCompletionAutomation = () => {
+    const storedTarget = getStoredSubtaskCompletionTarget(props.space?.id, props.statuses);
+    completionTargetStatusIdState.value = storedTarget ?? getFallbackCompletionTarget(props.statuses);
+};
+
+watch(() => [props.space?.id, props.statuses], () => {
+    syncCompletionAutomation();
+}, { immediate: true });
+
+const completionTargetStatus = computed(() => {
+    return completionStatusOptions.value.find((status) => status.id === completionTargetStatusIdState.value) || null;
+});
+
+const completionTargetStatusName = computed(() => {
+    return completionTargetStatus.value?.name || 'Off';
+});
+
+const setCompletionAutomation = (statusId) => {
+    completionTargetStatusIdState.value = statusId ? Number(statusId) : null;
+    setStoredSubtaskCompletionTarget(props.space?.id, statusId);
+    window.showSnackbar?.(statusId ? 'Automation status updated!' : 'Automation disabled!', 'success');
+};
+
 // ===== Description =====
 const editedDescription = ref(props.localTask?.description || '');
 watch(() => props.localTask?.description, (v) => { editedDescription.value = v || ''; }, { immediate: true });
@@ -88,6 +118,32 @@ const saveDescription = () => {
 };
 
 // ===== Status / Priority / Sprint =====
+const sprintLookup = computed(() => {
+    return new Map((props.sprints || []).map((sprint) => [Number(sprint.id), sprint]));
+});
+
+const resolveTaskSprint = (item) => {
+    if (!item) return null;
+    if (item.sprint) return item.sprint;
+
+    const sprintId = Number(item.sprint_id || 0);
+    if (!sprintId) return null;
+
+    return sprintLookup.value.get(sprintId) || null;
+};
+
+const currentTaskSprint = computed(() => resolveTaskSprint(props.localTask));
+
+const sprintDisplayName = (item) => {
+    const sprint = resolveTaskSprint(item);
+    if (sprint?.name) return sprint.name;
+
+    const sprintId = Number(item?.sprint_id || 0);
+    if (sprintId) return `Sprint #${sprintId}`;
+
+    return 'Backlog';
+};
+
 const changeStatus = (id) => {
     router.patch(getUpdateRoute(), { status_id: id }, {
         preserveScroll: true,
@@ -101,8 +157,19 @@ const changePriority = (level) => {
     });
 };
 const isSprintActive = (sprint) => {
+    if (!sprint) return false;
+    if (sprint.is_active) return true;
+    if (!sprint.start_date || !sprint.end_date) return false;
+
     const today = new Date(); today.setHours(0, 0, 0, 0);
-    return today >= new Date(sprint.start_date) && today <= new Date(sprint.end_date);
+    const start = new Date(sprint.start_date);
+    const end = new Date(sprint.end_date);
+
+    if (Number.isNaN(start.getTime()) || Number.isNaN(end.getTime())) return false;
+
+    start.setHours(0, 0, 0, 0);
+    end.setHours(23, 59, 59, 999);
+    return today >= start && today <= end;
 };
 const changeSprint = (id) => {
     router.patch(getUpdateRoute(), { sprint_id: id }, {
@@ -332,7 +399,6 @@ const deleteSubtask = async (sub) => {
 
 // ===== Dependencies =====
 const dependencyLoading = ref(false);
-const dependencyTab = ref('waiting');
 
 const getAvailablePredecessors = computed(() => {
     if (!props.isSubtask || !props.parentTask?.subtasks) return [];
@@ -499,6 +565,57 @@ const removeSuccessor = (suc) => depFetch('DELETE', { subtask_id: suc.id, depend
             <template v-if="isSubtask">
                 <v-divider class="my-1" />
 
+                <!-- Sprint Inclusion -->
+                <div class="prop-row">
+                    <div class="prop-label">
+                        <v-icon size="16" class="prop-icon">mdi-calendar-clock-outline</v-icon>
+                        Sprint
+                    </div>
+                    <div class="prop-value">
+                        <v-menu>
+                            <template v-slot:activator="{ props: menuProps }">
+                                <v-btn v-bind="menuProps" variant="text" size="small" class="text-none"
+                                    :color="currentTaskSprint ? (isSprintActive(currentTaskSprint) ? 'success' : 'primary') : 'grey'">
+                                    <v-icon start size="14">
+                                        {{ currentTaskSprint ? 'mdi-check-circle-outline' : 'mdi-tray-arrow-down' }}
+                                    </v-icon>
+                                    {{ sprintDisplayName(localTask) }}
+                                    <v-icon end size="14">mdi-chevron-down</v-icon>
+                                </v-btn>
+                            </template>
+                            <v-card color="surface" min-width="260">
+                                <v-list density="compact">
+                                    <v-list-item :active="!localTask.sprint_id" @click="changeSprint(null)">
+                                        <template v-slot:prepend>
+                                            <v-icon size="16" color="grey">mdi-tray-arrow-down</v-icon>
+                                        </template>
+                                        <v-list-item-title>Backlog (Not in sprint)</v-list-item-title>
+                                        <template v-slot:append>
+                                            <v-icon v-if="!localTask.sprint_id" size="16" color="primary">mdi-check</v-icon>
+                                        </template>
+                                    </v-list-item>
+                                    <v-divider v-if="sprints.length" />
+                                    <v-list-item v-for="sprint in sprints" :key="sprint.id"
+                                        :active="sprint.id === localTask.sprint_id" @click="changeSprint(sprint.id)">
+                                        <template v-slot:prepend>
+                                            <v-icon size="16" :color="isSprintActive(sprint) ? 'success' : 'primary'">
+                                                {{ isSprintActive(sprint) ? 'mdi-rocket-launch-outline' : 'mdi-calendar-clock-outline' }}
+                                            </v-icon>
+                                        </template>
+                                        <v-list-item-title>{{ sprint.name }}</v-list-item-title>
+                                        <template v-slot:append>
+                                            <v-icon v-if="sprint.id === localTask.sprint_id" size="16"
+                                                color="primary">mdi-check</v-icon>
+                                        </template>
+                                    </v-list-item>
+                                </v-list>
+                            </v-card>
+                        </v-menu>
+                    </div>
+                </div>
+
+                <v-divider class="my-1" />
+
                 <!-- Start Date -->
                 <div class="prop-row">
                     <div class="prop-label">
@@ -561,6 +678,58 @@ const removeSuccessor = (suc) => depFetch('DELETE', { subtask_id: suc.id, depend
                                     <v-btn size="small" color="primary" variant="flat"
                                         @click="updateDueDate">Save</v-btn>
                                 </v-card-actions>
+                            </v-card>
+                        </v-menu>
+                    </div>
+                </div>
+
+                <v-divider class="my-1" />
+
+                <!-- Completion Automation -->
+                <div class="prop-row">
+                    <div class="prop-label">
+                        <v-icon size="16" class="prop-icon">mdi-lightning-bolt</v-icon>
+                        Automation
+                    </div>
+                    <div class="prop-value">
+                        <v-menu location="bottom start">
+                            <template v-slot:activator="{ props: menuProps }">
+                                <v-btn v-bind="menuProps" variant="text" size="small" class="text-none"
+                                    :color="completionTargetStatusIdState ? 'primary' : 'grey'">
+                                    <span class="automation-preview-dot"
+                                        :style="{ backgroundColor: completionTargetStatus?.color || '#64748b' }" />
+                                    {{ completionTargetStatusName }}
+                                    <v-icon end size="14">mdi-chevron-down</v-icon>
+                                </v-btn>
+                            </template>
+                            <v-card color="surface" min-width="280">
+                                <v-list density="compact">
+                                    <v-list-item :active="!completionTargetStatusIdState"
+                                        @click="setCompletionAutomation(null)">
+                                        <template v-slot:prepend>
+                                            <v-icon size="16" color="grey">mdi-power</v-icon>
+                                        </template>
+                                        <v-list-item-title>Off</v-list-item-title>
+                                        <template v-slot:append>
+                                            <v-icon v-if="!completionTargetStatusIdState" size="16"
+                                                color="primary">mdi-check</v-icon>
+                                        </template>
+                                    </v-list-item>
+                                    <v-divider />
+                                    <v-list-item v-for="status in completionStatusOptions" :key="status.id"
+                                        :active="status.id === completionTargetStatusIdState"
+                                        @click="setCompletionAutomation(status.id)">
+                                        <template v-slot:prepend>
+                                            <div class="w-3 h-3 rounded-full mr-3"
+                                                :style="{ backgroundColor: status.color }" />
+                                        </template>
+                                        <v-list-item-title>{{ status.name }}</v-list-item-title>
+                                        <template v-slot:append>
+                                            <v-icon v-if="status.id === completionTargetStatusIdState" size="16"
+                                                color="primary">mdi-check</v-icon>
+                                        </template>
+                                    </v-list-item>
+                                </v-list>
                             </v-card>
                         </v-menu>
                     </div>
@@ -650,7 +819,7 @@ const removeSuccessor = (suc) => depFetch('DELETE', { subtask_id: suc.id, depend
                             {{ localTask.baseline_start_date || localTask.baseline_due_date
                                 ? `${formatDate(localTask.baseline_start_date)} ->
                             ${formatDate(localTask.baseline_due_date)}`
-                            : 'Not set' }}
+                                : 'Not set' }}
                         </span>
                         <v-chip
                             v-if="localTask.schedule_variance_minutes !== null && localTask.schedule_variance_minutes !== 0"
@@ -697,7 +866,7 @@ const removeSuccessor = (suc) => depFetch('DELETE', { subtask_id: suc.id, depend
                     <div class="prop-value">
                         <div class="d-flex align-center ga-2">
                             <span class="text-body-2">
-                            {{ formatDuration((localTask.time_spent || 0) * 60) }}
+                                {{ formatDuration((localTask.time_spent || 0) * 60) }}
                             </span>
                             <v-chip v-if="localTask.time_estimate" size="x-small" variant="tonal"
                                 :color="(localTask.time_spent || 0) > localTask.time_estimate ? 'error' : 'primary'">
@@ -713,11 +882,11 @@ const removeSuccessor = (suc) => depFetch('DELETE', { subtask_id: suc.id, depend
 
                 <v-divider class="my-1" />
 
-                <!-- Dependencies -->
+                <!-- Waiting On -->
                 <div class="prop-row" style="align-items: flex-start; padding-top: 10px; padding-bottom: 10px;">
                     <div class="prop-label" style="padding-top: 2px;">
-                        <v-icon size="16" class="prop-icon">mdi-link-variant</v-icon>
-                        Dependencies
+                        <v-icon size="16" class="prop-icon">mdi-clock-outline</v-icon>
+                        Waiting On
                     </div>
                     <div class="prop-value">
                         <div class="d-flex flex-wrap ga-1 align-center">
@@ -727,6 +896,50 @@ const removeSuccessor = (suc) => depFetch('DELETE', { subtask_id: suc.id, depend
                                 <v-icon start size="12">mdi-clock-outline</v-icon>
                                 {{ dep.name }}
                             </v-chip>
+                            <v-menu :close-on-content-click="false">
+                                <template v-slot:activator="{ props: menuProps }">
+                                    <v-btn v-bind="menuProps" icon variant="tonal" size="x-small" color="grey"
+                                        :loading="dependencyLoading">
+                                        <v-icon size="14">mdi-plus</v-icon>
+                                    </v-btn>
+                                </template>
+                                <v-card color="surface" min-width="260">
+                                    <v-list density="compact" max-height="200" class="overflow-auto">
+                                        <v-list-item v-for="s in getAvailablePredecessors" :key="s.id"
+                                            :disabled="dependencyLoading" @click="addDependency(s)">
+                                            <template #prepend>
+                                                <v-icon size="14">mdi-subtitles-outline</v-icon>
+                                            </template>
+                                            <v-list-item-title class="text-body-2">{{ s.name }}</v-list-item-title>
+                                            <v-list-item-subtitle v-if="s.time_estimate" class="text-caption">
+                                                Est: {{ formatSubtaskEstimate(s.time_estimate) }}
+                                            </v-list-item-subtitle>
+                                        </v-list-item>
+                                        <v-list-item v-if="getAvailablePredecessors.length === 0" disabled>
+                                            <v-list-item-title class="text-body-2 text-grey">
+                                                No available subtasks
+                                            </v-list-item-title>
+                                        </v-list-item>
+                                    </v-list>
+                                </v-card>
+                            </v-menu>
+                        </div>
+                        <div v-if="!(localTask?.dependencies || []).length" class="text-caption text-grey mt-1">
+                            No waiting-on dependencies
+                        </div>
+                    </div>
+                </div>
+
+                <v-divider class="my-1" />
+
+                <!-- Blocking -->
+                <div class="prop-row" style="align-items: flex-start; padding-top: 10px; padding-bottom: 10px;">
+                    <div class="prop-label" style="padding-top: 2px;">
+                        <v-icon size="16" class="prop-icon">mdi-hand-back-left</v-icon>
+                        Blocking
+                    </div>
+                    <div class="prop-value">
+                        <div class="d-flex flex-wrap ga-1 align-center">
                             <v-chip v-for="dep in (localTask?.dependents || [])" :key="'s-' + dep.id" size="small"
                                 color="error" variant="tonal" closable :disabled="dependencyLoading"
                                 @click:close="removeSuccessor(dep)">
@@ -741,64 +954,29 @@ const removeSuccessor = (suc) => depFetch('DELETE', { subtask_id: suc.id, depend
                                     </v-btn>
                                 </template>
                                 <v-card color="surface" min-width="260">
-                                    <v-tabs v-model="dependencyTab" density="compact" grow>
-                                        <v-tab value="waiting" class="text-caption">
-                                            <v-icon start size="14">mdi-clock-outline</v-icon>
-                                            Waiting on
-                                        </v-tab>
-                                        <v-tab value="blocking" class="text-caption">
-                                            <v-icon start size="14">mdi-hand-back-left</v-icon>
-                                            Blocking
-                                        </v-tab>
-                                    </v-tabs>
-                                    <v-divider />
-                                    <v-window v-model="dependencyTab">
-                                        <v-window-item value="waiting">
-                                            <v-list density="compact" max-height="200" class="overflow-auto">
-                                                <v-list-item v-for="s in getAvailablePredecessors" :key="s.id"
-                                                    :disabled="dependencyLoading" @click="addDependency(s)">
-                                                    <template #prepend>
-                                                        <v-icon size="14">mdi-subtitles-outline</v-icon>
-                                                    </template>
-                                                    <v-list-item-title class="text-body-2">{{ s.name
-                                                        }}</v-list-item-title>
-                                                    <v-list-item-subtitle v-if="s.time_estimate" class="text-caption">
-                                                        Est: {{ formatSubtaskEstimate(s.time_estimate) }}
-                                                    </v-list-item-subtitle>
-                                                </v-list-item>
-                                                <v-list-item v-if="getAvailablePredecessors.length === 0" disabled>
-                                                    <v-list-item-title class="text-body-2 text-grey">
-                                                        No available subtasks
-                                                    </v-list-item-title>
-                                                </v-list-item>
-                                            </v-list>
-                                        </v-window-item>
-                                        <v-window-item value="blocking">
-                                            <v-list density="compact" max-height="200" class="overflow-auto">
-                                                <v-list-item v-for="s in getAvailableSuccessors" :key="s.id"
-                                                    :disabled="dependencyLoading" @click="addSuccessor(s)">
-                                                    <template #prepend>
-                                                        <v-icon size="14">mdi-subtitles-outline</v-icon>
-                                                    </template>
-                                                    <v-list-item-title class="text-body-2">{{ s.name
-                                                        }}</v-list-item-title>
-                                                    <v-list-item-subtitle v-if="s.time_estimate" class="text-caption">
-                                                        Est: {{ formatSubtaskEstimate(s.time_estimate) }}
-                                                    </v-list-item-subtitle>
-                                                </v-list-item>
-                                                <v-list-item v-if="getAvailableSuccessors.length === 0" disabled>
-                                                    <v-list-item-title class="text-body-2 text-grey">
-                                                        No available subtasks
-                                                    </v-list-item-title>
-                                                </v-list-item>
-                                            </v-list>
-                                        </v-window-item>
-                                    </v-window>
+                                    <v-list density="compact" max-height="200" class="overflow-auto">
+                                        <v-list-item v-for="s in getAvailableSuccessors" :key="s.id"
+                                            :disabled="dependencyLoading" @click="addSuccessor(s)">
+                                            <template #prepend>
+                                                <v-icon size="14">mdi-subtitles-outline</v-icon>
+                                            </template>
+                                            <v-list-item-title class="text-body-2">{{ s.name }}</v-list-item-title>
+                                            <v-list-item-subtitle v-if="s.time_estimate" class="text-caption">
+                                                Est: {{ formatSubtaskEstimate(s.time_estimate) }}
+                                            </v-list-item-subtitle>
+                                        </v-list-item>
+                                        <v-list-item v-if="getAvailableSuccessors.length === 0" disabled>
+                                            <v-list-item-title class="text-body-2 text-grey">
+                                                No available subtasks
+                                            </v-list-item-title>
+                                        </v-list-item>
+                                    </v-list>
                                 </v-card>
                             </v-menu>
                         </div>
-                        <div v-if="!(localTask?.dependencies || []).length && !(localTask?.dependents || []).length"
-                            class="text-caption text-grey mt-1">No dependencies</div>
+                        <div v-if="!(localTask?.dependents || []).length" class="text-caption text-grey mt-1">
+                            Not blocking any subtask
+                        </div>
                     </div>
                 </div>
             </template>
@@ -829,8 +1007,13 @@ const removeSuccessor = (suc) => depFetch('DELETE', { subtask_id: suc.id, depend
                     <span class="subtask-check-name" :class="{ 'subtask-check-done': sub.completed_at }">
                         {{ sub.name }}
                     </span>
+                    <v-chip size="x-small" variant="tonal" class="subtask-sprint-chip ml-auto" @click.stop
+                        :color="resolveTaskSprint(sub) ? (isSprintActive(resolveTaskSprint(sub)) ? 'success' : 'primary') : 'grey'">
+                        <v-icon start size="12">mdi-calendar-clock-outline</v-icon>
+                        {{ sprintDisplayName(sub) }}
+                    </v-chip>
                     <v-icon v-if="sub.priority" :color="sub.priority.level <= 2 ? 'warning' : 'grey'" size="12"
-                        class="ml-auto flex-shrink-0">mdi-flag</v-icon>
+                        class="flex-shrink-0">mdi-flag</v-icon>
                 </div>
             </div>
             <div v-else class="pa-4 text-center text-body-2 text-grey">No subtasks yet</div>
@@ -885,6 +1068,15 @@ const removeSuccessor = (suc) => depFetch('DELETE', { subtask_id: suc.id, depend
     min-width: 0;
 }
 
+.automation-preview-dot {
+    width: 8px;
+    height: 8px;
+    border-radius: 999px;
+    display: inline-block;
+    margin-right: 8px;
+    box-shadow: 0 0 0 1px rgba(255, 255, 255, 0.25);
+}
+
 .timer-display {
     font-family: 'JetBrains Mono', 'Fira Code', monospace;
     font-size: 13px;
@@ -930,5 +1122,19 @@ const removeSuccessor = (suc) => depFetch('DELETE', { subtask_id: suc.id, depend
 .subtask-check-done {
     text-decoration: line-through;
     color: rgba(255, 255, 255, 0.3);
+}
+
+.subtask-sprint-chip {
+    max-width: 180px;
+    font-weight: 600;
+}
+
+.subtask-sprint-chip :deep(.v-chip__content) {
+    display: inline-flex;
+    align-items: center;
+    min-width: 0;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
 }
 </style>

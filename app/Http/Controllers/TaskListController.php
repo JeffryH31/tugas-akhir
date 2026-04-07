@@ -7,6 +7,7 @@ use App\Http\Requests\StoreTaskListRequest;
 use App\Http\Requests\UpdateTaskListRequest;
 use App\Models\Folder;
 use App\Models\Space;
+use App\Models\Task;
 use App\Models\TaskList;
 use App\Models\User;
 use App\Models\Workspace;
@@ -50,8 +51,15 @@ class TaskListController extends Controller
     public function show(Request $request, Workspace $workspace, Space $space, TaskList $list): Response
     {
         abort_unless($this->accessService->canViewProject($request->user(), $list), 403);
-        $taskId = $request->query('task_id');
-        $tasksByStatus = $this->taskListService->getWithTasksByStatus($list, $taskId);
+        $requestedTaskId = (int) $request->integer('task_id');
+        $parentTask = null;
+
+        if ($requestedTaskId > 0) {
+            // Accept task_id only if the task belongs to the currently opened list.
+            $parentTask = $list->tasks()->whereKey($requestedTaskId)->first();
+        }
+
+        $tasksByStatus = $this->taskListService->getWithTasksByStatus($list, $parentTask?->id);
 
         $workspace->load([
             'spaces' => fn($q) => $q->with([
@@ -64,7 +72,7 @@ class TaskListController extends Controller
 
         // Filter statuses based on whether viewing subtasks or tasks
         $statusesQuery = $space->statuses()->orderBy('position');
-        if ($taskId) {
+        if ($parentTask) {
             $statusesQuery->forSubtasks(); // Only subtask-applicable statuses
         } else {
             $statusesQuery->forTasks(); // Only task-applicable statuses
@@ -76,8 +84,8 @@ class TaskListController extends Controller
             'list' => $list,
             'tasksByStatus' => $tasksByStatus,
             'statuses' => $statusesQuery->get(),
-            'sprints' => $space->sprints()->orderBy('position')->get(),
-            'parentTask' => $taskId ? \App\Models\Task::find($taskId) : null,
+            'sprints' => $list->sprints()->withCount('subtasks')->orderBy('position')->get(),
+            'parentTask' => $parentTask,
             'projectMembers' => $list->members()->get(['users.id', 'users.name', 'users.email']),
         ]);
     }

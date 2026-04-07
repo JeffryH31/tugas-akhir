@@ -2,6 +2,7 @@
 
 namespace App\Http\Requests;
 
+use App\Models\Status;
 use Illuminate\Foundation\Http\FormRequest;
 
 class StoreTaskRequest extends FormRequest
@@ -28,7 +29,7 @@ class StoreTaskRequest extends FormRequest
                 'exists:statuses,id',
                 function ($attribute, $value, $fail) {
                     if ($value) {
-                        $status = \App\Models\Status::find($value);
+                        $status = Status::find($value);
                         if ($status && $status->applies_to === 'subtasks') {
                             $fail('This status can only be used for subtasks, not tasks.');
                         }

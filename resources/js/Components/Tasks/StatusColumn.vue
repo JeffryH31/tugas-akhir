@@ -214,17 +214,20 @@ const handleTaskOpen = (task) => {
         <div class="column-content">
             <!-- Draggable Tasks -->
             <draggable :list="tasks" group="tasks" item-key="id" :animation="200" ghost-class="task-ghost"
-                drag-class="task-dragging" class="tasks-list" @change="onDragChange" @start="isDragging = true"
-                @end="isDragging = false">
+                drag-class="task-dragging" class="tasks-list" :class="{ 'tasks-list--dragging': isDragging }"
+                @change="onDragChange" @start="isDragging = true" @end="isDragging = false">
                 <template #item="{ element }">
                     <div class="task-wrapper">
                         <TaskCard :task="element" @complete="handleTaskComplete" @open-detail="handleTaskOpen" />
                     </div>
                 </template>
             </draggable>
+        </div>
 
+        <!-- Bottom Footer (Jira/ClickUp style) -->
+        <div class="column-footer">
             <!-- Add Task Form -->
-            <div v-if="showAddTask" class="add-task-form mt-2">
+            <div v-if="showAddTask" class="add-task-form">
                 <v-card variant="outlined" rounded="lg">
                     <v-card-text class="pa-3">
                         <v-text-field v-model="newTaskName" placeholder="Task name" variant="plain" density="compact"
@@ -242,7 +245,7 @@ const handleTaskOpen = (task) => {
             </div>
 
             <!-- Add Task Button (when form is hidden) -->
-            <v-btn v-if="!showAddTask" variant="text" block class="add-task-btn mt-2" @click="showAddTask = true">
+            <v-btn v-if="!showAddTask" variant="text" block class="add-task-btn" @click="showAddTask = true">
                 <v-icon start size="16">mdi-plus</v-icon>
                 {{ parentTask ? 'Add Subtask' : 'Add Task' }}
             </v-btn>
@@ -346,7 +349,30 @@ const handleTaskOpen = (task) => {
     display: flex;
     flex-direction: column;
     gap: 8px;
-    min-height: 2px;
+    min-height: 100%;
+    border-radius: 8px;
+    padding: 2px;
+}
+
+.tasks-list::after {
+    content: '';
+    display: block;
+    min-height: 16px;
+}
+
+.tasks-list--dragging {
+    background: rgba(255, 255, 255, 0.03);
+    outline: 1px dashed rgba(255, 255, 255, 0.16);
+}
+
+.tasks-list--dragging::after {
+    min-height: 72px;
+}
+
+.column-footer {
+    padding: 8px;
+    border-top: 1px solid #2d2d30;
+    background-color: #1a1a1a;
 }
 
 .task-wrapper {

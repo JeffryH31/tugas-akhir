@@ -73,7 +73,7 @@ class TaskController extends Controller
             'list' => $list,
             'task' => new TaskResource($task),
             'statuses' => $space->statuses()->orderBy('position')->get(),
-            'sprints' => $space->sprints()->orderBy('position')->get(),
+            'sprints' => $list->sprints()->orderBy('position')->get(),
         ]);
     }
 

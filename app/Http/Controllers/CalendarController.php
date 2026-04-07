@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Http\Requests\CalendarFilterRequest;
+use App\Models\Subtask;
 use App\Models\Workspace;
 use App\Services\AccessService;
 use Inertia\Inertia;
@@ -32,7 +33,7 @@ class CalendarController extends Controller
             'members',
         ]);
 
-        $subtasks = \App\Models\Subtask::query()
+        $subtasks = Subtask::query()
             ->whereHas('task.taskList.space', function ($query) use ($workspace) {
                 $query->where('workspace_id', $workspace->id);
             })

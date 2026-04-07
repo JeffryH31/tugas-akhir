@@ -71,7 +71,7 @@ class WorkspaceAnalyticsService
                     ->whereNotNull('due_date')
                     ->where('due_date', '<', now())
                     ->count(),
-                'active_sprints' => Sprint::whereHas('space', fn($q) => $q->where('workspace_id', $workspace->id))
+                'active_sprints' => Sprint::whereHas('taskList.space', fn($q) => $q->where('workspace_id', $workspace->id))
                     ->where('is_active', true)
                     ->count(),
                 'time_logged_minutes' => (clone $timeQuery)->sum('duration'),

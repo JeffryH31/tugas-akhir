@@ -44,6 +44,58 @@ const showStartTimePicker = ref(false);
 const showEndDatePicker = ref(false);
 const showEndTimePicker = ref(false);
 
+const pad2 = (n) => String(n).padStart(2, '0');
+
+// Normalize picker output across adapters (string, Date, array, or date-like objects)
+const normalizeDateValue = (value) => {
+    const raw = Array.isArray(value) ? value[0] : value;
+    if (!raw) return '';
+
+    if (typeof raw === 'string') {
+        if (/^\d{4}-\d{2}-\d{2}$/.test(raw)) return raw;
+        const d = new Date(raw);
+        if (Number.isNaN(d.getTime())) return '';
+        return `${d.getFullYear()}-${pad2(d.getMonth() + 1)}-${pad2(d.getDate())}`;
+    }
+
+    if (raw instanceof Date) {
+        if (Number.isNaN(raw.getTime())) return '';
+        return `${raw.getFullYear()}-${pad2(raw.getMonth() + 1)}-${pad2(raw.getDate())}`;
+    }
+
+    if (raw && typeof raw.toISODate === 'function') {
+        return raw.toISODate() || '';
+    }
+
+    return '';
+};
+
+const normalizeTimeValue = (value) => {
+    const raw = Array.isArray(value) ? value[0] : value;
+    if (!raw) return '';
+
+    if (typeof raw === 'string') {
+        const m = raw.match(/^(\d{1,2}):(\d{2})/);
+        if (!m) return '';
+        return `${pad2(m[1])}:${m[2]}`;
+    }
+
+    if (raw instanceof Date) {
+        if (Number.isNaN(raw.getTime())) return '';
+        return `${pad2(raw.getHours())}:${pad2(raw.getMinutes())}`;
+    }
+
+    if (raw && typeof raw === 'object' && Number.isFinite(raw.hours) && Number.isFinite(raw.minutes)) {
+        return `${pad2(raw.hours)}:${pad2(raw.minutes)}`;
+    }
+
+    if (raw && typeof raw.toFormat === 'function') {
+        return raw.toFormat('HH:mm');
+    }
+
+    return '';
+};
+
 const sortedTimeEntries = computed(() => {
     const entries = Array.isArray(props.task?.time_entries) ? [...props.task.time_entries] : [];
     return entries.sort((a, b) => {
@@ -54,26 +106,38 @@ const sortedTimeEntries = computed(() => {
 });
 
 const formatPickerDate = (value) => {
-    if (!value) return 'Select date';
-    const d = new Date(`${value}T00:00:00`);
+    const normalized = normalizeDateValue(value);
+    if (!normalized) return 'Select date';
+    const d = new Date(`${normalized}T00:00:00`);
     if (Number.isNaN(d.getTime())) return 'Select date';
     return d.toLocaleDateString();
 };
 
 const formatPickerTime = (value) => {
-    if (!value) return 'Select time';
-    const [hour = '00', minute = '00'] = String(value).split(':');
+    const normalized = normalizeTimeValue(value);
+    if (!normalized) return 'Select time';
+    const [hour = '00', minute = '00'] = normalized.split(':');
     const d = new Date();
     d.setHours(Number(hour), Number(minute), 0, 0);
     return d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
 };
 
 const buildDateTime = (dateValue, timeValue) => {
-    if (!dateValue || !timeValue) return null;
-    const normalizedTime = String(timeValue).slice(0, 5);
-    const dt = new Date(`${dateValue}T${normalizedTime}:00`);
+    const normalizedDate = normalizeDateValue(dateValue);
+    const normalizedTime = normalizeTimeValue(timeValue);
+    if (!normalizedDate || !normalizedTime) return null;
+    const dt = new Date(`${normalizedDate}T${normalizedTime}:00`);
     return Number.isNaN(dt.getTime()) ? null : dt;
 };
+
+const normalizedStartDate = computed(() => normalizeDateValue(newEntry.value.startDate));
+const normalizedEndDate = computed(() => normalizeDateValue(newEntry.value.endDate));
+const normalizedStartTime = computed(() => normalizeTimeValue(newEntry.value.startTime));
+const normalizedEndTime = computed(() => normalizeTimeValue(newEntry.value.endTime));
+
+const canLogEntry = computed(() => {
+    return !!(normalizedStartDate.value && normalizedStartTime.value && normalizedEndDate.value && normalizedEndTime.value);
+});
 
 const startDateTime = computed(() => buildDateTime(newEntry.value.startDate, newEntry.value.startTime));
 const endDateTime = computed(() => buildDateTime(newEntry.value.endDate, newEntry.value.endTime));
@@ -121,8 +185,8 @@ const addEntry = () => {
     router.post(
         route('tasks.subtasks.time-entries.store', [props.workspace.id, props.space.id, props.list.id, props.parentTask.id, props.task.id]),
         {
-            started_at: `${newEntry.value.startDate} ${newEntry.value.startTime}:00`,
-            ended_at: `${newEntry.value.endDate} ${newEntry.value.endTime}:00`,
+            started_at: `${normalizedStartDate.value} ${normalizedStartTime.value}:00`,
+            ended_at: `${normalizedEndDate.value} ${normalizedEndTime.value}:00`,
             description: newEntry.value.description,
         },
         {
@@ -207,8 +271,8 @@ const deleteEntry = async (entryId) => {
                                     readonly hide-details class="picker-field" />
                             </template>
                             <v-card color="surface">
-                                <v-date-picker v-model="newEntry.startDate" hide-header
-                                    @update:model-value="showStartDatePicker = false" />
+                                <v-date-picker :model-value="newEntry.startDate" hide-header
+                                    @update:model-value="(value) => { newEntry.startDate = normalizeDateValue(value); showStartDatePicker = false; }" />
                             </v-card>
                         </v-menu>
 
@@ -219,8 +283,8 @@ const deleteEntry = async (entryId) => {
                                     density="compact" readonly hide-details class="picker-field" />
                             </template>
                             <v-card color="surface" min-width="260">
-                                <v-time-picker v-model="newEntry.startTime" format="24hr"
-                                    @update:model-value="showStartTimePicker = false" />
+                                <v-time-picker :model-value="newEntry.startTime" format="24hr"
+                                    @update:model-value="(value) => { newEntry.startTime = normalizeTimeValue(value); showStartTimePicker = false; }" />
                             </v-card>
                         </v-menu>
                     </div>
@@ -234,8 +298,8 @@ const deleteEntry = async (entryId) => {
                                     readonly hide-details class="picker-field" />
                             </template>
                             <v-card color="surface">
-                                <v-date-picker v-model="newEntry.endDate" hide-header
-                                    @update:model-value="showEndDatePicker = false" />
+                                <v-date-picker :model-value="newEntry.endDate" hide-header
+                                    @update:model-value="(value) => { newEntry.endDate = normalizeDateValue(value); showEndDatePicker = false; }" />
                             </v-card>
                         </v-menu>
 
@@ -246,8 +310,8 @@ const deleteEntry = async (entryId) => {
                                     density="compact" readonly hide-details class="picker-field" />
                             </template>
                             <v-card color="surface" min-width="260">
-                                <v-time-picker v-model="newEntry.endTime" format="24hr"
-                                    @update:model-value="showEndTimePicker = false" />
+                                <v-time-picker :model-value="newEntry.endTime" format="24hr"
+                                    @update:model-value="(value) => { newEntry.endTime = normalizeTimeValue(value); showEndTimePicker = false; }" />
                             </v-card>
                         </v-menu>
                     </div>
@@ -259,7 +323,7 @@ const deleteEntry = async (entryId) => {
                             Duration: {{ durationPreview }}
                         </v-chip>
                         <v-btn color="primary" variant="flat" size="small"
-                            :disabled="!newEntry.startDate || !newEntry.startTime || !newEntry.endDate || !newEntry.endTime"
+                            :disabled="!canLogEntry"
                             @click="addEntry">
                             <v-icon size="16">mdi-plus</v-icon>
                             Log

@@ -5,6 +5,7 @@ namespace App\Services;
 use App\Models\Space;
 use App\Models\Sprint;
 use App\Models\Subtask;
+use App\Models\TaskList;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\ValidationException;
 
@@ -13,11 +14,13 @@ class SprintService
     /**
      * Create a new sprint.
      */
-    public function createSprint(Space $space, array $data): Sprint
+    public function createSprint(TaskList $list, array $data): Sprint
     {
-        $position = $space->sprints()->max('position') + 1;
+        $position = $list->sprints()->max('position') + 1;
 
-        return $space->sprints()->create([
+        return Sprint::create([
+            'space_id' => $list->space_id,
+            'task_list_id' => $list->id,
             'name' => $data['name'],
             'goal' => $data['goal'] ?? null,
             'start_date' => $data['start_date'],
@@ -32,7 +35,12 @@ class SprintService
      */
     public function updateSprint(Sprint $sprint, array $data): Sprint
     {
+        $targetListId = $data['list_id'] ?? $sprint->task_list_id;
+        $targetList = $targetListId ? TaskList::find($targetListId) : null;
+
         $sprint->update([
+            'task_list_id' => $targetList?->id ?? $sprint->task_list_id,
+            'space_id' => $targetList?->space_id ?? $sprint->space_id,
             'name' => $data['name'] ?? $sprint->name,
             'goal' => $data['goal'] ?? $sprint->goal,
             'start_date' => $data['start_date'] ?? $sprint->start_date,
@@ -58,9 +66,14 @@ class SprintService
      */
     public function startSprint(Sprint $sprint): Sprint
     {
-        Sprint::where('space_id', $sprint->space_id)
-            ->where('id', '!=', $sprint->id)
-            ->update(['is_active' => false]);
+        $query = Sprint::query()->where('id', '!=', $sprint->id);
+        if ($sprint->task_list_id) {
+            $query->where('task_list_id', $sprint->task_list_id);
+        } else {
+            $query->where('space_id', $sprint->space_id);
+        }
+
+        $query->update(['is_active' => false]);
 
         $sprint->update(['is_active' => true]);
 
@@ -82,13 +95,18 @@ class SprintService
      */
     public function addSubtaskToSprint(Sprint $sprint, int $subtaskId): void
     {
-        $updated = Subtask::where('id', $subtaskId)
-            ->whereHas('task.taskList', fn($q) => $q->where('space_id', $sprint->space_id))
-            ->update(['sprint_id' => $sprint->id]);
+        $query = Subtask::where('id', $subtaskId);
+        if ($sprint->task_list_id) {
+            $query->whereHas('task', fn($q) => $q->where('task_list_id', $sprint->task_list_id));
+        } else {
+            $query->whereHas('task.taskList', fn($q) => $q->where('space_id', $sprint->space_id));
+        }
+
+        $updated = $query->update(['sprint_id' => $sprint->id]);
 
         if ($updated === 0) {
             throw ValidationException::withMessages([
-                'subtask_id' => ['Subtask is not part of this space.'],
+                'subtask_id' => ['Subtask is not part of this product.'],
             ]);
         }
     }
@@ -144,10 +162,10 @@ class SprintService
     /**
      * Get backlog subtasks (subtasks without sprint in the space).
      */
-    public function getBacklogSubtasks(Space $space): \Illuminate\Support\Collection
+    public function getBacklogSubtasks(TaskList $list): \Illuminate\Support\Collection
     {
         return Subtask::whereNull('sprint_id')
-            ->whereHas('task.taskList', fn($q) => $q->where('space_id', $space->id))
+            ->whereHas('task', fn($q) => $q->where('task_list_id', $list->id))
             ->with(['status', 'assignees', 'task'])
             ->get();
     }
@@ -155,9 +173,9 @@ class SprintService
     /**
      * Calculate sprint velocity (completed subtasks per sprint).
      */
-    public function calculateVelocity(Space $space, int $lastNSprints = 5): array
+    public function calculateVelocity(TaskList $list, int $lastNSprints = 5): array
     {
-        $sprints = Sprint::where('space_id', $space->id)
+        $sprints = Sprint::where('task_list_id', $list->id)
             ->where('end_date', '<', now())
             ->orderBy('end_date', 'desc')
             ->limit($lastNSprints)

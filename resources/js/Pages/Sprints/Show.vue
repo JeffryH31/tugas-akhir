@@ -3,11 +3,13 @@ import { ref, computed } from 'vue';
 import { router } from '@inertiajs/vue3';
 import MainLayout from '@/Layouts/MainLayout.vue';
 import TaskCard from '@/Components/Tasks/TaskCard.vue';
+import TaskDetailPanel from '@/Components/Tasks/TaskDetailPanel.vue';
 import { useConfirmDialog } from '@/composables/useConfirmDialog';
 
 const props = defineProps({
     workspace: Object,
     space: Object,
+    list: Object,
     sprint: Object,
     backlogSubtasks: Array,
     statistics: Object,
@@ -22,6 +24,10 @@ const draggingSubtaskId = ref(null);
 const draggingSource = ref(null);
 const activeDropZone = ref(null);
 const isMoving = ref(false);
+const showDetail = ref(false);
+const detailTask = ref(null);
+const detailParentTask = ref(null);
+const detailList = ref(null);
 
 const isSprintActive = computed(() => {
     return !!props.sprint?.is_active;
@@ -33,6 +39,25 @@ const isSprintCompleted = computed(() => {
     const end = new Date(props.sprint.end_date);
     return !props.sprint?.is_active && today > end;
 });
+
+const validBacklogSubtasks = computed(() => (props.backlogSubtasks || []).filter((s) => !!s.task));
+const validSprintSubtasks = computed(() => (props.sprint?.subtasks || []).filter((s) => !!s.task));
+const activeListId = computed(() => props.list?.id || props.sprint?.task_list_id || null);
+
+const goToSprintIndex = () => {
+    if (!activeListId.value) {
+        router.visit(route('spaces.show', [props.workspace.id, props.space.id]));
+        return;
+    }
+
+    router.visit(route('lists.show', {
+        workspace: props.workspace.id,
+        space: props.space.id,
+        list: activeListId.value,
+        view: 'sprint',
+        sprint_id: props.sprint.id,
+    }));
+};
 
 const startSprint = async () => {
     const ok = await confirmDialog('Start this sprint now?', 'Start Sprint');
@@ -62,14 +87,14 @@ const completeSprint = async () => {
 
 const openTask = (subtask) => {
     const parentTask = subtask.task;
-    if (!parentTask) return;
-
-    router.visit(route('tasks.show', [
-        props.workspace.id,
-        props.space.id,
-        parentTask.task_list_id,
-        parentTask.id,
-    ]));
+    if (!parentTask) {
+        window.showSnackbar?.('Task detail is unavailable because its parent task no longer exists.', 'error');
+        return;
+    }
+    detailTask.value = subtask;
+    detailParentTask.value = parentTask;
+    detailList.value = { id: parentTask.task_list_id };
+    showDetail.value = true;
 };
 
 const addTaskToSprint = (task) => {
@@ -131,7 +156,7 @@ const onDropToSprint = () => {
         return;
     }
 
-    const subtask = (props.backlogSubtasks || []).find((item) => item.id === draggingSubtaskId.value);
+    const subtask = validBacklogSubtasks.value.find((item) => item.id === draggingSubtaskId.value);
     if (subtask) addTaskToSprint(subtask);
     activeDropZone.value = null;
 };
@@ -142,7 +167,7 @@ const onDropToBacklog = () => {
         return;
     }
 
-    const sprintSubtasks = props.sprint?.subtasks || [];
+    const sprintSubtasks = validSprintSubtasks.value;
     const subtask = sprintSubtasks.find((item) => item.id === draggingSubtaskId.value);
     if (subtask) removeTaskFromSprint(subtask);
     activeDropZone.value = null;
@@ -150,17 +175,13 @@ const onDropToBacklog = () => {
 </script>
 
 <template>
-    <MainLayout :title="`${sprint.name} - ${space.name}`">
+    <MainLayout :title="`${sprint.name} - ${list?.name || space.name}`">
         <div class="h-full flex flex-col bg-[#1e1e1e]">
             <!-- Header -->
             <div class="border-b border-gray-800 p-6">
                 <div class="flex items-center justify-between mb-4">
                     <div class="flex items-center gap-4">
-                        <v-btn
-                            icon="mdi-arrow-left"
-                            variant="text"
-                            @click="router.visit(route('sprints.index', [workspace.id, space.id]))"
-                        />
+                        <v-btn icon="mdi-arrow-left" variant="text" @click="goToSprintIndex" />
                         <div>
                             <div class="flex items-center gap-3">
                                 <h1 class="text-2xl font-bold text-white">{{ sprint.name }}</h1>
@@ -168,24 +189,16 @@ const onDropToBacklog = () => {
                                 <v-chip v-else-if="isSprintCompleted" color="default" size="small">Completed</v-chip>
                                 <v-chip v-else color="info" size="small">Planned</v-chip>
                             </div>
+                            <p v-if="list?.name" class="text-gray-500 text-xs mt-1">Product: {{ list.name }}</p>
                             <p v-if="sprint.goal" class="text-gray-400 text-sm mt-1">{{ sprint.goal }}</p>
                         </div>
                     </div>
                     <div class="flex items-center gap-2">
-                        <v-btn
-                            v-if="!isSprintActive && !isSprintCompleted"
-                            color="success"
-                            prepend-icon="mdi-play"
-                            @click="startSprint"
-                        >
+                        <v-btn v-if="!isSprintActive && !isSprintCompleted" color="success" prepend-icon="mdi-play"
+                            @click="startSprint">
                             Start Sprint
                         </v-btn>
-                        <v-btn
-                            v-if="isSprintActive"
-                            color="warning"
-                            prepend-icon="mdi-check"
-                            @click="completeSprint"
-                        >
+                        <v-btn v-if="isSprintActive" color="warning" prepend-icon="mdi-check" @click="completeSprint">
                             Complete Sprint
                         </v-btn>
                     </div>
@@ -224,40 +237,22 @@ const onDropToBacklog = () => {
                         <div class="flex items-center justify-between mb-4">
                             <h3 class="text-lg font-semibold text-white">
                                 Backlog
-                                <span class="text-gray-400 text-sm ml-2">({{ backlogSubtasks.length }})</span>
+                                <span class="text-gray-400 text-sm ml-2">({{ validBacklogSubtasks.length }})</span>
                             </h3>
                         </div>
-                        <div
-                            class="flex-1 bg-[#2D2D2D] rounded-lg p-4 overflow-auto drop-zone"
+                        <div class="flex-1 bg-[#2D2D2D] rounded-lg p-4 overflow-auto drop-zone"
                             :class="{ 'drop-zone--active': activeDropZone === 'backlog' }"
-                            @dragover.prevent="onDragOverZone('backlog')"
-                            @drop.prevent="onDropToBacklog"
-                        >
+                            @dragover.prevent="onDragOverZone('backlog')" @drop.prevent="onDropToBacklog">
                             <div class="space-y-2">
-                                <div
-                                    v-for="subtask in backlogSubtasks"
-                                    :key="subtask.id"
-                                    class="relative"
+                                <div v-for="subtask in validBacklogSubtasks" :key="subtask.id" class="relative"
                                     :class="{ 'drag-item--dragging': draggingSubtaskId === subtask.id }"
-                                    draggable="true"
-                                    @dragstart="onDragStart(subtask, 'backlog', $event)"
-                                    @dragend="onDragEnd"
-                                >
-                                    <TaskCard
-                                        :task="subtask"
-                                        :show-checkbox="false"
-                                        @open-detail="openTask"
-                                    />
-                                    <v-btn
-                                        icon="mdi-plus"
-                                        size="x-small"
-                                        variant="text"
-                                        color="primary"
-                                        class="!absolute top-2 right-2 z-10"
-                                        @click.stop="addTaskToSprint(subtask)"
-                                    />
+                                    draggable="true" @dragstart="onDragStart(subtask, 'backlog', $event)"
+                                    @dragend="onDragEnd">
+                                    <TaskCard :task="subtask" :show-checkbox="false" @open-detail="openTask" />
+                                    <v-btn icon="mdi-plus" size="x-small" variant="text" color="primary"
+                                        class="!absolute top-2 right-2 z-10" @click.stop="addTaskToSprint(subtask)" />
                                 </div>
-                                <div v-if="backlogSubtasks.length === 0" class="text-center py-8 text-gray-500">
+                                <div v-if="validBacklogSubtasks.length === 0" class="text-center py-8 text-gray-500">
                                     <p>No tasks in backlog</p>
                                 </div>
                             </div>
@@ -269,40 +264,23 @@ const onDropToBacklog = () => {
                         <div class="flex items-center justify-between mb-4">
                             <h3 class="text-lg font-semibold text-white">
                                 Sprint Tasks
-                                <span class="text-gray-400 text-sm ml-2">({{ sprint.subtasks?.length || 0 }})</span>
+                                <span class="text-gray-400 text-sm ml-2">({{ validSprintSubtasks.length }})</span>
                             </h3>
                         </div>
-                        <div
-                            class="flex-1 bg-[#2D2D2D] rounded-lg p-4 overflow-auto drop-zone"
+                        <div class="flex-1 bg-[#2D2D2D] rounded-lg p-4 overflow-auto drop-zone"
                             :class="{ 'drop-zone--active': activeDropZone === 'sprint' }"
-                            @dragover.prevent="onDragOverZone('sprint')"
-                            @drop.prevent="onDropToSprint"
-                        >
+                            @dragover.prevent="onDragOverZone('sprint')" @drop.prevent="onDropToSprint">
                             <div class="space-y-2">
-                                <div
-                                    v-for="subtask in sprint.subtasks || []"
-                                    :key="subtask.id"
-                                    class="relative"
+                                <div v-for="subtask in validSprintSubtasks" :key="subtask.id" class="relative"
                                     :class="{ 'drag-item--dragging': draggingSubtaskId === subtask.id }"
-                                    draggable="true"
-                                    @dragstart="onDragStart(subtask, 'sprint', $event)"
-                                    @dragend="onDragEnd"
-                                >
-                                    <TaskCard
-                                        :task="subtask"
-                                        :show-checkbox="false"
-                                        @open-detail="openTask"
-                                    />
-                                    <v-btn
-                                        icon="mdi-minus"
-                                        size="x-small"
-                                        variant="text"
-                                        color="error"
+                                    draggable="true" @dragstart="onDragStart(subtask, 'sprint', $event)"
+                                    @dragend="onDragEnd">
+                                    <TaskCard :task="subtask" :show-checkbox="false" @open-detail="openTask" />
+                                    <v-btn icon="mdi-minus" size="x-small" variant="text" color="error"
                                         class="!absolute top-2 right-2 z-10"
-                                        @click.stop="removeTaskFromSprint(subtask)"
-                                    />
+                                        @click.stop="removeTaskFromSprint(subtask)" />
                                 </div>
-                                <div v-if="(sprint.subtasks?.length || 0) === 0" class="text-center py-8 text-gray-500">
+                                <div v-if="validSprintSubtasks.length === 0" class="text-center py-8 text-gray-500">
                                     <p>No tasks in sprint</p>
                                     <p class="text-sm mt-2">Add tasks from backlog</p>
                                 </div>
@@ -312,25 +290,19 @@ const onDropToBacklog = () => {
                 </div>
 
                 <!-- Burndown Chart -->
-                <div v-if="burndown && burndown.actual && burndown.actual.length > 0" class="mt-8 bg-[#2D2D2D] rounded-lg p-6">
+                <div v-if="burndown && burndown.actual && burndown.actual.length > 0"
+                    class="mt-8 bg-[#2D2D2D] rounded-lg p-6">
                     <h3 class="text-lg font-semibold text-white mb-4">Burndown Chart</h3>
                     <div class="h-64 flex items-end gap-2">
-                        <div
-                            v-for="(point, index) in burndown.actual"
-                            :key="index"
-                            class="flex-1 flex flex-col items-center"
-                        >
+                        <div v-for="(point, index) in burndown.actual" :key="index"
+                            class="flex-1 flex flex-col items-center">
                             <div class="w-full flex items-end justify-center gap-1 h-48">
                                 <!-- Ideal line -->
-                                <div
-                                    class="w-2 bg-gray-600 rounded-t"
-                                    :style="{ height: `${(burndown.ideal[index]?.remaining / statistics.total_subtasks) * 100}%` }"
-                                />
+                                <div class="w-2 bg-gray-600 rounded-t"
+                                    :style="{ height: `${(burndown.ideal[index]?.remaining / statistics.total_subtasks) * 100}%` }" />
                                 <!-- Actual line -->
-                                <div
-                                    class="w-2 bg-primary rounded-t"
-                                    :style="{ height: `${(point.remaining / statistics.total_subtasks) * 100}%` }"
-                                />
+                                <div class="w-2 bg-primary rounded-t"
+                                    :style="{ height: `${(point.remaining / statistics.total_subtasks) * 100}%` }" />
                             </div>
                             <div class="text-xs text-gray-400 mt-2">Day {{ point.day }}</div>
                         </div>
@@ -348,6 +320,17 @@ const onDropToBacklog = () => {
                 </div>
             </div>
         </div>
+        <TaskDetailPanel
+            v-model="showDetail"
+            :task="detailTask"
+            :parent-task="detailParentTask"
+            :list="detailList"
+            :workspace="workspace"
+            :space="space"
+            :statuses="statuses"
+            :members="members"
+            :labels="labels"
+        />
     </MainLayout>
 </template>
 
@@ -366,4 +349,3 @@ const onDropToBacklog = () => {
     opacity: 0.55;
 }
 </style>
-

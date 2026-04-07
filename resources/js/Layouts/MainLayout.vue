@@ -502,15 +502,6 @@ const formatDuration = (seconds) => {
                                     </v-list-item>
                                 </template>
 
-                                <!-- Sprint Link -->
-                                <v-list-item :href="route('sprints.index', [activeWorkspace?.id, space.id])"
-                                    rounded="lg" class="pl-8">
-                                    <template v-slot:prepend>
-                                        <v-icon size="14" class="mr-1">mdi-calendar-clock</v-icon>
-                                    </template>
-                                    <v-list-item-title class="text-sm">Sprints</v-list-item-title>
-                                </v-list-item>
-
                                 <!-- Folders -->
                                 <template v-for="folder in space.folders || []" :key="folder.id">
                                     <v-list-group :value="'folder-' + folder.id">
@@ -720,6 +711,10 @@ const formatDuration = (seconds) => {
 :deep(.v-navigation-drawer__content) {
     display: flex;
     flex-direction: column;
+}
+
+:deep(.v-navigation-drawer .v-list) {
+    background-color: transparent !important;
 }
 
 /* Override Vuetify's default list indentation */

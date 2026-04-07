@@ -14,6 +14,7 @@ class UpdateSprintRequest extends FormRequest
     public function rules(): array
     {
         return [
+            'list_id' => ['sometimes', 'integer', 'exists:task_lists,id'],
             'name' => ['sometimes', 'string', 'max:255'],
             'goal' => ['nullable', 'string', 'max:1000'],
             'start_date' => ['sometimes', 'date'],

@@ -82,7 +82,7 @@ const vuetify = createVuetify({
             color: 'primary',
         },
         VList: {
-            bgColor: 'transparent',
+            bgColor: 'surface',
         },
         VListItem: {
             rounded: 'lg',

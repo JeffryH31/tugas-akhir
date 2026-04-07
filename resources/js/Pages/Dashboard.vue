@@ -279,7 +279,7 @@ const openCreateSpace = () => {
                                     item-value="id" return-object label="Select Product" variant="outlined"
                                     density="compact" hide-details :disabled="!availableLists.length"
                                     placeholder="Choose a product..." bg-color="#1e1e1e" base-color="white"
-                                    color="primary" :menu-props="{ contentClass: 'bg-[#1e1e1e]' }" />
+                                    color="primary" />
                                 <div class="flex gap-2">
                                     <v-btn color="primary" size="small" @click="createQuickTask" :loading="isProcessing"
                                         :disabled="!quickTaskName.trim() || !quickTaskList">
@@ -321,8 +321,9 @@ const openCreateSpace = () => {
                                 </div>
                                 <div v-else class="pa-2">
                                     <div class="space-y-2">
-                                        <TaskCard v-for="task in recentTasks" :key="task.id" :task="task" show-list :show-checkbox="false"
-                                            @complete="handleTaskComplete" @open-detail="handleTaskOpen" />
+                                        <TaskCard v-for="task in recentTasks" :key="task.id" :task="task" show-list
+                                            :show-checkbox="false" @complete="handleTaskComplete"
+                                            @open-detail="handleTaskOpen" />
                                     </div>
                                 </div>
                             </v-tabs-window-item>
@@ -334,8 +335,9 @@ const openCreateSpace = () => {
                                 </div>
                                 <div v-else class="pa-2">
                                     <div class="space-y-2">
-                                        <TaskCard v-for="task in overdueTasks" :key="task.id" :task="task" show-list :show-checkbox="false"
-                                            @complete="handleTaskComplete" @open-detail="handleTaskOpen" />
+                                        <TaskCard v-for="task in overdueTasks" :key="task.id" :task="task" show-list
+                                            :show-checkbox="false" @complete="handleTaskComplete"
+                                            @open-detail="handleTaskOpen" />
                                     </div>
                                 </div>
                             </v-tabs-window-item>

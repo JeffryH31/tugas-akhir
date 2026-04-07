@@ -14,6 +14,7 @@ class StoreSprintRequest extends FormRequest
     public function rules(): array
     {
         return [
+            'list_id' => ['required', 'integer', 'exists:task_lists,id'],
             'name' => ['required', 'string', 'max:255'],
             'goal' => ['nullable', 'string', 'max:1000'],
             'start_date' => ['required', 'date'],
@@ -25,6 +26,7 @@ class StoreSprintRequest extends FormRequest
     public function messages(): array
     {
         return [
+            'list_id.required' => 'Product is required.',
             'name.required' => 'Sprint name is required.',
             'name.max' => 'Sprint name must not exceed 255 characters.',
             'start_date.required' => 'Start date is required.',

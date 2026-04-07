@@ -4,11 +4,13 @@ namespace App\Services;
 
 use App\Enums\PriorityLevel;
 use App\Models\Activity;
+use App\Models\Sprint;
 use App\Models\Status;
 use App\Models\Subtask;
 use App\Models\Task;
 use App\Models\User;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Validation\ValidationException;
 
 class SubtaskService
 {
@@ -79,6 +81,7 @@ class SubtaskService
                 'description',
                 'status_id',
                 'priority_level',
+                'sprint_id',
                 'start_date',
                 'due_date',
                 'baseline_start_date',
@@ -99,6 +102,24 @@ class SubtaskService
 
             foreach ($fields as $field) {
                 if (array_key_exists($field, $data)) {
+                    if ($field === 'sprint_id' && $data[$field]) {
+                        $sprint = Sprint::find((int) $data[$field]);
+                        if (!$sprint) {
+                            throw ValidationException::withMessages([
+                                'sprint_id' => ['Selected sprint does not exist.'],
+                            ]);
+                        }
+
+                        $subtaskListId = (int) $subtask->task->task_list_id;
+                        $sprintListId = (int) ($sprint->task_list_id ?? 0);
+
+                        if ($sprintListId > 0 && $sprintListId !== $subtaskListId) {
+                            throw ValidationException::withMessages([
+                                'sprint_id' => ['Selected sprint is not in this product.'],
+                            ]);
+                        }
+                    }
+
                     $updateData[$field] = $data[$field];
                 }
             }

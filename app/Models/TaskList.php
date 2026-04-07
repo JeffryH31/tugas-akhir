@@ -103,6 +103,11 @@ class TaskList extends Model
         return $this->hasMany(View::class);
     }
 
+    public function sprints(): HasMany
+    {
+        return $this->hasMany(Sprint::class)->orderBy('position');
+    }
+
     public function addMember(User $user, string $role = 'development_team'): void
     {
         $this->members()->syncWithoutDetaching([

@@ -620,7 +620,7 @@ const getAvailableDependencies = (subtask) => {
 
 const addDependency = (subtask, dependsOn) => {
     dependencyLoading.value = true;
-    
+
     fetch(
         route('tasks.cpm.dependencies.add', [props.workspace.id, props.space.id, props.list.id, props.task.id]),
         {
@@ -659,7 +659,7 @@ const addDependency = (subtask, dependsOn) => {
 
 const removeDependency = (subtask, dependsOn) => {
     dependencyLoading.value = true;
-    
+
     fetch(
         route('tasks.cpm.dependencies.remove', [props.workspace.id, props.space.id, props.list.id, props.task.id]),
         {
@@ -826,9 +826,9 @@ onUnmounted(() => {
                     <!-- Priority -->
                     <div class="bg-[#2D2D2D] rounded-lg p-4">
                         <div class="text-sm text-gray-400 mb-2">Priority</div>
-                        <v-select v-model="localTask.priority_level" :items="PRIORITIES" item-title="name" item-value="level"
-                            variant="solo-filled" density="compact" hide-details clearable bg-color="#3D3D3D"
-                            @update:model-value="updatePriority">
+                        <v-select v-model="localTask.priority_level" :items="PRIORITIES" item-title="name"
+                            item-value="level" variant="solo-filled" density="compact" hide-details clearable
+                            bg-color="#3D3D3D" @update:model-value="updatePriority">
                             <template #selection="{ item }">
                                 <div class="flex items-center gap-2">
                                     <v-icon :color="item.raw.color" size="16">mdi-flag</v-icon>
@@ -906,8 +906,9 @@ onUnmounted(() => {
                             <v-textarea v-model="newComment" placeholder="Write a comment..." variant="solo-filled"
                                 bg-color="#3D3D3D" hide-details rows="2" :disabled="isSubmittingComment" />
                             <div class="flex justify-end mt-2">
-                                <v-btn color="primary" size="small" :disabled="!newComment.trim() || isSubmittingComment" 
-                                    :loading="isSubmittingComment" @click="addComment">
+                                <v-btn color="primary" size="small"
+                                    :disabled="!newComment.trim() || isSubmittingComment" :loading="isSubmittingComment"
+                                    @click="addComment">
                                     Comment
                                 </v-btn>
                             </div>
@@ -990,184 +991,195 @@ onUnmounted(() => {
 
                 <!-- Subtasks list -->
                 <div v-if="task.subtasks?.length > 0" class="space-y-3">
-                    <draggable v-model="localSubtasks" item-key="id" :animation="200"
-                        ghost-class="subtask-ghost" handle=".subtask-drag-handle"
-                        @start="subtasksDragging = true" @end="onSubtaskDragEnd">
+                    <draggable v-model="localSubtasks" item-key="id" :animation="200" ghost-class="subtask-ghost"
+                        handle=".subtask-drag-handle" @start="subtasksDragging = true" @end="onSubtaskDragEnd">
                         <template #item="{ element: subtask }">
                             <div class="bg-[#2D2D2D] rounded-lg p-3 hover:bg-[#323233] transition-colors mb-3">
-                        <!-- Subtask Header -->
-                        <div class="group flex items-start gap-2 mb-2">
-                            <v-icon class="subtask-drag-handle cursor-grab mt-1 text-gray-500 hover:text-gray-300" size="16">mdi-drag</v-icon>
-                            <v-checkbox :model-value="!!subtask.completed_at" hide-details density="compact"
-                                @update:model-value="toggleSubtask(subtask)" />
-                            <div v-if="editingSubtaskId === subtask.id" class="flex-1">
-                                <v-text-field v-model="editingSubtaskName" variant="solo-filled" density="compact"
-                                    hide-details bg-color="#3D3D3D" @keyup.enter="saveSubtaskEdit(subtask)"
-                                    @keyup.esc="cancelSubtaskEdit" autofocus />
-                            </div>
-                            <span v-else :class="{ 'line-through text-gray-500': subtask.completed_at }"
-                                class="flex-1 cursor-pointer" @click="startEditSubtask(subtask)">
-                                {{ subtask.name }}
-                            </span>
-                            <div class="opacity-0 group-hover:opacity-100 transition-opacity flex gap-1">
-                                <v-btn v-if="editingSubtaskId === subtask.id" icon="mdi-check" size="x-small"
-                                    variant="text" color="success" @click="saveSubtaskEdit(subtask)" />
-                                <v-btn v-if="editingSubtaskId === subtask.id" icon="mdi-close" size="x-small"
-                                    variant="text" @click="cancelSubtaskEdit" />
-                                <v-btn v-else icon="mdi-pencil" size="x-small" variant="text"
-                                    @click="startEditSubtask(subtask)" />
-                                <v-btn icon="mdi-delete" size="x-small" variant="text" color="error"
-                                    @click="deleteSubtask(subtask)" />
-                            </div>
-                        </div>
-
-                        <!-- Subtask Details -->
-                        <div class="pl-8 space-y-2 text-xs">
-                            <!-- Assignees -->
-                            <div class="flex items-center gap-2">
-                                <v-icon size="14" class="text-gray-500">mdi-account</v-icon>
-                                <div class="flex flex-wrap gap-1 flex-1">
-                                    <v-chip v-for="assignee in subtask.assignees" :key="assignee.id" size="x-small"
-                                        closable @click:close="removeSubtaskAssignee(subtask, assignee)">
-                                        {{ assignee.name }}
-                                    </v-chip>
-                                    <v-menu>
-                                        <template #activator="{ props }">
-                                            <v-btn v-bind="props" icon="mdi-plus" size="x-small" variant="text" />
-                                        </template>
-                                        <v-card color="surface">
-                                            <v-list density="compact">
-                                                <v-list-item v-for="member in getAvailableSubtaskMembers(subtask)"
-                                                    :key="member.id" @click="assignSubtaskMember(subtask, member)">
-                                                    <v-list-item-title>{{ member.name }}</v-list-item-title>
-                                                </v-list-item>
-                                            </v-list>
-                                        </v-card>
-                                    </v-menu>
-                                </div>
-                            </div>
-
-                            <!-- Sprint -->
-                            <div class="flex items-center gap-2">
-                                <v-icon size="14" class="text-gray-500">mdi-calendar-clock</v-icon>
-                                <v-menu>
-                                    <template #activator="{ props }">
-                                        <v-btn v-bind="props" variant="text" size="x-small"
-                                            :color="subtask.sprint ? 'primary' : 'default'">
-                                            {{ subtask.sprint?.name || 'No Sprint' }}
-                                        </v-btn>
-                                    </template>
-                                    <v-card color="surface">
-                                        <v-list density="compact">
-                                            <v-list-item v-for="sprint in sprints" :key="sprint.id"
-                                                @click="changeSubtaskSprint(subtask, sprint.id)">
-                                                <v-list-item-title>{{ sprint.name }}</v-list-item-title>
-                                            </v-list-item>
-                                            <v-divider v-if="subtask.sprint" />
-                                            <v-list-item v-if="subtask.sprint" prepend-icon="mdi-close"
-                                                title="Remove from Sprint"
-                                                @click="changeSubtaskSprint(subtask, null)" />
-                                        </v-list>
-                                    </v-card>
-                                </v-menu>
-                            </div>
-
-                            <!-- Time Estimate -->
-                            <div class="flex items-center gap-2">
-                                <v-icon size="14" class="text-gray-500">mdi-timer-sand</v-icon>
-                                <v-menu :close-on-content-click="false">
-                                    <template #activator="{ props }">
-                                        <v-btn v-bind="props" variant="text" size="x-small"
-                                            :color="subtask.time_estimate ? 'primary' : 'default'">
-                                            {{ formatSubtaskTimeEstimate(subtask.time_estimate) }}
-                                        </v-btn>
-                                    </template>
-                                    <v-card color="surface" min-width="200">
-                                        <v-card-text>
-                                            <div class="text-sm font-medium mb-2">Time Estimate (Man-Hour)</div>
-                                            <v-text-field :model-value="(subtask.time_estimate || 0) / 60"
-                                                @update:model-value="(val) => updateSubtaskTimeEstimate(subtask, val)"
-                                                type="number" variant="outlined" density="compact" hide-details
-                                                bg-color="#3D3D3D" min="0" step="0.5" />
-                                        </v-card-text>
-                                    </v-card>
-                                </v-menu>
-                            </div>
-
-                            <!-- Time Tracking -->
-                            <div class="flex items-center gap-2">
-                                <v-icon size="14" class="text-gray-500">mdi-timer</v-icon>
-                                <v-btn v-if="!isSubtaskTimerRunning(subtask)" prepend-icon="mdi-play" size="x-small"
-                                    variant="text" @click="startSubtaskTimer(subtask)">
-                                    Start
-                                </v-btn>
-                                <template v-else>
-                                    <v-btn prepend-icon="mdi-stop" size="x-small" variant="text" color="error"
-                                        @click="stopSubtaskTimer(subtask)">
-                                        Stop
-                                    </v-btn>
-                                    <span class="text-red-400 font-mono text-[11px]">
-                                        {{ formatRunningTime }}
+                                <!-- Subtask Header -->
+                                <div class="group flex items-start gap-2 mb-2">
+                                    <v-icon
+                                        class="subtask-drag-handle cursor-grab mt-1 text-gray-500 hover:text-gray-300"
+                                        size="16">mdi-drag</v-icon>
+                                    <v-checkbox :model-value="!!subtask.completed_at" hide-details density="compact"
+                                        @update:model-value="toggleSubtask(subtask)" />
+                                    <div v-if="editingSubtaskId === subtask.id" class="flex-1">
+                                        <v-text-field v-model="editingSubtaskName" variant="solo-filled"
+                                            density="compact" hide-details bg-color="#3D3D3D"
+                                            @keyup.enter="saveSubtaskEdit(subtask)" @keyup.esc="cancelSubtaskEdit"
+                                            autofocus />
+                                    </div>
+                                    <span v-else :class="{ 'line-through text-gray-500': subtask.completed_at }"
+                                        class="flex-1 cursor-pointer" @click="startEditSubtask(subtask)">
+                                        {{ subtask.name }}
                                     </span>
-                                </template>
-                                <span v-if="subtask.time_spent" class="text-gray-400">
-                                    {{ formatSubtaskTime(subtask.time_spent) }}
-                                </span>
-                            </div>
+                                    <div class="opacity-0 group-hover:opacity-100 transition-opacity flex gap-1">
+                                        <v-btn v-if="editingSubtaskId === subtask.id" icon="mdi-check" size="x-small"
+                                            variant="text" color="success" @click="saveSubtaskEdit(subtask)" />
+                                        <v-btn v-if="editingSubtaskId === subtask.id" icon="mdi-close" size="x-small"
+                                            variant="text" @click="cancelSubtaskEdit" />
+                                        <v-btn v-else icon="mdi-pencil" size="x-small" variant="text"
+                                            @click="startEditSubtask(subtask)" />
+                                        <v-btn icon="mdi-delete" size="x-small" variant="text" color="error"
+                                            @click="deleteSubtask(subtask)" />
+                                    </div>
+                                </div>
 
-                            <!-- Dependencies (Predecessor) -->
-                            <div class="flex items-start gap-2">
-                                <v-icon size="14" class="text-gray-500 mt-1">mdi-link-variant</v-icon>
-                                <div class="flex-1">
-                                    <div class="flex flex-wrap gap-1 items-center">
-                                        <v-chip v-for="dep in (subtask.dependencies || [])" :key="dep.id"
-                                            size="x-small" color="warning" variant="tonal" closable
-                                            @click:close="removeDependency(subtask, dep)">
-                                            <v-icon start size="10">mdi-arrow-left</v-icon>
-                                            {{ dep.name }}
-                                        </v-chip>
-                                        <v-chip v-for="dep in (subtask.dependents || [])" :key="'dep-' + dep.id"
-                                            size="x-small" color="info" variant="tonal">
-                                            <v-icon start size="10">mdi-arrow-right</v-icon>
-                                            {{ dep.name }}
-                                        </v-chip>
-                                        <v-menu :close-on-content-click="false">
-                                            <template #activator="{ props: menuProps }">
-                                                <v-btn v-bind="menuProps" icon="mdi-plus" size="x-small"
-                                                    variant="text" />
+                                <!-- Subtask Details -->
+                                <div class="pl-8 space-y-2 text-xs">
+                                    <!-- Assignees -->
+                                    <div class="flex items-center gap-2">
+                                        <v-icon size="14" class="text-gray-500">mdi-account</v-icon>
+                                        <div class="flex flex-wrap gap-1 flex-1">
+                                            <v-chip v-for="assignee in subtask.assignees" :key="assignee.id"
+                                                size="x-small" closable
+                                                @click:close="removeSubtaskAssignee(subtask, assignee)">
+                                                {{ assignee.name }}
+                                            </v-chip>
+                                            <v-menu>
+                                                <template #activator="{ props }">
+                                                    <v-btn v-bind="props" icon="mdi-plus" size="x-small"
+                                                        variant="text" />
+                                                </template>
+                                                <v-card color="surface">
+                                                    <v-list density="compact">
+                                                        <v-list-item
+                                                            v-for="member in getAvailableSubtaskMembers(subtask)"
+                                                            :key="member.id"
+                                                            @click="assignSubtaskMember(subtask, member)">
+                                                            <v-list-item-title>{{ member.name }}</v-list-item-title>
+                                                        </v-list-item>
+                                                    </v-list>
+                                                </v-card>
+                                            </v-menu>
+                                        </div>
+                                    </div>
+
+                                    <!-- Sprint -->
+                                    <div class="flex items-center gap-2">
+                                        <v-icon size="14" class="text-gray-500">mdi-calendar-clock</v-icon>
+                                        <v-menu>
+                                            <template #activator="{ props }">
+                                                <v-btn v-bind="props" variant="text" size="x-small"
+                                                    :color="subtask.sprint ? 'primary' : 'default'">
+                                                    {{ subtask.sprint?.name || 'No Sprint' }}
+                                                </v-btn>
                                             </template>
-                                            <v-card color="surface" min-width="250">
-                                                <v-card-title class="text-sm py-2">
-                                                    Add Predecessor
-                                                </v-card-title>
-                                                <v-divider />
-                                                <v-list density="compact" max-height="200" class="overflow-auto">
-                                                    <v-list-item
-                                                        v-for="s in getAvailableDependencies(subtask)"
-                                                        :key="s.id"
-                                                        :disabled="dependencyLoading"
-                                                        @click="addDependency(subtask, s)">
-                                                        <template #prepend>
-                                                            <v-icon size="16">mdi-subtitles-outline</v-icon>
-                                                        </template>
-                                                        <v-list-item-title class="text-sm">{{ s.name }}</v-list-item-title>
-                                                        <v-list-item-subtitle v-if="s.time_estimate" class="text-xs">
-                                                            Est: {{ formatSubtaskTimeEstimate(s.time_estimate) }}
-                                                        </v-list-item-subtitle>
+                                            <v-card color="surface">
+                                                <v-list density="compact">
+                                                    <v-list-item v-for="sprint in sprints" :key="sprint.id"
+                                                        @click="changeSubtaskSprint(subtask, sprint.id)">
+                                                        <v-list-item-title>{{ sprint.name }}</v-list-item-title>
                                                     </v-list-item>
-                                                    <v-list-item v-if="getAvailableDependencies(subtask).length === 0" disabled>
-                                                        <v-list-item-title class="text-sm text-gray-500">No available subtasks</v-list-item-title>
-                                                    </v-list-item>
+                                                    <v-divider v-if="subtask.sprint" />
+                                                    <v-list-item v-if="subtask.sprint" prepend-icon="mdi-close"
+                                                        title="Remove from Sprint"
+                                                        @click="changeSubtaskSprint(subtask, null)" />
                                                 </v-list>
                                             </v-card>
                                         </v-menu>
                                     </div>
-                                    <div v-if="!(subtask.dependencies || []).length && !(subtask.dependents || []).length"
-                                        class="text-gray-500 text-[10px]">No dependencies</div>
+
+                                    <!-- Time Estimate -->
+                                    <div class="flex items-center gap-2">
+                                        <v-icon size="14" class="text-gray-500">mdi-timer-sand</v-icon>
+                                        <v-menu :close-on-content-click="false">
+                                            <template #activator="{ props }">
+                                                <v-btn v-bind="props" variant="text" size="x-small"
+                                                    :color="subtask.time_estimate ? 'primary' : 'default'">
+                                                    {{ formatSubtaskTimeEstimate(subtask.time_estimate) }}
+                                                </v-btn>
+                                            </template>
+                                            <v-card color="surface" min-width="200">
+                                                <v-card-text>
+                                                    <div class="text-sm font-medium mb-2">Time Estimate (Man-Hour)</div>
+                                                    <v-text-field :model-value="(subtask.time_estimate || 0) / 60"
+                                                        @update:model-value="(val) => updateSubtaskTimeEstimate(subtask, val)"
+                                                        type="number" variant="outlined" density="compact" hide-details
+                                                        bg-color="#3D3D3D" min="0" step="0.5" />
+                                                </v-card-text>
+                                            </v-card>
+                                        </v-menu>
+                                    </div>
+
+                                    <!-- Time Tracking -->
+                                    <div class="flex items-center gap-2">
+                                        <v-icon size="14" class="text-gray-500">mdi-timer</v-icon>
+                                        <v-btn v-if="!isSubtaskTimerRunning(subtask)" prepend-icon="mdi-play"
+                                            size="x-small" variant="text" @click="startSubtaskTimer(subtask)">
+                                            Start
+                                        </v-btn>
+                                        <template v-else>
+                                            <v-btn prepend-icon="mdi-stop" size="x-small" variant="text" color="error"
+                                                @click="stopSubtaskTimer(subtask)">
+                                                Stop
+                                            </v-btn>
+                                            <span class="text-red-400 font-mono text-[11px]">
+                                                {{ formatRunningTime }}
+                                            </span>
+                                        </template>
+                                        <span v-if="subtask.time_spent" class="text-gray-400">
+                                            {{ formatSubtaskTime(subtask.time_spent) }}
+                                        </span>
+                                    </div>
+
+                                    <!-- Dependencies (Predecessor) -->
+                                    <div class="flex items-start gap-2">
+                                        <v-icon size="14" class="text-gray-500 mt-1">mdi-link-variant</v-icon>
+                                        <div class="flex-1">
+                                            <div class="flex flex-wrap gap-1 items-center">
+                                                <v-chip v-for="dep in (subtask.dependencies || [])" :key="dep.id"
+                                                    size="x-small" color="warning" variant="tonal" closable
+                                                    @click:close="removeDependency(subtask, dep)">
+                                                    <v-icon start size="10">mdi-arrow-left</v-icon>
+                                                    {{ dep.name }}
+                                                </v-chip>
+                                                <v-chip v-for="dep in (subtask.dependents || [])" :key="'dep-' + dep.id"
+                                                    size="x-small" color="info" variant="tonal">
+                                                    <v-icon start size="10">mdi-arrow-right</v-icon>
+                                                    {{ dep.name }}
+                                                </v-chip>
+                                                <v-menu :close-on-content-click="false">
+                                                    <template #activator="{ props: menuProps }">
+                                                        <v-btn v-bind="menuProps" icon="mdi-plus" size="x-small"
+                                                            variant="text" />
+                                                    </template>
+                                                    <v-card color="surface" min-width="250">
+                                                        <v-card-title class="text-sm py-2">
+                                                            Add Predecessor
+                                                        </v-card-title>
+                                                        <v-divider />
+                                                        <v-list density="compact" max-height="200"
+                                                            class="overflow-auto">
+                                                            <v-list-item v-for="s in getAvailableDependencies(subtask)"
+                                                                :key="s.id" :disabled="dependencyLoading"
+                                                                @click="addDependency(subtask, s)">
+                                                                <template #prepend>
+                                                                    <v-icon size="16">mdi-subtitles-outline</v-icon>
+                                                                </template>
+                                                                <v-list-item-title class="text-sm">{{ s.name
+                                                                    }}</v-list-item-title>
+                                                                <v-list-item-subtitle v-if="s.time_estimate"
+                                                                    class="text-xs">
+                                                                    Est: {{ formatSubtaskTimeEstimate(s.time_estimate)
+                                                                    }}
+                                                                </v-list-item-subtitle>
+                                                            </v-list-item>
+                                                            <v-list-item
+                                                                v-if="getAvailableDependencies(subtask).length === 0"
+                                                                disabled>
+                                                                <v-list-item-title class="text-sm text-gray-500">No
+                                                                    available subtasks</v-list-item-title>
+                                                            </v-list-item>
+                                                        </v-list>
+                                                    </v-card>
+                                                </v-menu>
+                                            </div>
+                                            <div v-if="!(subtask.dependencies || []).length && !(subtask.dependents || []).length"
+                                                class="text-gray-500 text-[10px]">No dependencies</div>
+                                        </div>
+                                    </div>
                                 </div>
                             </div>
-                        </div>
-                    </div>
                         </template>
                     </draggable>
                 </div>
