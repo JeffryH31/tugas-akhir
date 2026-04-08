@@ -91,6 +91,53 @@ class TaskListController extends Controller
     }
 
     /**
+     * Display product access settings.
+     */
+    public function settings(Request $request, Workspace $workspace, Space $space, TaskList $list): Response
+    {
+        abort_unless((int) $space->workspace_id === (int) $workspace->id, 404);
+        abort_unless((int) $list->space_id === (int) $space->id, 404);
+        abort_unless($this->accessService->canViewProject($request->user(), $list), 403);
+
+        $workspace->load('members');
+        $list->load('members');
+
+        $listMemberIds = $list->members->pluck('id');
+
+        $mapUser = fn($member, ?string $role = null) => [
+            'id' => $member->id,
+            'name' => $member->name,
+            'email' => $member->email,
+            'initials' => $member->initials,
+            'avatar_color' => $member->avatar_color,
+            'profile_photo_url' => $member->profile_photo_url,
+            'role' => $role,
+        ];
+
+        return Inertia::render('Lists/Settings', [
+            'workspace' => $workspace,
+            'space' => [
+                'id' => $space->id,
+                'name' => $space->name,
+            ],
+            'list' => [
+                'id' => $list->id,
+                'name' => $list->name,
+                'description' => $list->description,
+                'is_archived' => (bool) $list->is_archived,
+            ],
+            'members' => $list->members
+                ->map(fn($member) => $mapUser($member, $member->pivot?->role))
+                ->values(),
+            'availableUsers' => $workspace->members
+                ->filter(fn($member) => !$listMemberIds->contains($member->id))
+                ->map(fn($member) => $mapUser($member))
+                ->values(),
+            'canManageMembers' => $this->accessService->canManageProjectMembers($request->user(), $list),
+        ]);
+    }
+
+    /**
      * Update the specified list.
      */
     public function update(UpdateTaskListRequest $request, Workspace $workspace, Space $space, TaskList $list): RedirectResponse

@@ -11,6 +11,8 @@ use App\Services\WorkspaceService;
 use Illuminate\Foundation\Auth\Access\AuthorizesRequests;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Hash;
+use Illuminate\Validation\Rule;
 use Inertia\Inertia;
 use Inertia\Response;
 
@@ -52,17 +54,78 @@ class WorkspaceController extends Controller
      */
     public function settings(Request $request, Workspace $workspace): Response
     {
-        $workspace->load(['members', 'labels']);
+        $workspace->load([
+            'members',
+            'labels',
+            'spaces' => fn($query) => $query
+                ->orderBy('position')
+                ->with([
+                    'members',
+                    'lists' => fn($listQuery) => $listQuery
+                        ->orderBy('position')
+                        ->with(['members']),
+                ]),
+        ]);
 
         $members = $workspace->members;
 
         $availableUsers = User::whereNotIn('id', $members->pluck('id'))
             ->get();
 
+        $projectLists = $workspace->spaces
+            ->flatMap(function ($space) {
+                return $space->lists->map(function ($list) use ($space) {
+                    return [
+                        'id' => $list->id,
+                        'name' => $list->name,
+                        'space' => [
+                            'id' => $space->id,
+                            'name' => $space->name,
+                        ],
+                        'is_archived' => (bool) $list->is_archived,
+                        'members' => $list->members->map(function ($member) {
+                            return [
+                                'id' => $member->id,
+                                'name' => $member->name,
+                                'email' => $member->email,
+                                'initials' => $member->initials,
+                                'avatar_color' => $member->avatar_color,
+                                'profile_photo_url' => $member->profile_photo_url,
+                                'role' => $member->pivot?->role,
+                            ];
+                        })->values(),
+                    ];
+                });
+            })
+            ->values();
+
+        $spaces = $workspace->spaces
+            ->map(function ($space) {
+                return [
+                    'id' => $space->id,
+                    'name' => $space->name,
+                    'is_private' => (bool) $space->is_private,
+                    'members' => $space->members->map(function ($member) {
+                        return [
+                            'id' => $member->id,
+                            'name' => $member->name,
+                            'email' => $member->email,
+                            'initials' => $member->initials,
+                            'avatar_color' => $member->avatar_color,
+                            'profile_photo_url' => $member->profile_photo_url,
+                            'role' => $member->pivot?->role,
+                        ];
+                    })->values(),
+                ];
+            })
+            ->values();
+
         return Inertia::render('Workspaces/Settings', [
             'workspace' => $workspace,
             'members' => $members,
             'availableUsers' => $availableUsers,
+            'projectLists' => $projectLists,
+            'spaces' => $spaces,
         ]);
     }
 
@@ -158,6 +221,13 @@ class WorkspaceController extends Controller
             $this->authorize('update', $workspace);
 
             $user = User::findOrFail($validated['user_id']);
+            if ((int) $workspace->owner_id === (int) $user->id) {
+                return redirect()->back()->withErrors(['error' => 'Workspace owner cannot be removed.']);
+            }
+
+            if ((int) $request->user()->id === (int) $user->id) {
+                return redirect()->back()->withErrors(['error' => 'You cannot remove yourself from workspace.']);
+            }
 
             $this->workspaceService->removeMember($workspace, $user, $request->user());
 
@@ -181,6 +251,9 @@ class WorkspaceController extends Controller
             $this->authorize('update', $workspace);
 
             $user = User::findOrFail($validated['user_id']);
+            if ((int) $workspace->owner_id === (int) $user->id) {
+                return redirect()->back()->withErrors(['error' => 'Workspace owner role cannot be changed.']);
+            }
 
             $this->workspaceService->updateMemberRole(
                 $workspace,
@@ -192,6 +265,79 @@ class WorkspaceController extends Controller
             return redirect()->back()->with('success', 'Member role updated successfully.');
         } catch (\Exception $e) {
             return redirect()->back()->withErrors(['error' => 'Failed to update member role: ' . $e->getMessage()]);
+        }
+    }
+
+    /**
+     * Create a new user account and add it to workspace members.
+     */
+    public function createMemberUser(Request $request, Workspace $workspace): RedirectResponse
+    {
+        $validated = $request->validate([
+            'name' => ['required', 'string', 'max:255'],
+            'email' => ['required', 'email', 'max:255', 'unique:users,email'],
+            'password' => ['required', 'string', 'min:8', 'confirmed'],
+            'hourly_rate' => ['nullable', 'numeric', 'min:0'],
+            'role' => ['nullable', 'in:admin,member,guest'],
+        ]);
+
+        try {
+            $this->authorize('update', $workspace);
+
+            $user = User::create([
+                'name' => $validated['name'],
+                'email' => $validated['email'],
+                'password' => Hash::make($validated['password']),
+                'hourly_rate' => $validated['hourly_rate'] ?? 25,
+            ]);
+
+            $this->workspaceService->addMember(
+                $workspace,
+                $user,
+                $validated['role'] ?? 'member',
+                $request->user()
+            );
+
+            return redirect()->back()->with('success', 'User created and added to workspace successfully.');
+        } catch (\Exception $e) {
+            return redirect()->back()->withErrors(['error' => 'Failed to create user: ' . $e->getMessage()]);
+        }
+    }
+
+    /**
+     * Update workspace member user profile fields.
+     */
+    public function updateMemberUser(Request $request, Workspace $workspace): RedirectResponse
+    {
+        $validated = $request->validate([
+            'user_id' => ['required', 'exists:users,id'],
+            'name' => ['required', 'string', 'max:255'],
+            'email' => [
+                'required',
+                'email',
+                'max:255',
+                Rule::unique('users', 'email')->ignore($request->input('user_id')),
+            ],
+            'hourly_rate' => ['nullable', 'numeric', 'min:0'],
+        ]);
+
+        try {
+            $this->authorize('update', $workspace);
+
+            $user = User::findOrFail($validated['user_id']);
+            if (!$workspace->isMember($user)) {
+                return redirect()->back()->withErrors(['error' => 'User is not a member of this workspace.']);
+            }
+
+            $user->update([
+                'name' => $validated['name'],
+                'email' => $validated['email'],
+                'hourly_rate' => $validated['hourly_rate'] ?? $user->hourly_rate,
+            ]);
+
+            return redirect()->back()->with('success', 'User updated successfully.');
+        } catch (\Exception $e) {
+            return redirect()->back()->withErrors(['error' => 'Failed to update user: ' . $e->getMessage()]);
         }
     }
 }

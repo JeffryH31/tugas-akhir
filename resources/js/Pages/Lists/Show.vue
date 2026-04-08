@@ -1465,6 +1465,8 @@ onMounted(() => {
                         </template>
                         <v-card color="surface">
                             <v-list density="compact">
+                                <v-list-item prepend-icon="mdi-account-lock-outline" title="Product Access"
+                                    @click="router.visit(route('lists.settings', [workspace.id, space.id, list.id]))" />
                                 <v-list-item prepend-icon="mdi-pencil-outline" title="Edit Product"
                                     @click="openEditList" />
                                 <v-list-item prepend-icon="mdi-folder-move-outline" title="Move to Folder"

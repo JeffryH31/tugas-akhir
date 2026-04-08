@@ -1,12 +1,6 @@
 <script setup>
 import { ref } from 'vue';
 import { useForm } from '@inertiajs/vue3';
-import ActionMessage from '@/Components/ActionMessage.vue';
-import FormSection from '@/Components/FormSection.vue';
-import InputError from '@/Components/InputError.vue';
-import InputLabel from '@/Components/InputLabel.vue';
-import PrimaryButton from '@/Components/PrimaryButton.vue';
-import TextInput from '@/Components/TextInput.vue';
 
 const passwordInput = ref(null);
 const currentPasswordInput = ref(null);
@@ -38,63 +32,66 @@ const updatePassword = () => {
 </script>
 
 <template>
-    <FormSection @submitted="updatePassword">
-        <template #title>
+    <v-card variant="outlined" rounded="xl" class="profile-section-card">
+        <v-card-title class="d-flex align-center ga-2">
+            <v-icon color="primary">mdi-lock-reset</v-icon>
             Update Password
-        </template>
+        </v-card-title>
+        <v-card-subtitle>
+            Use a strong password to secure your account.
+        </v-card-subtitle>
+        <v-divider class="mt-3" />
 
-        <template #description>
-            Ensure your account is using a long, random password to stay secure.
-        </template>
-
-        <template #form>
-            <div class="col-span-6 sm:col-span-4">
-                <InputLabel for="current_password" value="Current Password" />
-                <TextInput
-                    id="current_password"
+        <v-form @submit.prevent="updatePassword">
+            <v-card-text class="pt-6">
+                <v-text-field
                     ref="currentPasswordInput"
                     v-model="form.current_password"
+                    label="Current Password"
                     type="password"
-                    class="mt-1 block w-full"
+                    variant="outlined"
                     autocomplete="current-password"
+                    :error-messages="form.errors.current_password"
+                    class="mb-3"
                 />
-                <InputError :message="form.errors.current_password" class="mt-2" />
-            </div>
 
-            <div class="col-span-6 sm:col-span-4">
-                <InputLabel for="password" value="New Password" />
-                <TextInput
-                    id="password"
+                <v-text-field
                     ref="passwordInput"
                     v-model="form.password"
+                    label="New Password"
                     type="password"
-                    class="mt-1 block w-full"
+                    variant="outlined"
                     autocomplete="new-password"
+                    :error-messages="form.errors.password"
+                    class="mb-3"
                 />
-                <InputError :message="form.errors.password" class="mt-2" />
-            </div>
 
-            <div class="col-span-6 sm:col-span-4">
-                <InputLabel for="password_confirmation" value="Confirm Password" />
-                <TextInput
-                    id="password_confirmation"
+                <v-text-field
                     v-model="form.password_confirmation"
+                    label="Confirm Password"
                     type="password"
-                    class="mt-1 block w-full"
+                    variant="outlined"
                     autocomplete="new-password"
+                    :error-messages="form.errors.password_confirmation"
                 />
-                <InputError :message="form.errors.password_confirmation" class="mt-2" />
-            </div>
-        </template>
+            </v-card-text>
 
-        <template #actions>
-            <ActionMessage :on="form.recentlySuccessful" class="me-3">
-                Saved.
-            </ActionMessage>
-
-            <PrimaryButton :class="{ 'opacity-25': form.processing }" :disabled="form.processing">
-                Save
-            </PrimaryButton>
-        </template>
-    </FormSection>
+            <v-divider />
+            <v-card-actions class="pa-4">
+                <v-chip v-if="form.recentlySuccessful" color="success" variant="tonal" size="small">
+                    Password updated
+                </v-chip>
+                <v-spacer />
+                <v-btn type="submit" color="primary" :loading="form.processing" :disabled="form.processing">
+                    Save Password
+                </v-btn>
+            </v-card-actions>
+        </v-form>
+    </v-card>
 </template>
+
+<style scoped>
+.profile-section-card {
+    border-color: rgba(148, 163, 184, 0.35);
+}
+</style>

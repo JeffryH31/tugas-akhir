@@ -159,6 +159,40 @@ class SpaceService
         });
     }
 
+    public function addMember(Space $space, User $user, string $role, User $addedBy): void
+    {
+        $space->members()->syncWithoutDetaching([
+            $user->id => ['role' => $role],
+        ]);
+
+        Activity::log($space->workspace, $addedBy, $space, 'member_added', [
+            'name' => $space->name,
+            'member_name' => $user->name,
+            'role' => $role,
+        ]);
+    }
+
+    public function updateMemberRole(Space $space, User $user, string $role, User $updatedBy): void
+    {
+        $space->members()->updateExistingPivot($user->id, ['role' => $role]);
+
+        Activity::log($space->workspace, $updatedBy, $space, 'member_role_updated', [
+            'name' => $space->name,
+            'member_name' => $user->name,
+            'role' => $role,
+        ]);
+    }
+
+    public function removeMember(Space $space, User $user, User $removedBy): void
+    {
+        $space->members()->detach($user->id);
+
+        Activity::log($space->workspace, $removedBy, $space, 'member_removed', [
+            'name' => $space->name,
+            'member_name' => $user->name,
+        ]);
+    }
+
     /**
      * Get space statistics
      */

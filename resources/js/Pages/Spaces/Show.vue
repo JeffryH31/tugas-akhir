@@ -352,6 +352,12 @@ const onProductDragChange = (evt, statusId) => {
                         </template>
                         <v-card color="surface">
                             <v-list density="compact">
+                                <v-list-item
+                                    prepend-icon="mdi-shield-home-outline"
+                                    title="Space Access"
+                                    @click="router.visit(route('spaces.settings', [workspace.id, space.id]))"
+                                    class="px-4"
+                                />
                                 <v-list-item prepend-icon="mdi-pencil-outline" title="Edit Space" @click="openEditSpace"
                                     class="px-4" />
                                 <v-divider />

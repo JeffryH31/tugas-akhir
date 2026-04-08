@@ -440,22 +440,6 @@ const openCreateSpace = () => {
                         </v-card-text>
                     </v-card>
 
-                    <!-- Quick Links -->
-                    <v-card variant="outlined" rounded="lg">
-                        <v-card-title>Quick Links</v-card-title>
-                        <v-list density="compact" nav>
-                            <v-list-item prepend-icon="mdi-checkbox-marked-circle-outline" title="My Tasks"
-                                :href="route('my-tasks')" rounded="lg" />
-                            <v-list-item prepend-icon="mdi-timer-outline" title="Time Tracking"
-                                :href="route('time-tracking.index')" rounded="lg" />
-                            <v-list-item prepend-icon="mdi-chart-box-outline" title="Analytics"
-                                :href="activeWorkspace ? route('workspaces.analytics', activeWorkspace.id) : undefined"
-                                rounded="lg" />
-                            <v-list-item prepend-icon="mdi-cog-outline" title="Settings"
-                                :href="activeWorkspace ? route('workspaces.settings', activeWorkspace.id) : undefined"
-                                rounded="lg" />
-                        </v-list>
-                    </v-card>
                 </div>
             </div>
         </div>

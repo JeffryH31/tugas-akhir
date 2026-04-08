@@ -1,13 +1,6 @@
 <script setup>
 import { ref } from 'vue';
 import { Link, router, useForm } from '@inertiajs/vue3';
-import ActionMessage from '@/Components/ActionMessage.vue';
-import FormSection from '@/Components/FormSection.vue';
-import InputError from '@/Components/InputError.vue';
-import InputLabel from '@/Components/InputLabel.vue';
-import PrimaryButton from '@/Components/PrimaryButton.vue';
-import SecondaryButton from '@/Components/SecondaryButton.vue';
-import TextInput from '@/Components/TextInput.vue';
 
 const props = defineProps({
     user: Object,
@@ -76,115 +69,126 @@ const clearPhotoFileInput = () => {
 </script>
 
 <template>
-    <FormSection @submitted="updateProfileInformation">
-        <template #title>
+    <v-card variant="outlined" rounded="xl" class="profile-section-card">
+        <v-card-title class="d-flex align-center ga-2">
+            <v-icon color="primary">mdi-account-circle-outline</v-icon>
             Profile Information
-        </template>
+        </v-card-title>
+        <v-card-subtitle>
+            Update your account details and email address.
+        </v-card-subtitle>
+        <v-divider class="mt-3" />
 
-        <template #description>
-            Update your account's profile information and email address.
-        </template>
-
-        <template #form>
-            <!-- Profile Photo -->
-            <div v-if="$page.props.jetstream.managesProfilePhotos" class="col-span-6 sm:col-span-4">
-                <!-- Profile Photo File Input -->
+        <v-form @submit.prevent="updateProfileInformation">
+            <v-card-text class="pt-6">
                 <input
                     id="photo"
                     ref="photoInput"
                     type="file"
                     class="hidden"
+                    accept="image/*"
                     @change="updatePhotoPreview"
                 >
 
-                <InputLabel for="photo" value="Photo" />
+                <div v-if="$page.props.jetstream.managesProfilePhotos" class="mb-6">
+                    <div class="text-subtitle-2 mb-3">Profile Photo</div>
+                    <div class="d-flex align-center ga-4 flex-wrap">
+                        <v-avatar size="84" :color="user.avatar_color || 'primary'">
+                            <img
+                                v-if="photoPreview || user.profile_photo_url"
+                                :src="photoPreview || user.profile_photo_url"
+                                :alt="user.name"
+                            >
+                            <span v-else class="text-h6">{{ user.initials }}</span>
+                        </v-avatar>
 
-                <!-- Current Profile Photo -->
-                <div v-show="! photoPreview" class="mt-2">
-                    <img :src="user.profile_photo_url" :alt="user.name" class="rounded-full size-20 object-cover">
-                </div>
-
-                <!-- New Profile Photo Preview -->
-                <div v-show="photoPreview" class="mt-2">
-                    <span
-                        class="block rounded-full size-20 bg-cover bg-no-repeat bg-center"
-                        :style="'background-image: url(\'' + photoPreview + '\');'"
-                    />
-                </div>
-
-                <SecondaryButton class="mt-2 me-2" type="button" @click.prevent="selectNewPhoto">
-                    Select A New Photo
-                </SecondaryButton>
-
-                <SecondaryButton
-                    v-if="user.profile_photo_path"
-                    type="button"
-                    class="mt-2"
-                    @click.prevent="deletePhoto"
-                >
-                    Remove Photo
-                </SecondaryButton>
-
-                <InputError :message="form.errors.photo" class="mt-2" />
-            </div>
-
-            <!-- Name -->
-            <div class="col-span-6 sm:col-span-4">
-                <InputLabel for="name" value="Name" />
-                <TextInput
-                    id="name"
-                    v-model="form.name"
-                    type="text"
-                    class="mt-1 block w-full"
-                    required
-                    autocomplete="name"
-                />
-                <InputError :message="form.errors.name" class="mt-2" />
-            </div>
-
-            <!-- Email -->
-            <div class="col-span-6 sm:col-span-4">
-                <InputLabel for="email" value="Email" />
-                <TextInput
-                    id="email"
-                    v-model="form.email"
-                    type="email"
-                    class="mt-1 block w-full"
-                    required
-                    autocomplete="username"
-                />
-                <InputError :message="form.errors.email" class="mt-2" />
-
-                <div v-if="$page.props.jetstream.hasEmailVerification && user.email_verified_at === null">
-                    <p class="text-sm mt-2">
-                        Your email address is unverified.
-
-                        <Link
-                            :href="route('verification.send')"
-                            method="post"
-                            as="button"
-                            class="underline text-sm text-gray-600 hover:text-gray-900 rounded-md focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500"
-                            @click.prevent="sendEmailVerification"
-                        >
-                            Click here to re-send the verification email.
-                        </Link>
-                    </p>
-
-                    <div v-show="verificationLinkSent" class="mt-2 font-medium text-sm text-green-600">
-                        A new verification link has been sent to your email address.
+                        <div class="d-flex ga-2 flex-wrap">
+                            <v-btn color="primary" variant="tonal" @click.prevent="selectNewPhoto">
+                                <v-icon start>mdi-image-edit-outline</v-icon>
+                                Change Photo
+                            </v-btn>
+                            <v-btn
+                                v-if="user.profile_photo_path"
+                                color="error"
+                                variant="text"
+                                @click.prevent="deletePhoto"
+                            >
+                                Remove
+                            </v-btn>
+                        </div>
                     </div>
+                    <v-alert v-if="form.errors.photo" type="error" variant="tonal" density="compact" class="mt-3">
+                        {{ form.errors.photo }}
+                    </v-alert>
                 </div>
-            </div>
-        </template>
 
-        <template #actions>
-            <ActionMessage :on="form.recentlySuccessful" class="me-3">
-                Saved.
-            </ActionMessage>
+                <v-row>
+                    <v-col cols="12" md="6">
+                        <v-text-field
+                            v-model="form.name"
+                            label="Full Name"
+                            variant="outlined"
+                            autocomplete="name"
+                            :error-messages="form.errors.name"
+                            required
+                        />
+                    </v-col>
+                    <v-col cols="12" md="6">
+                        <v-text-field
+                            v-model="form.email"
+                            label="Email"
+                            type="email"
+                            variant="outlined"
+                            autocomplete="username"
+                            :error-messages="form.errors.email"
+                            required
+                        />
+                    </v-col>
+                </v-row>
 
-            <PrimaryButton :class="{ 'opacity-25': form.processing }" :disabled="form.processing">
-                Save
-            </PrimaryButton>
-        </template>
-    </FormSection>
+                <v-alert
+                    v-if="$page.props.jetstream.hasEmailVerification && user.email_verified_at === null"
+                    type="warning"
+                    variant="tonal"
+                    border="start"
+                    class="mt-2"
+                >
+                    Your email is not verified.
+                    <Link
+                        :href="route('verification.send')"
+                        method="post"
+                        as="button"
+                        class="verify-link"
+                        @click.prevent="sendEmailVerification"
+                    >
+                        Resend verification email
+                    </Link>
+                    <div v-if="verificationLinkSent" class="mt-2 text-success">Verification link sent.</div>
+                </v-alert>
+            </v-card-text>
+
+            <v-divider />
+            <v-card-actions class="pa-4">
+                <v-chip v-if="form.recentlySuccessful" color="success" variant="tonal" size="small">
+                    Saved
+                </v-chip>
+                <v-spacer />
+                <v-btn type="submit" color="primary" :loading="form.processing" :disabled="form.processing">
+                    Save Changes
+                </v-btn>
+            </v-card-actions>
+        </v-form>
+    </v-card>
 </template>
+
+<style scoped>
+.profile-section-card {
+    border-color: rgba(148, 163, 184, 0.35);
+}
+
+.verify-link {
+    margin-left: 6px;
+    text-decoration: underline;
+    color: inherit;
+}
+</style>

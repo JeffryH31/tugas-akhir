@@ -178,6 +178,25 @@ const newSpaceDescription = ref('');
 const newSpaceColor = ref('#6366F1');
 const isCreatingSpace = ref(false);
 
+const showCreateWorkspace = ref(false);
+const newWorkspaceName = ref('');
+const newWorkspaceDescription = ref('');
+const newWorkspaceColor = ref('#3B82F6');
+const newWorkspaceIcon = ref('mdi-briefcase-outline');
+const isCreatingWorkspace = ref(false);
+
+const workspaceColorOptions = ['#3B82F6', '#06B6D4', '#10B981', '#84CC16', '#F59E0B', '#F97316', '#EF4444', '#8B5CF6'];
+const workspaceIconOptions = [
+    'mdi-briefcase-outline',
+    'mdi-office-building-outline',
+    'mdi-account-group-outline',
+    'mdi-rocket-launch-outline',
+    'mdi-chart-box-outline',
+    'mdi-code-braces',
+    'mdi-lightbulb-outline',
+    'mdi-storefront-outline',
+];
+
 const createSpace = () => {
     if (!newSpaceName.value.trim() || !activeWorkspace.value || isCreatingSpace.value) return;
     isCreatingSpace.value = true;
@@ -200,6 +219,40 @@ const createSpace = () => {
                 router.reload({ only: ['activeWorkspace'] });
             },
             onFinish: () => { isCreatingSpace.value = false; }
+        }
+    );
+};
+
+const openCreateWorkspaceDialog = () => {
+    newWorkspaceName.value = '';
+    newWorkspaceDescription.value = '';
+    newWorkspaceColor.value = '#3B82F6';
+    newWorkspaceIcon.value = 'mdi-briefcase-outline';
+    showCreateWorkspace.value = true;
+};
+
+const createWorkspace = () => {
+    if (!newWorkspaceName.value.trim() || isCreatingWorkspace.value) return;
+    isCreatingWorkspace.value = true;
+
+    router.post(
+        route('workspaces.store'),
+        {
+            name: newWorkspaceName.value.trim(),
+            description: newWorkspaceDescription.value.trim() || null,
+            color: newWorkspaceColor.value,
+            icon: newWorkspaceIcon.value,
+        },
+        {
+            preserveScroll: true,
+            onSuccess: () => {
+                showCreateWorkspace.value = false;
+                showSnackbar('Workspace created successfully!', 'success');
+                router.reload({ only: ['workspaces', 'activeWorkspace'] });
+            },
+            onFinish: () => {
+                isCreatingWorkspace.value = false;
+            },
         }
     );
 };
@@ -335,9 +388,6 @@ const formatDuration = (seconds) => {
                     <v-divider />
                     <v-list density="compact">
                         <v-list-item prepend-icon="mdi-account-outline" title="Profile" :href="route('profile.show')" />
-                        <v-list-item prepend-icon="mdi-cog-outline" title="Settings"
-                            :href="activeWorkspace ? route('workspaces.settings', activeWorkspace.id) : undefined"
-                            :disabled="!activeWorkspace" />
                         <v-list-item prepend-icon="mdi-chart-box-outline" title="Analytics"
                             :href="activeWorkspace ? route('workspaces.analytics', activeWorkspace.id) : undefined"
                             :disabled="!activeWorkspace" />
@@ -356,15 +406,15 @@ const formatDuration = (seconds) => {
 
         <!-- Sidebar -->
         <v-navigation-drawer v-model="isSidebarOpen" :rail="isSidebarMini" :temporary="mobile" color="surface"
-            width="280" class="border-r border-[#2d2d30]">
+            width="280" :rail-width="72" class="sidebar-drawer border-r border-[#2d2d30]">
             <div class="flex flex-col h-full">
                 <!-- Workspace Selector -->
-                <div class="border-b border-[#2d2d30]" :class="isSidebarMini ? 'px-1 py-3' : 'px-3 py-3'">
+                <div class="border-b border-[#2d2d30]" :class="isSidebarMini ? 'px-1 py-2' : 'px-3 py-3'">
                     <v-menu>
                         <template v-slot:activator="{ props: menuProps }">
                             <v-btn v-bind="menuProps" variant="text" :block="!isSidebarMini"
                                 :icon="isSidebarMini" :class="isSidebarMini ? 'mx-auto' : 'justify-start text-left'">
-                                <div class="flex items-center gap-2" :class="{ 'w-full': !isSidebarMini }">
+                                <div class="workspace-selector-trigger flex items-center gap-2" :class="{ 'w-full': !isSidebarMini }">
                                     <v-tooltip v-if="isSidebarMini" location="right" :text="activeWorkspace?.name || 'Select Workspace'">
                                         <template #activator="{ props: tipProps }">
                                             <div v-bind="tipProps" class="w-8 h-8 rounded-lg flex items-center justify-center text-white font-bold text-sm"
@@ -385,9 +435,9 @@ const formatDuration = (seconds) => {
                             </v-btn>
                         </template>
 
-                        <v-card width="280" color="surface">
+                        <v-card width="300" color="surface" rounded="xl" class="workspace-menu-card">
                             <v-list density="compact">
-                                <v-list-subheader>WORKSPACES</v-list-subheader>
+                                <v-list-subheader class="workspace-menu-subheader">WORKSPACES</v-list-subheader>
                                 <v-list-item v-for="workspace in workspaces" :key="workspace.id"
                                     :active="workspace.id === activeWorkspace?.id"
                                     @click="router.post(route('workspaces.switch', workspace.id))">
@@ -400,24 +450,32 @@ const formatDuration = (seconds) => {
                                     <v-list-item-title>{{ workspace.name }}</v-list-item-title>
                                 </v-list-item>
                                 <v-divider class="my-2" />
-                                <v-list-item prepend-icon="mdi-plus" title="Create Workspace" />
+                                <v-list-item
+                                    prepend-icon="mdi-plus-circle-outline"
+                                    title="Create Workspace"
+                                    subtitle="Set up a new team space"
+                                    class="workspace-create-entry"
+                                    @click="openCreateWorkspaceDialog"
+                                />
                             </v-list>
                         </v-card>
                     </v-menu>
                 </div>
 
                 <!-- Navigation Links -->
-                <div :class="isSidebarMini ? 'px-1 py-2' : 'px-2 py-2'">
-                    <v-list density="compact" nav>
+                <div :class="isSidebarMini ? 'px-1 py-1' : 'px-2 py-2'">
+                    <v-list density="compact" nav :class="isSidebarMini ? 'rail-nav-list' : ''">
                         <v-tooltip v-for="navItem in [
                             { href: route('dashboard'), active: route().current('dashboard'), icon: 'mdi-home-outline', label: 'Home', show: true },
                             { href: route('my-tasks'), active: route().current('my-tasks'), icon: 'mdi-checkbox-marked-circle-outline', label: 'My Tasks', show: true },
                             { href: activeWorkspace ? route('calendar.index', activeWorkspace.id) : undefined, active: route().current('calendar.*'), icon: 'mdi-calendar-month-outline', label: 'Calendar', show: !!activeWorkspace },
                             { href: route('time-tracking.index'), active: route().current('time-tracking.*'), icon: 'mdi-timer-outline', label: 'Time Tracking', show: true },
+                            { href: activeWorkspace ? route('workspaces.settings', activeWorkspace.id) : undefined, active: route().current('workspaces.settings'), icon: 'mdi-cog-outline', label: 'Settings', show: !!activeWorkspace },
                         ]" :key="navItem.label" location="right" :text="navItem.label" :disabled="!isSidebarMini">
                             <template #activator="{ props: tipProps }">
                                 <v-list-item v-if="navItem.show" v-bind="tipProps" :href="navItem.href" :active="navItem.active"
-                                    :prepend-icon="navItem.icon" :title="isSidebarMini ? undefined : navItem.label" rounded="lg" />
+                                    :prepend-icon="navItem.icon" :title="isSidebarMini ? undefined : navItem.label" rounded="lg"
+                                    :class="isSidebarMini ? 'rail-nav-item' : ''" />
                             </template>
                         </v-tooltip>
                     </v-list>
@@ -426,16 +484,17 @@ const formatDuration = (seconds) => {
                 <v-divider class="my-1" />
 
                 <!-- Favorites -->
-                <div v-if="activeWorkspace?.starred_spaces?.length" :class="isSidebarMini ? 'px-1 py-2' : 'px-2 py-2'">
+                <div v-if="activeWorkspace?.starred_spaces?.length" :class="isSidebarMini ? 'px-1 py-1' : 'px-2 py-2'">
                     <div v-if="!isSidebarMini" class="px-3 py-1 text-xs font-medium text-gray-500 uppercase">
                         Favorites
                     </div>
-                    <v-list density="compact" nav>
+                    <v-list density="compact" nav :class="isSidebarMini ? 'rail-nav-list' : ''">
                         <v-tooltip v-for="space in activeWorkspace?.starred_spaces || []" :key="space.id"
                             location="right" :text="space.name" :disabled="!isSidebarMini">
                             <template #activator="{ props: tipProps }">
                                 <v-list-item v-bind="tipProps"
-                                    :href="route('spaces.show', [activeWorkspace.id, space.id])" rounded="lg">
+                                    :href="route('spaces.show', [activeWorkspace.id, space.id])" rounded="lg"
+                                    :class="isSidebarMini ? 'rail-nav-item' : ''">
                                     <template v-slot:prepend>
                                         <div class="w-2 h-2 rounded-full" :class="isSidebarMini ? '' : 'mr-3'"
                                             :style="{ backgroundColor: space.color || '#6366F1' }" />
@@ -448,7 +507,7 @@ const formatDuration = (seconds) => {
                 </div>
 
                 <!-- Spaces -->
-                <div class="flex-1 overflow-y-auto py-2" :class="isSidebarMini ? 'px-1' : 'px-2'">
+                <div class="flex-1 overflow-y-auto" :class="isSidebarMini ? 'px-1 py-1' : 'px-2 py-2'">
                     <div v-if="!isSidebarMini" class="flex items-center justify-between px-3 py-1">
                         <span class="text-xs font-medium text-gray-500 uppercase">Spaces</span>
                         <v-btn icon variant="text" size="x-small" @click="showCreateSpace = true">
@@ -457,24 +516,26 @@ const formatDuration = (seconds) => {
                     </div>
 
                     <!-- View All Spaces Link -->
-                    <v-list density="compact" nav class="mb-2">
+                    <v-list density="compact" nav class="mb-2" :class="isSidebarMini ? 'rail-nav-list' : ''">
                         <v-tooltip location="right" text="View All Spaces" :disabled="!isSidebarMini">
                             <template #activator="{ props: tipProps }">
                                 <v-list-item v-if="activeWorkspace" v-bind="tipProps"
                                     :href="route('workspaces.show', activeWorkspace.id)"
                                     prepend-icon="mdi-view-grid-outline"
-                                    :title="isSidebarMini ? undefined : 'View All Spaces'" rounded="lg" class="text-sm" />
+                                    :title="isSidebarMini ? undefined : 'View All Spaces'" rounded="lg"
+                                    :class="isSidebarMini ? 'rail-nav-item text-sm' : 'text-sm'" />
                             </template>
                         </v-tooltip>
                     </v-list>
 
                     <!-- Mini mode: icon-only space list -->
-                    <v-list v-if="isSidebarMini" density="compact" nav>
+                    <v-list v-if="isSidebarMini" density="compact" nav class="rail-nav-list">
                         <v-tooltip v-for="space in activeWorkspace?.spaces || []" :key="space.id"
                             location="right" :text="space.name">
                             <template #activator="{ props: tipProps }">
                                 <v-list-item v-bind="tipProps"
-                                    :href="route('spaces.show', [activeWorkspace.id, space.id])" rounded="lg">
+                                    :href="route('spaces.show', [activeWorkspace.id, space.id])" rounded="lg"
+                                    class="rail-nav-item">
                                     <template v-slot:prepend>
                                         <div class="w-6 h-6 rounded flex items-center justify-center text-white text-xs"
                                             :style="{ backgroundColor: space.color || '#6366F1' }">
@@ -540,7 +601,7 @@ const formatDuration = (seconds) => {
                 </div>
 
                 <!-- Sidebar Footer -->
-                <div class="border-t border-[#2d2d30]" :class="isSidebarMini ? 'px-1 py-2' : 'px-3 py-2'">
+                <div class="border-t border-[#2d2d30]" :class="isSidebarMini ? 'px-1 py-1' : 'px-3 py-2'">
                     <v-tooltip location="right" text="Expand" :disabled="!isSidebarMini">
                         <template #activator="{ props: tipProps }">
                             <v-btn v-bind="tipProps" variant="text" :block="!isSidebarMini" size="small"
@@ -661,6 +722,95 @@ const formatDuration = (seconds) => {
             </v-card>
         </v-dialog>
 
+        <!-- Create Workspace Dialog -->
+        <v-dialog v-model="showCreateWorkspace" max-width="560">
+            <v-card rounded="xl" class="workspace-dialog">
+                <v-card-title class="d-flex align-center ga-2 pb-2">
+                    <v-icon color="primary">mdi-plus-circle-outline</v-icon>
+                    Create Workspace
+                </v-card-title>
+                <v-card-subtitle>Start a new workspace for a team, client, or initiative.</v-card-subtitle>
+                <v-divider class="mt-3" />
+
+                <v-card-text class="pt-5">
+                    <v-text-field
+                        v-model="newWorkspaceName"
+                        label="Workspace Name"
+                        placeholder="e.g., Product Team, Acme Client"
+                        variant="outlined"
+                        autofocus
+                        @keydown.enter="createWorkspace"
+                    />
+
+                    <v-textarea
+                        v-model="newWorkspaceDescription"
+                        label="Description (Optional)"
+                        placeholder="What will this workspace be used for?"
+                        variant="outlined"
+                        rows="3"
+                        class="mt-3"
+                    />
+
+                    <div class="mt-3">
+                        <div class="text-sm font-medium mb-2">Workspace Color</div>
+                        <div class="d-flex flex-wrap ga-2">
+                            <button
+                                v-for="color in workspaceColorOptions"
+                                :key="color"
+                                type="button"
+                                class="workspace-color-dot"
+                                :class="{ 'workspace-color-dot--active': newWorkspaceColor === color }"
+                                :style="{ backgroundColor: color }"
+                                @click="newWorkspaceColor = color"
+                            />
+                        </div>
+                    </div>
+
+                    <div class="mt-4">
+                        <div class="text-sm font-medium mb-2">Workspace Icon</div>
+                        <div class="d-flex flex-wrap ga-2">
+                            <v-btn
+                                v-for="icon in workspaceIconOptions"
+                                :key="icon"
+                                icon
+                                variant="tonal"
+                                size="small"
+                                :color="newWorkspaceIcon === icon ? 'primary' : 'default'"
+                                @click="newWorkspaceIcon = icon"
+                            >
+                                <v-icon>{{ icon }}</v-icon>
+                            </v-btn>
+                        </div>
+                    </div>
+
+                    <v-card variant="tonal" rounded="lg" class="mt-4" :color="newWorkspaceColor">
+                        <v-card-text class="d-flex align-center ga-3">
+                            <div class="workspace-preview-icon" :style="{ backgroundColor: newWorkspaceColor }">
+                                <v-icon color="white">{{ newWorkspaceIcon }}</v-icon>
+                            </div>
+                            <div>
+                                <div class="font-weight-bold">{{ newWorkspaceName || 'Workspace Preview' }}</div>
+                                <div class="text-caption text-medium-emphasis">{{ newWorkspaceDescription || 'No description yet' }}</div>
+                            </div>
+                        </v-card-text>
+                    </v-card>
+                </v-card-text>
+
+                <v-card-actions class="pa-4">
+                    <v-spacer />
+                    <v-btn variant="text" @click="showCreateWorkspace = false">Cancel</v-btn>
+                    <v-btn
+                        color="primary"
+                        :loading="isCreatingWorkspace"
+                        :disabled="!newWorkspaceName.trim()"
+                        @click="createWorkspace"
+                    >
+                        Create Workspace
+                    </v-btn>
+                </v-card-actions>
+            </v-card>
+        </v-dialog>
+
         <!-- Global Snackbar -->
         <v-snackbar v-model="snackbar" :color="snackbarColor" :timeout="3000" location="bottom right">
             {{ snackbarText }}
@@ -735,15 +885,72 @@ const formatDuration = (seconds) => {
 }
 
 /* Rail mode overrides */
-:deep(.v-navigation-drawer--rail) .v-list-item {
-    justify-content: center;
+:deep(.sidebar-drawer.v-navigation-drawer--rail .rail-nav-list) {
+    padding-block: 2px !important;
 }
 
-:deep(.v-navigation-drawer--rail) .v-list-item__prepend {
+:deep(.sidebar-drawer.v-navigation-drawer--rail .rail-nav-item) {
+    min-height: 42px !important;
+    height: 42px !important;
+    margin-block: 2px !important;
+    padding-inline: 0 !important;
+}
+
+:deep(.sidebar-drawer.v-navigation-drawer--rail .rail-nav-item .v-list-item__prepend) {
     margin-right: 0 !important;
+    width: 100% !important;
+    min-width: 0 !important;
+    justify-content: center !important;
+}
+
+:deep(.sidebar-drawer.v-navigation-drawer--rail .rail-nav-item .v-list-item__content) {
+    display: none;
 }
 
 .search-dialog-input :deep(.v-field) {
     border-radius: 0;
+}
+
+.workspace-selector-trigger {
+    min-height: 40px;
+}
+
+:deep(.workspace-menu-card .v-list-item--active) {
+    background: rgba(59, 130, 246, 0.16);
+}
+
+.workspace-menu-subheader {
+    letter-spacing: 0.08em;
+}
+
+.workspace-create-entry {
+    border-radius: 10px;
+}
+
+.workspace-color-dot {
+    width: 28px;
+    height: 28px;
+    border-radius: 10px;
+    border: 2px solid transparent;
+    cursor: pointer;
+    transition: transform 0.15s ease, border-color 0.15s ease;
+}
+
+.workspace-color-dot:hover {
+    transform: scale(1.06);
+}
+
+.workspace-color-dot--active {
+    border-color: rgba(255, 255, 255, 0.9);
+    transform: scale(1.08);
+}
+
+.workspace-preview-icon {
+    width: 36px;
+    height: 36px;
+    border-radius: 10px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
 }
 </style>

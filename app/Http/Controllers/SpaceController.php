@@ -9,6 +9,7 @@ use App\Http\Requests\UpdateSpaceRequest;
 use App\Http\Requests\UpdateStatusRequest;
 use App\Models\Space;
 use App\Models\Status;
+use App\Models\User;
 use App\Models\Workspace;
 use App\Services\AccessService;
 use App\Services\SpaceService;
@@ -75,6 +76,55 @@ class SpaceController extends Controller
             'space' => $space,
             'statistics' => $statistics,
             'productsByStatus' => $productsByStatus,
+        ]);
+    }
+
+    /**
+     * Display space access settings.
+     */
+    public function settings(Request $request, Workspace $workspace, Space $space): Response
+    {
+        abort_unless((int) $space->workspace_id === (int) $workspace->id, 404);
+        abort_unless($this->accessService->canViewSpace($request->user(), $space), 403);
+
+        $workspace->load('members');
+        $space->load(['members', 'lists']);
+
+        $spaceMemberIds = $space->members->pluck('id');
+
+        $mapUser = fn($member, ?string $role = null) => [
+            'id' => $member->id,
+            'name' => $member->name,
+            'email' => $member->email,
+            'initials' => $member->initials,
+            'avatar_color' => $member->avatar_color,
+            'profile_photo_url' => $member->profile_photo_url,
+            'role' => $role,
+        ];
+
+        return Inertia::render('Spaces/Settings', [
+            'workspace' => $workspace,
+            'space' => [
+                'id' => $space->id,
+                'name' => $space->name,
+                'description' => $space->description,
+                'is_private' => (bool) $space->is_private,
+            ],
+            'products' => $space->lists
+                ->map(fn($list) => [
+                    'id' => $list->id,
+                    'name' => $list->name,
+                    'is_archived' => (bool) $list->is_archived,
+                ])
+                ->values(),
+            'members' => $space->members
+                ->map(fn($member) => $mapUser($member, $member->pivot?->role))
+                ->values(),
+            'availableUsers' => $workspace->members
+                ->filter(fn($member) => !$spaceMemberIds->contains($member->id))
+                ->map(fn($member) => $mapUser($member))
+                ->values(),
+            'canManageMembers' => $this->accessService->canManageSpace($request->user(), $space),
         ]);
     }
 
@@ -205,5 +255,58 @@ class SpaceController extends Controller
         } catch (\Exception $e) {
             return redirect()->back()->withErrors(['error' => 'Failed to reorder statuses: ' . $e->getMessage()]);
         }
+    }
+
+    public function addMember(Request $request, Workspace $workspace, Space $space): RedirectResponse
+    {
+        abort_unless($this->accessService->canManageSpace($request->user(), $space), 403);
+
+        $validated = $request->validate([
+            'user_id' => ['required', 'exists:users,id'],
+            'role' => ['required', 'in:owner,admin,manager,member,guest'],
+        ]);
+
+        $user = User::findOrFail($validated['user_id']);
+        if (!$workspace->isMember($user)) {
+            return redirect()->back()->withErrors(['error' => 'User must be a workspace member first.']);
+        }
+
+        $this->spaceService->addMember($space, $user, $validated['role'], $request->user());
+
+        return redirect()->back()->with('success', 'Space member added successfully.');
+    }
+
+    public function updateMemberRole(Request $request, Workspace $workspace, Space $space): RedirectResponse
+    {
+        abort_unless($this->accessService->canManageSpace($request->user(), $space), 403);
+
+        $validated = $request->validate([
+            'user_id' => ['required', 'exists:users,id'],
+            'role' => ['required', 'in:owner,admin,manager,member,guest'],
+        ]);
+
+        $user = User::findOrFail($validated['user_id']);
+        $this->spaceService->updateMemberRole($space, $user, $validated['role'], $request->user());
+
+        return redirect()->back()->with('success', 'Space member role updated successfully.');
+    }
+
+    public function removeMember(Request $request, Workspace $workspace, Space $space): RedirectResponse
+    {
+        abort_unless($this->accessService->canManageSpace($request->user(), $space), 403);
+
+        $validated = $request->validate([
+            'user_id' => ['required', 'exists:users,id'],
+        ]);
+
+        $user = User::findOrFail($validated['user_id']);
+        $isSpaceOwner = $space->members()->where('user_id', $user->id)->wherePivot('role', 'owner')->exists();
+        if ($isSpaceOwner) {
+            return redirect()->back()->withErrors(['error' => 'Space owner cannot be removed.']);
+        }
+
+        $this->spaceService->removeMember($space, $user, $request->user());
+
+        return redirect()->back()->with('success', 'Space member removed successfully.');
     }
 }

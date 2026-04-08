@@ -1,12 +1,24 @@
 <script setup>
-import { ref } from 'vue';
-import { Head, router } from '@inertiajs/vue3';
+import { computed, ref } from 'vue';
+import { Head, router, usePage } from '@inertiajs/vue3';
 import MainLayout from '@/Layouts/MainLayout.vue';
 
 const props = defineProps({
     workspace: Object,
     members: Array,
     availableUsers: Array,
+    projectLists: Array,
+    spaces: Array,
+});
+
+const page = usePage();
+
+const isAdmin = computed(() => {
+    const currentUserId = page.props?.auth?.user?.id;
+    const currentMember = props.members?.find((member) => member.id === currentUserId);
+    const role = currentMember?.pivot?.role || currentMember?.role;
+
+    return role === 'owner' || role === 'admin';
 });
 
 // ===== Label Management =====
@@ -79,6 +91,25 @@ const deleteLabel = (label) => {
 const showAddMember = ref(false);
 const selectedUser = ref(null);
 const selectedRole = ref('member');
+const showCreateUser = ref(false);
+const showEditUser = ref(false);
+const editingUser = ref(null);
+
+const createUserForm = ref({
+    name: '',
+    email: '',
+    password: '',
+    password_confirmation: '',
+    hourly_rate: 25,
+    role: 'member',
+});
+
+const editUserForm = ref({
+    user_id: null,
+    name: '',
+    email: '',
+    hourly_rate: 25,
+});
 
 const addMember = () => {
     if (!selectedUser.value) return;
@@ -99,6 +130,78 @@ const addMember = () => {
                     window.showSnackbar('Member added successfully!', 'success');
                 }
             }
+        }
+    );
+};
+
+const openCreateUserDialog = () => {
+    createUserForm.value = {
+        name: '',
+        email: '',
+        password: '',
+        password_confirmation: '',
+        hourly_rate: 25,
+        role: 'member',
+    };
+    showCreateUser.value = true;
+};
+
+const createUser = () => {
+    if (!createUserForm.value.name.trim() || !createUserForm.value.email.trim()) {
+        return;
+    }
+
+    router.post(
+        route('workspaces.members.users.store', props.workspace.id),
+        createUserForm.value,
+        {
+            preserveScroll: true,
+            onSuccess: () => {
+                showCreateUser.value = false;
+                createUserForm.value = {
+                    name: '',
+                    email: '',
+                    password: '',
+                    password_confirmation: '',
+                    hourly_rate: 25,
+                    role: 'member',
+                };
+                if (window.showSnackbar) {
+                    window.showSnackbar('User created successfully!', 'success');
+                }
+            },
+        }
+    );
+};
+
+const openEditUserDialog = (member) => {
+    editingUser.value = member;
+    editUserForm.value = {
+        user_id: member.id,
+        name: member.name || '',
+        email: member.email || '',
+        hourly_rate: Number(member.hourly_rate ?? 25),
+    };
+    showEditUser.value = true;
+};
+
+const updateUser = () => {
+    if (!editUserForm.value.user_id || !editUserForm.value.name.trim() || !editUserForm.value.email.trim()) {
+        return;
+    }
+
+    router.patch(
+        route('workspaces.members.users.update', props.workspace.id),
+        editUserForm.value,
+        {
+            preserveScroll: true,
+            onSuccess: () => {
+                showEditUser.value = false;
+                editingUser.value = null;
+                if (window.showSnackbar) {
+                    window.showSnackbar('User updated successfully!', 'success');
+                }
+            },
         }
     );
 };
@@ -149,6 +252,270 @@ const getRoleBadgeColor = (role) => {
     }
 };
 
+const spaceRoleItems = [
+    { title: 'Owner', value: 'owner' },
+    { title: 'Admin', value: 'admin' },
+    { title: 'Manager', value: 'manager' },
+    { title: 'Member', value: 'member' },
+    { title: 'Guest', value: 'guest' },
+];
+
+const selectedSpaceId = ref(props.spaces?.[0]?.id ?? null);
+const showAddSpaceMember = ref(false);
+const selectedSpaceUser = ref(null);
+const selectedSpaceRole = ref('member');
+
+const spaceOptions = computed(() => {
+    return (props.spaces || []).map((space) => ({
+        title: `${space.name}${space.is_private ? ' (Private)' : ''}`,
+        value: space.id,
+    }));
+});
+
+const selectedSpace = computed(() => {
+    const selectedId = Number(selectedSpaceId.value);
+    return (props.spaces || []).find((space) => space.id === selectedId) || null;
+});
+
+const canManageSelectedSpace = computed(() => {
+    if (isAdmin.value) {
+        return true;
+    }
+
+    const currentUserId = page.props?.auth?.user?.id;
+    const spaceMember = selectedSpace.value?.members?.find((member) => member.id === currentUserId);
+
+    return ['owner', 'admin', 'manager'].includes(spaceMember?.role || '');
+});
+
+const availableSpaceUsers = computed(() => {
+    if (!selectedSpace.value) {
+        return [];
+    }
+
+    const assignedIds = new Set((selectedSpace.value.members || []).map((member) => member.id));
+    return (props.members || []).filter((member) => !assignedIds.has(member.id));
+});
+
+const getSpaceRoleBadgeColor = (role) => {
+    switch (role) {
+        case 'owner': return 'error';
+        case 'admin': return 'warning';
+        case 'manager': return 'info';
+        case 'member': return 'primary';
+        case 'guest': return 'grey';
+        default: return 'grey';
+    }
+};
+
+const openAddSpaceMemberDialog = () => {
+    selectedSpaceUser.value = null;
+    selectedSpaceRole.value = 'member';
+    showAddSpaceMember.value = true;
+};
+
+const addSpaceMember = () => {
+    if (!selectedSpace.value || !selectedSpaceUser.value) {
+        return;
+    }
+
+    router.post(
+        route('spaces.members.add', [props.workspace.id, selectedSpace.value.id]),
+        {
+            user_id: selectedSpaceUser.value,
+            role: selectedSpaceRole.value,
+        },
+        {
+            preserveScroll: true,
+            preserveState: true,
+            onSuccess: () => {
+                showAddSpaceMember.value = false;
+                selectedSpaceUser.value = null;
+                selectedSpaceRole.value = 'member';
+                if (window.showSnackbar) {
+                    window.showSnackbar('Space member added successfully!', 'success');
+                }
+            },
+        }
+    );
+};
+
+const changeSpaceMemberRole = (space, member, role) => {
+    router.patch(
+        route('spaces.members.role', [props.workspace.id, space.id]),
+        {
+            user_id: member.id,
+            role,
+        },
+        {
+            preserveScroll: true,
+            preserveState: true,
+            onSuccess: () => {
+                if (window.showSnackbar) {
+                    window.showSnackbar('Space role updated successfully!', 'success');
+                }
+            },
+        }
+    );
+};
+
+const removeSpaceMember = (space, member) => {
+    if (!confirm(`Remove ${member.name} from ${space.name}?`)) {
+        return;
+    }
+
+    router.delete(
+        route('spaces.members.remove', [props.workspace.id, space.id]),
+        {
+            data: { user_id: member.id },
+            preserveScroll: true,
+            preserveState: true,
+            onSuccess: () => {
+                if (window.showSnackbar) {
+                    window.showSnackbar('Space member removed successfully!', 'success');
+                }
+            },
+        }
+    );
+};
+
+const canModifyWorkspaceMember = (member) => {
+    const role = member?.pivot?.role || member?.role;
+    const currentUserId = page.props?.auth?.user?.id;
+
+    return role !== 'owner' && member?.id !== currentUserId;
+};
+
+const projectRoleItems = [
+    { title: 'Project Owner', value: 'project_owner' },
+    { title: 'Project Manager', value: 'project_manager' },
+    { title: 'Development Team', value: 'development_team' },
+    { title: 'Guest', value: 'guest' },
+];
+
+const selectedProjectId = ref(props.projectLists?.[0]?.id ?? null);
+const showAddProjectMember = ref(false);
+const selectedProjectUser = ref(null);
+const selectedProjectRole = ref('development_team');
+
+const projectOptions = computed(() => {
+    return (props.projectLists || []).map((project) => ({
+        title: `${project.name} - ${project.space?.name || 'Unknown Space'}${project.is_archived ? ' (Archived)' : ''}`,
+        value: project.id,
+    }));
+});
+
+const selectedProject = computed(() => {
+    const selectedId = Number(selectedProjectId.value);
+    return (props.projectLists || []).find((project) => project.id === selectedId) || null;
+});
+
+const canManageSelectedProject = computed(() => {
+    if (isAdmin.value) {
+        return true;
+    }
+
+    const currentUserId = page.props?.auth?.user?.id;
+    const projectMember = selectedProject.value?.members?.find((member) => member.id === currentUserId);
+
+    return projectMember?.role === 'project_owner';
+});
+
+const availableProjectUsers = computed(() => {
+    if (!selectedProject.value) {
+        return [];
+    }
+
+    const assignedIds = new Set((selectedProject.value.members || []).map((member) => member.id));
+    return (props.members || []).filter((member) => !assignedIds.has(member.id));
+});
+
+const getProjectRoleBadgeColor = (role) => {
+    switch (role) {
+        case 'project_owner': return 'error';
+        case 'project_manager': return 'warning';
+        case 'development_team': return 'primary';
+        case 'guest': return 'grey';
+        default: return 'grey';
+    }
+};
+
+const getProjectRoleLabel = (role) => {
+    const match = projectRoleItems.find((item) => item.value === role);
+    return match?.title || role || 'Unknown';
+};
+
+const openAddProjectMemberDialog = () => {
+    selectedProjectUser.value = null;
+    selectedProjectRole.value = 'development_team';
+    showAddProjectMember.value = true;
+};
+
+const addProjectMember = () => {
+    if (!selectedProject.value || !selectedProjectUser.value) {
+        return;
+    }
+
+    router.post(
+        route('lists.members.add', [props.workspace.id, selectedProject.value.space.id, selectedProject.value.id]),
+        {
+            user_id: selectedProjectUser.value,
+            role: selectedProjectRole.value,
+        },
+        {
+            preserveScroll: true,
+            preserveState: true,
+            onSuccess: () => {
+                showAddProjectMember.value = false;
+                selectedProjectUser.value = null;
+                selectedProjectRole.value = 'development_team';
+                if (window.showSnackbar) {
+                    window.showSnackbar('Project member added successfully!', 'success');
+                }
+            },
+        }
+    );
+};
+
+const changeProjectMemberRole = (project, member, role) => {
+    router.patch(
+        route('lists.members.role', [props.workspace.id, project.space.id, project.id]),
+        {
+            user_id: member.id,
+            role,
+        },
+        {
+            preserveScroll: true,
+            preserveState: true,
+            onSuccess: () => {
+                if (window.showSnackbar) {
+                    window.showSnackbar('Project role updated successfully!', 'success');
+                }
+            },
+        }
+    );
+};
+
+const removeProjectMember = (project, member) => {
+    if (!confirm(`Remove ${member.name} from ${project.name}?`)) {
+        return;
+    }
+
+    router.delete(
+        route('lists.members.remove', [props.workspace.id, project.space.id, project.id]),
+        {
+            data: { user_id: member.id },
+            preserveScroll: true,
+            preserveState: true,
+            onSuccess: () => {
+                if (window.showSnackbar) {
+                    window.showSnackbar('Project member removed successfully!', 'success');
+                }
+            },
+        }
+    );
+};
+
 // Delete workspace
 const showDeleteWorkspace = ref(false);
 const confirmationName = ref('');
@@ -182,16 +549,66 @@ const deleteWorkspace = () => {
         <div class="settings-page">
             <div class="settings-header">
                 <h1 class="text-2xl font-bold">Workspace Settings</h1>
-                <p class="text-gray-500 mt-1">Manage {{ workspace?.name }} settings and members</p>
+                <p class="text-gray-500 mt-1">Manage {{ workspace?.name }} access layers and configuration</p>
             </div>
 
             <v-card variant="outlined" rounded="lg" class="mt-6">
+                <v-card-title class="d-flex align-center ga-2">
+                    <v-icon color="primary">mdi-shield-account-outline</v-icon>
+                    Access Layers
+                </v-card-title>
+                <v-divider />
+                <v-card-text>
+                    <v-row>
+                        <v-col cols="12" md="6" lg="3">
+                            <v-card variant="tonal" color="primary" rounded="lg" class="h-100">
+                                <v-card-text>
+                                    <div class="font-weight-bold mb-1">General Website</div>
+                                    <div class="text-body-2">Controls global account access (login/profile/security).</div>
+                                </v-card-text>
+                            </v-card>
+                        </v-col>
+                        <v-col cols="12" md="6" lg="3">
+                            <v-card variant="tonal" color="info" rounded="lg" class="h-100">
+                                <v-card-text>
+                                    <div class="font-weight-bold mb-1">Workspace Access</div>
+                                    <div class="text-body-2">Owner/Admin/Member/Guest roles for workspace-wide capabilities.</div>
+                                </v-card-text>
+                            </v-card>
+                        </v-col>
+                        <v-col cols="12" md="6" lg="3">
+                            <v-card variant="tonal" color="warning" rounded="lg" class="h-100">
+                                <v-card-text>
+                                    <div class="font-weight-bold mb-1">Space Access</div>
+                                    <div class="text-body-2">Private/public space visibility and space-level membership control.</div>
+                                </v-card-text>
+                            </v-card>
+                        </v-col>
+                        <v-col cols="12" md="6" lg="3">
+                            <v-card variant="tonal" color="success" rounded="lg" class="h-100">
+                                <v-card-text>
+                                    <div class="font-weight-bold mb-1">Product Access</div>
+                                    <div class="text-body-2">Product-level member roles (owner/manager/dev/guest).</div>
+                                </v-card-text>
+                            </v-card>
+                        </v-col>
+                    </v-row>
+                </v-card-text>
+            </v-card>
+
+            <v-card variant="outlined" rounded="lg" class="mt-6">
                 <v-card-title class="flex items-center justify-between">
-                    <span>Members ({{ members?.length || 0 }})</span>
-                    <v-btn v-if="isAdmin" color="primary" @click="showAddMember = true">
-                        <v-icon start>mdi-account-plus</v-icon>
-                        Add Member
-                    </v-btn>
+                    <span>Workspace Access ({{ members?.length || 0 }})</span>
+                    <div v-if="isAdmin" class="d-flex ga-2">
+                        <v-btn color="secondary" variant="tonal" @click="openCreateUserDialog">
+                            <v-icon start>mdi-account-plus-outline</v-icon>
+                            Create User
+                        </v-btn>
+                        <v-btn color="primary" @click="showAddMember = true">
+                            <v-icon start>mdi-account-multiple-plus</v-icon>
+                            Add Member
+                        </v-btn>
+                    </div>
                 </v-card-title>
                 <v-divider />
                 <v-table>
@@ -216,7 +633,7 @@ const deleteWorkspace = () => {
                             </td>
                             <td>{{ member.email }}</td>
                             <td>
-                                <v-menu>
+                                <v-menu v-if="isAdmin && canModifyWorkspaceMember(member)">
                                     <template v-slot:activator="{ props: menuProps }">
                                         <v-chip v-bind="menuProps"
                                             :color="getRoleBadgeColor(member.pivot?.role || member.role)" size="small"
@@ -232,11 +649,26 @@ const deleteWorkspace = () => {
                                         </v-list>
                                     </v-card>
                                 </v-menu>
+                                <v-chip v-else :color="getRoleBadgeColor(member.pivot?.role || member.role)" size="small">
+                                    {{ (member.pivot?.role || member.role || 'member').toUpperCase() }}
+                                </v-chip>
                             </td>
                             <td>
-                                <v-btn icon variant="text" size="small" color="error" @click="removeMember(member)">
-                                    <v-icon size="18">mdi-delete</v-icon>
-                                </v-btn>
+                                <div v-if="isAdmin" class="d-flex ga-1">
+                                    <v-btn icon variant="text" size="small" @click="openEditUserDialog(member)">
+                                        <v-icon size="18">mdi-pencil</v-icon>
+                                    </v-btn>
+                                    <v-btn
+                                        icon
+                                        variant="text"
+                                        size="small"
+                                        color="error"
+                                        :disabled="!canModifyWorkspaceMember(member)"
+                                        @click="removeMember(member)"
+                                    >
+                                        <v-icon size="18">mdi-delete</v-icon>
+                                    </v-btn>
+                                </div>
                             </td>
                         </tr>
                         <tr v-if="!members?.length">
@@ -246,6 +678,65 @@ const deleteWorkspace = () => {
                         </tr>
                     </tbody>
                 </v-table>
+            </v-card>
+
+            <v-card variant="outlined" rounded="lg" class="mt-6">
+                <v-card-title class="d-flex align-center ga-2">
+                    <v-icon color="warning">mdi-sitemap-outline</v-icon>
+                    Scope Settings Navigation
+                </v-card-title>
+                <v-divider />
+                <v-card-text>
+                    <v-alert type="info" variant="tonal" class="mb-4">
+                        Product Access and Space Access are now managed in dedicated settings pages per scope.
+                    </v-alert>
+
+                    <v-row>
+                        <v-col cols="12" md="6">
+                            <v-card variant="tonal" color="warning" rounded="lg" class="h-100">
+                                <v-card-title class="text-subtitle-1">Space Settings</v-card-title>
+                                <v-card-text>
+                                    <div class="text-body-2 mb-3">Open each space to manage space-level membership roles.</div>
+                                    <div class="d-flex flex-wrap ga-2">
+                                        <v-btn
+                                            v-for="space in spaces"
+                                            :key="`space-settings-link-${space.id}`"
+                                            size="small"
+                                            variant="outlined"
+                                            color="warning"
+                                            @click="router.visit(route('spaces.settings', [workspace.id, space.id]))"
+                                        >
+                                            {{ space.name }}
+                                        </v-btn>
+                                        <span v-if="!spaces?.length" class="text-body-2 text-grey">No spaces found.</span>
+                                    </div>
+                                </v-card-text>
+                            </v-card>
+                        </v-col>
+
+                        <v-col cols="12" md="6">
+                            <v-card variant="tonal" color="success" rounded="lg" class="h-100">
+                                <v-card-title class="text-subtitle-1">Product Settings</v-card-title>
+                                <v-card-text>
+                                    <div class="text-body-2 mb-3">Open each product to manage product member roles.</div>
+                                    <div class="d-flex flex-wrap ga-2">
+                                        <v-btn
+                                            v-for="project in projectLists"
+                                            :key="`project-settings-link-${project.id}`"
+                                            size="small"
+                                            variant="outlined"
+                                            color="success"
+                                            @click="router.visit(route('lists.settings', [workspace.id, project.space.id, project.id]))"
+                                        >
+                                            {{ project.name }}
+                                        </v-btn>
+                                        <span v-if="!projectLists?.length" class="text-body-2 text-grey">No products found.</span>
+                                    </div>
+                                </v-card-text>
+                            </v-card>
+                        </v-col>
+                    </v-row>
+                </v-card-text>
             </v-card>
 
             <!-- Labels Management -->
@@ -370,6 +861,115 @@ const deleteWorkspace = () => {
                     <v-spacer />
                     <v-btn variant="text" @click="showAddMember = false">Cancel</v-btn>
                     <v-btn color="primary" @click="addMember">Add Member</v-btn>
+                </v-card-actions>
+            </v-card>
+        </v-dialog>
+
+        <v-dialog v-model="showCreateUser" max-width="560">
+            <v-card>
+                <v-card-title>Create User</v-card-title>
+                <v-card-text>
+                    <v-text-field
+                        v-model="createUserForm.name"
+                        label="Full Name"
+                        variant="outlined"
+                        class="mb-3"
+                        autofocus
+                    />
+                    <v-text-field
+                        v-model="createUserForm.email"
+                        label="Email"
+                        type="email"
+                        variant="outlined"
+                        class="mb-3"
+                    />
+                    <v-text-field
+                        v-model="createUserForm.password"
+                        label="Password"
+                        type="password"
+                        variant="outlined"
+                        class="mb-3"
+                    />
+                    <v-text-field
+                        v-model="createUserForm.password_confirmation"
+                        label="Confirm Password"
+                        type="password"
+                        variant="outlined"
+                        class="mb-3"
+                    />
+                    <v-text-field
+                        v-model.number="createUserForm.hourly_rate"
+                        label="Hourly Rate"
+                        type="number"
+                        min="0"
+                        step="0.01"
+                        variant="outlined"
+                        class="mb-3"
+                    />
+                    <v-select
+                        v-model="createUserForm.role"
+                        :items="[
+                            { title: 'Admin', value: 'admin' },
+                            { title: 'Member', value: 'member' },
+                            { title: 'Guest', value: 'guest' },
+                        ]"
+                        label="Workspace Role"
+                        variant="outlined"
+                    />
+                </v-card-text>
+                <v-card-actions>
+                    <v-spacer />
+                    <v-btn variant="text" @click="showCreateUser = false">Cancel</v-btn>
+                    <v-btn
+                        color="primary"
+                        :disabled="!createUserForm.name.trim() || !createUserForm.email.trim() || !createUserForm.password"
+                        @click="createUser"
+                    >
+                        Create User
+                    </v-btn>
+                </v-card-actions>
+            </v-card>
+        </v-dialog>
+
+        <v-dialog v-model="showEditUser" max-width="560">
+            <v-card>
+                <v-card-title>Edit User</v-card-title>
+                <v-card-text>
+                    <v-alert type="info" variant="tonal" density="compact" class="mb-4">
+                        Updating account data for <strong>{{ editingUser?.name }}</strong>.
+                    </v-alert>
+                    <v-text-field
+                        v-model="editUserForm.name"
+                        label="Full Name"
+                        variant="outlined"
+                        class="mb-3"
+                    />
+                    <v-text-field
+                        v-model="editUserForm.email"
+                        label="Email"
+                        type="email"
+                        variant="outlined"
+                        class="mb-3"
+                    />
+                    <v-text-field
+                        v-model.number="editUserForm.hourly_rate"
+                        label="Hourly Rate"
+                        type="number"
+                        min="0"
+                        step="0.01"
+                        variant="outlined"
+                    />
+                </v-card-text>
+                <v-card-actions>
+                    <v-spacer />
+                    <v-btn variant="text" @click="showEditUser = false">Cancel</v-btn>
+                    <v-btn
+                        color="primary"
+                        :disabled="!editUserForm.name.trim() || !editUserForm.email.trim()"
+                        @click="updateUser"
+                    >
+                        Save Changes
+                    </v-btn>
                 </v-card-actions>
             </v-card>
         </v-dialog>

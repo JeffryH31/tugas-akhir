@@ -17,19 +17,40 @@ class AccessService
     public const WORKSPACE_MEMBER = 'member';
     public const WORKSPACE_GUEST = 'guest';
 
+    public const SPACE_OWNER = 'owner';
+    public const SPACE_ADMIN = 'admin';
+    public const SPACE_MANAGER = 'manager';
+    public const SPACE_MEMBER = 'member';
+    public const SPACE_GUEST = 'guest';
+
     public const PROJECT_OWNER = 'project_owner';
     public const PROJECT_MANAGER = 'project_manager';
     public const PROJECT_DEVELOPER = 'development_team';
     public const PROJECT_GUEST = 'guest';
+
+    public function canAccessWebsite(User $user): bool
+    {
+        return !is_null($user->id) && $user->workspaces()->exists();
+    }
 
     public function getWorkspaceRole(User $user, Workspace $workspace): ?string
     {
         return $workspace->members()->where('user_id', $user->id)->first()?->pivot?->role;
     }
 
+    public function getSpaceRole(User $user, Space $space): ?string
+    {
+        return $space->members()->where('user_id', $user->id)->first()?->pivot?->role;
+    }
+
     public function getProjectRole(User $user, TaskList $list): ?string
     {
         return $list->members()->where('user_id', $user->id)->first()?->pivot?->role;
+    }
+
+    public function getProductRole(User $user, TaskList $list): ?string
+    {
+        return $this->getProjectRole($user, $list);
     }
 
     public function canViewWorkspace(User $user, Workspace $workspace): bool
@@ -44,63 +65,115 @@ class AccessService
 
     public function canViewSpace(User $user, Space $space): bool
     {
+        if (!$this->canViewWorkspace($user, $space->workspace)) {
+            return false;
+        }
+
         $workspaceRole = $this->getWorkspaceRole($user, $space->workspace);
 
         if (in_array($workspaceRole, [self::WORKSPACE_OWNER, self::WORKSPACE_ADMIN], true)) {
             return true;
         }
 
-        if ($workspaceRole === self::WORKSPACE_MEMBER) {
-            return $space->members()->where('user_id', $user->id)->exists() || !$space->is_private;
+        if (!$space->is_private) {
+            return in_array($workspaceRole, [self::WORKSPACE_MEMBER, self::WORKSPACE_GUEST], true);
         }
 
-        return false;
+        return in_array($this->getSpaceRole($user, $space), [
+            self::SPACE_OWNER,
+            self::SPACE_ADMIN,
+            self::SPACE_MANAGER,
+            self::SPACE_MEMBER,
+            self::SPACE_GUEST,
+        ], true);
     }
 
-    public function canViewProject(User $user, TaskList $list): bool
+    public function canManageSpace(User $user, Space $space): bool
     {
-        $workspaceRole = $this->getWorkspaceRole($user, $list->space->workspace);
-        if (in_array($workspaceRole, [self::WORKSPACE_OWNER, self::WORKSPACE_ADMIN], true)) {
+        if (in_array($this->getWorkspaceRole($user, $space->workspace), [self::WORKSPACE_OWNER, self::WORKSPACE_ADMIN], true)) {
             return true;
         }
 
-        if ($workspaceRole === self::WORKSPACE_MEMBER && $this->canViewSpace($user, $list->space)) {
+        if (!$this->canViewSpace($user, $space)) {
+            return false;
+        }
+
+        return in_array($this->getSpaceRole($user, $space), [
+            self::SPACE_OWNER,
+            self::SPACE_ADMIN,
+            self::SPACE_MANAGER,
+        ], true);
+    }
+
+    public function canViewProduct(User $user, TaskList $list): bool
+    {
+        if (!$this->canViewSpace($user, $list->space)) {
+            return false;
+        }
+
+        if (in_array($this->getWorkspaceRole($user, $list->space->workspace), [self::WORKSPACE_OWNER, self::WORKSPACE_ADMIN], true)) {
             return true;
         }
 
-        return in_array($this->getProjectRole($user, $list), [
+        if (in_array($this->getProductRole($user, $list), [
             self::PROJECT_OWNER,
             self::PROJECT_MANAGER,
             self::PROJECT_DEVELOPER,
             self::PROJECT_GUEST,
-        ], true);
+        ], true)) {
+            return true;
+        }
+
+        // Backward compatibility: if product membership has not been configured,
+        // inherit view access from the parent space.
+        return !$list->members()->exists();
+    }
+
+    public function canViewProject(User $user, TaskList $list): bool
+    {
+        return $this->canViewProduct($user, $list);
+    }
+
+    public function canManageProduct(User $user, TaskList $list): bool
+    {
+        if (in_array($this->getWorkspaceRole($user, $list->space->workspace), [self::WORKSPACE_OWNER, self::WORKSPACE_ADMIN], true)) {
+            return true;
+        }
+
+        return in_array($this->getProductRole($user, $list), [self::PROJECT_OWNER, self::PROJECT_MANAGER], true);
     }
 
     public function canManageProject(User $user, TaskList $list): bool
     {
+        return $this->canManageProduct($user, $list);
+    }
+
+    public function canDeleteProduct(User $user, TaskList $list): bool
+    {
         if (in_array($this->getWorkspaceRole($user, $list->space->workspace), [self::WORKSPACE_OWNER, self::WORKSPACE_ADMIN], true)) {
             return true;
         }
 
-        return in_array($this->getProjectRole($user, $list), [self::PROJECT_OWNER, self::PROJECT_MANAGER], true);
+        return $this->getProductRole($user, $list) === self::PROJECT_OWNER;
     }
 
     public function canDeleteProject(User $user, TaskList $list): bool
     {
-        if (in_array($this->getWorkspaceRole($user, $list->space->workspace), [self::WORKSPACE_OWNER, self::WORKSPACE_ADMIN], true)) {
-            return true;
-        }
-
-        return $this->getProjectRole($user, $list) === self::PROJECT_OWNER;
+        return $this->canDeleteProduct($user, $list);
     }
 
-    public function canManageProjectMembers(User $user, TaskList $list): bool
+    public function canManageProductMembers(User $user, TaskList $list): bool
     {
         if (in_array($this->getWorkspaceRole($user, $list->space->workspace), [self::WORKSPACE_OWNER, self::WORKSPACE_ADMIN], true)) {
             return true;
         }
 
-        return $this->getProjectRole($user, $list) === self::PROJECT_OWNER;
+        return $this->getProductRole($user, $list) === self::PROJECT_OWNER;
+    }
+
+    public function canManageProjectMembers(User $user, TaskList $list): bool
+    {
+        return $this->canManageProductMembers($user, $list);
     }
 
     public function canEditTasks(User $user, TaskList $list): bool

@@ -71,6 +71,8 @@ Route::middleware(['auth:sanctum', config('jetstream.auth_session'), 'verified']
                 Route::post('/', [WorkspaceController::class, 'addMember'])->name('workspaces.members.add');
                 Route::delete('/', [WorkspaceController::class, 'removeMember'])->name('workspaces.members.remove');
                 Route::patch('/role', [WorkspaceController::class, 'updateMemberRole'])->name('workspaces.members.role');
+                Route::post('/users', [WorkspaceController::class, 'createMemberUser'])->name('workspaces.members.users.store');
+                Route::patch('/users', [WorkspaceController::class, 'updateMemberUser'])->name('workspaces.members.users.update');
             });
 
             Route::prefix('labels')->group(function () {
@@ -91,9 +93,13 @@ Route::middleware(['auth:sanctum', config('jetstream.auth_session'), 'verified']
 
                 Route::prefix('{space}')->group(function () {
                     Route::get('/', [SpaceController::class, 'show'])->name('spaces.show');
+                    Route::get('/settings', [SpaceController::class, 'settings'])->name('spaces.settings');
                     Route::patch('/', [SpaceController::class, 'update'])->name('spaces.update');
                     Route::delete('/', [SpaceController::class, 'destroy'])->name('spaces.destroy');
                     Route::post('/star', [SpaceController::class, 'toggleStar'])->name('spaces.star');
+                    Route::post('/members', [SpaceController::class, 'addMember'])->name('spaces.members.add');
+                    Route::patch('/members/role', [SpaceController::class, 'updateMemberRole'])->name('spaces.members.role');
+                    Route::delete('/members', [SpaceController::class, 'removeMember'])->name('spaces.members.remove');
                     Route::post('/statuses', [SpaceController::class, 'addStatus'])->name('spaces.statuses.add');
                     Route::patch('/statuses/{status}', [SpaceController::class, 'updateStatus'])->name('spaces.statuses.update');
                     Route::delete('/statuses/{status}', [SpaceController::class, 'deleteStatus'])->name('spaces.statuses.delete');
@@ -131,6 +137,7 @@ Route::middleware(['auth:sanctum', config('jetstream.auth_session'), 'verified']
 
                         Route::prefix('{list}')->group(function () {
                             Route::get('/', [TaskListController::class, 'show'])->name('lists.show');
+                            Route::get('/settings', [TaskListController::class, 'settings'])->name('lists.settings');
                             Route::patch('/', [TaskListController::class, 'update'])->name('lists.update');
                             Route::delete('/', [TaskListController::class, 'destroy'])->name('lists.destroy');
                             Route::post('/archive', [TaskListController::class, 'archive'])->name('lists.archive');
