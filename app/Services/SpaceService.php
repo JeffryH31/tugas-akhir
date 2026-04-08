@@ -152,9 +152,11 @@ class SpaceService
      */
     public function reorder(Workspace $workspace, array $order): void
     {
-        DB::transaction(function () use ($order) {
+        DB::transaction(function () use ($workspace, $order) {
             foreach ($order as $position => $spaceId) {
-                Space::where('id', $spaceId)->update(['position' => $position]);
+                Space::where('id', $spaceId)
+                    ->where('workspace_id', $workspace->id)
+                    ->update(['position' => $position]);
             }
         });
     }
@@ -279,9 +281,11 @@ class SpaceService
      */
     public function reorderStatuses(Space $space, array $order): void
     {
-        DB::transaction(function () use ($order) {
+        DB::transaction(function () use ($space, $order) {
             foreach ($order as $position => $statusId) {
-                Status::where('id', $statusId)->update(['position' => $position]);
+                Status::where('id', $statusId)
+                    ->where('space_id', $space->id)
+                    ->update(['position' => $position]);
             }
         });
     }

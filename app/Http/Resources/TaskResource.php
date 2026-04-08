@@ -15,12 +15,20 @@ class TaskResource extends JsonResource
     public function toArray(Request $request): array
     {
         $earliestDueDate = null;
+        $resolvedAssignees = collect();
 
         if ($this->relationLoaded('subtasks')) {
             $earliestDueDate = $this->subtasks
                 ->filter(fn($subtask) => !empty($subtask->due_date))
                 ->sortBy('due_date')
                 ->first()?->due_date;
+
+            $resolvedAssignees = $this->subtasks
+                ->flatMap(fn($subtask) => $subtask->relationLoaded('assignees') ? $subtask->assignees : collect())
+                ->unique('id')
+                ->values();
+        } elseif ($this->relationLoaded('assignees')) {
+            $resolvedAssignees = $this->assignees;
         }
 
         return [
@@ -54,7 +62,7 @@ class TaskResource extends JsonResource
                         : null,
                 ];
             }),
-            'assignees' => UserResource::collection($this->whenLoaded('assignees')),
+            'assignees' => UserResource::collection($resolvedAssignees),
             'labels' => LabelResource::collection($this->whenLoaded('labels')),
             'creator' => new UserResource($this->whenLoaded('creator')),
             'subtasks' => SubtaskResource::collection($this->whenLoaded('subtasks')),

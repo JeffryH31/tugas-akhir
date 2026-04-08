@@ -54,6 +54,8 @@ class WorkspaceController extends Controller
      */
     public function settings(Request $request, Workspace $workspace): Response
     {
+        $this->authorize('view', $workspace);
+
         $workspace->load([
             'members',
             'labels',
@@ -134,6 +136,8 @@ class WorkspaceController extends Controller
      */
     public function show(Request $request, Workspace $workspace): Response
     {
+        $this->authorize('view', $workspace);
+
         $workspace->load([
             'spaces' => fn($q) => $q->withCount(['lists', 'tasks'])
                 ->orderBy('position'),
@@ -169,6 +173,8 @@ class WorkspaceController extends Controller
      */
     public function destroy(Request $request, Workspace $workspace): RedirectResponse
     {
+        $this->authorize('delete', $workspace);
+
         try {
             $this->workspaceService->delete($workspace, $request->user());
 

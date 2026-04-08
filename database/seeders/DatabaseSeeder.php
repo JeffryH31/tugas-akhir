@@ -19,18 +19,18 @@ class DatabaseSeeder extends Seeder
     {
         $this->call([
             UsersSeeder::class,
-            WorkspacesSeeder::class,
-            LabelsSeeder::class,
-            SpacesSeeder::class,
-            StatusesSeeder::class,
-            FoldersSeeder::class,
-            TaskListsSeeder::class,
-            TasksSeeder::class,
-            SubtasksSeeder::class,
-            TimeEntriesSeeder::class,
-            CommentsSeeder::class,
-            ActivitiesSeeder::class,
-            ViewsSeeder::class,
+            // WorkspacesSeeder::class,
+            // LabelsSeeder::class,
+            // SpacesSeeder::class,
+            // StatusesSeeder::class,
+            // FoldersSeeder::class,
+            // TaskListsSeeder::class,
+            // TasksSeeder::class,
+            // SubtasksSeeder::class,
+            // TimeEntriesSeeder::class,
+            // CommentsSeeder::class,
+            // ActivitiesSeeder::class,
+            // ViewsSeeder::class,
         ]);
 
         $this->command->info('');

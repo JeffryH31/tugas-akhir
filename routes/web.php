@@ -58,7 +58,7 @@ Route::middleware(['auth:sanctum', config('jetstream.auth_session'), 'verified']
         Route::get('/', [WorkspaceController::class, 'index'])->name('workspaces.index');
         Route::post('/', [WorkspaceController::class, 'store'])->name('workspaces.store');
 
-        Route::prefix('{workspace}')->group(function () {
+        Route::prefix('{workspace}')->scopeBindings()->group(function () {
             Route::get('/', [WorkspaceController::class, 'show'])->name('workspaces.show');
             Route::get('/settings', [WorkspaceController::class, 'settings'])->name('workspaces.settings');
             Route::patch('/', [WorkspaceController::class, 'update'])->name('workspaces.update');
@@ -91,7 +91,7 @@ Route::middleware(['auth:sanctum', config('jetstream.auth_session'), 'verified']
                 Route::post('/', [SpaceController::class, 'store'])->name('spaces.store');
                 Route::post('/reorder', [SpaceController::class, 'reorder'])->name('spaces.reorder');
 
-                Route::prefix('{space}')->group(function () {
+                Route::prefix('{space}')->scopeBindings()->group(function () {
                     Route::get('/', [SpaceController::class, 'show'])->name('spaces.show');
                     Route::get('/settings', [SpaceController::class, 'settings'])->name('spaces.settings');
                     Route::patch('/', [SpaceController::class, 'update'])->name('spaces.update');
@@ -135,7 +135,7 @@ Route::middleware(['auth:sanctum', config('jetstream.auth_session'), 'verified']
                         Route::post('/', [TaskListController::class, 'store'])->name('lists.store');
                         Route::post('/reorder', [TaskListController::class, 'reorder'])->name('lists.reorder');
 
-                        Route::prefix('{list}')->group(function () {
+                        Route::prefix('{list}')->scopeBindings()->group(function () {
                             Route::get('/', [TaskListController::class, 'show'])->name('lists.show');
                             Route::get('/settings', [TaskListController::class, 'settings'])->name('lists.settings');
                             Route::patch('/', [TaskListController::class, 'update'])->name('lists.update');
@@ -153,7 +153,7 @@ Route::middleware(['auth:sanctum', config('jetstream.auth_session'), 'verified']
                                 Route::post('/', [TaskController::class, 'store'])->name('tasks.store');
                                 Route::post('/reorder', [TaskController::class, 'reorder'])->name('tasks.reorder');
 
-                                Route::prefix('{task}')->group(function () {
+                                Route::prefix('{task}')->scopeBindings()->group(function () {
                                     Route::get('/', [TaskController::class, 'show'])->name('tasks.show');
                                     Route::patch('/', [TaskController::class, 'update'])->name('tasks.update');
                                     Route::delete('/', [TaskController::class, 'destroy'])->name('tasks.destroy');
@@ -173,7 +173,7 @@ Route::middleware(['auth:sanctum', config('jetstream.auth_session'), 'verified']
                                         Route::post('/', [SubtaskController::class, 'store'])->name('tasks.subtasks.store');
                                         Route::post('/reorder', [SubtaskController::class, 'reorder'])->name('tasks.subtasks.reorder');
 
-                                        Route::prefix('{subtask}')->group(function () {
+                                        Route::prefix('{subtask}')->scopeBindings()->group(function () {
                                             Route::patch('/', [SubtaskController::class, 'update'])->name('tasks.subtasks.update');
                                             Route::delete('/', [SubtaskController::class, 'destroy'])->name('tasks.subtasks.destroy');
                                             Route::post('/complete', [SubtaskController::class, 'complete'])->name('tasks.subtasks.complete');

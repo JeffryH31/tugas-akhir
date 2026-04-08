@@ -7,6 +7,7 @@ use App\Models\Task;
 use App\Models\TaskList;
 use App\Models\TimeEntry;
 use App\Models\Workspace;
+use App\Services\AccessService;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
@@ -14,8 +15,14 @@ use Inertia\Response;
 
 class RecycleBinController extends Controller
 {
+    public function __construct(
+        protected AccessService $accessService,
+    ) {}
+
     public function index(Request $request, Workspace $workspace): Response
     {
+        abort_unless($this->accessService->canViewWorkspace($request->user(), $workspace), 403);
+
         $taskLists = TaskList::onlyTrashed()
             ->whereHas('space', fn($q) => $q->where('workspace_id', $workspace->id))
             ->with('space:id,name')
@@ -53,6 +60,8 @@ class RecycleBinController extends Controller
 
     public function restore(Request $request, Workspace $workspace): RedirectResponse
     {
+        abort_unless($this->accessService->canViewWorkspace($request->user(), $workspace), 403);
+
         $validated = $request->validate([
             'type' => ['required', 'in:list,task,subtask,time_entry'],
             'id' => ['required', 'integer'],

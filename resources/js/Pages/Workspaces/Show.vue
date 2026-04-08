@@ -57,21 +57,12 @@ const createSpace = () => {
 
             <!-- Spaces Grid -->
             <div v-if="workspace?.spaces?.length" class="spaces-grid">
-                <v-card
-                    v-for="space in workspace.spaces"
-                    :key="space.id"
-                    variant="outlined"
-                    rounded="lg"
-                    class="space-card"
-                    hover
-                    @click="router.visit(route('spaces.show', [workspace.id, space.id]))"
-                >
+                <v-card v-for="space in workspace.spaces" :key="space.id" variant="outlined" rounded="lg"
+                    class="space-card" hover @click="router.visit(route('spaces.show', [workspace.id, space.id]))">
                     <v-card-text class="pa-4">
                         <div class="flex items-start gap-3">
-                            <div
-                                class="w-12 h-12 rounded-lg flex items-center justify-center text-white flex-shrink-0"
-                                :style="{ backgroundColor: space.color || '#6366F1' }"
-                            >
+                            <div class="w-12 h-12 rounded-lg flex items-center justify-center text-white flex-shrink-0"
+                                :style="{ backgroundColor: space.color || '#6366F1' }">
                                 <v-icon color="white" size="24">{{ space.icon || 'mdi-folder' }}</v-icon>
                             </div>
                             <div class="flex-1 min-w-0">
@@ -99,11 +90,7 @@ const createSpace = () => {
             <div v-else class="empty-state">
                 <v-icon size="80" color="grey-darken-1" class="mb-4">mdi-folder-open-outline</v-icon>
                 <h2 class="text-xl font-semibold mb-2">No spaces yet</h2>
-                <p class="text-gray-500 mb-6">Create your first space to organize your work</p>
-                <v-btn color="primary" size="large" @click="showCreateSpace = true">
-                    <v-icon start>mdi-plus</v-icon>
-                    Create Your First Space
-                </v-btn>
+                <p class="text-gray-500">Create your first space to organize your work</p>
             </div>
         </div>
 
@@ -112,40 +99,24 @@ const createSpace = () => {
             <v-card>
                 <v-card-title>Create Space</v-card-title>
                 <v-card-text>
-                    <v-text-field
-                        v-model="newSpaceName"
-                        label="Space Name"
-                        placeholder="e.g., Marketing, Development"
-                        variant="outlined"
-                        autofocus
-                        class="mb-3"
-                        @keydown.enter="createSpace"
-                    />
-                    <v-textarea
-                        v-model="newSpaceDescription"
-                        label="Description (Optional)"
-                        variant="outlined"
-                        rows="3"
-                        class="mb-3"
-                    />
+                    <v-text-field v-model="newSpaceName" label="Space Name" placeholder="e.g., Marketing, Development"
+                        variant="outlined" autofocus class="mb-3" @keydown.enter="createSpace" />
+                    <v-textarea v-model="newSpaceDescription" label="Description (Optional)" variant="outlined" rows="3"
+                        class="mb-3" />
                     <div>
                         <div class="text-sm font-medium mb-2">Space Color</div>
                         <div class="flex gap-2">
-                            <div
-                                v-for="color in ['#6366F1', '#EF4444', '#F59E0B', '#10B981', '#3B82F6', '#8B5CF6', '#EC4899', '#6B7280']"
-                                :key="color"
-                                class="w-10 h-10 rounded-lg cursor-pointer border-2 transition-all"
+                            <div v-for="color in ['#6366F1', '#EF4444', '#F59E0B', '#10B981', '#3B82F6', '#8B5CF6', '#EC4899', '#6B7280']"
+                                :key="color" class="w-10 h-10 rounded-lg cursor-pointer border-2 transition-all"
                                 :class="{ 'border-white scale-110': newSpaceColor === color, 'border-transparent': newSpaceColor !== color }"
-                                :style="{ backgroundColor: color }"
-                                @click="newSpaceColor = color"
-                            />
+                                :style="{ backgroundColor: color }" @click="newSpaceColor = color" />
                         </div>
                     </div>
                 </v-card-text>
                 <v-card-actions>
                     <v-spacer />
                     <v-btn variant="text" @click="showCreateSpace = false">Cancel</v-btn>
-                    <v-btn color="primary" @click="createSpace">Create Space</v-btn>
+                    <v-btn color="primary" @click="createSpace">Create</v-btn>
                 </v-card-actions>
             </v-card>
         </v-dialog>

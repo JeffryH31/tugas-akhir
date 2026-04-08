@@ -70,6 +70,16 @@ class TaskListService
                 ])
                 ->orderBy('position')
                 ->get();
+
+            // Task-level assignees are derived from subtask assignees.
+            $items->each(function ($task) {
+                $aggregatedAssignees = $task->subtasks
+                    ->flatMap(fn($subtask) => $subtask->assignees ?? collect())
+                    ->unique('id')
+                    ->values();
+
+                $task->setRelation('assignees', $aggregatedAssignees);
+            });
         }
 
         $statuses = $list->space->statuses;
@@ -256,11 +266,13 @@ class TaskListService
     /**
      * Reorder lists
      */
-    public function reorder(array $order): void
+    public function reorder(Space $space, array $order): void
     {
-        DB::transaction(function () use ($order) {
+        DB::transaction(function () use ($space, $order) {
             foreach ($order as $position => $listId) {
-                TaskList::where('id', $listId)->update(['position' => $position]);
+                TaskList::where('id', $listId)
+                    ->where('space_id', $space->id)
+                    ->update(['position' => $position]);
             }
         });
     }

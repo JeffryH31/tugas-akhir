@@ -113,11 +113,13 @@ class FolderService
     /**
      * Reorder folders
      */
-    public function reorder(array $order): void
+    public function reorder(Space $space, array $order): void
     {
-        DB::transaction(function () use ($order) {
+        DB::transaction(function () use ($space, $order) {
             foreach ($order as $position => $folderId) {
-                Folder::where('id', $folderId)->update(['position' => $position]);
+                Folder::where('id', $folderId)
+                    ->where('space_id', $space->id)
+                    ->update(['position' => $position]);
             }
         });
     }

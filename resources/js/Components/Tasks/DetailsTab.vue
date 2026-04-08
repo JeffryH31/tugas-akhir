@@ -277,11 +277,52 @@ const setBaselineFromCurrent = () => {
 };
 
 // ===== Labels =====
-const availableLabels = computed(() => {
-    const ids = (props.localTask?.labels || []).map(l => l.id);
-    return props.labels.filter(l => !ids.includes(l.id));
-});
+const workspaceLabels = computed(() => props.labels || []);
+const showLabelEditor = ref(false);
+const editingLabel = ref(null);
+const labelForm = ref({ name: '', color: '#61BD4F' });
+
+const labelPresetColors = [
+    '#61BD4F', '#F2D600', '#FF9F1A', '#EB5A46', '#C377E0',
+    '#0079BF', '#00C2E0', '#51E898', '#FF78CB', '#344563',
+];
+
+const isLabelSelected = (labelId) => {
+    return (props.localTask?.labels || []).some((label) => label.id === labelId);
+};
+
+const normalizeLabelColor = (color) => {
+    const raw = (color || '').trim();
+    if (!raw) return '#61BD4F';
+    return raw.startsWith('#') ? raw.toUpperCase() : `#${raw.toUpperCase()}`;
+};
+
+const openCreateLabelEditor = () => {
+    editingLabel.value = null;
+    labelForm.value = { name: '', color: '#61BD4F' };
+    showLabelEditor.value = true;
+};
+
+const openEditLabelEditor = (label) => {
+    editingLabel.value = label;
+    labelForm.value = {
+        name: label.name,
+        color: label.color,
+    };
+    showLabelEditor.value = true;
+};
+
+const toggleLabel = (label) => {
+    if (isLabelSelected(label.id)) {
+        removeLabel(label);
+        return;
+    }
+
+    addLabel(label);
+};
+
 const addLabel = (label) => {
+    if (isLabelSelected(label.id)) return;
     if (!props.localTask.labels) props.localTask.labels = [];
     props.localTask.labels.push(label);
     const url = props.isSubtask
@@ -306,8 +347,94 @@ const removeLabel = (label) => {
     });
 };
 
+const saveWorkspaceLabel = () => {
+    const name = labelForm.value.name?.trim();
+    const color = normalizeLabelColor(labelForm.value.color);
+
+    if (!name) {
+        window.showSnackbar?.('Label name is required.', 'error');
+        return;
+    }
+
+    if (!/^#[0-9A-F]{6}$/.test(color)) {
+        window.showSnackbar?.('Color must be valid hex format (#RRGGBB).', 'error');
+        return;
+    }
+
+    const payload = { name, color };
+
+    if (editingLabel.value) {
+        router.patch(route('workspaces.labels.update', [props.workspace.id, editingLabel.value.id]), payload, {
+            preserveScroll: true,
+            preserveState: true,
+            onSuccess: () => {
+                showLabelEditor.value = false;
+                router.reload({ only: ['workspace', 'task', 'tasksByStatus'] });
+                window.showSnackbar?.('Label updated!', 'success');
+            },
+        });
+        return;
+    }
+
+    router.post(route('workspaces.labels.store', props.workspace.id), payload, {
+        preserveScroll: true,
+        preserveState: true,
+        onSuccess: () => {
+            showLabelEditor.value = false;
+            router.reload({ only: ['workspace', 'task', 'tasksByStatus'] });
+            window.showSnackbar?.('Label created!', 'success');
+        },
+    });
+};
+
+const deleteWorkspaceLabel = async () => {
+    if (!editingLabel.value) return;
+
+    const confirmed = await confirmDialog(
+        `Delete label "${editingLabel.value.name}"? This removes it from all tasks and subtasks.`,
+        'Delete Label'
+    );
+
+    if (!confirmed) return;
+
+    const deletingId = editingLabel.value.id;
+
+    router.delete(route('workspaces.labels.destroy', [props.workspace.id, deletingId]), {
+        preserveScroll: true,
+        preserveState: true,
+        onSuccess: () => {
+            props.localTask.labels = (props.localTask.labels || []).filter((label) => label.id !== deletingId);
+            showLabelEditor.value = false;
+            editingLabel.value = null;
+            router.reload({ only: ['workspace', 'task', 'tasksByStatus'] });
+            window.showSnackbar?.('Label deleted!', 'success');
+        },
+    });
+};
+
 // ===== Assignees =====
+const displayedAssignees = computed(() => {
+    if (props.isSubtask) {
+        return props.localTask?.assignees || [];
+    }
+
+    const subtasks = props.localTask?.subtasks || [];
+    const seen = new Set();
+
+    return subtasks
+        .flatMap((subtask) => subtask.assignees || [])
+        .filter((assignee) => {
+            if (seen.has(assignee.id)) return false;
+            seen.add(assignee.id);
+            return true;
+        });
+});
+
 const toggleAssignee = (userId) => {
+    if (!props.isSubtask) {
+        return;
+    }
+
     const isAssigned = props.task.assignees?.some(a => a.id === userId);
     const member = props.members.find(m => m.id === userId);
     if (isAssigned) {
@@ -318,39 +445,18 @@ const toggleAssignee = (userId) => {
     }
     const reloadAfterAssign = () => router.reload({ only: ['task', 'tasksByStatus'] });
 
-    if (props.isSubtask) {
-        const ids = props.task.assignees?.map(a => a.id) || [];
-        router.patch(getUpdateRoute(), { assignee_ids: ids }, {
-            preserveScroll: true,
-            onSuccess: () => {
-                window.showSnackbar?.(isAssigned ? 'Assignee removed!' : 'Assignee added!', 'success');
-                reloadAfterAssign();
-            },
-            onError: () => {
-                if (isAssigned) props.task.assignees.push(member);
-                else props.task.assignees = props.task.assignees.filter(a => a.id !== userId);
-            },
-        });
-    } else {
-        if (isAssigned) {
-            router.delete(route('tasks.unassign', [props.workspace.id, props.space.id, props.list.id, props.task.id]), {
-                data: { user_id: userId }, preserveScroll: true,
-                onSuccess: () => {
-                    window.showSnackbar?.('Assignee removed!', 'success');
-                    reloadAfterAssign();
-                },
-                onError: () => props.task.assignees.push(member),
-            });
-        } else {
-            router.post(route('tasks.assign', [props.workspace.id, props.space.id, props.list.id, props.task.id]), { user_id: userId }, {
-                preserveScroll: true,
-                onSuccess: () => {
-                    window.showSnackbar?.('Assignee added!', 'success');
-                    reloadAfterAssign();
-                },
-            });
-        }
-    }
+    const ids = props.task.assignees?.map(a => a.id) || [];
+    router.patch(getUpdateRoute(), { assignee_ids: ids }, {
+        preserveScroll: true,
+        onSuccess: () => {
+            window.showSnackbar?.(isAssigned ? 'Assignee removed!' : 'Assignee added!', 'success');
+            reloadAfterAssign();
+        },
+        onError: () => {
+            if (isAssigned) props.task.assignees.push(member);
+            else props.task.assignees = props.task.assignees.filter(a => a.id !== userId);
+        },
+    });
 };
 
 // ===== Subtask list management (for tasks, not subtask panel) =====
@@ -485,16 +591,26 @@ const removeSuccessor = (suc) => depFetch('DELETE', { subtask_id: suc.id, depend
                 </div>
                 <div class="prop-value">
                     <div class="d-flex align-center ga-2 flex-wrap">
-                        <v-tooltip v-for="assignee in localTask.assignees" :key="assignee.id" location="top">
+                        <v-tooltip v-for="assignee in displayedAssignees" :key="assignee.id" location="top">
                             <template v-slot:activator="{ props: tooltipProps }">
                                 <v-avatar v-bind="tooltipProps" :color="assignee.avatar_color || 'primary'" size="28"
-                                    class="cursor-pointer elevation-1" @click="toggleAssignee(assignee.id)">
+                                    class="elevation-1" :class="{ 'cursor-pointer': isSubtask }"
+                                    @click="isSubtask ? toggleAssignee(assignee.id) : null">
                                     <span class="text-xs font-weight-medium">{{ assignee.initials }}</span>
                                 </v-avatar>
                             </template>
-                            <span>{{ assignee.name }} (click to remove)</span>
+                            <span>{{ assignee.name }}{{ isSubtask ? ' (click to remove)' : '' }}</span>
                         </v-tooltip>
-                        <v-menu>
+
+                        <span v-if="!displayedAssignees.length" class="text-caption text-grey">
+                            {{ isSubtask ? 'No assignees yet' : 'No subtask assignees yet' }}
+                        </span>
+
+                        <v-chip v-if="!isSubtask && displayedAssignees.length" size="x-small" variant="tonal" color="info">
+                            Synced from subtasks
+                        </v-chip>
+
+                        <v-menu v-if="isSubtask">
                             <template v-slot:activator="{ props: menuProps }">
                                 <v-btn v-bind="menuProps" icon variant="tonal" size="x-small" color="grey">
                                     <v-icon size="14">mdi-plus</v-icon>
@@ -543,18 +659,45 @@ const removeSuccessor = (suc) => depFetch('DELETE', { subtask_id: suc.id, depend
                                     <v-icon size="14">mdi-plus</v-icon>
                                 </v-btn>
                             </template>
-                            <v-card color="surface" min-width="200">
-                                <v-list v-if="availableLabels.length" density="compact">
-                                    <v-list-item v-for="label in availableLabels" :key="label.id"
-                                        @click="addLabel(label)">
+                            <v-card color="surface" min-width="260">
+                                <v-list density="compact" max-height="260" class="overflow-auto">
+                                    <v-list-item v-for="label in workspaceLabels" :key="label.id"
+                                        @click="toggleLabel(label)">
                                         <template v-slot:prepend>
                                             <div class="w-3 h-3 rounded-full mr-2"
                                                 :style="{ backgroundColor: label.color }" />
                                         </template>
                                         <v-list-item-title class="text-body-2">{{ label.name }}</v-list-item-title>
+                                        <template #append>
+                                            <div class="d-flex align-center ga-1">
+                                                <v-icon v-if="isLabelSelected(label.id)" size="16" color="primary">
+                                                    mdi-check
+                                                </v-icon>
+                                                <v-btn
+                                                    icon
+                                                    variant="text"
+                                                    size="x-small"
+                                                    @click.stop="openEditLabelEditor(label)"
+                                                >
+                                                    <v-icon size="14">mdi-pencil-outline</v-icon>
+                                                </v-btn>
+                                            </div>
+                                        </template>
+                                    </v-list-item>
+
+                                    <v-list-item v-if="!workspaceLabels.length" disabled>
+                                        <v-list-item-title class="text-body-2 text-grey">No labels yet</v-list-item-title>
                                     </v-list-item>
                                 </v-list>
-                                <div v-else class="pa-3 text-body-2 text-grey">No labels available</div>
+
+                                <v-divider />
+
+                                <div class="pa-2 d-flex justify-end">
+                                    <v-btn size="small" variant="tonal" color="primary" @click="openCreateLabelEditor">
+                                        <v-icon start size="14">mdi-plus</v-icon>
+                                        Create Label
+                                    </v-btn>
+                                </div>
                             </v-card>
                         </v-menu>
                     </div>
@@ -1030,6 +1173,74 @@ const removeSuccessor = (suc) => depFetch('DELETE', { subtask_id: suc.id, depend
                     hide-details auto-grow @blur="saveDescription" />
             </div>
         </div>
+
+        <v-dialog v-model="showLabelEditor" max-width="420">
+            <v-card>
+                <v-card-title class="d-flex align-center ga-2">
+                    <v-icon :color="editingLabel ? 'warning' : 'primary'">mdi-label-outline</v-icon>
+                    <span>{{ editingLabel ? 'Edit Label' : 'Create Label' }}</span>
+                </v-card-title>
+
+                <v-card-text>
+                    <v-text-field
+                        v-model="labelForm.name"
+                        label="Label name"
+                        variant="outlined"
+                        density="compact"
+                        autofocus
+                        class="mb-3"
+                    />
+
+                    <v-text-field
+                        v-model="labelForm.color"
+                        label="Color (#RRGGBB)"
+                        variant="outlined"
+                        density="compact"
+                        class="mb-3"
+                    />
+
+                    <div class="text-caption text-grey mb-2">Preset colors</div>
+                    <div class="d-flex flex-wrap ga-2 mb-3">
+                        <button
+                            v-for="color in labelPresetColors"
+                            :key="color"
+                            type="button"
+                            class="label-color-option"
+                            :class="{ 'label-color-option--active': normalizeLabelColor(labelForm.color) === color }"
+                            :style="{ backgroundColor: color }"
+                            @click="labelForm.color = color"
+                        >
+                            <v-icon v-if="normalizeLabelColor(labelForm.color) === color" size="14" color="white">
+                                mdi-check
+                            </v-icon>
+                        </button>
+                    </div>
+
+                    <div class="d-flex align-center ga-2">
+                        <span class="text-caption text-grey">Preview</span>
+                        <v-chip :color="normalizeLabelColor(labelForm.color)" size="small" variant="flat">
+                            {{ labelForm.name || 'Label' }}
+                        </v-chip>
+                    </div>
+                </v-card-text>
+
+                <v-card-actions>
+                    <v-btn
+                        v-if="editingLabel"
+                        variant="text"
+                        color="error"
+                        @click="deleteWorkspaceLabel"
+                    >
+                        Delete
+                    </v-btn>
+                    <v-spacer />
+                    <v-btn variant="text" @click="showLabelEditor = false">Cancel</v-btn>
+                    <v-btn color="primary" :disabled="!labelForm.name?.trim()" @click="saveWorkspaceLabel">
+                        {{ editingLabel ? 'Save' : 'Create' }}
+                    </v-btn>
+                </v-card-actions>
+            </v-card>
+        </v-dialog>
     </div>
 </template>
 
@@ -1136,5 +1347,21 @@ const removeSuccessor = (suc) => depFetch('DELETE', { subtask_id: suc.id, depend
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
+}
+
+.label-color-option {
+    width: 28px;
+    height: 28px;
+    border-radius: 6px;
+    border: 2px solid transparent;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+}
+
+.label-color-option--active {
+    border-color: rgba(255, 255, 255, 0.9);
+    box-shadow: 0 0 0 1px rgba(0, 0, 0, 0.2);
 }
 </style>

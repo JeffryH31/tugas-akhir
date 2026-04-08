@@ -30,6 +30,9 @@ class SubtaskController extends Controller
      */
     public function store(StoreSubtaskRequest $request, Workspace $workspace, Space $space, TaskList $list, Task $task): RedirectResponse
     {
+        abort_unless((int) $space->workspace_id === (int) $workspace->id, 404);
+        abort_unless((int) $list->space_id === (int) $space->id, 404);
+        abort_unless((int) $task->task_list_id === (int) $list->id, 404);
         abort_unless($this->accessService->canManageTaskStructure($request->user(), $list), 403);
         try {
             $subtask = $this->subtaskService->create(
@@ -52,6 +55,10 @@ class SubtaskController extends Controller
      */
     public function update(UpdateSubtaskRequest $request, Workspace $workspace, Space $space, TaskList $list, Task $task, Subtask $subtask): RedirectResponse
     {
+        abort_unless((int) $space->workspace_id === (int) $workspace->id, 404);
+        abort_unless((int) $list->space_id === (int) $space->id, 404);
+        abort_unless((int) $task->task_list_id === (int) $list->id, 404);
+        abort_unless((int) $subtask->task_id === (int) $task->id, 404);
         abort_unless($this->accessService->canEditTasks($request->user(), $list), 403);
         try {
             $this->subtaskService->update($subtask, $request->validated(), $request->user());
@@ -67,6 +74,10 @@ class SubtaskController extends Controller
      */
     public function destroy(Request $request, Workspace $workspace, Space $space, TaskList $list, Task $task, Subtask $subtask): RedirectResponse
     {
+        abort_unless((int) $space->workspace_id === (int) $workspace->id, 404);
+        abort_unless((int) $list->space_id === (int) $space->id, 404);
+        abort_unless((int) $task->task_list_id === (int) $list->id, 404);
+        abort_unless((int) $subtask->task_id === (int) $task->id, 404);
         abort_unless($this->accessService->canManageTaskStructure($request->user(), $list), 403);
         try {
             $this->subtaskService->delete($subtask, $request->user());
@@ -81,6 +92,10 @@ class SubtaskController extends Controller
      */
     public function complete(Request $request, Workspace $workspace, Space $space, TaskList $list, Task $task, Subtask $subtask): RedirectResponse
     {
+        abort_unless((int) $space->workspace_id === (int) $workspace->id, 404);
+        abort_unless((int) $list->space_id === (int) $space->id, 404);
+        abort_unless((int) $task->task_list_id === (int) $list->id, 404);
+        abort_unless((int) $subtask->task_id === (int) $task->id, 404);
         abort_unless($this->accessService->canEditTasks($request->user(), $list), 403);
         $validated = $request->validate([
             'target_status_id' => [
@@ -114,6 +129,10 @@ class SubtaskController extends Controller
      */
     public function reopen(Request $request, Workspace $workspace, Space $space, TaskList $list, Task $task, Subtask $subtask): RedirectResponse
     {
+        abort_unless((int) $space->workspace_id === (int) $workspace->id, 404);
+        abort_unless((int) $list->space_id === (int) $space->id, 404);
+        abort_unless((int) $task->task_list_id === (int) $list->id, 404);
+        abort_unless((int) $subtask->task_id === (int) $task->id, 404);
         abort_unless($this->accessService->canEditTasks($request->user(), $list), 403);
         $subtask->markAsIncomplete();
 
@@ -129,10 +148,16 @@ class SubtaskController extends Controller
      */
     public function reorder(Request $request, Workspace $workspace, Space $space, TaskList $list, Task $task): RedirectResponse
     {
+        abort_unless((int) $space->workspace_id === (int) $workspace->id, 404);
+        abort_unless((int) $list->space_id === (int) $space->id, 404);
+        abort_unless((int) $task->task_list_id === (int) $list->id, 404);
         abort_unless($this->accessService->canManageTaskStructure($request->user(), $list), 403);
         $request->validate([
             'subtask_ids' => ['required', 'array'],
-            'subtask_ids.*' => ['integer', 'exists:subtasks,id'],
+            'subtask_ids.*' => [
+                'integer',
+                Rule::exists('subtasks', 'id')->where(fn($query) => $query->where('task_id', $task->id)),
+            ],
         ]);
 
         try {
@@ -148,13 +173,20 @@ class SubtaskController extends Controller
      */
     public function addLabel(Request $request, Workspace $workspace, Space $space, TaskList $list, Task $task, Subtask $subtask): RedirectResponse
     {
+        abort_unless((int) $space->workspace_id === (int) $workspace->id, 404);
+        abort_unless((int) $list->space_id === (int) $space->id, 404);
+        abort_unless((int) $task->task_list_id === (int) $list->id, 404);
+        abort_unless((int) $subtask->task_id === (int) $task->id, 404);
         abort_unless($this->accessService->canManageLabels($request->user(), $list), 403);
         $validated = $request->validate([
-            'label_id' => 'required|exists:labels,id',
+            'label_id' => [
+                'required',
+                Rule::exists('labels', 'id')->where(fn($query) => $query->where('workspace_id', $workspace->id)),
+            ],
         ]);
 
         try {
-            $label = Label::findOrFail($validated['label_id']);
+            $label = Label::where('workspace_id', $workspace->id)->findOrFail($validated['label_id']);
 
             $alreadyAttached = $subtask->labels()->whereKey($label->id)->exists();
             if (!$alreadyAttached) {
@@ -183,13 +215,20 @@ class SubtaskController extends Controller
      */
     public function removeLabel(Request $request, Workspace $workspace, Space $space, TaskList $list, Task $task, Subtask $subtask): RedirectResponse
     {
+        abort_unless((int) $space->workspace_id === (int) $workspace->id, 404);
+        abort_unless((int) $list->space_id === (int) $space->id, 404);
+        abort_unless((int) $task->task_list_id === (int) $list->id, 404);
+        abort_unless((int) $subtask->task_id === (int) $task->id, 404);
         abort_unless($this->accessService->canManageLabels($request->user(), $list), 403);
         $validated = $request->validate([
-            'label_id' => 'required|exists:labels,id',
+            'label_id' => [
+                'required',
+                Rule::exists('labels', 'id')->where(fn($query) => $query->where('workspace_id', $workspace->id)),
+            ],
         ]);
 
         try {
-            $label = Label::findOrFail($validated['label_id']);
+            $label = Label::where('workspace_id', $workspace->id)->findOrFail($validated['label_id']);
 
             $detached = $subtask->labels()->detach($label->id);
             if ($detached > 0) {

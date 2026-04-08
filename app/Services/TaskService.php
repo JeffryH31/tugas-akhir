@@ -311,9 +311,11 @@ class TaskService
      */
     public function reorder(TaskList $list, array $order): void
     {
-        DB::transaction(function () use ($order) {
+        DB::transaction(function () use ($list, $order) {
             foreach ($order as $position => $taskId) {
-                Task::where('id', $taskId)->update(['position' => $position]);
+                Task::where('id', $taskId)
+                    ->where('task_list_id', $list->id)
+                    ->update(['position' => $position]);
             }
         });
     }

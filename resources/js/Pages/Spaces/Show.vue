@@ -547,17 +547,7 @@ const onProductDragChange = (evt, statusId) => {
                 <div v-if="!space?.folders?.length && !space?.lists_without_folder?.length" class="empty-state">
                     <v-icon size="80" color="grey-darken-1" class="mb-4">mdi-folder-open-outline</v-icon>
                     <h2 class="text-xl font-semibold mb-2">This space is empty</h2>
-                    <p class="text-gray-500 mb-6">Get started by creating a product or folder</p>
-                    <div class="flex gap-3 justify-center">
-                        <v-btn color="primary" @click="showCreateList = true">
-                            <v-icon start>mdi-plus</v-icon>
-                            Create Product
-                        </v-btn>
-                        <v-btn variant="outlined" @click="showCreateFolder = true">
-                            <v-icon start>mdi-folder-plus-outline</v-icon>
-                            Create Folder
-                        </v-btn>
-                    </div>
+                    <p class="text-gray-500">Get started by creating a product or folder</p>
                 </div>
             </div>
         </div>

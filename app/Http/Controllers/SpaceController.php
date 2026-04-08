@@ -16,6 +16,7 @@ use App\Services\SpaceService;
 use Illuminate\Foundation\Auth\Access\AuthorizesRequests;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Validation\Rule;
 use Inertia\Inertia;
 use Inertia\Response;
 
@@ -55,6 +56,7 @@ class SpaceController extends Controller
      */
     public function show(Request $request, Workspace $workspace, Space $space): Response
     {
+        abort_unless((int) $space->workspace_id === (int) $workspace->id, 404);
         abort_unless($this->accessService->canViewSpace($request->user(), $space), 403);
         $space = $this->spaceService->getWithHierarchy($space);
         $statistics = $this->spaceService->getStatistics($space);
@@ -133,6 +135,7 @@ class SpaceController extends Controller
      */
     public function update(UpdateSpaceRequest $request, Workspace $workspace, Space $space): RedirectResponse
     {
+        abort_unless((int) $space->workspace_id === (int) $workspace->id, 404);
         abort_unless($this->accessService->canManageWorkspace($request->user(), $workspace), 403);
         try {
             $updatedSpace = $this->spaceService->update($space, $request->validated(), $request->user());
@@ -151,6 +154,7 @@ class SpaceController extends Controller
      */
     public function destroy(Request $request, Workspace $workspace, Space $space): RedirectResponse
     {
+        abort_unless((int) $space->workspace_id === (int) $workspace->id, 404);
         abort_unless($this->accessService->canManageWorkspace($request->user(), $workspace), 403);
         try {
             $this->spaceService->delete($space, $request->user());
@@ -168,6 +172,9 @@ class SpaceController extends Controller
      */
     public function toggleStar(Request $request, Workspace $workspace, Space $space): RedirectResponse
     {
+        abort_unless((int) $space->workspace_id === (int) $workspace->id, 404);
+        abort_unless($this->accessService->canViewSpace($request->user(), $space), 403);
+
         try {
             $updatedSpace = $this->spaceService->toggleStar($space);
 
@@ -185,6 +192,8 @@ class SpaceController extends Controller
      */
     public function reorder(ReorderRequest $request, Workspace $workspace): RedirectResponse
     {
+        abort_unless($this->accessService->canManageWorkspace($request->user(), $workspace), 403);
+
         try {
             $this->spaceService->reorder($workspace, $request->order);
 
@@ -199,6 +208,9 @@ class SpaceController extends Controller
      */
     public function addStatus(StoreStatusRequest $request, Workspace $workspace, Space $space): RedirectResponse
     {
+        abort_unless((int) $space->workspace_id === (int) $workspace->id, 404);
+        abort_unless($this->accessService->canManageSpace($request->user(), $space), 403);
+
         try {
             $status = $this->spaceService->addStatus($space, $request->validated());
 
@@ -216,6 +228,10 @@ class SpaceController extends Controller
      */
     public function updateStatus(UpdateStatusRequest $request, Workspace $workspace, Space $space, Status $status): RedirectResponse
     {
+        abort_unless((int) $space->workspace_id === (int) $workspace->id, 404);
+        abort_unless((int) $status->space_id === (int) $space->id, 404);
+        abort_unless($this->accessService->canManageSpace($request->user(), $space), 403);
+
         try {
             $this->spaceService->updateStatus($status, $request->validated());
 
@@ -230,8 +246,15 @@ class SpaceController extends Controller
      */
     public function deleteStatus(Request $request, Workspace $workspace, Space $space, Status $status): RedirectResponse
     {
+        abort_unless((int) $space->workspace_id === (int) $workspace->id, 404);
+        abort_unless((int) $status->space_id === (int) $space->id, 404);
+        abort_unless($this->accessService->canManageSpace($request->user(), $space), 403);
+
         $validated = $request->validate([
-            'move_to_status_id' => 'nullable|exists:statuses,id',
+            'move_to_status_id' => [
+                'nullable',
+                Rule::exists('statuses', 'id')->where(fn($query) => $query->where('space_id', $space->id)),
+            ],
         ]);
 
         try {
@@ -248,6 +271,9 @@ class SpaceController extends Controller
      */
     public function reorderStatuses(ReorderRequest $request, Workspace $workspace, Space $space): RedirectResponse
     {
+        abort_unless((int) $space->workspace_id === (int) $workspace->id, 404);
+        abort_unless($this->accessService->canManageSpace($request->user(), $space), 403);
+
         try {
             $this->spaceService->reorderStatuses($space, $request->order);
 
@@ -259,6 +285,7 @@ class SpaceController extends Controller
 
     public function addMember(Request $request, Workspace $workspace, Space $space): RedirectResponse
     {
+        abort_unless((int) $space->workspace_id === (int) $workspace->id, 404);
         abort_unless($this->accessService->canManageSpace($request->user(), $space), 403);
 
         $validated = $request->validate([
@@ -278,6 +305,7 @@ class SpaceController extends Controller
 
     public function updateMemberRole(Request $request, Workspace $workspace, Space $space): RedirectResponse
     {
+        abort_unless((int) $space->workspace_id === (int) $workspace->id, 404);
         abort_unless($this->accessService->canManageSpace($request->user(), $space), 403);
 
         $validated = $request->validate([
@@ -293,6 +321,7 @@ class SpaceController extends Controller
 
     public function removeMember(Request $request, Workspace $workspace, Space $space): RedirectResponse
     {
+        abort_unless((int) $space->workspace_id === (int) $workspace->id, 404);
         abort_unless($this->accessService->canManageSpace($request->user(), $space), 403);
 
         $validated = $request->validate([

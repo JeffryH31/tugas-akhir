@@ -84,6 +84,8 @@ class DashboardController extends Controller
      */
     public function switchWorkspace(Request $request, Workspace $workspace)
     {
+        abort_unless($this->accessService->canViewWorkspace($request->user(), $workspace), 403);
+
         session(['active_workspace_id' => $workspace->id]);
 
         return redirect()->route('dashboard');

@@ -453,7 +453,6 @@ const formatDuration = (seconds) => {
                                 <v-list-item
                                     prepend-icon="mdi-plus-circle-outline"
                                     title="Create Workspace"
-                                    subtitle="Set up a new team space"
                                     class="workspace-create-entry"
                                     @click="openCreateWorkspaceDialog"
                                 />
