@@ -20,7 +20,6 @@ return new class extends Migration
             $table->string('color', 7)->default('#6366F1');
             $table->string('icon')->nullable();
             $table->boolean('is_private')->default(false);
-            $table->boolean('is_starred')->default(false);
             $table->integer('position')->default(0);
             $table->json('settings')->nullable();
             $table->foreignId('created_by')->nullable()->constrained('users')->nullOnDelete();
@@ -39,6 +38,19 @@ return new class extends Migration
             $table->timestamps();
 
             $table->unique(['space_id', 'user_id']);
+            $table->index('user_id');
+        });
+
+        // Per-user starred spaces (global is_starred on the row would be shared across users).
+        Schema::create('starred_spaces', function (Blueprint $table) {
+            $table->id();
+            $table->foreignId('user_id')->constrained()->cascadeOnDelete();
+            $table->foreignId('space_id')->constrained()->cascadeOnDelete();
+            $table->foreignId('workspace_id')->constrained()->cascadeOnDelete();
+            $table->timestamp('starred_at')->useCurrent();
+
+            $table->unique(['user_id', 'space_id']);
+            $table->index(['user_id', 'workspace_id']);
         });
     }
 
@@ -47,6 +59,7 @@ return new class extends Migration
      */
     public function down(): void
     {
+        Schema::dropIfExists('starred_spaces');
         Schema::dropIfExists('space_members');
         Schema::dropIfExists('spaces');
     }

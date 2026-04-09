@@ -145,12 +145,19 @@ class SpaceService
     }
 
     /**
-     * Toggle starred status
+     * Toggle starred status for a specific user
      */
-    public function toggleStar(Space $space): Space
+    public function toggleStar(Space $space, User $user): bool
     {
-        $space->toggleStar();
-        return $space->fresh();
+        $isStarred = $space->starredBy()->where('user_id', $user->id)->exists();
+
+        if ($isStarred) {
+            $space->starredBy()->detach($user->id);
+            return false;
+        } else {
+            $space->starredBy()->attach($user->id, ['workspace_id' => $space->workspace_id]);
+            return true;
+        }
     }
 
     /**

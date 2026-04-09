@@ -33,6 +33,7 @@ class Subtask extends Model
         'most_likely_estimate',
         'pessimistic_estimate',
         'time_spent',
+        'progress',
         'position',
         'is_archived',
         'custom_fields',
@@ -51,6 +52,7 @@ class Subtask extends Model
         'most_likely_estimate' => 'integer',
         'pessimistic_estimate' => 'integer',
         'time_spent' => 'integer',
+        'progress' => 'integer',
         'is_archived' => 'boolean',
         'custom_fields' => 'array',
         'priority_level' => PriorityLevel::class,
@@ -272,6 +274,7 @@ class Subtask extends Model
         $payload = [
             'completed_at' => now(),
             'completed_by' => $user->id,
+            'progress' => 100,
         ];
 
         if ($resolvedStatusId) {
@@ -288,6 +291,7 @@ class Subtask extends Model
         $payload = [
             'completed_at' => null,
             'completed_by' => null,
+            'progress' => 0,
         ];
 
         if ($defaultOpenStatusId) {

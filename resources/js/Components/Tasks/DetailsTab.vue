@@ -54,10 +54,13 @@ const formatTimeEstimate = (minutes) => {
 const formatDate = (d) => d
     ? new Date(d).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })
     : 'Not set';
-const formatPertEstimate = (m) => {
-    if (!m) return 'Not set';
-    const h = m / 60;
-    return h % 1 === 0 ? `${h}h` : `${h.toFixed(1)}h`;
+const formatVariance = (minutes) => {
+    if (!minutes) return null;
+    const abs = Math.abs(minutes);
+    const h = Math.floor(abs / 60);
+    const m = abs % 60;
+    const sign = minutes > 0 ? '+' : '-';
+    return h > 0 ? `${sign}${h}h ${m}m` : `${sign}${m}m`;
 };
 const formatSubtaskEstimate = (m) => {
     if (!m) return '';
@@ -112,7 +115,6 @@ const saveDescription = () => {
             preserveScroll: true,
             onSuccess: () => {
                 router.reload({ only: ['task', 'tasksByStatus'] });
-                window.showSnackbar?.('Description updated!', 'success');
             },
         });
     }
@@ -145,16 +147,10 @@ const sprintDisplayName = (item) => {
     return 'Backlog';
 };
 
-const changeStatus = (id) => {
-    router.patch(getUpdateRoute(), { status_id: id }, {
-        preserveScroll: true,
-        onSuccess: () => { router.reload({ only: ['task', 'tasksByStatus'] }); window.showSnackbar?.('Status changed!', 'success'); },
-    });
-};
 const changePriority = (level) => {
     router.patch(getUpdateRoute(), { priority_level: level }, {
         preserveScroll: true,
-        onSuccess: () => { router.reload({ only: ['task', 'tasksByStatus'] }); window.showSnackbar?.('Priority changed!', 'success'); },
+        onSuccess: () => { router.reload({ only: ['task', 'tasksByStatus'] }); },
     });
 };
 const isSprintActive = (sprint) => {
@@ -175,7 +171,7 @@ const isSprintActive = (sprint) => {
 const changeSprint = (id) => {
     router.patch(getUpdateRoute(), { sprint_id: id }, {
         preserveScroll: true,
-        onSuccess: () => { router.reload({ only: ['task', 'tasksByStatus'] }); window.showSnackbar?.(id ? 'Added to sprint!' : 'Removed from sprint!', 'success'); },
+        onSuccess: () => { router.reload({ only: ['task', 'tasksByStatus'] }); },
     });
 };
 
@@ -185,7 +181,7 @@ const tempStartDate = ref(null);
 const showDueDatePicker = ref(false);
 const tempDueDate = ref(null);
 
-const openStartDatePicker = () => { tempStartDate.value = props.task.start_date; showStartDatePicker.value = true; };
+watch(showStartDatePicker, (isOpen) => { if (isOpen) tempStartDate.value = props.task.start_date ? String(props.task.start_date).substring(0, 10) : null; });
 const updateStartDate = () => {
     if (tempStartDate.value && props.task.due_date && tempStartDate.value > props.task.due_date) {
         window.showSnackbar?.('Start date cannot be after due date.', 'error'); return;
@@ -195,14 +191,14 @@ const updateStartDate = () => {
     showStartDatePicker.value = false;
     router.patch(getUpdateRoute(), { start_date: tempStartDate.value || '' }, {
         preserveScroll: true, preserveState: true,
-        onSuccess: () => window.showSnackbar?.('Start date updated!', 'success'),
+        onSuccess: () => router.reload({ only: ['task', 'tasksByStatus'] }),
         onError: (errors) => {
             props.task.start_date = old;
             window.showSnackbar?.(Object.values(errors).flat().join(', ') || 'Failed to update start date', 'error');
         },
     });
 };
-const openDueDatePicker = () => { tempDueDate.value = props.task.due_date; showDueDatePicker.value = true; };
+watch(showDueDatePicker, (isOpen) => { if (isOpen) tempDueDate.value = props.task.due_date ? String(props.task.due_date).substring(0, 10) : null; });
 const updateDueDate = () => {
     if (tempDueDate.value && props.task.start_date && tempDueDate.value < props.task.start_date) {
         window.showSnackbar?.('Due date cannot be before start date.', 'error'); return;
@@ -212,7 +208,7 @@ const updateDueDate = () => {
     showDueDatePicker.value = false;
     router.patch(getUpdateRoute(), { due_date: tempDueDate.value || '' }, {
         preserveScroll: true, preserveState: true,
-        onSuccess: () => window.showSnackbar?.('Due date updated!', 'success'),
+        onSuccess: () => router.reload({ only: ['task', 'tasksByStatus'] }),
         onError: (errors) => {
             props.task.due_date = old;
             window.showSnackbar?.(Object.values(errors).flat().join(', ') || 'Failed to update due date', 'error');
@@ -223,7 +219,7 @@ const updateDueDate = () => {
 // ===== Time estimate =====
 const showTimeEstimatePicker = ref(false);
 const tempTimeEstimate = ref(0);
-const openTimeEstimatePicker = () => { tempTimeEstimate.value = (props.task.time_estimate || 0) / 60; showTimeEstimatePicker.value = true; };
+watch(showTimeEstimatePicker, (isOpen) => { if (isOpen) tempTimeEstimate.value = (props.task.time_estimate || 0) / 60; });
 const updateTimeEstimate = () => {
     const hours = parseFloat(tempTimeEstimate.value) || 0;
     if (hours < 0) { window.showSnackbar?.('Time estimate cannot be negative.', 'error'); return; }
@@ -234,7 +230,7 @@ const updateTimeEstimate = () => {
     showTimeEstimatePicker.value = false;
     router.patch(getUpdateRoute(), { time_estimate: total }, {
         preserveScroll: true, preserveState: true,
-        onSuccess: () => window.showSnackbar?.('Time estimate updated!', 'success'),
+        onSuccess: () => router.reload({ only: ['task', 'tasksByStatus'] }),
         onError: () => { props.task.time_estimate = old; },
     });
 };
@@ -242,12 +238,13 @@ const updateTimeEstimate = () => {
 // ===== PERT =====
 const showPertPicker = ref(false);
 const tempOptimistic = ref(0), tempMostLikely = ref(0), tempPessimistic = ref(0);
-const openPertPicker = () => {
-    tempOptimistic.value = (props.task.optimistic_estimate || 0) / 60;
-    tempMostLikely.value = (props.task.most_likely_estimate || 0) / 60;
-    tempPessimistic.value = (props.task.pessimistic_estimate || 0) / 60;
-    showPertPicker.value = true;
-};
+watch(showPertPicker, (isOpen) => {
+    if (isOpen) {
+        tempOptimistic.value = (props.task.optimistic_estimate || 0) / 60;
+        tempMostLikely.value = (props.task.most_likely_estimate || 0) / 60;
+        tempPessimistic.value = (props.task.pessimistic_estimate || 0) / 60;
+    }
+});
 const updatePertEstimates = () => {
     const o = Math.round((parseFloat(tempOptimistic.value) || 0) * 60);
     const m = Math.round((parseFloat(tempMostLikely.value) || 0) * 60);
@@ -259,7 +256,7 @@ const updatePertEstimates = () => {
         pessimistic_estimate: p || null, time_estimate: expected || null,
     }, {
         preserveScroll: true, preserveState: true,
-        onSuccess: () => { showPertPicker.value = false; window.showSnackbar?.('PERT estimates updated!', 'success'); },
+        onSuccess: () => { showPertPicker.value = false; router.reload({ only: ['task', 'tasksByStatus'] }); },
     });
 };
 
@@ -273,7 +270,7 @@ const setBaselineFromCurrent = () => {
         baseline_due_date: props.task.due_date || null,
     }, {
         preserveScroll: true, preserveState: true,
-        onSuccess: () => window.showSnackbar?.('Baseline schedule captured.', 'success'),
+        onSuccess: () => router.reload({ only: ['task', 'tasksByStatus'] }),
     });
 };
 
@@ -326,7 +323,7 @@ const addLabel = (label) => {
         : route('tasks.labels.add', [props.workspace.id, props.space.id, props.list.id, props.task.id]);
     router.post(url, { label_id: label.id }, {
         preserveScroll: true, preserveState: true,
-        onSuccess: () => { router.reload({ only: ['task', 'tasksByStatus'] }); window.showSnackbar?.('Label added!', 'success'); },
+        onSuccess: () => { router.reload({ only: ['task', 'tasksByStatus'] }); },
         onError: () => { props.localTask.labels = props.localTask.labels.filter(l => l.id !== label.id); window.showSnackbar?.('Failed to add label', 'error'); },
     });
 };
@@ -366,7 +363,6 @@ const saveWorkspaceLabel = () => {
             onSuccess: () => {
                 showLabelEditor.value = false;
                 router.reload({ only: ['workspace', 'task', 'tasksByStatus'] });
-                window.showSnackbar?.('Label updated!', 'success');
             },
         });
         return;
@@ -378,7 +374,6 @@ const saveWorkspaceLabel = () => {
         onSuccess: () => {
             showLabelEditor.value = false;
             router.reload({ only: ['workspace', 'task', 'tasksByStatus'] });
-            window.showSnackbar?.('Label created!', 'success');
         },
     });
 };
@@ -403,7 +398,6 @@ const deleteWorkspaceLabel = async () => {
             showLabelEditor.value = false;
             editingLabel.value = null;
             router.reload({ only: ['workspace', 'task', 'tasksByStatus'] });
-            window.showSnackbar?.('Label deleted!', 'success');
         },
     });
 };
@@ -445,7 +439,6 @@ const toggleAssignee = (userId) => {
     router.patch(getUpdateRoute(), { assignee_ids: ids }, {
         preserveScroll: true,
         onSuccess: () => {
-            window.showSnackbar?.(isAssigned ? 'Assignee removed!' : 'Assignee added!', 'success');
             reloadAfterAssign();
         },
         onError: () => {
@@ -456,21 +449,6 @@ const toggleAssignee = (userId) => {
 };
 
 // ===== Subtask list management (for tasks, not subtask panel) =====
-const showAddSubtask = ref(false);
-const newSubtaskName = ref('');
-const editingSubtaskId = ref(null);
-const editingSubtaskName = ref('');
-
-const addSubtask = () => {
-    if (!newSubtaskName.value.trim()) return;
-    router.post(route('tasks.store', [props.workspace.id, props.space.id, props.list.id]), {
-        name: newSubtaskName.value, task_id: props.task.id, status_id: props.statuses[0]?.id,
-    }, {
-        preserveScroll: true,
-        onSuccess: () => { newSubtaskName.value = ''; showAddSubtask.value = false; },
-        onFinish: () => { router.reload({ only: ['task', 'tasksByStatus'] }); window.showSnackbar?.('Subtask added!', 'success'); },
-    });
-};
 const toggleSubtask = (subtask) => {
     const done = !!subtask.completed_at;
     const targetStatusId = getStoredSubtaskCompletionTarget(props.space?.id, props.statuses);
@@ -478,27 +456,10 @@ const toggleSubtask = (subtask) => {
 
     router.post(route(done ? 'tasks.subtasks.reopen' : 'tasks.subtasks.complete', [props.workspace.id, props.space.id, props.list.id, props.task.id, subtask.id]), payload, {
         preserveScroll: true,
-        onSuccess: () => { router.reload({ only: ['task', 'tasksByStatus'] }); window.showSnackbar?.(done ? 'Subtask reopened!' : 'Subtask completed!', 'success'); },
+        onSuccess: () => { router.reload({ only: ['task', 'tasksByStatus'] }); },
         onError: (errors) => { if (errors.dependency) window.showSnackbar?.(errors.dependency, 'error'); },
     });
 };
-const startEditSubtask = (sub) => { editingSubtaskId.value = sub.id; editingSubtaskName.value = sub.name; };
-const cancelSubtaskEdit = () => { editingSubtaskId.value = null; editingSubtaskName.value = ''; };
-const saveSubtaskEdit = (sub) => {
-    if (!editingSubtaskName.value.trim()) return;
-    router.patch(route('tasks.update', [props.workspace.id, props.space.id, props.list.id, sub.id]), { name: editingSubtaskName.value }, {
-        preserveScroll: true,
-        onSuccess: () => { cancelSubtaskEdit(); router.reload({ only: ['task', 'tasksByStatus'] }); window.showSnackbar?.('Subtask updated!', 'success'); },
-    });
-};
-const deleteSubtask = async (sub) => {
-    if (!await confirmDialog(`Delete subtask "${sub.name}"?`, 'Delete Subtask')) return;
-    router.delete(route('tasks.destroy', [props.workspace.id, props.space.id, props.list.id, sub.id]), {
-        preserveScroll: true,
-        onSuccess: () => { router.reload({ only: ['task', 'tasksByStatus'] }); window.showSnackbar?.('Subtask deleted!', 'success'); },
-    });
-};
-
 // ===== Dependencies =====
 const dependencyLoading = ref(false);
 
@@ -513,7 +474,7 @@ const dependencyCandidateSubtasks = computed(() => {
     return Array.isArray(props.siblingSubtasks) ? props.siblingSubtasks : [];
 });
 
-const getAvailablePredecessors = computed(() => {
+const availableForDependency = computed(() => {
     if (!props.isSubtask) return [];
 
     const taskId = Number(props.task?.id || 0);
@@ -528,20 +489,13 @@ const getAvailablePredecessors = computed(() => {
     });
 });
 
-const getAvailableSuccessors = computed(() => {
-    if (!props.isSubtask) return [];
-
-    const taskId = Number(props.task?.id || 0);
-    const depIds = new Set((props.task.dependencies || []).map(d => Number(d.id)));
-    const dntIds = new Set((props.task.dependents || []).map(d => Number(d.id)));
-
-    return dependencyCandidateSubtasks.value.filter((subtask) => {
-        const candidateId = Number(subtask?.id || 0);
-        if (!candidateId || candidateId === taskId) return false;
-
-        return !depIds.has(candidateId) && !dntIds.has(candidateId);
+// ===== Progress =====
+const updateProgress = (value) => {
+    router.patch(getUpdateRoute(), { progress: value }, {
+        preserveScroll: true, preserveState: true,
+        onSuccess: () => router.reload({ only: ['task', 'tasksByStatus'] }),
     });
-});
+};
 
 const depFetch = (method, body) => {
     const routeName = method === 'DELETE' ? 'tasks.cpm.dependencies.remove' : 'tasks.cpm.dependencies.add';
@@ -630,7 +584,8 @@ const removeSuccessor = (suc) => depFetch('DELETE', { subtask_id: suc.id, depend
                             {{ isSubtask ? 'No assignees yet' : 'No subtask assignees yet' }}
                         </span>
 
-                        <v-chip v-if="!isSubtask && displayedAssignees.length" size="x-small" variant="tonal" color="info">
+                        <v-chip v-if="!isSubtask && displayedAssignees.length" size="x-small" variant="tonal"
+                            color="info">
                             Synced from subtasks
                         </v-chip>
 
@@ -697,12 +652,8 @@ const removeSuccessor = (suc) => depFetch('DELETE', { subtask_id: suc.id, depend
                                                 <v-icon v-if="isLabelSelected(label.id)" size="16" color="primary">
                                                     mdi-check
                                                 </v-icon>
-                                                <v-btn
-                                                    icon
-                                                    variant="text"
-                                                    size="x-small"
-                                                    @click.stop="openEditLabelEditor(label)"
-                                                >
+                                                <v-btn icon variant="text" size="x-small"
+                                                    @click.stop="openEditLabelEditor(label)">
                                                     <v-icon size="14">mdi-pencil-outline</v-icon>
                                                 </v-btn>
                                             </div>
@@ -710,7 +661,8 @@ const removeSuccessor = (suc) => depFetch('DELETE', { subtask_id: suc.id, depend
                                     </v-list-item>
 
                                     <v-list-item v-if="!workspaceLabels.length" disabled>
-                                        <v-list-item-title class="text-body-2 text-grey">No labels yet</v-list-item-title>
+                                        <v-list-item-title class="text-body-2 text-grey">No labels
+                                            yet</v-list-item-title>
                                     </v-list-item>
                                 </v-list>
 
@@ -758,7 +710,8 @@ const removeSuccessor = (suc) => depFetch('DELETE', { subtask_id: suc.id, depend
                                         </template>
                                         <v-list-item-title>Backlog (Not in sprint)</v-list-item-title>
                                         <template v-slot:append>
-                                            <v-icon v-if="!localTask.sprint_id" size="16" color="primary">mdi-check</v-icon>
+                                            <v-icon v-if="!localTask.sprint_id" size="16"
+                                                color="primary">mdi-check</v-icon>
                                         </template>
                                     </v-list-item>
                                     <v-divider v-if="sprints.length" />
@@ -766,7 +719,8 @@ const removeSuccessor = (suc) => depFetch('DELETE', { subtask_id: suc.id, depend
                                         :active="sprint.id === localTask.sprint_id" @click="changeSprint(sprint.id)">
                                         <template v-slot:prepend>
                                             <v-icon size="16" :color="isSprintActive(sprint) ? 'success' : 'primary'">
-                                                {{ isSprintActive(sprint) ? 'mdi-rocket-launch-outline' : 'mdi-calendar-clock-outline' }}
+                                                {{ isSprintActive(sprint) ? 'mdi-rocket-launch-outline' :
+                                                    'mdi-calendar-clock-outline' }}
                                             </v-icon>
                                         </template>
                                         <v-list-item-title>{{ sprint.name }}</v-list-item-title>
@@ -949,7 +903,7 @@ const removeSuccessor = (suc) => depFetch('DELETE', { subtask_id: suc.id, depend
                             <template v-slot:activator="{ props: menuProps }">
                                 <v-btn v-bind="menuProps" variant="text" size="small" class="text-none"
                                     :color="localTask.pert_expected_estimate ? 'primary' : 'grey'">
-                                    {{ formatPertEstimate(localTask.pert_expected_estimate) }}
+                                    {{ formatTimeEstimate(localTask.pert_expected_estimate) }}
                                 </v-btn>
                             </template>
                             <v-card color="surface" min-width="320">
@@ -983,7 +937,7 @@ const removeSuccessor = (suc) => depFetch('DELETE', { subtask_id: suc.id, depend
                     <div class="prop-value d-flex align-center ga-2 flex-wrap">
                         <span class="text-body-2">
                             {{ localTask.baseline_start_date || localTask.baseline_due_date
-                                ? `${formatDate(localTask.baseline_start_date)} ->
+                                ? `${formatDate(localTask.baseline_start_date)} →
                             ${formatDate(localTask.baseline_due_date)}`
                                 : 'Not set' }}
                         </span>
@@ -991,8 +945,7 @@ const removeSuccessor = (suc) => depFetch('DELETE', { subtask_id: suc.id, depend
                             v-if="localTask.schedule_variance_minutes !== null && localTask.schedule_variance_minutes !== 0"
                             size="x-small" :color="localTask.schedule_variance_minutes > 0 ? 'warning' : 'success'"
                             variant="tonal">
-                            {{ localTask.schedule_variance_minutes > 0 ? '+' : '' }}{{
-                                localTask.schedule_variance_minutes }} min variance
+                            {{ formatVariance(localTask.schedule_variance_minutes) }} variance
                         </v-chip>
                         <v-btn size="x-small" variant="tonal" color="primary" @click="setBaselineFromCurrent">
                             Set from current dates
@@ -1035,8 +988,7 @@ const removeSuccessor = (suc) => depFetch('DELETE', { subtask_id: suc.id, depend
                                 <span class="text-body-2">
                                     {{ formatDuration((localTask.time_spent || 0) * 60) }}
                                 </span>
-                                <span v-if="localTask.time_estimate"
-                                    class="spent-percent"
+                                <span v-if="localTask.time_estimate" class="spent-percent"
                                     :class="{ 'spent-percent--over': (localTask.time_spent || 0) > localTask.time_estimate }">
                                     {{ getSpentPercentage(localTask.time_spent, localTask.time_estimate) }}%
                                 </span>
@@ -1051,9 +1003,25 @@ const removeSuccessor = (suc) => depFetch('DELETE', { subtask_id: suc.id, depend
 
                 <v-divider class="my-1" />
 
+                <!-- Progress (% Complete for EVM) -->
+                <div class="prop-row">
+                    <div class="prop-label">
+                        <v-icon size="16" class="prop-icon">mdi-percent</v-icon>
+                        Progress
+                    </div>
+                    <div class="prop-value d-flex align-center ga-3">
+                        <v-slider :model-value="localTask.progress ?? 0" min="0" max="100" step="1" density="compact"
+                            hide-details thumb-label class="progress-slider"
+                            :color="(localTask.progress ?? 0) >= 100 ? 'success' : 'primary'" @end="updateProgress" />
+                        <span class="text-body-2">{{ localTask.progress ?? 0 }}%</span>
+                    </div>
+                </div>
+
+                <v-divider class="my-1" />
+
                 <!-- Waiting On -->
-                <div class="prop-row" style="align-items: flex-start; padding-top: 10px; padding-bottom: 10px;">
-                    <div class="prop-label" style="padding-top: 2px;">
+                <div class="prop-row prop-row--top">
+                    <div class="prop-label prop-label--top">
                         <v-icon size="16" class="prop-icon">mdi-clock-outline</v-icon>
                         Waiting On
                     </div>
@@ -1074,7 +1042,7 @@ const removeSuccessor = (suc) => depFetch('DELETE', { subtask_id: suc.id, depend
                                 </template>
                                 <v-card color="surface" min-width="260">
                                     <v-list density="compact" max-height="200" class="overflow-auto">
-                                        <v-list-item v-for="s in getAvailablePredecessors" :key="s.id"
+                                        <v-list-item v-for="s in availableForDependency" :key="s.id"
                                             :disabled="dependencyLoading" @click="addDependency(s)">
                                             <template #prepend>
                                                 <v-icon size="14">mdi-subtitles-outline</v-icon>
@@ -1084,7 +1052,7 @@ const removeSuccessor = (suc) => depFetch('DELETE', { subtask_id: suc.id, depend
                                                 Est: {{ formatSubtaskEstimate(s.time_estimate) }}
                                             </v-list-item-subtitle>
                                         </v-list-item>
-                                        <v-list-item v-if="getAvailablePredecessors.length === 0" disabled>
+                                        <v-list-item v-if="availableForDependency.length === 0" disabled>
                                             <v-list-item-title class="text-body-2 text-grey">
                                                 No available subtasks
                                             </v-list-item-title>
@@ -1102,8 +1070,8 @@ const removeSuccessor = (suc) => depFetch('DELETE', { subtask_id: suc.id, depend
                 <v-divider class="my-1" />
 
                 <!-- Blocking -->
-                <div class="prop-row" style="align-items: flex-start; padding-top: 10px; padding-bottom: 10px;">
-                    <div class="prop-label" style="padding-top: 2px;">
+                <div class="prop-row prop-row--top">
+                    <div class="prop-label prop-label--top">
                         <v-icon size="16" class="prop-icon">mdi-hand-back-left</v-icon>
                         Blocking
                     </div>
@@ -1124,7 +1092,7 @@ const removeSuccessor = (suc) => depFetch('DELETE', { subtask_id: suc.id, depend
                                 </template>
                                 <v-card color="surface" min-width="260">
                                     <v-list density="compact" max-height="200" class="overflow-auto">
-                                        <v-list-item v-for="s in getAvailableSuccessors" :key="s.id"
+                                        <v-list-item v-for="s in availableForDependency" :key="s.id"
                                             :disabled="dependencyLoading" @click="addSuccessor(s)">
                                             <template #prepend>
                                                 <v-icon size="14">mdi-subtitles-outline</v-icon>
@@ -1134,7 +1102,7 @@ const removeSuccessor = (suc) => depFetch('DELETE', { subtask_id: suc.id, depend
                                                 Est: {{ formatSubtaskEstimate(s.time_estimate) }}
                                             </v-list-item-subtitle>
                                         </v-list-item>
-                                        <v-list-item v-if="getAvailableSuccessors.length === 0" disabled>
+                                        <v-list-item v-if="availableForDependency.length === 0" disabled>
                                             <v-list-item-title class="text-body-2 text-grey">
                                                 No available subtasks
                                             </v-list-item-title>
@@ -1208,23 +1176,11 @@ const removeSuccessor = (suc) => depFetch('DELETE', { subtask_id: suc.id, depend
                 </v-card-title>
 
                 <v-card-text>
-                    <v-text-field
-                        v-model="labelForm.name"
-                        label="Label name"
-                        variant="outlined"
-                        density="compact"
-                        autofocus
-                        class="mb-3"
-                    />
+                    <v-text-field v-model="labelForm.name" label="Label name" variant="outlined" density="compact"
+                        autofocus class="mb-3" />
 
-                    <v-text-field
-                        v-model="labelForm.color"
-                        label="Color (#RRGGBB)"
-                        variant="outlined"
-                        density="compact"
-                        class="mb-3"
-                        @blur="labelForm.color = normalizeLabelColor(labelForm.color)"
-                    />
+                    <v-text-field v-model="labelForm.color" label="Color (#RRGGBB)" variant="outlined" density="compact"
+                        class="mb-3" @blur="labelForm.color = normalizeLabelColor(labelForm.color)" />
 
                     <div class="d-flex align-center ga-3 mb-3">
                         <input v-model="labelForm.color" type="color" class="color-input-native" />
@@ -1233,12 +1189,7 @@ const removeSuccessor = (suc) => depFetch('DELETE', { subtask_id: suc.id, depend
                 </v-card-text>
 
                 <v-card-actions>
-                    <v-btn
-                        v-if="editingLabel"
-                        variant="text"
-                        color="error"
-                        @click="deleteWorkspaceLabel"
-                    >
+                    <v-btn v-if="editingLabel" variant="text" color="error" @click="deleteWorkspaceLabel">
                         Delete
                     </v-btn>
                     <v-spacer />
@@ -1415,5 +1366,21 @@ const removeSuccessor = (suc) => depFetch('DELETE', { subtask_id: suc.id, depend
 .color-input-native::-webkit-color-swatch {
     border: none;
     border-radius: 5px;
+}
+
+.prop-row--top {
+    align-items: flex-start;
+    padding-top: 10px;
+    padding-bottom: 10px;
+}
+
+.prop-label--top {
+    padding-top: 2px;
+}
+
+.progress-slider {
+    flex: 1;
+    min-width: 80px;
+    max-width: 160px;
 }
 </style>

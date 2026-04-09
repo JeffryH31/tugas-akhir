@@ -172,7 +172,6 @@ const addEntry = () => {
                     endDate: '',
                     endTime: '',
                 };
-                window.showSnackbar?.('Time entry added!', 'success');
                 router.reload({ only: ['task', 'tasksByStatus'] });
             },
         }
@@ -186,7 +185,6 @@ const deleteEntry = async (entryId) => {
         {
             preserveScroll: true,
             onSuccess: () => {
-                window.showSnackbar?.('Time entry deleted!', 'success');
                 router.reload({ only: ['task', 'tasksByStatus'] });
             },
         }
@@ -198,16 +196,6 @@ const deleteEntry = async (entryId) => {
     <div class="time-tab pa-5">
         <!-- Summary -->
         <div class="time-summary mb-5">
-            <div class="time-summary-card">
-                <div class="time-summary-icon bg-primary-subtle">
-                    <v-icon size="18" color="primary">mdi-timer-sand</v-icon>
-                </div>
-                <div>
-                    <div class="text-caption text-medium-emphasis mb-1">Estimated</div>
-                    <div class="text-subtitle-1 font-weight-bold">{{ formatTimeEstimate(task.time_estimate) }}</div>
-                </div>
-            </div>
-
             <div class="time-summary-card">
                 <div class="time-summary-icon"
                     :class="(task.time_spent || 0) > task.time_estimate ? 'bg-error-subtle' : 'bg-success-subtle'">

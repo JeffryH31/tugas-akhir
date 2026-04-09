@@ -58,9 +58,6 @@ const addMember = () => {
                 showAddMemberDialog.value = false;
                 selectedUserId.value = null;
                 selectedRole.value = 'member';
-                if (window.showSnackbar) {
-                    window.showSnackbar('Space member added successfully!', 'success');
-                }
             },
         }
     );
@@ -76,9 +73,6 @@ const changeMemberRole = (member, role) => {
         {
             preserveScroll: true,
             onSuccess: () => {
-                if (window.showSnackbar) {
-                    window.showSnackbar('Space role updated successfully!', 'success');
-                }
             },
         }
     );
@@ -95,9 +89,6 @@ const removeMember = (member) => {
             data: { user_id: member.id },
             preserveScroll: true,
             onSuccess: () => {
-                if (window.showSnackbar) {
-                    window.showSnackbar('Space member removed successfully!', 'success');
-                }
             },
         }
     );

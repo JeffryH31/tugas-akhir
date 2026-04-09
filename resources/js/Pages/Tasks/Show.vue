@@ -47,9 +47,6 @@ const updateTimeEstimate = () => {
             preserveScroll: true,
             onFinish: () => {
                 router.reload({ only: ['task'] });
-                if (window.showSnackbar) {
-                    window.showSnackbar('Time estimate updated!', 'success');
-                }
             }
         }
     );
@@ -215,7 +212,6 @@ const addLabel = (label) => {
         {
             preserveScroll: true,
             onSuccess: () => {
-                window.showSnackbar?.('Label added!', 'success');
                 router.reload({ only: ['task'] });
             },
             onError: () => {
@@ -268,7 +264,6 @@ const saveWorkspaceLabel = () => {
             onSuccess: () => {
                 showLabelEditor.value = false;
                 router.reload({ only: ['workspace', 'task'] });
-                window.showSnackbar?.('Label updated!', 'success');
             },
         });
         return;
@@ -279,7 +274,6 @@ const saveWorkspaceLabel = () => {
         onSuccess: () => {
             showLabelEditor.value = false;
             router.reload({ only: ['workspace', 'task'] });
-            window.showSnackbar?.('Label created!', 'success');
         },
     });
 };
@@ -303,7 +297,6 @@ const deleteWorkspaceLabel = async () => {
             showLabelEditor.value = false;
             editingLabel.value = null;
             router.reload({ only: ['workspace', 'task'] });
-            window.showSnackbar?.('Label deleted!', 'success');
         },
     });
 };
@@ -327,9 +320,6 @@ const addComment = () => {
             preserveScroll: true,
             onSuccess: () => {
                 newComment.value = '';
-                if (window.showSnackbar) {
-                    window.showSnackbar('Comment added!', 'success');
-                }
             },
             onError: (errors) => {
                 if (window.showSnackbar) {
@@ -378,7 +368,6 @@ const addSubtask = () => {
             onFinish: () => {
                 isProcessing.value = false;
                 router.reload({ only: ['task'] });
-                window.showSnackbar('Subtask added!', 'success');
             }
         }
     );
@@ -431,7 +420,6 @@ const saveSubtaskEdit = (subtask) => {
             },
             onFinish: () => {
                 router.reload({ only: ['task'] });
-                window.showSnackbar('Subtask updated!', 'success');
             }
         }
     );
@@ -451,7 +439,6 @@ const deleteSubtask = async (subtask) => {
                 preserveScroll: true,
                 onFinish: () => {
                     router.reload({ only: ['task'] });
-                    window.showSnackbar('Subtask deleted!', 'success');
                 }
             }
         );
@@ -477,7 +464,6 @@ const assignSubtaskMember = (subtask, member) => {
             preserveScroll: true,
             onSuccess: () => {
                 router.reload({ only: ['task'] });
-                window.showSnackbar(`Assigned to ${member.name}!`, 'success');
             }
         }
     );
@@ -495,7 +481,6 @@ const removeSubtaskAssignee = (subtask, assignee) => {
             preserveScroll: true,
             onSuccess: () => {
                 router.reload({ only: ['task'] });
-                window.showSnackbar(`Unassigned ${assignee.name}!`, 'success');
             }
         }
     );
@@ -510,7 +495,6 @@ const changeSubtaskSprint = (subtask, sprintId) => {
             preserveScroll: true,
             onFinish: () => {
                 router.reload({ only: ['task'] });
-                window.showSnackbar(sprintId ? 'Added to sprint!' : 'Removed from sprint!', 'success');
             }
         }
     );
@@ -675,7 +659,6 @@ const updateSubtaskTimeEstimate = (subtask, hours) => {
             preserveScroll: true,
             onFinish: () => {
                 router.reload({ only: ['task'] });
-                window.showSnackbar('Time estimate updated!', 'success');
             }
         }
     );

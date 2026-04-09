@@ -93,6 +93,12 @@ class User extends Authenticatable
             ->withTimestamps();
     }
 
+    public function starredSpaces(): BelongsToMany
+    {
+        return $this->belongsToMany(Space::class, 'starred_spaces', 'user_id', 'space_id')
+            ->withTimestamps();
+    }
+
     public function projectLists(): BelongsToMany
     {
         return $this->belongsToMany(TaskList::class, 'task_list_members')

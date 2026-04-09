@@ -38,9 +38,6 @@ const createSpace = () => {
                 newSpaceDescription.value = '';
                 newSpaceColor.value = '#6366F1';
                 showCreateSpace.value = false;
-                if (window.showSnackbar) {
-                    window.showSnackbar('Space created successfully!', 'success');
-                }
             },
         }
     );

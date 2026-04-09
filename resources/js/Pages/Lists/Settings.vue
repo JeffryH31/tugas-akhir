@@ -61,9 +61,6 @@ const addMember = () => {
                 showAddMemberDialog.value = false;
                 selectedUserId.value = null;
                 selectedRole.value = 'development_team';
-                if (window.showSnackbar) {
-                    window.showSnackbar('Project member added successfully!', 'success');
-                }
             },
         }
     );
@@ -79,9 +76,6 @@ const changeMemberRole = (member, role) => {
         {
             preserveScroll: true,
             onSuccess: () => {
-                if (window.showSnackbar) {
-                    window.showSnackbar('Project role updated successfully!', 'success');
-                }
             },
         }
     );
@@ -98,9 +92,6 @@ const removeMember = (member) => {
             data: { user_id: member.id },
             preserveScroll: true,
             onSuccess: () => {
-                if (window.showSnackbar) {
-                    window.showSnackbar('Project member removed successfully!', 'success');
-                }
             },
         }
     );

@@ -67,7 +67,6 @@ const startSprint = async () => {
         preserveScroll: true,
         onSuccess: () => {
             router.reload({ only: ['sprint', 'statistics', 'burndown'] });
-            window.showSnackbar?.('Sprint started!', 'success');
         },
     });
 };
@@ -80,7 +79,6 @@ const completeSprint = async () => {
         preserveScroll: true,
         onSuccess: () => {
             router.reload({ only: ['sprint', 'statistics', 'burndown'] });
-            window.showSnackbar?.('Sprint completed!', 'success');
         },
     });
 };
@@ -109,7 +107,6 @@ const addTaskToSprint = (task) => {
             onFinish: () => {
                 isMoving.value = false;
                 router.reload({ only: ['sprint', 'backlogSubtasks', 'statistics', 'burndown'] });
-                window.showSnackbar('Task added to sprint!', 'success');
             },
         }
     );
@@ -127,7 +124,6 @@ const removeTaskFromSprint = (task) => {
             onFinish: () => {
                 isMoving.value = false;
                 router.reload({ only: ['sprint', 'backlogSubtasks', 'statistics', 'burndown'] });
-                window.showSnackbar('Task removed from sprint!', 'success');
             },
         }
     );

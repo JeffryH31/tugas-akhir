@@ -33,6 +33,7 @@ return new class extends Migration
             $table->integer('most_likely_estimate')->nullable(); // in minutes
             $table->integer('pessimistic_estimate')->nullable(); // in minutes
             $table->integer('time_spent')->default(0); // in minutes (denormalized for performance)
+            $table->tinyInteger('progress')->default(0); // 0-100, manually set % complete for EVM
 
             $table->integer('position')->default(0);
 
@@ -60,6 +61,7 @@ return new class extends Migration
             $table->timestamps();
 
             $table->unique(['subtask_id', 'user_id']);
+            $table->index('user_id');
         });
 
         Schema::create('subtask_labels', function (Blueprint $table) {
@@ -69,6 +71,7 @@ return new class extends Migration
             $table->timestamps();
 
             $table->unique(['subtask_id', 'label_id']);
+            $table->index('label_id');
         });
 
         Schema::create('subtask_dependencies', function (Blueprint $table) {
@@ -91,6 +94,11 @@ return new class extends Migration
      */
     public function down(): void
     {
+        // Drop the FK added to comments before dropping subtasks.
+        Schema::table('comments', function (Blueprint $table) {
+            $table->dropForeign(['subtask_id']);
+        });
+
         Schema::dropIfExists('subtask_dependencies');
         Schema::dropIfExists('subtask_labels');
         Schema::dropIfExists('subtask_assignees');

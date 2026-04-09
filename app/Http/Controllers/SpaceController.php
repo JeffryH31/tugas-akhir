@@ -61,6 +61,9 @@ class SpaceController extends Controller
         $space = $this->spaceService->getWithHierarchy($space);
         $statistics = $this->spaceService->getStatistics($space);
 
+        // Annotate is_starred for the current user.
+        $space->is_starred = $space->starredBy()->where('user_id', $request->user()->id)->exists();
+
         // Products (TaskLists) grouped by status for kanban
         $productsByStatus = $this->spaceService->getProductsByStatus($space);
 
@@ -176,12 +179,9 @@ class SpaceController extends Controller
         abort_unless($this->accessService->canViewSpace($request->user(), $space), 403);
 
         try {
-            $updatedSpace = $this->spaceService->toggleStar($space);
+            $this->spaceService->toggleStar($space, $request->user());
 
-            return redirect()->back()->with([
-                'success' => 'Space starred status updated.',
-                'space' => $updatedSpace
-            ]);
+            return redirect()->back()->with('success', 'Space starred status updated.');
         } catch (\Exception $e) {
             return redirect()->back()->withErrors(['error' => 'Failed to update space: ' . $e->getMessage()]);
         }

@@ -134,14 +134,14 @@ class Task extends Model
     public function dependencies(): BelongsToMany
     {
         return $this->belongsToMany(Task::class, 'task_dependencies', 'task_id', 'depends_on_task_id')
-            ->withPivot('type')
+            ->withPivot('dependency_type')
             ->withTimestamps();
     }
 
     public function dependents(): BelongsToMany
     {
         return $this->belongsToMany(Task::class, 'task_dependencies', 'depends_on_task_id', 'task_id')
-            ->withPivot('type')
+            ->withPivot('dependency_type')
             ->withTimestamps();
     }
 

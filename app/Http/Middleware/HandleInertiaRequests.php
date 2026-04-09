@@ -7,6 +7,7 @@ use App\Models\Activity;
 use App\Models\TimeEntry;
 use App\Models\Workspace;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\ViewErrorBag;
 use Inertia\Middleware;
 
@@ -85,6 +86,22 @@ class HandleInertiaRequests extends Middleware
                     },
                     'labels' => fn($q) => $q->orderBy('name'),
                 ]);
+
+                // Compute per-user starred spaces and annotate each space with is_starred.
+                $starredSpaceIds = DB::table('starred_spaces')
+                    ->where('user_id', $request->user()->id)
+                    ->where('workspace_id', $activeWorkspace->id)
+                    ->pluck('space_id')
+                    ->toArray();
+
+                $starredSpaces = collect();
+                foreach ($activeWorkspace->spaces as $space) {
+                    $space->is_starred = in_array($space->id, $starredSpaceIds);
+                    if ($space->is_starred) {
+                        $starredSpaces->push($space);
+                    }
+                }
+                $activeWorkspace->setRelation('starred_spaces', $starredSpaces);
             }
         }
 

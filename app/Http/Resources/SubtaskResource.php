@@ -36,6 +36,7 @@ class SubtaskResource extends JsonResource
             'pert_expected_estimate' => $this->pert_expected_estimate,
             'pert_variance' => $this->pert_variance,
             'time_spent' => $this->time_spent,
+            'progress' => $this->progress,
             'position' => $this->position,
             'is_archived' => $this->is_archived,
             'is_overdue' => $this->isOverdue(),

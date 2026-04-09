@@ -30,6 +30,7 @@ return new class extends Migration
 
             $table->index(['space_id', 'folder_id', 'position']);
             $table->index(['folder_id', 'is_archived']);
+            $table->index('is_archived');
         });
 
         Schema::create('task_list_members', function (Blueprint $table) {

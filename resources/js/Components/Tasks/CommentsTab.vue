@@ -33,7 +33,6 @@ const submitComment = () => {
             preserveScroll: true,
             onSuccess: () => {
                 newComment.value = '';
-                window.showSnackbar?.('Comment added!', 'success');
                 emit('updated');
             },
             onError: () => {

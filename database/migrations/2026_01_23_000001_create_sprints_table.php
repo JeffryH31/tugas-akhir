@@ -24,6 +24,7 @@ return new class extends Migration
             $table->softDeletes();
 
             $table->index('is_active');
+            $table->index('space_id');
         });
     }
 

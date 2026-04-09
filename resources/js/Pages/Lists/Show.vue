@@ -223,9 +223,6 @@ const persistBoardOrder = (successMessage) => {
             {
                 preserveScroll: true,
                 onSuccess: () => {
-                    if (window.showSnackbar && successMessage) {
-                        window.showSnackbar(successMessage, 'success');
-                    }
                     router.reload({ only: ['tasksByStatus'] });
                 },
                 onError: () => {
@@ -245,9 +242,6 @@ const persistBoardOrder = (successMessage) => {
         {
             preserveScroll: true,
             onSuccess: () => {
-                if (window.showSnackbar && successMessage) {
-                    window.showSnackbar(successMessage, 'success');
-                }
                 router.reload({ only: ['tasksByStatus'] });
             },
             onError: () => {
@@ -325,9 +319,6 @@ const handleTaskComplete = (task) => {
         {
             preserveScroll: true,
             onSuccess: () => {
-                if (window.showSnackbar) {
-                    window.showSnackbar(wasCompleted ? 'Subtask reopened!' : 'Subtask completed!', 'success');
-                }
                 router.reload({ only: ['tasksByStatus'] });
             },
             onError: (errors) => {
@@ -511,7 +502,6 @@ const saveSprint = () => {
             preserveScroll: true,
             onSuccess: () => {
                 showCreateSprint.value = false;
-                window.showSnackbar?.('Sprint updated!', 'success');
                 router.reload({ only: ['sprints'] });
             },
             onError: (errors) => {
@@ -528,7 +518,6 @@ const saveSprint = () => {
         preserveScroll: true,
         onSuccess: () => {
             showCreateSprint.value = false;
-            window.showSnackbar?.('Sprint created!', 'success');
             router.reload({ only: ['sprints'] });
         },
         onError: (errors) => {
@@ -747,7 +736,6 @@ const deleteSprint = async (sprint) => {
     router.delete(route('sprints.destroy', [props.workspace.id, props.space.id, sprint.id]), {
         preserveScroll: true,
         onSuccess: () => {
-            window.showSnackbar?.('Sprint deleted!', 'success');
             router.reload({ only: ['sprints'] });
         },
     });
@@ -777,9 +765,6 @@ const handleAddTask = ({ name, status_id }) => {
             {
                 preserveScroll: true,
                 onSuccess: (response) => {
-                    if (window.showSnackbar) {
-                        window.showSnackbar('Subtask added successfully!', 'success');
-                    }
                     // Reload subtask view
                     router.visit(route('lists.show', [props.workspace.id, props.space.id, props.list.id]) + `?task_id=${props.parentTask.id}`, {
                         preserveScroll: true
@@ -806,9 +791,6 @@ const handleAddTask = ({ name, status_id }) => {
             {
                 preserveScroll: true,
                 onSuccess: (response) => {
-                    if (window.showSnackbar) {
-                        window.showSnackbar('Task added successfully!', 'success');
-                    }
                     router.reload({ only: ['tasksByStatus'] });
                 },
                 onError: (errors) => {
@@ -846,9 +828,6 @@ const addStatus = () => {
         {
             preserveScroll: true,
             onSuccess: () => {
-                if (window.showSnackbar) {
-                    window.showSnackbar('Status added successfully!', 'success');
-                }
             }
         }
     );

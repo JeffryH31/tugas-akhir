@@ -95,6 +95,7 @@ class SubtaskService
                 'optimistic_estimate',
                 'most_likely_estimate',
                 'pessimistic_estimate',
+                'progress',
             ];
 
             // Capture status/priority before update for readable activity descriptions

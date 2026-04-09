@@ -63,9 +63,7 @@ const addMember = () => {
                 showAddMember.value = false;
                 selectedUser.value = null;
                 selectedRole.value = 'member';
-                if (window.showSnackbar) {
-                    window.showSnackbar('Member added successfully!', 'success');
-                }
+            }
             }
         }
     );
@@ -103,9 +101,6 @@ const createUser = () => {
                     hourly_rate: 25,
                     role: 'member',
                 };
-                if (window.showSnackbar) {
-                    window.showSnackbar('User created successfully!', 'success');
-                }
             },
         }
     );
@@ -135,9 +130,6 @@ const updateUser = () => {
             onSuccess: () => {
                 showEditUser.value = false;
                 editingUser.value = null;
-                if (window.showSnackbar) {
-                    window.showSnackbar('User updated successfully!', 'success');
-                }
             },
         }
     );
@@ -153,9 +145,6 @@ const removeMember = async (member) => {
             data: { user_id: member.id },
             preserveScroll: true,
             onSuccess: () => {
-                if (window.showSnackbar) {
-                    window.showSnackbar('Member removed successfully!', 'success');
-                }
             }
         }
     );
@@ -172,9 +161,6 @@ const changeRole = (member, newRole) => {
         {
             preserveScroll: true,
             onSuccess: () => {
-                if (window.showSnackbar) {
-                    window.showSnackbar('Role updated successfully!', 'success');
-                }
             }
         }
     );
@@ -269,9 +255,6 @@ const addSpaceMember = () => {
                 showAddSpaceMember.value = false;
                 selectedSpaceUser.value = null;
                 selectedSpaceRole.value = 'member';
-                if (window.showSnackbar) {
-                    window.showSnackbar('Space member added successfully!', 'success');
-                }
             },
         }
     );
@@ -288,9 +271,6 @@ const changeSpaceMemberRole = (space, member, role) => {
             preserveScroll: true,
             preserveState: true,
             onSuccess: () => {
-                if (window.showSnackbar) {
-                    window.showSnackbar('Space role updated successfully!', 'success');
-                }
             },
         }
     );
@@ -308,9 +288,6 @@ const removeSpaceMember = async (space, member) => {
             preserveScroll: true,
             preserveState: true,
             onSuccess: () => {
-                if (window.showSnackbar) {
-                    window.showSnackbar('Space member removed successfully!', 'success');
-                }
             },
         }
     );
@@ -406,9 +383,6 @@ const addProjectMember = () => {
                 showAddProjectMember.value = false;
                 selectedProjectUser.value = null;
                 selectedProjectRole.value = 'development_team';
-                if (window.showSnackbar) {
-                    window.showSnackbar('Project member added successfully!', 'success');
-                }
             },
         }
     );
@@ -425,9 +399,6 @@ const changeProjectMemberRole = (project, member, role) => {
             preserveScroll: true,
             preserveState: true,
             onSuccess: () => {
-                if (window.showSnackbar) {
-                    window.showSnackbar('Project role updated successfully!', 'success');
-                }
             },
         }
     );
@@ -445,9 +416,6 @@ const removeProjectMember = async (project, member) => {
             preserveScroll: true,
             preserveState: true,
             onSuccess: () => {
-                if (window.showSnackbar) {
-                    window.showSnackbar('Project member removed successfully!', 'success');
-                }
             },
         }
     );
@@ -474,9 +442,6 @@ const deleteWorkspace = () => {
         {
             onSuccess: () => {
                 confirmationName.value = '';
-                if (window.showSnackbar) {
-                    window.showSnackbar('Workspace deleted successfully!', 'success');
-                }
             },
             onError: () => {
                 if (window.showSnackbar) {

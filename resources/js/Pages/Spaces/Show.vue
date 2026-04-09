@@ -33,9 +33,6 @@ const createFolder = () => {
             onSuccess: () => {
                 newFolderName.value = '';
                 showCreateFolder.value = false;
-                if (window.showSnackbar) {
-                    window.showSnackbar('Folder created successfully!', 'success');
-                }
             }
         }
     );
@@ -56,9 +53,6 @@ const createList = () => {
                 newListName.value = '';
                 selectedFolderId.value = null;
                 showCreateList.value = false;
-                if (window.showSnackbar) {
-                    window.showSnackbar('Product created successfully!', 'success');
-                }
             }
         }
     );
@@ -104,9 +98,6 @@ const updateSpace = () => {
             preserveScroll: true,
             onSuccess: () => {
                 showEditSpace.value = false;
-                if (window.showSnackbar) {
-                    window.showSnackbar('Space updated successfully!', 'success');
-                }
             }
         }
     );
@@ -119,9 +110,6 @@ const confirmDeleteSpace = () => {
         route('spaces.destroy', [props.workspace.id, props.space.id]),
         {
             onSuccess: () => {
-                if (window.showSnackbar) {
-                    window.showSnackbar('Space deleted successfully!', 'success');
-                }
                 router.visit(route('dashboard'));
             }
         }
@@ -150,9 +138,6 @@ const updateFolder = () => {
             onSuccess: () => {
                 showEditFolder.value = false;
                 editingFolder.value = null;
-                if (window.showSnackbar) {
-                    window.showSnackbar('Folder updated successfully!', 'success');
-                }
             }
         }
     );
@@ -177,9 +162,6 @@ const confirmDeleteFolder = () => {
             onSuccess: () => {
                 showDeleteFolder.value = false;
                 deletingFolder.value = null;
-                if (window.showSnackbar) {
-                    window.showSnackbar('Folder deleted successfully!', 'success');
-                }
             }
         }
     );
@@ -207,9 +189,6 @@ const moveListToFolder = () => {
             onSuccess: () => {
                 showMoveList.value = false;
                 movingList.value = null;
-                if (window.showSnackbar) {
-                    window.showSnackbar('Product moved successfully!', 'success');
-                }
             }
         }
     );
@@ -265,9 +244,6 @@ const handleDrop = (event, targetFolderId = null) => {
         {
             preserveScroll: true,
             onSuccess: () => {
-                if (window.showSnackbar) {
-                    window.showSnackbar('Product moved successfully!', 'success');
-                }
             },
             onError: () => {
                 if (window.showSnackbar) {

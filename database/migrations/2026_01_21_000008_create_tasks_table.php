@@ -34,6 +34,7 @@ return new class extends Migration
 
             $table->index(['task_list_id', 'status_id', 'position']);
             $table->index(['created_by']);
+            $table->index('is_archived');
         });
 
         Schema::create('task_assignees', function (Blueprint $table) {
@@ -45,6 +46,7 @@ return new class extends Migration
             $table->timestamps();
 
             $table->unique(['task_id', 'user_id']);
+            $table->index('user_id');
         });
 
         Schema::create('task_labels', function (Blueprint $table) {
@@ -54,13 +56,14 @@ return new class extends Migration
             $table->timestamps();
 
             $table->unique(['task_id', 'label_id']);
+            $table->index('label_id');
         });
 
         Schema::create('task_dependencies', function (Blueprint $table) {
             $table->id();
             $table->foreignId('task_id')->constrained()->cascadeOnDelete();
             $table->foreignId('depends_on_task_id')->constrained('tasks')->cascadeOnDelete();
-            $table->string('type')->default('blocking'); // blocking, waiting_on
+            $table->enum('dependency_type', ['blocks', 'blocked_by', 'relates_to'])->default('blocks');
             $table->timestamps();
 
             $table->unique(['task_id', 'depends_on_task_id']);

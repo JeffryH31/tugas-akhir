@@ -22,7 +22,6 @@ class Space extends Model
         'color',
         'icon',
         'is_private',
-        'is_starred',
         'position',
         'settings',
         'created_by',
@@ -30,7 +29,6 @@ class Space extends Model
 
     protected $casts = [
         'is_private' => 'boolean',
-        'is_starred' => 'boolean',
         'settings' => 'array',
     ];
 
@@ -90,6 +88,12 @@ class Space extends Model
             ->withTimestamps();
     }
 
+    public function starredBy(): BelongsToMany
+    {
+        return $this->belongsToMany(User::class, 'starred_spaces', 'space_id', 'user_id')
+            ->withTimestamps();
+    }
+
     public function folders(): HasMany
     {
         return $this->hasMany(Folder::class)->whereNull('parent_id')->orderBy('position');
@@ -142,21 +146,11 @@ class Space extends Model
     }
 
 
-    public function scopeStarred($query)
-    {
-        return $query->where('is_starred', true);
-    }
-
     public function scopePublic($query)
     {
         return $query->where('is_private', false);
     }
 
-
-    public function toggleStar(): void
-    {
-        $this->update(['is_starred' => !$this->is_starred]);
-    }
 
     public function getDefaultStatus(): ?Status
     {

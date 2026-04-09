@@ -182,7 +182,6 @@ const createWorkspace = () => {
         onSuccess: () => {
             newWorkspaceName.value = '';
             showCreateWorkspace.value = false;
-            showSnackbar('Workspace created successfully!', 'success');
             router.reload({ only: ['workspaces', 'activeWorkspace'] });
         },
         onFinish: () => { isProcessing.value = false; }

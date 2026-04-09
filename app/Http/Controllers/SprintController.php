@@ -8,6 +8,7 @@ use App\Models\Space;
 use App\Models\Sprint;
 use App\Models\TaskList;
 use App\Models\Workspace;
+use App\Services\AccessService;
 use App\Services\SprintService;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
@@ -16,7 +17,7 @@ class SprintController extends Controller
 {
     protected $sprintService;
 
-    public function __construct(SprintService $sprintService)
+    public function __construct(SprintService $sprintService, protected AccessService $accessService)
     {
         $this->sprintService = $sprintService;
     }
@@ -26,6 +27,8 @@ class SprintController extends Controller
      */
     public function index(Request $request, Workspace $workspace, Space $space)
     {
+        abort_unless($this->accessService->canViewSpace($request->user(), $space), 403);
+
         $products = $space->lists()
             ->select('id', 'name', 'space_id')
             ->orderBy('position')
@@ -56,8 +59,9 @@ class SprintController extends Controller
     /**
      * Display the sprint board.
      */
-    public function show(Workspace $workspace, Space $space, Sprint $sprint)
+    public function show(Request $request, Workspace $workspace, Space $space, Sprint $sprint)
     {
+        abort_unless($this->accessService->canViewSpace($request->user(), $space), 403);
         $this->ensureSprintBelongsToSpace($sprint, $space);
 
         $list = $sprint->taskList;
@@ -97,6 +101,8 @@ class SprintController extends Controller
      */
     public function store(StoreSprintRequest $request, Workspace $workspace, Space $space)
     {
+        abort_unless($this->accessService->canManageSpace($request->user(), $space), 403);
+
         $validated = $request->validated();
 
         $list = TaskList::where('space_id', $space->id)->findOrFail((int) $validated['list_id']);
@@ -110,6 +116,7 @@ class SprintController extends Controller
      */
     public function update(UpdateSprintRequest $request, Workspace $workspace, Space $space, Sprint $sprint)
     {
+        abort_unless($this->accessService->canManageSpace($request->user(), $space), 403);
         $this->ensureSprintBelongsToSpace($sprint, $space);
 
         $validated = $request->validated();
@@ -125,8 +132,9 @@ class SprintController extends Controller
     /**
      * Start sprint.
      */
-    public function start(Workspace $workspace, Space $space, Sprint $sprint)
+    public function start(Request $request, Workspace $workspace, Space $space, Sprint $sprint)
     {
+        abort_unless($this->accessService->canManageSpace($request->user(), $space), 403);
         $this->ensureSprintBelongsToSpace($sprint, $space);
 
         $this->sprintService->startSprint($sprint);
@@ -137,8 +145,9 @@ class SprintController extends Controller
     /**
      * Complete sprint.
      */
-    public function complete(Workspace $workspace, Space $space, Sprint $sprint)
+    public function complete(Request $request, Workspace $workspace, Space $space, Sprint $sprint)
     {
+        abort_unless($this->accessService->canManageSpace($request->user(), $space), 403);
         $this->ensureSprintBelongsToSpace($sprint, $space);
 
         $this->sprintService->completeSprint($sprint);
@@ -151,6 +160,7 @@ class SprintController extends Controller
      */
     public function addTask(Request $request, Workspace $workspace, Space $space, Sprint $sprint)
     {
+        abort_unless($this->accessService->canManageSpace($request->user(), $space), 403);
         $this->ensureSprintBelongsToSpace($sprint, $space);
 
         $validated = $request->validate([
@@ -167,6 +177,7 @@ class SprintController extends Controller
      */
     public function removeTask(Request $request, Workspace $workspace, Space $space, Sprint $sprint)
     {
+        abort_unless($this->accessService->canManageSpace($request->user(), $space), 403);
         $this->ensureSprintBelongsToSpace($sprint, $space);
 
         $validated = $request->validate([
@@ -181,8 +192,9 @@ class SprintController extends Controller
     /**
      * Remove the specified sprint.
      */
-    public function destroy(Workspace $workspace, Space $space, Sprint $sprint)
+    public function destroy(Request $request, Workspace $workspace, Space $space, Sprint $sprint)
     {
+        abort_unless($this->accessService->canManageSpace($request->user(), $space), 403);
         $this->ensureSprintBelongsToSpace($sprint, $space);
 
         $this->sprintService->deleteSprint($sprint);

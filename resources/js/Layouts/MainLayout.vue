@@ -221,7 +221,6 @@ const createSpace = () => {
                 newSpaceDescription.value = '';
                 newSpaceColor.value = '#6366F1';
                 showCreateSpace.value = false;
-                showSnackbar('Space created successfully!', 'success');
                 router.reload({ only: ['activeWorkspace'] });
             },
             onFinish: () => { isCreatingSpace.value = false; }
@@ -253,7 +252,6 @@ const createWorkspace = () => {
             preserveScroll: true,
             onSuccess: () => {
                 showCreateWorkspace.value = false;
-                showSnackbar('Workspace created successfully!', 'success');
                 router.reload({ only: ['workspaces', 'activeWorkspace'] });
             },
             onFinish: () => {

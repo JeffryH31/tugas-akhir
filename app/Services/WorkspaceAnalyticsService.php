@@ -56,7 +56,7 @@ class WorkspaceAnalyticsService
         $throughputBySpace = Space::where('workspace_id', $workspace->id)
             ->withCount([
                 'tasks as tasks_count',
-                'tasks as archived_tasks_count' => fn($q) => $q->where('is_archived', true),
+                'tasks as archived_tasks_count' => fn($q) => $q->where('tasks.is_archived', true),
             ])
             ->get(['id', 'name'])
             ->map(fn($space) => [
@@ -131,7 +131,7 @@ class WorkspaceAnalyticsService
         $ac = 0.0;
 
         foreach ($subtasks as $subtask) {
-            $plannedMinutes = (float) ($subtask->planned_estimate ?? 0);
+            $plannedMinutes = (float) ($subtask->time_estimate ?? 0);
             if ($plannedMinutes <= 0) {
                 continue;
             }
@@ -139,7 +139,7 @@ class WorkspaceAnalyticsService
             $hourlyRate = (float) ($subtask->assignees->avg('hourly_rate') ?? 25.0);
             $plannedCost = ($plannedMinutes / 60) * $hourlyRate;
             $actualCost = (($subtask->time_spent ?? 0) / 60) * $hourlyRate;
-            $progressRatio = $subtask->completed_at ? 1.0 : min(1, ($subtask->time_spent ?? 0) / max(1, $plannedMinutes));
+            $progressRatio = $subtask->completed_at ? 1.0 : (($subtask->progress ?? 0) / 100);
             $scheduledProgress = $this->getScheduledProgressRatio($subtask, $asOf);
 
             $pv += $plannedCost * $scheduledProgress;
