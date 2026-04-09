@@ -21,7 +21,6 @@ class StoreTimeEntryRequest extends FormRequest
     {
         return [
             'duration' => ['nullable', 'integer', 'min:1', 'max:1440', 'required_without_all:started_at,ended_at'], // max 24 hours in minutes
-            'description' => ['nullable', 'string', 'max:500'],
             'started_at' => ['nullable', 'date', 'required_with:ended_at'],
             'ended_at' => ['nullable', 'date', 'after:started_at', 'required_with:started_at'],
             'is_billable' => ['nullable', 'boolean'],

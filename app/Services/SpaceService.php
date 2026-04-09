@@ -11,6 +11,9 @@ use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
 
+/**
+ * Manage space CRUD, hierarchy views, statuses, and membership operations.
+ */
 class SpaceService
 {
     /**
@@ -36,8 +39,11 @@ class SpaceService
     {
         return $space->load([
             'workspace',
-            'folders' => fn($q) => $q->with(['children', 'lists.status'])->orderBy('position'),
-            'listsWithoutFolder' => fn($q) => $q->with('status')->orderBy('position'),
+            'folders' => fn($q) => $q->with([
+                'children',
+                'lists' => fn($lq) => $lq->with('status')->withCount('tasks')->orderBy('position'),
+            ])->orderBy('position'),
+            'listsWithoutFolder' => fn($q) => $q->with('status')->withCount('tasks')->orderBy('position'),
             'statuses' => fn($q) => $q->orderBy('position'),
             'labels',
         ]);
@@ -161,6 +167,15 @@ class SpaceService
         });
     }
 
+    /**
+     * Add a member to the space with a role.
+     *
+     * @param Space $space
+     * @param User $user
+     * @param string $role
+     * @param User $addedBy
+     * @return void
+     */
     public function addMember(Space $space, User $user, string $role, User $addedBy): void
     {
         $space->members()->syncWithoutDetaching([
@@ -174,6 +189,15 @@ class SpaceService
         ]);
     }
 
+    /**
+     * Update role for an existing space member.
+     *
+     * @param Space $space
+     * @param User $user
+     * @param string $role
+     * @param User $updatedBy
+     * @return void
+     */
     public function updateMemberRole(Space $space, User $user, string $role, User $updatedBy): void
     {
         $space->members()->updateExistingPivot($user->id, ['role' => $role]);
@@ -185,6 +209,14 @@ class SpaceService
         ]);
     }
 
+    /**
+     * Remove a member from the space.
+     *
+     * @param Space $space
+     * @param User $user
+     * @param User $removedBy
+     * @return void
+     */
     public function removeMember(Space $space, User $user, User $removedBy): void
     {
         $space->members()->detach($user->id);

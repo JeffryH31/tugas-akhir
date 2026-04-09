@@ -10,6 +10,9 @@ use App\Models\TimeEntry;
 use App\Models\User;
 use App\Models\Workspace;
 
+/**
+ * Centralized authorization helper for workspace, space, and product scopes.
+ */
 class AccessService
 {
     public const WORKSPACE_OWNER = 'owner';
@@ -28,41 +31,96 @@ class AccessService
     public const PROJECT_DEVELOPER = 'development_team';
     public const PROJECT_GUEST = 'guest';
 
+    /**
+     * Determine whether the user can access the application.
+     *
+     * @param User $user
+     * @return bool
+     */
     public function canAccessWebsite(User $user): bool
     {
         return !is_null($user->id) && $user->workspaces()->exists();
     }
 
+    /**
+     * Get workspace membership role for a user.
+     *
+     * @param User $user
+     * @param Workspace $workspace
+     * @return string|null
+     */
     public function getWorkspaceRole(User $user, Workspace $workspace): ?string
     {
         return $workspace->members()->where('user_id', $user->id)->first()?->pivot?->role;
     }
 
+    /**
+     * Get space membership role for a user.
+     *
+     * @param User $user
+     * @param Space $space
+     * @return string|null
+     */
     public function getSpaceRole(User $user, Space $space): ?string
     {
         return $space->members()->where('user_id', $user->id)->first()?->pivot?->role;
     }
 
+    /**
+     * Get product/project membership role for a user.
+     *
+     * @param User $user
+     * @param TaskList $list
+     * @return string|null
+     */
     public function getProjectRole(User $user, TaskList $list): ?string
     {
         return $list->members()->where('user_id', $user->id)->first()?->pivot?->role;
     }
 
+    /**
+     * Alias of getProjectRole for product terminology.
+     *
+     * @param User $user
+     * @param TaskList $list
+     * @return string|null
+     */
     public function getProductRole(User $user, TaskList $list): ?string
     {
         return $this->getProjectRole($user, $list);
     }
 
+    /**
+     * Determine whether a user can view a workspace.
+     *
+     * @param User $user
+     * @param Workspace $workspace
+     * @return bool
+     */
     public function canViewWorkspace(User $user, Workspace $workspace): bool
     {
         return !is_null($this->getWorkspaceRole($user, $workspace));
     }
 
+    /**
+     * Determine whether a user can manage workspace settings and members.
+     *
+     * @param User $user
+     * @param Workspace $workspace
+     * @return bool
+     */
     public function canManageWorkspace(User $user, Workspace $workspace): bool
     {
         return in_array($this->getWorkspaceRole($user, $workspace), [self::WORKSPACE_OWNER, self::WORKSPACE_ADMIN], true);
     }
 
+    /**
+     * Determine whether a user can view a space.
+     *
+     * @param User $user
+     * @param Space $space
+     * @return bool
+     */
     public function canViewSpace(User $user, Space $space): bool
     {
         if (!$this->canViewWorkspace($user, $space->workspace)) {
@@ -88,6 +146,13 @@ class AccessService
         ], true);
     }
 
+    /**
+     * Determine whether a user can manage a space.
+     *
+     * @param User $user
+     * @param Space $space
+     * @return bool
+     */
     public function canManageSpace(User $user, Space $space): bool
     {
         if (in_array($this->getWorkspaceRole($user, $space->workspace), [self::WORKSPACE_OWNER, self::WORKSPACE_ADMIN], true)) {
@@ -105,6 +170,13 @@ class AccessService
         ], true);
     }
 
+    /**
+     * Determine whether a user can view a product.
+     *
+     * @param User $user
+     * @param TaskList $list
+     * @return bool
+     */
     public function canViewProduct(User $user, TaskList $list): bool
     {
         if (!$this->canViewSpace($user, $list->space)) {
@@ -129,11 +201,25 @@ class AccessService
         return !$list->members()->exists();
     }
 
+    /**
+     * Alias of canViewProduct for project terminology.
+     *
+     * @param User $user
+     * @param TaskList $list
+     * @return bool
+     */
     public function canViewProject(User $user, TaskList $list): bool
     {
         return $this->canViewProduct($user, $list);
     }
 
+    /**
+     * Determine whether a user can manage a product.
+     *
+     * @param User $user
+     * @param TaskList $list
+     * @return bool
+     */
     public function canManageProduct(User $user, TaskList $list): bool
     {
         if (in_array($this->getWorkspaceRole($user, $list->space->workspace), [self::WORKSPACE_OWNER, self::WORKSPACE_ADMIN], true)) {
@@ -143,11 +229,25 @@ class AccessService
         return in_array($this->getProductRole($user, $list), [self::PROJECT_OWNER, self::PROJECT_MANAGER], true);
     }
 
+    /**
+     * Alias of canManageProduct for project terminology.
+     *
+     * @param User $user
+     * @param TaskList $list
+     * @return bool
+     */
     public function canManageProject(User $user, TaskList $list): bool
     {
         return $this->canManageProduct($user, $list);
     }
 
+    /**
+     * Determine whether a user can delete a product.
+     *
+     * @param User $user
+     * @param TaskList $list
+     * @return bool
+     */
     public function canDeleteProduct(User $user, TaskList $list): bool
     {
         if (in_array($this->getWorkspaceRole($user, $list->space->workspace), [self::WORKSPACE_OWNER, self::WORKSPACE_ADMIN], true)) {
@@ -157,11 +257,25 @@ class AccessService
         return $this->getProductRole($user, $list) === self::PROJECT_OWNER;
     }
 
+    /**
+     * Alias of canDeleteProduct for project terminology.
+     *
+     * @param User $user
+     * @param TaskList $list
+     * @return bool
+     */
     public function canDeleteProject(User $user, TaskList $list): bool
     {
         return $this->canDeleteProduct($user, $list);
     }
 
+    /**
+     * Determine whether a user can manage product members.
+     *
+     * @param User $user
+     * @param TaskList $list
+     * @return bool
+     */
     public function canManageProductMembers(User $user, TaskList $list): bool
     {
         if (in_array($this->getWorkspaceRole($user, $list->space->workspace), [self::WORKSPACE_OWNER, self::WORKSPACE_ADMIN], true)) {
@@ -171,16 +285,37 @@ class AccessService
         return $this->getProductRole($user, $list) === self::PROJECT_OWNER;
     }
 
+    /**
+     * Alias of canManageProductMembers for project terminology.
+     *
+     * @param User $user
+     * @param TaskList $list
+     * @return bool
+     */
     public function canManageProjectMembers(User $user, TaskList $list): bool
     {
         return $this->canManageProductMembers($user, $list);
     }
 
+    /**
+     * Determine whether a user can edit tasks in a product.
+     *
+     * @param User $user
+     * @param TaskList $list
+     * @return bool
+     */
     public function canEditTasks(User $user, TaskList $list): bool
     {
         return $this->canOperateTasks($user, $list);
     }
 
+    /**
+     * Determine whether a user can perform task operations.
+     *
+     * @param User $user
+     * @param TaskList $list
+     * @return bool
+     */
     public function canOperateTasks(User $user, TaskList $list): bool
     {
         if (in_array($this->getWorkspaceRole($user, $list->space->workspace), [self::WORKSPACE_OWNER, self::WORKSPACE_ADMIN], true)) {
@@ -194,6 +329,13 @@ class AccessService
         ], true);
     }
 
+    /**
+     * Determine whether a user can manage task structure resources.
+     *
+     * @param User $user
+     * @param TaskList $list
+     * @return bool
+     */
     public function canManageTaskStructure(User $user, TaskList $list): bool
     {
         if (in_array($this->getWorkspaceRole($user, $list->space->workspace), [self::WORKSPACE_OWNER, self::WORKSPACE_ADMIN], true)) {
@@ -203,16 +345,37 @@ class AccessService
         return in_array($this->getProjectRole($user, $list), [self::PROJECT_OWNER, self::PROJECT_MANAGER], true);
     }
 
+    /**
+     * Determine whether a user can manage labels.
+     *
+     * @param User $user
+     * @param TaskList $list
+     * @return bool
+     */
     public function canManageLabels(User $user, TaskList $list): bool
     {
         return $this->canManageTaskStructure($user, $list);
     }
 
+    /**
+     * Determine whether a user can manage dependencies.
+     *
+     * @param User $user
+     * @param TaskList $list
+     * @return bool
+     */
     public function canManageDependencies(User $user, TaskList $list): bool
     {
         return $this->canManageTaskStructure($user, $list);
     }
 
+    /**
+     * Determine whether a user can assign tasks.
+     *
+     * @param User $user
+     * @param TaskList $list
+     * @return bool
+     */
     public function canAssignTasks(User $user, TaskList $list): bool
     {
         if (in_array($this->getWorkspaceRole($user, $list->space->workspace), [self::WORKSPACE_OWNER, self::WORKSPACE_ADMIN], true)) {
@@ -222,6 +385,13 @@ class AccessService
         return in_array($this->getProjectRole($user, $list), [self::PROJECT_OWNER, self::PROJECT_MANAGER], true);
     }
 
+    /**
+     * Determine whether a user can track time.
+     *
+     * @param User $user
+     * @param TaskList $list
+     * @return bool
+     */
     public function canTrackTime(User $user, TaskList $list): bool
     {
         if (in_array($this->getWorkspaceRole($user, $list->space->workspace), [self::WORKSPACE_OWNER, self::WORKSPACE_ADMIN], true)) {
@@ -235,16 +405,37 @@ class AccessService
         ], true);
     }
 
+    /**
+     * Determine whether a user can comment on a product.
+     *
+     * @param User $user
+     * @param TaskList $list
+     * @return bool
+     */
     public function canComment(User $user, TaskList $list): bool
     {
         return $this->canViewProject($user, $list);
     }
 
+    /**
+     * Determine whether a user can manage a specific comment.
+     *
+     * @param User $user
+     * @param Comment $comment
+     * @return bool
+     */
     public function canManageComment(User $user, Comment $comment): bool
     {
         return $comment->user_id === $user->id;
     }
 
+    /**
+     * Determine whether a user can manage a specific time entry.
+     *
+     * @param User $user
+     * @param TimeEntry $entry
+     * @return bool
+     */
     public function canManageTimeEntry(User $user, TimeEntry $entry): bool
     {
         if ($entry->user_id === $user->id) {
@@ -254,6 +445,13 @@ class AccessService
         return $this->canAssignTasks($user, $entry->subtask->task->taskList);
     }
 
+    /**
+     * Determine whether a user can view workspace analytics.
+     *
+     * @param User $user
+     * @param Workspace $workspace
+     * @return bool
+     */
     public function canViewAnalytics(User $user, Workspace $workspace): bool
     {
         return in_array($this->getWorkspaceRole($user, $workspace), [
@@ -263,6 +461,13 @@ class AccessService
         ], true);
     }
 
+    /**
+     * Determine whether a user can view project activity logs.
+     *
+     * @param User $user
+     * @param TaskList $list
+     * @return bool
+     */
     public function canViewActivity(User $user, TaskList $list): bool
     {
         return $this->canViewProject($user, $list);

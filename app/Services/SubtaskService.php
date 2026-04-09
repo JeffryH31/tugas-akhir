@@ -9,9 +9,14 @@ use App\Models\Status;
 use App\Models\Subtask;
 use App\Models\Task;
 use App\Models\User;
+use Carbon\Carbon;
+use DateTimeInterface;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\ValidationException;
 
+/**
+ * Manage subtask CRUD, assignment, labels, and workflow transitions.
+ */
 class SubtaskService
 {
     /**
@@ -130,8 +135,26 @@ class SubtaskService
 
             // Track changes for activity
             $changes = [];
+            $dateFields = ['start_date', 'due_date', 'baseline_start_date', 'baseline_due_date'];
             foreach ($oldValues as $key => $oldValue) {
-                $newValue = $data[$key] ?? $subtask->$key;
+                $newValue = array_key_exists($key, $data) ? $data[$key] : $subtask->$key;
+
+                if (in_array($key, $dateFields, true)) {
+                    $oldComparable = $this->normalizeDateForComparison($oldValue);
+                    $newComparable = $this->normalizeDateForComparison($newValue);
+
+                    if ($oldComparable === $newComparable) {
+                        continue;
+                    }
+
+                    $changes[$key] = [
+                        'old' => $oldComparable,
+                        'new' => $newComparable,
+                    ];
+
+                    continue;
+                }
+
                 if ($newValue != $oldValue) {
                     $changes[$key] = ['old' => $oldValue, 'new' => $newValue];
                 }
@@ -218,6 +241,36 @@ class SubtaskService
 
             return $subtask->fresh();
         });
+    }
+
+    /**
+     * Normalize date-like values into a comparable calendar date string.
+     *
+     * @param mixed $value
+     * @return string|null
+     */
+    private function normalizeDateForComparison(mixed $value): ?string
+    {
+        if ($value === null) {
+            return null;
+        }
+
+        if (is_string($value)) {
+            $value = trim($value);
+            if ($value === '') {
+                return null;
+            }
+        }
+
+        if ($value instanceof DateTimeInterface) {
+            return Carbon::instance($value)->toDateString();
+        }
+
+        try {
+            return Carbon::parse((string) $value)->toDateString();
+        } catch (\Throwable) {
+            return is_scalar($value) ? (string) $value : null;
+        }
     }
 
     /**

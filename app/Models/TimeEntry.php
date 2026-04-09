@@ -15,7 +15,6 @@ class TimeEntry extends Model
         'subtask_id',
         'user_id',
         'duration',
-        'description',
         'started_at',
         'ended_at',
         'is_billable',
@@ -107,7 +106,7 @@ class TimeEntry extends Model
         ]);
     }
 
-    public static function startTimer(Subtask $subtask, User $user, ?string $description = null): self
+    public static function startTimer(Subtask $subtask, User $user): self
     {
         static::where('user_id', $user->id)
             ->where('is_running', true)
@@ -116,7 +115,6 @@ class TimeEntry extends Model
         return static::create([
             'subtask_id' => $subtask->id,
             'user_id' => $user->id,
-            'description' => $description,
             'started_at' => now(),
             'duration' => 0,
             'is_running' => true,

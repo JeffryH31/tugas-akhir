@@ -48,14 +48,29 @@ export function useTaskTimer(props, localTask) {
         }
     };
 
-    const init = async () => {
-        if (!props.parentTask) return;
-        const currentId = props.task?.id;
+    const getTimerRouteParams = () => {
+        const workspaceId = props.workspace?.id;
+        const spaceId = props.space?.id;
+        const listId = props.list?.id;
+        const taskId = props.parentTask?.id;
 
-        const running = props.task?.time_entries?.find(e => e.is_running);
-        if (running?.subtask_id === currentId) {
+        if (!workspaceId || !spaceId || !listId || !taskId) {
+            return null;
+        }
+
+        return [workspaceId, spaceId, listId, taskId];
+    };
+
+    const init = async () => {
+        if (!props.parentTask || !props.task?.id) return;
+        const currentId = Number(props.task.id);
+
+        const entries = Array.isArray(props.task?.time_entries) ? props.task.time_entries : [];
+        const running = entries.find((entry) => entry && entry.is_running);
+
+        if (running && Number(running.subtask_id) === currentId) {
             isTracking.value = true;
-            runningEntryId.value = running.id;
+            runningEntryId.value = running.id ?? null;
             trackingDuration.value = Math.floor((Date.now() - new Date(running.started_at).getTime()) / 1000);
             startInterval();
             return;
@@ -87,12 +102,20 @@ export function useTaskTimer(props, localTask) {
 
     const start = async () => {
         if (!props.parentTask || isTimerLoading.value) return;
+
+        const routeParams = getTimerRouteParams();
+        const subtaskId = props.task?.id;
+        if (!routeParams || !subtaskId) {
+            window.showSnackbar?.('Task context is not ready yet. Please try again.', 'warning');
+            return;
+        }
+
         isTimerLoading.value = true;
         try {
-            const url = route('tasks.timer.start', [props.workspace.id, props.space.id, props.list.id, props.parentTask.id]);
+            const url = route('tasks.timer.start', routeParams);
             const res = await safeFetch(url, {
                 method: 'POST',
-                body: JSON.stringify({ subtask_id: props.task.id }),
+                body: JSON.stringify({ subtask_id: subtaskId }),
             });
             if (res.ok || res.status === 302 || res.status === 303) {
                 const data = await res.json().catch(() => ({}));
@@ -117,6 +140,13 @@ export function useTaskTimer(props, localTask) {
 
     const stop = async () => {
         if (isTimerLoading.value) return;
+
+        const routeParams = getTimerRouteParams();
+        if (!routeParams) {
+            window.showSnackbar?.('Task context is not ready yet. Please try again.', 'warning');
+            return;
+        }
+
         isTimerLoading.value = true;
         stopInterval();
 
@@ -146,7 +176,7 @@ export function useTaskTimer(props, localTask) {
         }
 
         try {
-            const url = route('tasks.timer.stop', [props.workspace.id, props.space.id, props.list.id, props.parentTask.id, entryId]);
+            const url = route('tasks.timer.stop', [...routeParams, entryId]);
             const res = await safeFetch(url, { method: 'POST' });
             if (res.ok || res.status === 302 || res.status === 303) {
                 const data = await res.json().catch(() => ({}));
@@ -155,14 +185,18 @@ export function useTaskTimer(props, localTask) {
                 window.showSnackbar?.(`Timer stopped: ${formatTrackingDuration.value}`, 'success');
                 if (data.timeEntry) {
                     const entry = data.timeEntry;
-                    localTask.value.time_spent = (localTask.value.time_spent || 0) + (entry.duration || 0);
-                    if (localTask.value.time_entries) {
-                        const idx = localTask.value.time_entries.findIndex(e => e.id === entry.id);
-                        if (idx >= 0) localTask.value.time_entries[idx] = entry;
-                        else localTask.value.time_entries.push(entry);
+                    if (localTask.value) {
+                        localTask.value.time_spent = (localTask.value.time_spent || 0) + (entry.duration || 0);
+                        if (Array.isArray(localTask.value.time_entries)) {
+                            const idx = localTask.value.time_entries.findIndex(e => e.id === entry.id);
+                            if (idx >= 0) localTask.value.time_entries[idx] = entry;
+                            else localTask.value.time_entries.push(entry);
+                        }
                     }
                 } else {
-                    localTask.value.time_spent = (localTask.value.time_spent || 0) + Math.max(1, Math.ceil(trackingDuration.value / 60));
+                    if (localTask.value) {
+                        localTask.value.time_spent = (localTask.value.time_spent || 0) + Math.max(1, Math.ceil(trackingDuration.value / 60));
+                    }
                 }
                 trackingDuration.value = 0;
                 router.reload({ preserveScroll: true, only: ['task', 'tasksByStatus', 'runningTimer'] });

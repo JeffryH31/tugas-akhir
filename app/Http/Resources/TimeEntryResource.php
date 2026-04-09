@@ -17,7 +17,6 @@ class TimeEntryResource extends JsonResource
         return [
             'id' => $this->id,
             'subtask_id' => $this->subtask_id,
-            'description' => $this->description,
             'duration' => $this->duration,
             'started_at' => $this->started_at?->toIso8601String(),
             'ended_at' => $this->ended_at?->toIso8601String(),

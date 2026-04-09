@@ -115,7 +115,6 @@ class TimeEntryController extends Controller
         abort_unless($this->accessService->canTrackTime($request->user(), $list), 403);
         $validated = $request->validate([
             'subtask_id' => ['nullable', 'integer', 'exists:subtasks,id'],
-            'description' => ['nullable', 'string', 'max:500'],
         ]);
 
         try {
@@ -125,8 +124,7 @@ class TimeEntryController extends Controller
 
             $entry = $this->timeTrackingService->startTimer(
                 $subtask,
-                $request->user(),
-                $validated['description'] ?? null
+                $request->user()
             );
 
             if ($request->wantsJson()) {

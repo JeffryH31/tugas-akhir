@@ -13,6 +13,9 @@ use Illuminate\Pagination\LengthAwarePaginator;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
 
+/**
+ * Manage task CRUD, movement, assignment, labels, and filtering.
+ */
 class TaskService
 {
     /**
@@ -391,6 +394,10 @@ class TaskService
 
     /**
      * Apply filters to task query
+        *
+        * @param \Illuminate\Database\Eloquent\Builder $query
+        * @param array<string, mixed> $filters
+        * @return \Illuminate\Database\Eloquent\Builder
      */
     protected function applyFilters($query, array $filters)
     {

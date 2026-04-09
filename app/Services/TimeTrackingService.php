@@ -11,6 +11,9 @@ use App\Models\Workspace;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
 
+/**
+ * Handle time entry logging, timers, and reporting across scopes.
+ */
 class TimeTrackingService
 {
     /**
@@ -34,7 +37,6 @@ class TimeTrackingService
                 'subtask_id' => $subtask->id,
                 'user_id' => $user->id,
                 'duration' => $duration, // in minutes
-                'description' => $data['description'] ?? null,
                 'started_at' => $startedAt,
                 'ended_at' => $endedAt ?? $startedAt->copy()->addMinutes($duration),
                 'is_billable' => $data['is_billable'] ?? false,
@@ -55,9 +57,9 @@ class TimeTrackingService
     /**
      * Start timer for a subtask
      */
-    public function startTimer(Subtask $subtask, User $user, ?string $description = null): TimeEntry
+    public function startTimer(Subtask $subtask, User $user): TimeEntry
     {
-        $entry = TimeEntry::startTimer($subtask, $user, $description);
+        $entry = TimeEntry::startTimer($subtask, $user);
 
         $workspace = $subtask->task->taskList->space->workspace;
 
@@ -105,7 +107,6 @@ class TimeTrackingService
         $oldDuration = $entry->duration;
 
         $updateData = [
-            'description' => $data['description'] ?? $entry->description,
             'started_at' => $data['started_at'] ?? $entry->started_at,
             'ended_at' => $data['ended_at'] ?? $entry->ended_at,
             'is_billable' => $data['is_billable'] ?? $entry->is_billable,

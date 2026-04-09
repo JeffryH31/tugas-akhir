@@ -63,12 +63,12 @@ const moveToStatusId = ref(null);
 // Task count
 const taskCount = computed(() => props.tasks.length);
 
-// Color options
-const colorOptions = [
-    '#6366F1', '#8B5CF6', '#EC4899', '#EF4444',
-    '#F59E0B', '#10B981', '#0EA5E9', '#06B6D4',
-    '#84cc16', '#22c55e', '#14b8a6', '#0891b2',
-];
+const normalizeHexColor = (value, fallback = '#6366F1') => {
+    const raw = (value || '').trim();
+    if (!raw) return fallback;
+    const hex = raw.startsWith('#') ? raw : `#${raw}`;
+    return /^#[0-9A-Fa-f]{6}$/.test(hex) ? hex.toUpperCase() : fallback;
+};
 
 // Available statuses for moving tasks (exclude current status)
 const availableStatuses = computed(() => {
@@ -82,12 +82,14 @@ const onDragChange = (evt) => {
             task: evt.added.element,
             statusId: props.status.id,
             newIndex: evt.added.newIndex,
+            changeType: 'added',
         });
     } else if (evt.moved) {
         emit('task-moved', {
             task: evt.moved.element,
             statusId: props.status.id,
             newIndex: evt.moved.newIndex,
+            changeType: 'moved',
         });
     }
 };
@@ -124,9 +126,14 @@ const openEditStatus = () => {
 
 // Save status
 const saveStatus = () => {
+    const payload = {
+        ...editStatusForm.value,
+        color: normalizeHexColor(editStatusForm.value.color),
+    };
+
     router.patch(
         route('spaces.statuses.update', [props.workspace.id, props.space.id, props.status.id]),
-        editStatusForm.value,
+        payload,
         {
             preserveScroll: true,
             onSuccess: () => {
@@ -265,10 +272,17 @@ const handleTaskOpen = (task) => {
 
                     <div class="mb-3">
                         <label class="text-sm text-gray-400 mb-2 block">Color</label>
-                        <div class="grid grid-cols-6 gap-2">
-                            <button v-for="color in colorOptions" :key="color" class="w-10 h-10 rounded-lg transition"
-                                :class="editStatusForm.color === color ? 'ring-2 ring-white ring-offset-2 ring-offset-gray-800' : ''"
-                                :style="{ backgroundColor: color }" @click="editStatusForm.color = color" />
+                        <div class="d-flex align-center ga-3">
+                            <input v-model="editStatusForm.color" type="color" class="color-input-native" />
+                            <v-text-field
+                                v-model="editStatusForm.color"
+                                label="Hex Color"
+                                variant="outlined"
+                                density="compact"
+                                hide-details
+                                class="flex-1"
+                                @blur="editStatusForm.color = normalizeHexColor(editStatusForm.color)"
+                            />
                         </div>
                     </div>
                 </v-card-text>
@@ -418,6 +432,25 @@ const handleTaskOpen = (task) => {
 .add-task-form :deep(*:focus-visible) {
     outline: none !important;
     box-shadow: none !important;
+}
+
+.color-input-native {
+    width: 44px;
+    height: 36px;
+    border: 1px solid rgba(255, 255, 255, 0.14);
+    border-radius: 8px;
+    background: transparent;
+    padding: 4px;
+    cursor: pointer;
+}
+
+.color-input-native::-webkit-color-swatch-wrapper {
+    padding: 0;
+}
+
+.color-input-native::-webkit-color-swatch {
+    border: none;
+    border-radius: 5px;
 }
 
 .add-task-form :deep(.v-field__input) {

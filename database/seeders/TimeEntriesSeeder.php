@@ -47,7 +47,6 @@ class TimeEntriesSeeder extends Seeder
                 'subtask_id' => $this->demoSubtask($entry['subtask'])->id,
                 'user_id' => $this->demoUser($entry['user'])->id,
                 'duration' => $entry['minutes'],
-                'description' => $entry['description'],
                 'started_at' => $startedAt,
                 'ended_at' => $startedAt->copy()->addMinutes($entry['minutes']),
                 'is_billable' => $entry['is_billable'],

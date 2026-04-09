@@ -190,39 +190,124 @@ const filteredTasksByStatus = computed(() => {
     return result;
 });
 
-// Handle task moved between columns
-const handleTaskMoved = ({ task, statusId, newIndex }) => {
+const siblingSubtasks = computed(() => {
+    if (!props.parentTask) {
+        return [];
+    }
+
+    const seen = new Set();
+    return Object.values(localTasksByStatus.value)
+        .flatMap((items) => Array.isArray(items) ? items : [])
+        .filter((item) => {
+            const id = Number(item?.id || 0);
+            if (!id || seen.has(id)) {
+                return false;
+            }
+
+            seen.add(id);
+            return true;
+        });
+});
+
+const getBoardOrderedIds = () => {
+    return (props.statuses || []).flatMap((status) =>
+        (localTasksByStatus.value[status.id] || []).map((item) => item.id)
+    );
+};
+
+const persistBoardOrder = (successMessage) => {
     if (props.parentTask) {
-        // Subtask view — use subtask update route
+        router.post(
+            route('tasks.subtasks.reorder', [props.workspace.id, props.space.id, props.list.id, props.parentTask.id]),
+            { subtask_ids: getBoardOrderedIds() },
+            {
+                preserveScroll: true,
+                onSuccess: () => {
+                    if (window.showSnackbar && successMessage) {
+                        window.showSnackbar(successMessage, 'success');
+                    }
+                    router.reload({ only: ['tasksByStatus'] });
+                },
+                onError: () => {
+                    router.reload({ only: ['tasksByStatus'] });
+                    if (window.showSnackbar) {
+                        window.showSnackbar('Failed to reorder subtasks', 'error');
+                    }
+                },
+            }
+        );
+        return;
+    }
+
+    router.post(
+        route('tasks.reorder', [props.workspace.id, props.space.id, props.list.id]),
+        { order: getBoardOrderedIds() },
+        {
+            preserveScroll: true,
+            onSuccess: () => {
+                if (window.showSnackbar && successMessage) {
+                    window.showSnackbar(successMessage, 'success');
+                }
+                router.reload({ only: ['tasksByStatus'] });
+            },
+            onError: () => {
+                router.reload({ only: ['tasksByStatus'] });
+                if (window.showSnackbar) {
+                    window.showSnackbar('Failed to reorder tasks', 'error');
+                }
+            },
+        }
+    );
+};
+
+// Handle task moved between columns or reordered in same column
+const handleTaskMoved = ({ task, statusId, changeType }) => {
+    const entity = props.parentTask ? 'Subtask' : 'Task';
+
+    // Reorder inside the same status column
+    if (changeType === 'moved') {
+        persistBoardOrder(`${entity} order updated successfully!`);
+        return;
+    }
+
+    if (props.parentTask) {
+        // Cross-column move for subtasks
         router.patch(
             route('tasks.subtasks.update', [props.workspace.id, props.space.id, props.list.id, props.parentTask.id, task.id]),
             { status_id: statusId },
             {
                 preserveScroll: true,
                 onSuccess: () => {
-                    if (window.showSnackbar) {
-                        window.showSnackbar('Subtask moved successfully!', 'success');
-                    }
+                    persistBoardOrder('Subtask moved successfully!');
+                },
+                onError: () => {
                     router.reload({ only: ['tasksByStatus'] });
-                }
+                    if (window.showSnackbar) {
+                        window.showSnackbar('Failed to move subtask', 'error');
+                    }
+                },
             }
         );
-    } else {
-        // Task view — use task change-status route
-        router.patch(
-            route('tasks.change-status', [props.workspace.id, props.space.id, props.list.id, task.id]),
-            { status_id: statusId },
-            {
-                preserveScroll: true,
-                onSuccess: () => {
-                    if (window.showSnackbar) {
-                        window.showSnackbar('Task moved successfully!', 'success');
-                    }
-                    router.reload({ only: ['tasksByStatus'] });
-                }
-            }
-        );
+        return;
     }
+
+    // Cross-column move for tasks
+    router.patch(
+        route('tasks.change-status', [props.workspace.id, props.space.id, props.list.id, task.id]),
+        { status_id: statusId },
+        {
+            preserveScroll: true,
+            onSuccess: () => {
+                persistBoardOrder('Task moved successfully!');
+            },
+            onError: () => {
+                router.reload({ only: ['tasksByStatus'] });
+                if (window.showSnackbar) {
+                    window.showSnackbar('Failed to move task', 'error');
+                }
+            },
+        }
+    );
 };
 
 // Handle task/subtask complete toggle
@@ -742,6 +827,13 @@ const showAddStatus = ref(false);
 const newStatusName = ref('');
 const newStatusColor = ref('#6366F1');
 
+const normalizeHexColor = (value, fallback = '#6366F1') => {
+    const raw = (value || '').trim();
+    if (!raw) return fallback;
+    const hex = raw.startsWith('#') ? raw : `#${raw}`;
+    return /^#[0-9A-Fa-f]{6}$/.test(hex) ? hex.toUpperCase() : fallback;
+};
+
 const addStatus = () => {
     if (!newStatusName.value.trim()) return;
 
@@ -749,7 +841,7 @@ const addStatus = () => {
         route('spaces.statuses.add', [props.workspace.id, props.space.id]),
         {
             name: newStatusName.value.trim(),
-            color: newStatusColor.value,
+            color: normalizeHexColor(newStatusColor.value),
         },
         {
             preserveScroll: true,
@@ -764,13 +856,6 @@ const addStatus = () => {
     newStatusName.value = '';
     showAddStatus.value = false;
 };
-
-// Color options
-const colorOptions = [
-    '#6366F1', '#8B5CF6', '#EC4899', '#EF4444',
-    '#F59E0B', '#10B981', '#0EA5E9', '#06B6D4',
-    '#84cc16', '#22c55e', '#14b8a6', '#0891b2',
-];
 
 // Edit list dialog
 const showEditList = ref(false);
@@ -1506,11 +1591,17 @@ onMounted(() => {
                             <v-text-field v-model="newStatusName" placeholder="Status name" variant="outlined"
                                 density="compact" hide-details autofocus class="mb-2" @keydown.enter="addStatus"
                                 @keydown.escape="showAddStatus = false" />
-                            <div class="flex flex-wrap gap-1 mb-3">
-                                <div v-for="color in colorOptions" :key="color"
-                                    class="w-6 h-6 rounded cursor-pointer border-2"
-                                    :class="color === newStatusColor ? 'border-white' : 'border-transparent'"
-                                    :style="{ backgroundColor: color }" @click="newStatusColor = color" />
+                            <div class="d-flex align-center ga-3 mb-3">
+                                <input v-model="newStatusColor" type="color" class="color-input-native" />
+                                <v-text-field
+                                    v-model="newStatusColor"
+                                    label="Hex Color"
+                                    variant="outlined"
+                                    density="compact"
+                                    hide-details
+                                    class="flex-1"
+                                    @blur="newStatusColor = normalizeHexColor(newStatusColor)"
+                                />
                             </div>
                             <div class="flex gap-2">
                                 <v-btn color="primary" size="small" @click="addStatus">Add</v-btn>
@@ -1882,7 +1973,8 @@ onMounted(() => {
         <!-- Task Detail Panel -->
         <TaskDetailPanel v-model="showTaskDetail" :task="selectedTask" :workspace="workspace" :space="space"
             :list="list" :parent-task="parentTask" :statuses="statuses" :members="members" :labels="labels"
-            :sprints="sprints" @view-subtasks="viewSubtasks" @updated="refreshTasks" />
+            :sprints="sprints" :sibling-subtasks="siblingSubtasks" @view-subtasks="viewSubtasks"
+            @updated="refreshTasks" />
 
         <!-- Create/Edit Sprint Dialog -->
         <v-dialog v-model="showCreateSprint" max-width="620">
@@ -2577,5 +2669,24 @@ onMounted(() => {
     white-space: nowrap;
     flex: 1;
     min-width: 0;
+}
+
+.color-input-native {
+    width: 44px;
+    height: 36px;
+    border: 1px solid rgba(255, 255, 255, 0.14);
+    border-radius: 8px;
+    background: transparent;
+    padding: 4px;
+    cursor: pointer;
+}
+
+.color-input-native::-webkit-color-swatch-wrapper {
+    padding: 0;
+}
+
+.color-input-native::-webkit-color-swatch {
+    border: none;
+    border-radius: 5px;
 }
 </style>

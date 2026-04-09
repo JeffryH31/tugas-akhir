@@ -15,16 +15,15 @@ return new class extends Migration
             $table->id();
             $table->foreignId('subtask_id')->constrained()->cascadeOnDelete();
             $table->foreignId('user_id')->constrained()->cascadeOnDelete();
-            
+
             $table->integer('duration'); // in minutes
-            $table->text('description')->nullable();
-            
+
             $table->timestamp('started_at');
             $table->timestamp('ended_at')->nullable();
-            
+
             $table->boolean('is_billable')->default(false);
             $table->boolean('is_running')->default(false);
-            
+
             $table->timestamps();
             $table->softDeletes();
 

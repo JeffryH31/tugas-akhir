@@ -2,6 +2,8 @@
 
 namespace App\Models;
 
+use Carbon\Carbon;
+use DateTimeInterface;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
@@ -130,14 +132,22 @@ class Activity extends Model
         foreach (array_slice($changes, 0, 2, true) as $field => $change) {
             $rawOld = $change['old'] ?? null;
             $rawNew = $change['new'] ?? null;
+
             // Skip array-value fields (e.g. raw assignee IDs) – they are logged separately
             if (is_array($rawOld) || is_array($rawNew)) {
                 continue;
             }
-            $oldVal     = $rawOld ?? '—';
-            $newVal     = $rawNew ?? '—';
+
+            $oldVal = $this->formatChangeValue($rawOld);
+            $newVal = $this->formatChangeValue($rawNew);
+
+            // Guard against no-op logs where values are equivalent after normalization.
+            if ($oldVal === $newVal) {
+                continue;
+            }
+
             $fieldLabel = str_replace('_', ' ', $field);
-            $changeList[] = "{$fieldLabel}: {$oldVal} -> {$newVal}";
+            $changeList[] = "{$fieldLabel}: " . ($oldVal ?? '—') . " -> " . ($newVal ?? '—');
         }
 
         if (empty($changeList)) {
@@ -150,6 +160,37 @@ class Activity extends Model
         }
 
         return "updated ({$summary})";
+    }
+
+    /**
+     * Normalize values for human-readable update summaries.
+     */
+    private function formatChangeValue(mixed $value): ?string
+    {
+        if ($value === null) {
+            return null;
+        }
+
+        if (is_string($value)) {
+            $value = trim($value);
+            if ($value === '') {
+                return null;
+            }
+        }
+
+        if ($value instanceof DateTimeInterface) {
+            return Carbon::instance($value)->toDateString();
+        }
+
+        if (is_string($value) && preg_match('/^\d{4}-\d{2}-\d{2}(?:[T\s].*)?$/', $value)) {
+            try {
+                return Carbon::parse($value)->toDateString();
+            } catch (\Throwable) {
+                // Fall through and keep the raw value.
+            }
+        }
+
+        return is_scalar($value) ? (string) $value : null;
     }
 
     private function buildAssignDescription(): string

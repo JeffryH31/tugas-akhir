@@ -106,11 +106,6 @@ const showLabelEditor = ref(false);
 const editingLabel = ref(null);
 const labelForm = ref({ name: '', color: '#61BD4F' });
 
-const labelPresetColors = [
-    '#61BD4F', '#F2D600', '#FF9F1A', '#EB5A46', '#C377E0',
-    '#0079BF', '#00C2E0', '#51E898', '#FF78CB', '#344563',
-];
-
 const isLabelSelected = (labelId) => {
     return (props.task.labels || []).some((label) => label.id === labelId);
 };
@@ -241,7 +236,6 @@ const removeLabel = (label) => {
             data: { label_id: label.id },
             preserveScroll: true,
             onSuccess: () => {
-                window.showSnackbar?.('Label removed!', 'success');
                 router.reload({ only: ['task'] });
             },
             onError: () => {
@@ -1041,30 +1035,12 @@ onUnmounted(() => {
                                 variant="outlined"
                                 density="compact"
                                 class="mb-3"
+                                @blur="labelForm.color = normalizeLabelColor(labelForm.color)"
                             />
 
-                            <div class="text-xs text-gray-400 mb-2">Preset colors</div>
-                            <div class="flex flex-wrap gap-2 mb-4">
-                                <button
-                                    v-for="color in labelPresetColors"
-                                    :key="color"
-                                    type="button"
-                                    class="label-color-option"
-                                    :class="{ 'label-color-option--active': normalizeLabelColor(labelForm.color) === color }"
-                                    :style="{ backgroundColor: color }"
-                                    @click="labelForm.color = color"
-                                >
-                                    <v-icon v-if="normalizeLabelColor(labelForm.color) === color" size="14" color="white">
-                                        mdi-check
-                                    </v-icon>
-                                </button>
-                            </div>
-
-                            <div class="flex items-center gap-2">
-                                <span class="text-xs text-gray-400">Preview</span>
-                                <v-chip :color="normalizeLabelColor(labelForm.color)" size="small" variant="flat">
-                                    {{ labelForm.name || 'Label' }}
-                                </v-chip>
+                            <div class="d-flex align-center ga-3 mb-4">
+                                <input v-model="labelForm.color" type="color" class="color-input-native" />
+                                <div class="text-xs text-gray-400">Choose any color with the picker</div>
                             </div>
                         </v-card-text>
 
@@ -1397,19 +1373,22 @@ onUnmounted(() => {
     cursor: grabbing;
 }
 
-.label-color-option {
-    width: 28px;
-    height: 28px;
-    border-radius: 6px;
-    border: 2px solid transparent;
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
+.color-input-native {
+    width: 44px;
+    height: 36px;
+    border: 1px solid rgba(255, 255, 255, 0.14);
+    border-radius: 8px;
+    background: transparent;
+    padding: 4px;
     cursor: pointer;
 }
 
-.label-color-option--active {
-    border-color: rgba(255, 255, 255, 0.9);
-    box-shadow: 0 0 0 1px rgba(0, 0, 0, 0.2);
+.color-input-native::-webkit-color-swatch-wrapper {
+    padding: 0;
+}
+
+.color-input-native::-webkit-color-swatch {
+    border: none;
+    border-radius: 5px;
 }
 </style>

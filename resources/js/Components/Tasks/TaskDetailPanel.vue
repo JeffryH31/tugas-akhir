@@ -24,6 +24,7 @@ const props = defineProps({
     space: Object,
     list: Object,
     parentTask: Object,
+    siblingSubtasks: { type: Array, default: () => [] },
     statuses: { type: Array, default: () => [] },
     members: { type: Array, default: () => [] },
     labels: { type: Array, default: () => [] },
@@ -257,7 +258,8 @@ onUnmounted(() => stopTimerInterval());
                     <v-tabs-window-item value="details">
                         <DetailsTab :local-task="localTask" :task="task" :is-subtask="isSubtask" :workspace="workspace"
                             :space="space" :list="list" :parent-task="parentTask" :statuses="statuses"
-                            :members="members" :labels="labels" :sprints="sprints" :is-tracking="isTracking"
+                            :members="members" :labels="labels" :sprints="sprints"
+                            :sibling-subtasks="siblingSubtasks" :is-tracking="isTracking"
                             :format-tracking-duration="formatTrackingDuration" :is-timer-loading="isTimerLoading"
                             @start-tracking="startTracking" @stop-tracking="stopTracking" @updated="emit('updated')"
                             @view-subtasks="emit('view-subtasks', $event)" />

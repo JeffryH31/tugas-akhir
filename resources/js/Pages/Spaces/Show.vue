@@ -5,7 +5,6 @@
 import { ref, computed, watch } from 'vue';
 import { Head, router } from '@inertiajs/vue3';
 import MainLayout from '@/Layouts/MainLayout.vue';
-import draggable from 'vuedraggable';
 
 const props = defineProps({
     workspace: Object,
@@ -84,6 +83,13 @@ const openEditSpace = () => {
     showEditSpace.value = true;
 };
 
+const normalizeHexColor = (value, fallback = '#6366F1') => {
+    const raw = (value || '').trim();
+    if (!raw) return fallback;
+    const hex = raw.startsWith('#') ? raw : `#${raw}`;
+    return /^#[0-9A-Fa-f]{6}$/.test(hex) ? hex.toUpperCase() : fallback;
+};
+
 const updateSpace = () => {
     if (!editSpaceName.value.trim()) return;
 
@@ -92,7 +98,7 @@ const updateSpace = () => {
         {
             name: editSpaceName.value.trim(),
             description: editSpaceDescription.value.trim() || null,
-            color: editSpaceColor.value,
+            color: normalizeHexColor(editSpaceColor.value),
         },
         {
             preserveScroll: true,
@@ -209,47 +215,70 @@ const moveListToFolder = () => {
     );
 };
 
-// Drag and drop
+// Hierarchy drag-and-drop (move product between folder/root)
 const draggedList = ref(null);
 const dragOverFolder = ref(null);
+
+const resetDragState = () => {
+    draggedList.value = null;
+    dragOverFolder.value = null;
+};
 
 const handleDragStart = (event, list) => {
     draggedList.value = list;
     event.dataTransfer.effectAllowed = 'move';
+    event.dataTransfer.setData('text/plain', String(list.id));
 };
 
 const handleDragOver = (event, folderId = null) => {
     event.preventDefault();
+    if (event.dataTransfer) {
+        event.dataTransfer.dropEffect = 'move';
+    }
     dragOverFolder.value = folderId;
 };
 
-const handleDragLeave = () => {
-    dragOverFolder.value = null;
+const handleDragLeave = (_event, folderId = null) => {
+    if (dragOverFolder.value === folderId) {
+        dragOverFolder.value = null;
+    }
 };
 
 const handleDrop = (event, targetFolderId = null) => {
     event.preventDefault();
 
-    if (!draggedList.value) return;
-
-    // Only move if dropping to a different folder
-    if (draggedList.value.folder_id !== targetFolderId) {
-        router.post(
-            route('lists.move-to-folder', [props.workspace.id, props.space.id, draggedList.value.id]),
-            { folder_id: targetFolderId },
-            {
-                preserveScroll: true,
-                onSuccess: () => {
-                    if (window.showSnackbar) {
-                        window.showSnackbar('Product moved successfully!', 'success');
-                    }
-                }
-            }
-        );
+    const list = draggedList.value;
+    if (!list) {
+        resetDragState();
+        return;
     }
 
-    draggedList.value = null;
-    dragOverFolder.value = null;
+    // No-op when dropped to the same folder/root
+    if (list.folder_id === targetFolderId) {
+        resetDragState();
+        return;
+    }
+
+    router.post(
+        route('lists.move-to-folder', [props.workspace.id, props.space.id, list.id]),
+        { folder_id: targetFolderId },
+        {
+            preserveScroll: true,
+            onSuccess: () => {
+                if (window.showSnackbar) {
+                    window.showSnackbar('Product moved successfully!', 'success');
+                }
+            },
+            onError: () => {
+                if (window.showSnackbar) {
+                    window.showSnackbar('Failed to move product', 'error');
+                }
+            },
+            onFinish: () => {
+                resetDragState();
+            },
+        }
+    );
 };
 
 // Available folders for moving lists
@@ -281,17 +310,6 @@ watch(() => props.productsByStatus, () => {
     localProductsByStatus.value = initProductsByStatus();
 }, { deep: true, immediate: true });
 
-// Handle product drag between status columns
-const onProductDragChange = (evt, statusId) => {
-    if (evt.added) {
-        const product = evt.added.element;
-        router.patch(
-            route('lists.change-status', [props.workspace.id, props.space.id, product.id]),
-            { status_id: statusId },
-            { preserveScroll: true }
-        );
-    }
-};
 </script>
 
 <template>
@@ -352,12 +370,9 @@ const onProductDragChange = (evt, statusId) => {
                         </template>
                         <v-card color="surface">
                             <v-list density="compact">
-                                <v-list-item
-                                    prepend-icon="mdi-shield-home-outline"
-                                    title="Space Access"
+                                <v-list-item prepend-icon="mdi-shield-home-outline" title="Space Access"
                                     @click="router.visit(route('spaces.settings', [workspace.id, space.id]))"
-                                    class="px-4"
-                                />
+                                    class="px-4" />
                                 <v-list-item prepend-icon="mdi-pencil-outline" title="Edit Space" @click="openEditSpace"
                                     class="px-4" />
                                 <v-divider />
@@ -431,41 +446,39 @@ const onProductDragChange = (evt, statusId) => {
                             <div class="flex items-center gap-2">
                                 <div class="w-3 h-3 rounded-full" :style="{ backgroundColor: status.color }" />
                                 <span class="font-medium text-sm">{{ status.name }}</span>
-                                <span class="text-xs text-gray-500 ml-1">{{ (localProductsByStatus[status.id] || []).length }}</span>
+                                <span class="text-xs text-gray-500 ml-1">{{ (localProductsByStatus[status.id] ||
+                                    []).length
+                                }}</span>
                             </div>
                         </div>
 
                         <!-- Draggable Products -->
                         <div class="board-column__content">
-                            <draggable
-                                :list="localProductsByStatus[status.id] || []"
-                                group="products"
-                                item-key="id"
-                                :animation="200"
-                                ghost-class="product-ghost"
-                                drag-class="product-dragging"
-                                class="board-column__list"
-                                @change="(evt) => onProductDragChange(evt, status.id)"
-                            >
-                                <template #item="{ element }">
-                                    <div class="product-card" @click="router.visit(route('lists.show', [workspace.id, space.id, element.id]))">
-                                        <div class="product-card__status-bar" :style="{ backgroundColor: status.color }" />
-                                        <div class="product-card__body">
-                                            <div class="product-card__name">{{ element.name }}</div>
-                                            <div class="product-card__meta">
-                                                <span v-if="element.folder" class="product-card__folder">
-                                                    <v-icon size="12">mdi-folder-outline</v-icon>
-                                                    {{ element.folder.name }}
-                                                </span>
-                                                <span class="product-card__tasks">
-                                                    <v-icon size="12">mdi-checkbox-marked-outline</v-icon>
-                                                    {{ element.tasks_count || 0 }} tasks
-                                                </span>
-                                            </div>
+                            <div class="board-column__list">
+                                <div v-for="element in (localProductsByStatus[status.id] || [])" :key="element.id"
+                                    class="product-card"
+                                    @click="router.visit(route('lists.show', [workspace.id, space.id, element.id]))">
+                                    <div class="product-card__status-bar" :style="{ backgroundColor: status.color }" />
+                                    <div class="product-card__body">
+                                        <div class="product-card__name">{{ element.name }}</div>
+                                        <div class="product-card__meta">
+                                            <span v-if="element.folder" class="product-card__folder">
+                                                <v-icon size="12">mdi-folder-outline</v-icon>
+                                                {{ element.folder.name }}
+                                            </span>
+                                            <span class="product-card__tasks">
+                                                <v-icon size="12">mdi-checkbox-marked-outline</v-icon>
+                                                {{ element.tasks_count || 0 }} tasks
+                                            </span>
                                         </div>
                                     </div>
-                                </template>
-                            </draggable>
+                                </div>
+
+                                <div v-if="!(localProductsByStatus[status.id] || []).length"
+                                    class="board-column__empty">
+                                    No products
+                                </div>
+                            </div>
                         </div>
                     </div>
                 </div>
@@ -498,9 +511,10 @@ const onProductDragChange = (evt, statusId) => {
                         </div>
                     </div>
 
-                    <div v-if="!collapsedFolders[folder.id]" class="folder-lists"
-                        :class="{ 'drag-over': dragOverFolder === folder.id }"
-                        @dragover="handleDragOver($event, folder.id)" @dragleave="handleDragLeave"
+                    <div v-if="!collapsedFolders[folder.id]" class="folder-lists" :class="{
+                        'folder-lists--empty': !(folder.lists?.length),
+                        'drag-over': dragOverFolder === folder.id
+                    }" @dragover="handleDragOver($event, folder.id)" @dragleave="handleDragLeave($event, folder.id)"
                         @drop="handleDrop($event, folder.id)">
                         <div v-for="list in folder.lists" :key="list.id" class="list-item" draggable="true"
                             @dragstart="handleDragStart($event, list)"
@@ -517,13 +531,20 @@ const onProductDragChange = (evt, statusId) => {
                                 </v-btn>
                             </div>
                         </div>
+
+                        <div v-if="!folder.lists?.length" class="folder-drop-hint">
+                            <span>Empty folder</span>
+                        </div>
                     </div>
                 </div>
 
                 <!-- Lists without folder -->
-                <div v-if="space?.lists_without_folder?.length" class="root-lists-zone"
-                    :class="{ 'drag-over': dragOverFolder === null }" @dragover="handleDragOver($event, null)"
-                    @dragleave="handleDragLeave" @drop="handleDrop($event, null)">
+                <div v-if="space?.lists_without_folder?.length || space?.folders?.length" class="root-lists-zone"
+                    :class="{
+                        'drag-over': dragOverFolder === null,
+                        'root-lists-zone--empty': !space?.lists_without_folder?.length
+                    }" @dragover="handleDragOver($event, null)" @dragleave="handleDragLeave($event, null)"
+                    @drop="handleDrop($event, null)">
                     <div v-for="list in space?.lists_without_folder" :key="list.id"
                         class="list-item list-item--standalone" draggable="true"
                         @dragstart="handleDragStart($event, list)"
@@ -541,6 +562,7 @@ const onProductDragChange = (evt, statusId) => {
                             <v-icon size="16" color="grey">mdi-chevron-right</v-icon>
                         </div>
                     </div>
+
                 </div>
 
                 <!-- Empty State -->
@@ -573,8 +595,8 @@ const onProductDragChange = (evt, statusId) => {
             <v-card>
                 <v-card-title>Create Product</v-card-title>
                 <v-card-text>
-                    <v-text-field v-model="newListName" label="Product Name" placeholder="e.g., Product A" variant="outlined"
-                        autofocus class="mb-3" @keydown.enter="createList" />
+                    <v-text-field v-model="newListName" label="Product Name" placeholder="e.g., Product A"
+                        variant="outlined" autofocus class="mb-3" @keydown.enter="createList" />
                     <v-select v-model="selectedFolderId" :items="space?.folders || []" item-title="name" item-value="id"
                         label="Folder (optional)" variant="outlined" clearable bg-color="#1e1e1e" />
                 </v-card-text>
@@ -597,11 +619,11 @@ const onProductDragChange = (evt, statusId) => {
                         rows="3" class="mb-4" />
                     <div>
                         <div class="text-sm font-medium mb-2">Space Color</div>
-                        <div class="flex gap-2">
-                            <div v-for="color in ['#6366F1', '#EF4444', '#F59E0B', '#10B981', '#3B82F6', '#8B5CF6', '#EC4899', '#6B7280']"
-                                :key="color" class="w-8 h-8 rounded-lg cursor-pointer border-2 transition-all"
-                                :class="{ 'border-white scale-110': editSpaceColor === color, 'border-transparent': editSpaceColor !== color }"
-                                :style="{ backgroundColor: color }" @click="editSpaceColor = color" />
+                        <div class="d-flex align-center ga-3">
+                            <input v-model="editSpaceColor" type="color" class="color-input-native" />
+                            <v-text-field v-model="editSpaceColor" label="Hex Color" variant="outlined"
+                                density="compact" hide-details class="flex-1"
+                                @blur="editSpaceColor = normalizeHexColor(editSpaceColor)" />
                         </div>
                     </div>
                 </v-card-text>
@@ -618,7 +640,8 @@ const onProductDragChange = (evt, statusId) => {
             <v-card>
                 <v-card-title class="text-error">Delete Space?</v-card-title>
                 <v-card-text>
-                    Are you sure you want to delete "{{ space?.name }}"? This will also delete all folders, products, and
+                    Are you sure you want to delete "{{ space?.name }}"? This will also delete all folders, products,
+                    and
                     tasks
                     within this space. This action cannot be undone.
                 </v-card-text>
@@ -650,7 +673,8 @@ const onProductDragChange = (evt, statusId) => {
             <v-card>
                 <v-card-title class="text-error">Delete Folder?</v-card-title>
                 <v-card-text>
-                    Are you sure you want to delete "{{ deletingFolder?.name }}"? This will also delete all products within
+                    Are you sure you want to delete "{{ deletingFolder?.name }}"? This will also delete all products
+                    within
                     this
                     folder. This action cannot be undone.
                 </v-card-text>
@@ -769,6 +793,24 @@ const onProductDragChange = (evt, statusId) => {
 
 .folder-lists {
     border-top: 1px solid #2d2d30;
+    transition: all 0.15s;
+}
+
+.folder-lists--empty {
+    min-height: 72px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 10px 12px;
+}
+
+.folder-drop-hint {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    color: #9ca3af;
+    font-size: 13px;
+    justify-content: center;
 }
 
 .list-item {
@@ -836,6 +878,12 @@ const onProductDragChange = (evt, statusId) => {
     padding: 8px;
     border-radius: 8px;
     transition: all 0.15s;
+}
+
+.root-lists-zone--empty {
+    min-height: 72px;
+    border: 1px dashed #2d2d30;
+    justify-content: center;
 }
 
 /* ─── Product Kanban Board ─── */
@@ -933,12 +981,29 @@ const onProductDragChange = (evt, statusId) => {
     gap: 4px;
 }
 
-.product-ghost {
-    opacity: 0.5;
+.color-input-native {
+    width: 48px;
+    height: 38px;
+    border: 1px solid rgba(255, 255, 255, 0.14);
+    border-radius: 8px;
+    background: transparent;
+    padding: 4px;
+    cursor: pointer;
 }
 
-.product-dragging {
-    transform: rotate(2deg);
-    box-shadow: 0 10px 40px rgba(0, 0, 0, 0.4);
+.color-input-native::-webkit-color-swatch-wrapper {
+    padding: 0;
+}
+
+.color-input-native::-webkit-color-swatch {
+    border: none;
+    border-radius: 5px;
+}
+
+.board-column__empty {
+    color: #9ca3af;
+    font-size: 12px;
+    text-align: center;
+    padding: 12px;
 }
 </style>

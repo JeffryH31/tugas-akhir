@@ -7,6 +7,9 @@ use App\Models\Task;
 use Carbon\Carbon;
 use Illuminate\Support\Collection;
 
+/**
+ * Perform Critical Path Method (CPM) analysis for task subtasks.
+ */
 class CpmService
 {
     /**
@@ -142,6 +145,15 @@ class CpmService
         return false;
     }
 
+    /**
+     * Depth-first search helper used for cycle detection.
+     *
+     * @param int $nodeId
+     * @param array<int, array<int>> $graph
+     * @param array<int, bool> $visited
+     * @param array<int, bool> $recStack
+     * @return bool
+     */
     protected function hasCycleDFS(int $nodeId, array $graph, array &$visited, array &$recStack): bool
     {
         if (!$visited[$nodeId]) {

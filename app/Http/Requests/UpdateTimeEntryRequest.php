@@ -21,7 +21,6 @@ class UpdateTimeEntryRequest extends FormRequest
     {
         return [
             'duration' => ['sometimes', 'integer', 'min:1', 'max:1440'],
-            'description' => ['nullable', 'string', 'max:500'],
             'started_at' => ['nullable', 'date'],
             'ended_at' => ['nullable', 'date', 'after:started_at'],
             'is_billable' => ['nullable', 'boolean'],

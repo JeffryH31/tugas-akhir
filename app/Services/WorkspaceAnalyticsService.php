@@ -11,8 +11,19 @@ use App\Models\Workspace;
 use Carbon\Carbon;
 use Illuminate\Support\Collection;
 
+/**
+ * Provide workspace-wide KPIs, EVM metrics, and analytics exports.
+ */
 class WorkspaceAnalyticsService
 {
+    /**
+     * Build overview analytics payload for dashboards.
+     *
+     * @param Workspace $workspace
+     * @param string|null $startDate
+     * @param string|null $endDate
+     * @return array<string, mixed>
+     */
     public function getOverview(Workspace $workspace, ?string $startDate = null, ?string $endDate = null): array
     {
         $start = $startDate ? Carbon::parse($startDate)->startOfDay() : now()->subDays(30)->startOfDay();
@@ -82,6 +93,14 @@ class WorkspaceAnalyticsService
         ];
     }
 
+    /**
+     * Get flat rows suitable for CSV export.
+     *
+     * @param Workspace $workspace
+     * @param string|null $startDate
+     * @param string|null $endDate
+     * @return Collection<int, array<string, mixed>>
+     */
     public function getCsvRows(Workspace $workspace, ?string $startDate = null, ?string $endDate = null): Collection
     {
         $overview = $this->getOverview($workspace, $startDate, $endDate);
@@ -93,6 +112,13 @@ class WorkspaceAnalyticsService
         ]);
     }
 
+    /**
+     * Calculate earned value management metrics as of a date.
+     *
+     * @param Workspace $workspace
+     * @param Carbon $asOf
+     * @return array<string, float|int|null>
+     */
     protected function calculateEvm(Workspace $workspace, Carbon $asOf): array
     {
         $subtasks = Subtask::query()
@@ -132,6 +158,13 @@ class WorkspaceAnalyticsService
         ];
     }
 
+    /**
+     * Estimate scheduled progress ratio from baseline/current date ranges.
+     *
+     * @param Subtask $subtask
+     * @param Carbon $asOf
+     * @return float
+     */
     protected function getScheduledProgressRatio(Subtask $subtask, Carbon $asOf): float
     {
         $start = $subtask->baseline_start_date ?? $subtask->start_date;

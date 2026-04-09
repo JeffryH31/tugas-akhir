@@ -14,6 +14,13 @@ const newSpaceName = ref('');
 const newSpaceDescription = ref('');
 const newSpaceColor = ref('#6366F1');
 
+const normalizeHexColor = (value, fallback = '#6366F1') => {
+    const raw = (value || '').trim();
+    if (!raw) return fallback;
+    const hex = raw.startsWith('#') ? raw : `#${raw}`;
+    return /^#[0-9A-Fa-f]{6}$/.test(hex) ? hex.toUpperCase() : fallback;
+};
+
 const createSpace = () => {
     if (!newSpaceName.value.trim()) return;
 
@@ -22,7 +29,7 @@ const createSpace = () => {
         {
             name: newSpaceName.value.trim(),
             description: newSpaceDescription.value.trim() || null,
-            color: newSpaceColor.value,
+            color: normalizeHexColor(newSpaceColor.value),
         },
         {
             preserveScroll: true,
@@ -105,11 +112,17 @@ const createSpace = () => {
                         class="mb-3" />
                     <div>
                         <div class="text-sm font-medium mb-2">Space Color</div>
-                        <div class="flex gap-2">
-                            <div v-for="color in ['#6366F1', '#EF4444', '#F59E0B', '#10B981', '#3B82F6', '#8B5CF6', '#EC4899', '#6B7280']"
-                                :key="color" class="w-10 h-10 rounded-lg cursor-pointer border-2 transition-all"
-                                :class="{ 'border-white scale-110': newSpaceColor === color, 'border-transparent': newSpaceColor !== color }"
-                                :style="{ backgroundColor: color }" @click="newSpaceColor = color" />
+                        <div class="d-flex align-center ga-3">
+                            <input v-model="newSpaceColor" type="color" class="color-input-native" />
+                            <v-text-field
+                                v-model="newSpaceColor"
+                                label="Hex Color"
+                                variant="outlined"
+                                density="compact"
+                                hide-details
+                                class="flex-1"
+                                @blur="newSpaceColor = normalizeHexColor(newSpaceColor)"
+                            />
                         </div>
                     </div>
                 </v-card-text>
@@ -159,8 +172,28 @@ const createSpace = () => {
 
 .line-clamp-2 {
     display: -webkit-box;
+    line-clamp: 2;
     -webkit-line-clamp: 2;
     -webkit-box-orient: vertical;
     overflow: hidden;
+}
+
+.color-input-native {
+    width: 48px;
+    height: 38px;
+    border: 1px solid rgba(255, 255, 255, 0.14);
+    border-radius: 8px;
+    background: transparent;
+    padding: 4px;
+    cursor: pointer;
+}
+
+.color-input-native::-webkit-color-swatch-wrapper {
+    padding: 0;
+}
+
+.color-input-native::-webkit-color-swatch {
+    border: none;
+    border-radius: 5px;
 }
 </style>

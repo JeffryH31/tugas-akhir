@@ -9,6 +9,9 @@ use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
 
+/**
+ * Manage workspace lifecycle, membership, and high-level statistics.
+ */
 class WorkspaceService
 {
     /**

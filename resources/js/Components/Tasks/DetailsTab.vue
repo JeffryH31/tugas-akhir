@@ -24,6 +24,7 @@ const props = defineProps({
     members: { type: Array, default: () => [] },
     labels: { type: Array, default: () => [] },
     sprints: { type: Array, default: () => [] },
+    siblingSubtasks: { type: Array, default: () => [] },
     isTracking: Boolean,
     formatTrackingDuration: String,
     isTimerLoading: Boolean,
@@ -282,11 +283,6 @@ const showLabelEditor = ref(false);
 const editingLabel = ref(null);
 const labelForm = ref({ name: '', color: '#61BD4F' });
 
-const labelPresetColors = [
-    '#61BD4F', '#F2D600', '#FF9F1A', '#EB5A46', '#C377E0',
-    '#0079BF', '#00C2E0', '#51E898', '#FF78CB', '#344563',
-];
-
 const isLabelSelected = (labelId) => {
     return (props.localTask?.labels || []).some((label) => label.id === labelId);
 };
@@ -342,7 +338,7 @@ const removeLabel = (label) => {
         : route('tasks.labels.remove', [props.workspace.id, props.space.id, props.list.id, props.task.id]);
     router.delete(url, {
         data: { label_id: label.id }, preserveScroll: true, preserveState: true,
-        onSuccess: () => { router.reload({ only: ['task', 'tasksByStatus'] }); window.showSnackbar?.('Label removed!', 'success'); },
+        onSuccess: () => { router.reload({ only: ['task', 'tasksByStatus'] }); },
         onError: () => { props.localTask.labels = backup; window.showSnackbar?.('Failed to remove label', 'error'); },
     });
 };
@@ -506,17 +502,45 @@ const deleteSubtask = async (sub) => {
 // ===== Dependencies =====
 const dependencyLoading = ref(false);
 
-const getAvailablePredecessors = computed(() => {
-    if (!props.isSubtask || !props.parentTask?.subtasks) return [];
-    const depIds = (props.task.dependencies || []).map(d => d.id);
-    const dntIds = (props.task.dependents || []).map(d => d.id);
-    return props.parentTask.subtasks.filter(s => s.id !== props.task.id && !depIds.includes(s.id) && !dntIds.includes(s.id));
+const dependencyCandidateSubtasks = computed(() => {
+    if (!props.isSubtask) return [];
+
+    const fromParent = props.parentTask?.subtasks;
+    if (Array.isArray(fromParent) && fromParent.length > 0) {
+        return fromParent;
+    }
+
+    return Array.isArray(props.siblingSubtasks) ? props.siblingSubtasks : [];
 });
+
+const getAvailablePredecessors = computed(() => {
+    if (!props.isSubtask) return [];
+
+    const taskId = Number(props.task?.id || 0);
+    const depIds = new Set((props.task.dependencies || []).map(d => Number(d.id)));
+    const dntIds = new Set((props.task.dependents || []).map(d => Number(d.id)));
+
+    return dependencyCandidateSubtasks.value.filter((subtask) => {
+        const candidateId = Number(subtask?.id || 0);
+        if (!candidateId || candidateId === taskId) return false;
+
+        return !depIds.has(candidateId) && !dntIds.has(candidateId);
+    });
+});
+
 const getAvailableSuccessors = computed(() => {
-    if (!props.isSubtask || !props.parentTask?.subtasks) return [];
-    const depIds = (props.task.dependencies || []).map(d => d.id);
-    const dntIds = (props.task.dependents || []).map(d => d.id);
-    return props.parentTask.subtasks.filter(s => s.id !== props.task.id && !depIds.includes(s.id) && !dntIds.includes(s.id));
+    if (!props.isSubtask) return [];
+
+    const taskId = Number(props.task?.id || 0);
+    const depIds = new Set((props.task.dependencies || []).map(d => Number(d.id)));
+    const dntIds = new Set((props.task.dependents || []).map(d => Number(d.id)));
+
+    return dependencyCandidateSubtasks.value.filter((subtask) => {
+        const candidateId = Number(subtask?.id || 0);
+        if (!candidateId || candidateId === taskId) return false;
+
+        return !depIds.has(candidateId) && !dntIds.has(candidateId);
+    });
 });
 
 const depFetch = (method, body) => {
@@ -850,7 +874,7 @@ const removeSuccessor = (suc) => depFetch('DELETE', { subtask_id: suc.id, depend
                                     <v-list-item :active="!completionTargetStatusIdState"
                                         @click="setCompletionAutomation(null)">
                                         <template v-slot:prepend>
-                                            <v-icon size="16" color="grey">mdi-power</v-icon>
+                                            <span class="automation-option-dot automation-option-dot--off" />
                                         </template>
                                         <v-list-item-title>Off</v-list-item-title>
                                         <template v-slot:append>
@@ -858,12 +882,11 @@ const removeSuccessor = (suc) => depFetch('DELETE', { subtask_id: suc.id, depend
                                                 color="primary">mdi-check</v-icon>
                                         </template>
                                     </v-list-item>
-                                    <v-divider />
                                     <v-list-item v-for="status in completionStatusOptions" :key="status.id"
                                         :active="status.id === completionTargetStatusIdState"
                                         @click="setCompletionAutomation(status.id)">
                                         <template v-slot:prepend>
-                                            <div class="w-3 h-3 rounded-full mr-3"
+                                            <span class="automation-option-dot"
                                                 :style="{ backgroundColor: status.color }" />
                                         </template>
                                         <v-list-item-title>{{ status.name }}</v-list-item-title>
@@ -1007,19 +1030,22 @@ const removeSuccessor = (suc) => depFetch('DELETE', { subtask_id: suc.id, depend
                         Spent
                     </div>
                     <div class="prop-value">
-                        <div class="d-flex align-center ga-2">
-                            <span class="text-body-2">
-                                {{ formatDuration((localTask.time_spent || 0) * 60) }}
-                            </span>
-                            <v-chip v-if="localTask.time_estimate" size="x-small" variant="tonal"
-                                :color="(localTask.time_spent || 0) > localTask.time_estimate ? 'error' : 'primary'">
-                                {{ getSpentPercentage(localTask.time_spent, localTask.time_estimate) }}%
-                            </v-chip>
+                        <div class="spent-progress-wrap">
+                            <div class="spent-metrics-row">
+                                <span class="text-body-2">
+                                    {{ formatDuration((localTask.time_spent || 0) * 60) }}
+                                </span>
+                                <span v-if="localTask.time_estimate"
+                                    class="spent-percent"
+                                    :class="{ 'spent-percent--over': (localTask.time_spent || 0) > localTask.time_estimate }">
+                                    {{ getSpentPercentage(localTask.time_spent, localTask.time_estimate) }}%
+                                </span>
+                            </div>
+                            <v-progress-linear v-if="localTask.time_estimate"
+                                :model-value="(localTask.time_spent / localTask.time_estimate) * 100"
+                                :color="localTask.time_spent > localTask.time_estimate ? 'error' : 'primary'" height="4"
+                                rounded class="spent-progress-bar mt-1" />
                         </div>
-                        <v-progress-linear v-if="localTask.time_estimate"
-                            :model-value="(localTask.time_spent / localTask.time_estimate) * 100"
-                            :color="localTask.time_spent > localTask.time_estimate ? 'error' : 'primary'" height="4"
-                            rounded class="mt-1" style="max-width: 200px;" />
                     </div>
                 </div>
 
@@ -1197,30 +1223,12 @@ const removeSuccessor = (suc) => depFetch('DELETE', { subtask_id: suc.id, depend
                         variant="outlined"
                         density="compact"
                         class="mb-3"
+                        @blur="labelForm.color = normalizeLabelColor(labelForm.color)"
                     />
 
-                    <div class="text-caption text-grey mb-2">Preset colors</div>
-                    <div class="d-flex flex-wrap ga-2 mb-3">
-                        <button
-                            v-for="color in labelPresetColors"
-                            :key="color"
-                            type="button"
-                            class="label-color-option"
-                            :class="{ 'label-color-option--active': normalizeLabelColor(labelForm.color) === color }"
-                            :style="{ backgroundColor: color }"
-                            @click="labelForm.color = color"
-                        >
-                            <v-icon v-if="normalizeLabelColor(labelForm.color) === color" size="14" color="white">
-                                mdi-check
-                            </v-icon>
-                        </button>
-                    </div>
-
-                    <div class="d-flex align-center ga-2">
-                        <span class="text-caption text-grey">Preview</span>
-                        <v-chip :color="normalizeLabelColor(labelForm.color)" size="small" variant="flat">
-                            {{ labelForm.name || 'Label' }}
-                        </v-chip>
+                    <div class="d-flex align-center ga-3 mb-3">
+                        <input v-model="labelForm.color" type="color" class="color-input-native" />
+                        <div class="text-caption text-grey">Choose any color with the picker</div>
                     </div>
                 </v-card-text>
 
@@ -1288,6 +1296,19 @@ const removeSuccessor = (suc) => depFetch('DELETE', { subtask_id: suc.id, depend
     box-shadow: 0 0 0 1px rgba(255, 255, 255, 0.25);
 }
 
+.automation-option-dot {
+    width: 12px;
+    height: 12px;
+    border-radius: 999px;
+    display: inline-block;
+    margin-right: 12px;
+}
+
+.automation-option-dot--off {
+    background-color: #64748b;
+    box-shadow: 0 0 0 1px rgba(255, 255, 255, 0.2);
+}
+
 .timer-display {
     font-family: 'JetBrains Mono', 'Fira Code', monospace;
     font-size: 13px;
@@ -1300,6 +1321,34 @@ const removeSuccessor = (suc) => depFetch('DELETE', { subtask_id: suc.id, depend
 .timer-display--active {
     background: rgba(76, 175, 80, 0.12);
     color: #66bb6a;
+}
+
+.spent-metrics-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+}
+
+.spent-progress-wrap {
+    width: min(220px, 100%);
+}
+
+.spent-progress-bar {
+    width: 100%;
+}
+
+.spent-percent {
+    font-size: 12px;
+    font-weight: 600;
+    line-height: 1;
+    min-width: 32px;
+    text-align: right;
+    color: rgba(255, 255, 255, 0.6);
+}
+
+.spent-percent--over {
+    color: #ef5350;
 }
 
 .subtask-checklist {
@@ -1349,19 +1398,22 @@ const removeSuccessor = (suc) => depFetch('DELETE', { subtask_id: suc.id, depend
     text-overflow: ellipsis;
 }
 
-.label-color-option {
-    width: 28px;
-    height: 28px;
-    border-radius: 6px;
-    border: 2px solid transparent;
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
+.color-input-native {
+    width: 44px;
+    height: 36px;
+    border: 1px solid rgba(255, 255, 255, 0.14);
+    border-radius: 8px;
+    background: transparent;
+    padding: 4px;
     cursor: pointer;
 }
 
-.label-color-option--active {
-    border-color: rgba(255, 255, 255, 0.9);
-    box-shadow: 0 0 0 1px rgba(0, 0, 0, 0.2);
+.color-input-native::-webkit-color-swatch-wrapper {
+    padding: 0;
+}
+
+.color-input-native::-webkit-color-swatch {
+    border: none;
+    border-radius: 5px;
 }
 </style>

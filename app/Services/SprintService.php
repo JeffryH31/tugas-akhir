@@ -9,6 +9,9 @@ use App\Models\TaskList;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\ValidationException;
 
+/**
+ * Handle sprint lifecycle, backlog movement, and sprint metrics.
+ */
 class SprintService
 {
     /**

@@ -196,7 +196,9 @@ Route::middleware(['auth:sanctum', config('jetstream.auth_session'), 'verified']
 
                                     Route::prefix('timer')->group(function () {
                                         Route::post('/start', [TimeEntryController::class, 'startTimer'])->name('tasks.timer.start');
-                                        Route::post('/{entry}/stop', [TimeEntryController::class, 'stopTimer'])->name('tasks.timer.stop');
+                                        Route::post('/{entry}/stop', [TimeEntryController::class, 'stopTimer'])
+                                            ->withoutScopedBindings()
+                                            ->name('tasks.timer.stop');
                                     });
 
                                     Route::prefix('comments')->group(function () {

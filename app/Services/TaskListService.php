@@ -5,6 +5,7 @@ namespace App\Services;
 use App\Models\Activity;
 use App\Models\Folder;
 use App\Models\Space;
+use App\Models\Status;
 use App\Models\Task;
 use App\Models\TaskList;
 use App\Models\User;
@@ -12,10 +13,17 @@ use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
 
+/**
+ * Manage product/list lifecycle, membership, board grouping, and cloning.
+ */
 class TaskListService
 {
     /**
-     * Get lists for a space (optionally filtered by folder)
+     * Get lists for a space, optionally scoped to a specific folder.
+     *
+     * @param Space $space The parent space that owns the lists.
+     * @param Folder|null $folder Optional folder filter.
+     * @return Collection<int, TaskList>
      */
     public function getListsForSpace(Space $space, ?Folder $folder = null): Collection
     {
@@ -31,8 +39,14 @@ class TaskListService
     }
 
     /**
-     * Get a list with tasks/subtasks grouped by status
-     * Returns an associative array where key is status_id and value is array of tasks/subtasks
+     * Get board payload grouped by status for tasks or subtasks.
+     *
+     * When taskId is provided, returns subtasks for the parent task grouped by status.
+     * Otherwise returns task-level board items grouped by status.
+     *
+     * @param TaskList $list The list being viewed.
+     * @param int|string|null $taskId Optional parent task id for subtask mode.
+     * @return array<int, array<int, array<string, mixed>>>
      */
     public function getWithTasksByStatus(TaskList $list, $taskId = null): array
     {
@@ -107,11 +121,20 @@ class TaskListService
     }
 
     /**
-     * Create a new list
+     * Create a new list/product inside a space.
+     *
+     * @param array<string, mixed> $data Validated list payload.
+     * @param Space $space Parent space.
+     * @param User $user Current actor.
+     * @param Folder|null $folder Optional folder destination.
+     * @return TaskList
      */
     public function create(array $data, Space $space, User $user, ?Folder $folder = null): TaskList
     {
         return DB::transaction(function () use ($data, $space, $user, $folder) {
+            // Backward-compat: older spaces may miss one of the default task statuses.
+            $this->ensureDefaultTaskStatuses($space);
+
             $list = TaskList::create([
                 'space_id' => $space->id,
                 'folder_id' => $folder?->id,
@@ -135,6 +158,113 @@ class TaskListService
         });
     }
 
+    /**
+     * Ensure canonical task statuses exist for the space.
+     *
+     * @param Space $space Target space.
+     * @return void
+     */
+    private function ensureDefaultTaskStatuses(Space $space): void
+    {
+        $defaults = [
+            [
+                'type' => 'open',
+                'name' => 'Open',
+                'slug' => 'open',
+                'color' => '#6B7280',
+                'position' => 0,
+                'is_default' => true,
+                'is_closed' => false,
+            ],
+            [
+                'type' => 'in_progress',
+                'name' => 'In Progress',
+                'slug' => 'in-progress',
+                'color' => '#3B82F6',
+                'position' => 1,
+                'is_default' => false,
+                'is_closed' => false,
+            ],
+            [
+                'type' => 'review',
+                'name' => 'Review',
+                'slug' => 'review',
+                'color' => '#F59E0B',
+                'position' => 2,
+                'is_default' => false,
+                'is_closed' => false,
+            ],
+            [
+                'type' => 'closed',
+                'name' => 'Completed',
+                'slug' => 'completed',
+                'color' => '#10B981',
+                'position' => 3,
+                'is_default' => false,
+                'is_closed' => true,
+            ],
+        ];
+
+        foreach ($defaults as $default) {
+            $status = $space->statuses()
+                ->where(fn($q) => $q->where('type', $default['type'])->orWhere('slug', $default['slug']))
+                ->first();
+
+            if ($status) {
+                $updates = [];
+
+                if ($status->type !== $default['type']) {
+                    $updates['type'] = $default['type'];
+                }
+
+                if (!in_array($status->applies_to, ['tasks', 'both'], true)) {
+                    $updates['applies_to'] = 'both';
+                }
+
+                if ($default['is_closed'] && !$status->is_closed) {
+                    $updates['is_closed'] = true;
+                }
+
+                if ($default['is_default']) {
+                    $hasDefaultTaskStatus = $space->statuses()->forTasks()->where('is_default', true)->exists();
+                    if (!$hasDefaultTaskStatus && !$status->is_default) {
+                        $updates['is_default'] = true;
+                    }
+                }
+
+                if (!empty($updates)) {
+                    $status->update($updates);
+                }
+
+                continue;
+            }
+
+            // Keep insertion in a sensible order without touching existing custom statuses more than needed.
+            $space->statuses()->where('position', '>=', $default['position'])->increment('position');
+
+            Status::create([
+                'space_id' => $space->id,
+                'name' => $default['name'],
+                'slug' => $default['slug'],
+                'color' => $default['color'],
+                'type' => $default['type'],
+                'applies_to' => 'both',
+                'position' => $default['position'],
+                'is_default' => $default['is_default'],
+                'is_closed' => $default['is_closed'],
+            ]);
+        }
+    }
+
+    /**
+     * Add a member to a list with a role.
+     *
+     * @param TaskList $list Target list.
+     * @param User $user Member to add.
+     * @param string $role Membership role.
+     * @param User $addedBy Actor performing the operation.
+     * @return void
+     */
     public function addMember(TaskList $list, User $user, string $role, User $addedBy): void
     {
         $list->addMember($user, $role);
@@ -146,6 +276,15 @@ class TaskListService
         ]);
     }
 
+    /**
+     * Update an existing list member role.
+     *
+     * @param TaskList $list Target list.
+     * @param User $user Member whose role is being updated.
+     * @param string $role New role value.
+     * @param User $updatedBy Actor performing the operation.
+     * @return void
+     */
     public function updateMemberRole(TaskList $list, User $user, string $role, User $updatedBy): void
     {
         $list->members()->updateExistingPivot($user->id, ['role' => $role]);
@@ -157,6 +296,14 @@ class TaskListService
         ]);
     }
 
+    /**
+     * Remove a member from a list.
+     *
+     * @param TaskList $list Target list.
+     * @param User $user Member to remove.
+     * @param User $removedBy Actor performing the operation.
+     * @return void
+     */
     public function removeMember(TaskList $list, User $user, User $removedBy): void
     {
         $list->members()->detach($user->id);
@@ -168,7 +315,12 @@ class TaskListService
     }
 
     /**
-     * Update a list
+     * Update list metadata.
+     *
+     * @param TaskList $list Target list.
+     * @param array<string, mixed> $data Validated update payload.
+     * @param User $user Current actor.
+     * @return TaskList
      */
     public function update(TaskList $list, array $data, User $user): TaskList
     {
@@ -198,7 +350,11 @@ class TaskListService
     }
 
     /**
-     * Delete a list
+     * Soft-delete a list.
+     *
+     * @param TaskList $list Target list.
+     * @param User $user Current actor.
+     * @return void
      */
     public function delete(TaskList $list, User $user): void
     {
@@ -212,7 +368,11 @@ class TaskListService
     }
 
     /**
-     * Archive a list
+     * Archive a list.
+     *
+     * @param TaskList $list Target list.
+     * @param User $user Current actor.
+     * @return TaskList
      */
     public function archive(TaskList $list, User $user): TaskList
     {
@@ -226,7 +386,11 @@ class TaskListService
     }
 
     /**
-     * Unarchive a list
+     * Unarchive a list.
+     *
+     * @param TaskList $list Target list.
+     * @param User $user Current actor.
+     * @return TaskList
      */
     public function unarchive(TaskList $list, User $user): TaskList
     {
@@ -240,7 +404,12 @@ class TaskListService
     }
 
     /**
-     * Move list to folder
+     * Move a list to another folder (or root when null).
+     *
+     * @param TaskList $list Target list.
+     * @param Folder|null $folder Destination folder, null for root.
+     * @param User $user Current actor.
+     * @return TaskList
      */
     public function moveToFolder(TaskList $list, ?Folder $folder, User $user): TaskList
     {
@@ -264,7 +433,11 @@ class TaskListService
     }
 
     /**
-     * Reorder lists
+     * Reorder list positions within a space.
+     *
+     * @param Space $space Target space.
+     * @param array<int, int|string> $order Ordered list ids.
+     * @return void
      */
     public function reorder(Space $space, array $order): void
     {
@@ -278,7 +451,11 @@ class TaskListService
     }
 
     /**
-     * Duplicate a list with its tasks
+     * Duplicate a list and clone all tasks/subtasks and their assignments/labels.
+     *
+     * @param TaskList $list Source list.
+     * @param User $user Current actor.
+     * @return TaskList
      */
     public function duplicate(TaskList $list, User $user): TaskList
     {

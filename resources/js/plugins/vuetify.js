@@ -61,7 +61,7 @@ const vuetify = createVuetify({
         },
     },
     typography: {
-        fontFamily: "'Inter', sans-serif",
+        fontFamily: "'Plus Jakarta Sans', sans-serif",
     },
     defaults: {
         VBtn: {

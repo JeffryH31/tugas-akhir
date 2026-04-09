@@ -24,7 +24,6 @@ const timerInterval = ref(null);
 const showAddEntry = ref(false);
 const editingEntry = ref(null);
 const entryForm = ref({
-    description: '',
     started_at: '',
     ended_at: '',
     is_billable: false,
@@ -115,7 +114,6 @@ const stopTimer = async (entry) => {
 const editEntry = (entry) => {
     editingEntry.value = entry;
     entryForm.value = {
-        description: entry.description || '',
         started_at: entry.started_at ? new Date(entry.started_at).toISOString().slice(0, 16) : '',
         ended_at: entry.ended_at ? new Date(entry.ended_at).toISOString().slice(0, 16) : '',
         is_billable: entry.is_billable,
@@ -151,7 +149,6 @@ const deleteEntry = async (entry) => {
 
 const resetForm = () => {
     entryForm.value = {
-        description: '',
         started_at: '',
         ended_at: '',
         is_billable: false,
@@ -295,7 +292,6 @@ watch(() => props.runningTimer, (newTimer) => {
                             <tr>
                                 <th class="text-left">Task</th>
                                 <th class="text-left">Project</th>
-                                <th class="text-left">Description</th>
                                 <th class="text-left">Start</th>
                                 <th class="text-left">End</th>
                                 <th class="text-right">Duration</th>
@@ -323,7 +319,6 @@ watch(() => props.runningTimer, (newTimer) => {
                                 <td class="text-gray-400">
                                     {{ entry.subtask?.task?.task_list?.name || '-' }}
                                 </td>
-                                <td>{{ entry.description || '-' }}</td>
                                 <td class="text-gray-400">{{ formatDateTime(entry.started_at) }}</td>
                                 <td class="text-gray-400">{{ entry.ended_at ? formatDateTime(entry.ended_at) : '-' }}</td>
                                 <td class="text-right font-mono">
@@ -366,7 +361,7 @@ watch(() => props.runningTimer, (newTimer) => {
                                 </td>
                             </tr>
                             <tr v-if="entries.length === 0">
-                                <td colspan="8" class="text-center py-8 text-gray-500">
+                                <td colspan="7" class="text-center py-8 text-gray-500">
                                     No time entries found. Start tracking time on a task!
                                 </td>
                             </tr>
@@ -390,14 +385,6 @@ watch(() => props.runningTimer, (newTimer) => {
                 <v-card class="bg-[#2D2D2D]">
                     <v-card-title>{{ editingEntry ? 'Edit Time Entry' : 'Add Time Entry' }}</v-card-title>
                     <v-card-text>
-                        <v-text-field
-                            v-model="entryForm.description"
-                            label="Description"
-                            variant="outlined"
-                            hide-details
-                            class="mb-4"
-                        />
-                        
                         <div class="grid grid-cols-2 gap-4">
                             <v-text-field
                                 v-model="entryForm.started_at"

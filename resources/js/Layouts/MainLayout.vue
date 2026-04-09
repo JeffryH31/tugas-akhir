@@ -185,7 +185,6 @@ const newWorkspaceColor = ref('#3B82F6');
 const newWorkspaceIcon = ref('mdi-briefcase-outline');
 const isCreatingWorkspace = ref(false);
 
-const workspaceColorOptions = ['#3B82F6', '#06B6D4', '#10B981', '#84CC16', '#F59E0B', '#F97316', '#EF4444', '#8B5CF6'];
 const workspaceIconOptions = [
     'mdi-briefcase-outline',
     'mdi-office-building-outline',
@@ -197,6 +196,13 @@ const workspaceIconOptions = [
     'mdi-storefront-outline',
 ];
 
+const normalizeHexColor = (value, fallback) => {
+    const raw = (value || '').trim();
+    if (!raw) return fallback;
+    const hex = raw.startsWith('#') ? raw : `#${raw}`;
+    return /^#[0-9A-Fa-f]{6}$/.test(hex) ? hex.toUpperCase() : fallback;
+};
+
 const createSpace = () => {
     if (!newSpaceName.value.trim() || !activeWorkspace.value || isCreatingSpace.value) return;
     isCreatingSpace.value = true;
@@ -206,7 +212,7 @@ const createSpace = () => {
         {
             name: newSpaceName.value.trim(),
             description: newSpaceDescription.value.trim() || null,
-            color: newSpaceColor.value,
+            color: normalizeHexColor(newSpaceColor.value, '#6366F1'),
         },
         {
             preserveScroll: true,
@@ -240,7 +246,7 @@ const createWorkspace = () => {
         {
             name: newWorkspaceName.value.trim(),
             description: newWorkspaceDescription.value.trim() || null,
-            color: newWorkspaceColor.value,
+            color: normalizeHexColor(newWorkspaceColor.value, '#3B82F6'),
             icon: newWorkspaceIcon.value,
         },
         {
@@ -293,70 +299,87 @@ const formatDuration = (seconds) => {
         <Head :title="title" />
 
         <!-- Top Navigation Bar -->
-        <v-app-bar color="surface" elevation="0" height="48" class="border-b border-[#2d2d30]">
+        <v-app-bar color="surface" elevation="0" height="52" class="topbar">
             <!-- Sidebar Toggle -->
-            <v-btn icon variant="text" size="small" @click="isSidebarOpen = !isSidebarOpen">
-                <v-icon>mdi-menu</v-icon>
+            <v-btn icon variant="text" size="small" class="topbar-menu-btn" @click="isSidebarOpen = !isSidebarOpen">
+                <v-icon size="20">mdi-menu</v-icon>
             </v-btn>
 
             <!-- Logo -->
-            <Link :href="route('dashboard')" class="flex items-center ml-2">
-                <div class="flex items-center gap-2">
-                    <span v-if="!smAndDown" class="text-lg font-semibold text-white">Project Management</span>
+            <Link :href="route('dashboard')" class="topbar-logo">
+                <div class="logo-icon">
+                    <v-icon size="18" color="white">mdi-hexagon-multiple</v-icon>
                 </div>
+                <span v-if="!smAndDown" class="logo-text">Projex</span>
             </Link>
 
             <v-spacer />
 
             <!-- Search -->
-            <v-btn variant="tonal" color="surface-light" rounded="lg" size="small" class="mr-2 px-4"
-                @click="searchDialog = true">
-                <v-icon start size="18">mdi-magnify</v-icon>
-                <span v-if="!smAndDown" class="text-sm text-gray-400">Search...</span>
-            </v-btn>
+            <button class="topbar-search" @click="searchDialog = true">
+                <v-icon size="15" color="grey">mdi-magnify</v-icon>
+                <span v-if="!smAndDown">Search anything...</span>
+                <kbd v-if="!smAndDown">Ctrl K</kbd>
+            </button>
+
+            <v-spacer />
 
             <!-- Running Timer Indicator -->
             <v-chip v-if="runningTimer" color="success" size="small" class="mr-2" variant="tonal">
-                <v-icon start size="14">mdi-timer-outline</v-icon>
+                <v-icon start size="13">mdi-record-circle-outline</v-icon>
                 {{ formatDuration(timerElapsed) }}
             </v-chip>
 
             <!-- Create Button -->
             <v-menu location="bottom end">
                 <template v-slot:activator="{ props: createMenuProps }">
-                    <v-btn v-bind="createMenuProps" color="primary" size="small" rounded="lg" class="mr-2">
-                        <v-icon start size="18">mdi-plus</v-icon>
-                        <span v-if="!smAndDown">Create</span>
+                    <v-btn v-bind="createMenuProps" color="primary" size="small" rounded="lg" class="mr-2 topbar-create-btn">
+                        <v-icon size="16">mdi-plus</v-icon>
+                        <span v-if="!smAndDown" class="ml-1">Create</span>
                     </v-btn>
                 </template>
-                <v-list density="compact" min-width="180">
-                    <v-list-item prepend-icon="mdi-folder-plus-outline" title="New Space" @click="showCreateSpace = true" />
-                </v-list>
+                <v-card rounded="xl" elevation="8" min-width="200">
+                    <v-list density="compact" nav>
+                        <v-list-item prepend-icon="mdi-layers-plus" title="New Space"
+                            subtitle="Create a new space" @click="showCreateSpace = true" rounded="lg" />
+                        <v-list-item prepend-icon="mdi-briefcase-plus-outline" title="New Workspace"
+                            subtitle="Start a new workspace" @click="openCreateWorkspaceDialog" rounded="lg" />
+                    </v-list>
+                </v-card>
             </v-menu>
 
             <!-- Notifications -->
-            <v-menu v-model="notificationMenuOpen" location="bottom end" @update:model-value="(open) => open && markNotificationsRead()">
+            <v-menu v-model="notificationMenuOpen" location="bottom end"
+                @update:model-value="(open) => open && markNotificationsRead()">
                 <template v-slot:activator="{ props: notificationProps }">
-                    <v-btn v-bind="notificationProps" icon variant="text" size="small" class="mr-1">
-                        <v-badge :content="unreadNotificationsCount" :model-value="unreadNotificationsCount > 0" color="error">
-                            <v-icon>mdi-bell-outline</v-icon>
+                    <v-btn v-bind="notificationProps" icon variant="text" size="small" class="mr-1 topbar-icon-btn">
+                        <v-badge :content="unreadNotificationsCount" :model-value="unreadNotificationsCount > 0"
+                            color="error" floating>
+                            <v-icon size="20">mdi-bell-outline</v-icon>
                         </v-badge>
                     </v-btn>
                 </template>
-                <v-card min-width="340" max-width="420">
-                    <v-card-title class="d-flex align-center justify-space-between">
-                        <span>Notifications</span>
-                        <v-chip size="x-small" variant="tonal">{{ unreadNotificationsCount }} unread</v-chip>
-                    </v-card-title>
+                <v-card min-width="360" max-width="420" rounded="xl">
+                    <div class="notification-header">
+                        <span class="text-subtitle-2 font-weight-bold">Notifications</span>
+                        <v-chip v-if="unreadNotificationsCount" size="x-small" variant="tonal" color="error">
+                            {{ unreadNotificationsCount }} new
+                        </v-chip>
+                    </div>
                     <v-divider />
-                    <v-list density="compact" max-height="360" class="overflow-auto">
-                        <v-list-item v-for="notification in notifications" :key="notification.id">
+                    <v-list density="compact" max-height="360" class="overflow-auto notification-list">
+                        <v-list-item v-for="notification in notifications" :key="notification.id"
+                            rounded="lg" class="notification-item">
+                            <template #prepend>
+                                <div class="notif-dot" />
+                            </template>
                             <v-list-item-title class="text-body-2">{{ notification.description }}</v-list-item-title>
-                            <v-list-item-subtitle>{{ notification.created_at }}</v-list-item-subtitle>
+                            <v-list-item-subtitle class="text-caption">{{ notification.created_at }}</v-list-item-subtitle>
                         </v-list-item>
-                        <v-list-item v-if="!notifications.length" disabled>
-                            <v-list-item-title>No notifications yet.</v-list-item-title>
-                        </v-list-item>
+                        <div v-if="!notifications.length" class="notif-empty">
+                            <v-icon size="28" color="grey-darken-1">mdi-bell-sleep-outline</v-icon>
+                            <div class="text-caption text-medium-emphasis mt-2">You're all caught up!</div>
+                        </div>
                     </v-list>
                 </v-card>
             </v-menu>
@@ -364,41 +387,40 @@ const formatDuration = (seconds) => {
             <!-- User Menu -->
             <v-menu v-model="userMenuOpen" :close-on-content-click="false" location="bottom end">
                 <template v-slot:activator="{ props: menuProps }">
-                    <v-btn v-bind="menuProps" icon variant="text" size="small">
-                        <v-avatar size="32" :color="user?.avatar_color || 'primary'">
+                    <v-btn v-bind="menuProps" icon variant="text" size="small" class="mr-2 topbar-avatar-btn">
+                        <v-avatar size="30" :color="user?.avatar_color || 'primary'" class="user-avatar-ring">
                             <img v-if="user?.profile_photo_url" :src="user.profile_photo_url" :alt="user?.name" />
-                            <span v-else class="text-xs font-medium">{{ user?.initials }}</span>
+                            <span v-else class="text-[11px] font-weight-bold">{{ user?.initials }}</span>
                         </v-avatar>
                     </v-btn>
                 </template>
 
-                <v-card width="280" class="mt-2">
-                    <v-card-text class="pb-2">
-                        <div class="flex items-center gap-3 mb-3">
-                            <v-avatar size="40" :color="user?.avatar_color || 'primary'">
-                                <img v-if="user?.profile_photo_url" :src="user.profile_photo_url" :alt="user?.name" />
-                                <span v-else class="text-sm font-medium">{{ user?.initials }}</span>
-                            </v-avatar>
-                            <div>
-                                <div class="font-medium">{{ user?.name }}</div>
-                                <div class="text-xs text-gray-400">{{ user?.email }}</div>
-                            </div>
+                <v-card width="260" rounded="xl" class="user-menu-card">
+                    <div class="user-menu-header">
+                        <v-avatar size="38" :color="user?.avatar_color || 'primary'">
+                            <img v-if="user?.profile_photo_url" :src="user.profile_photo_url" :alt="user?.name" />
+                            <span v-else class="text-sm font-weight-bold">{{ user?.initials }}</span>
+                        </v-avatar>
+                        <div class="min-w-0">
+                            <div class="text-body-2 font-weight-bold text-truncate">{{ user?.name }}</div>
+                            <div class="text-caption text-medium-emphasis text-truncate">{{ user?.email }}</div>
                         </div>
-                    </v-card-text>
+                    </div>
                     <v-divider />
-                    <v-list density="compact">
-                        <v-list-item prepend-icon="mdi-account-outline" title="Profile" :href="route('profile.show')" />
-                        <v-list-item prepend-icon="mdi-chart-box-outline" title="Analytics"
+                    <v-list density="compact" nav class="py-1">
+                        <v-list-item prepend-icon="mdi-account-circle-outline" title="Profile"
+                            :href="route('profile.show')" rounded="lg" />
+                        <v-list-item prepend-icon="mdi-chart-areaspline" title="Analytics"
                             :href="activeWorkspace ? route('workspaces.analytics', activeWorkspace.id) : undefined"
-                            :disabled="!activeWorkspace" />
+                            :disabled="!activeWorkspace" rounded="lg" />
                         <v-list-item prepend-icon="mdi-delete-clock-outline" title="Recycle Bin"
                             :href="activeWorkspace ? route('workspaces.recycle-bin.index', activeWorkspace.id) : undefined"
-                            :disabled="!activeWorkspace" />
-                        <v-list-item prepend-icon="mdi-theme-light-dark" title="Theme" />
+                            :disabled="!activeWorkspace" rounded="lg" />
                     </v-list>
                     <v-divider />
-                    <v-list density="compact">
-                        <v-list-item prepend-icon="mdi-logout" title="Log Out" @click="logout" />
+                    <v-list density="compact" nav class="py-1">
+                        <v-list-item prepend-icon="mdi-logout-variant" title="Sign Out" class="text-error"
+                            @click="logout" rounded="lg" />
                     </v-list>
                 </v-card>
             </v-menu>
@@ -406,139 +428,155 @@ const formatDuration = (seconds) => {
 
         <!-- Sidebar -->
         <v-navigation-drawer v-model="isSidebarOpen" :rail="isSidebarMini" :temporary="mobile" color="surface"
-            width="280" :rail-width="72" class="sidebar-drawer border-r border-[#2d2d30]">
-            <div class="flex flex-col h-full">
+            width="264" :rail-width="60" class="sidebar-drawer">
+            <div class="sidebar-inner">
+
                 <!-- Workspace Selector -->
-                <div class="border-b border-[#2d2d30]" :class="isSidebarMini ? 'px-1 py-2' : 'px-3 py-3'">
+                <div class="sidebar-workspace-area">
                     <v-menu>
                         <template v-slot:activator="{ props: menuProps }">
-                            <v-btn v-bind="menuProps" variant="text" :block="!isSidebarMini"
-                                :icon="isSidebarMini" :class="isSidebarMini ? 'mx-auto' : 'justify-start text-left'">
-                                <div class="workspace-selector-trigger flex items-center gap-2" :class="{ 'w-full': !isSidebarMini }">
-                                    <v-tooltip v-if="isSidebarMini" location="right" :text="activeWorkspace?.name || 'Select Workspace'">
-                                        <template #activator="{ props: tipProps }">
-                                            <div v-bind="tipProps" class="w-8 h-8 rounded-lg flex items-center justify-center text-white font-bold text-sm"
-                                                :style="{ backgroundColor: activeWorkspace?.color || '#6366F1' }">
-                                                {{ activeWorkspace?.name?.charAt(0)?.toUpperCase() || 'W' }}
-                                            </div>
-                                        </template>
-                                    </v-tooltip>
-                                    <div v-else class="w-8 h-8 rounded-lg flex items-center justify-center text-white font-bold text-sm"
+                            <button v-bind="menuProps" class="workspace-selector-btn" :class="{ 'is-mini': isSidebarMini }">
+                                <v-tooltip v-if="isSidebarMini" location="right" :text="activeWorkspace?.name || 'Select Workspace'">
+                                    <template #activator="{ props: tipProps }">
+                                        <div v-bind="tipProps" class="workspace-avatar"
+                                            :style="{ backgroundColor: activeWorkspace?.color || '#6366F1' }">
+                                            {{ activeWorkspace?.name?.charAt(0)?.toUpperCase() || 'W' }}
+                                        </div>
+                                    </template>
+                                </v-tooltip>
+                                <template v-else>
+                                    <div class="workspace-avatar"
                                         :style="{ backgroundColor: activeWorkspace?.color || '#6366F1' }">
                                         {{ activeWorkspace?.name?.charAt(0)?.toUpperCase() || 'W' }}
                                     </div>
-                                    <div v-if="!isSidebarMini" class="flex-1 min-w-0">
-                                        <div class="font-medium truncate">{{ activeWorkspace?.name || 'Select Workspace' }}</div>
+                                    <div class="workspace-info">
+                                        <div class="workspace-name">{{ activeWorkspace?.name || 'Select Workspace' }}</div>
+                                        <div class="workspace-sub">Workspace</div>
                                     </div>
-                                    <v-icon v-if="!isSidebarMini" size="18">mdi-chevron-down</v-icon>
-                                </div>
-                            </v-btn>
+                                    <v-icon size="16" class="workspace-chevron">mdi-chevron-expand</v-icon>
+                                </template>
+                            </button>
                         </template>
 
-                        <v-card width="300" color="surface" rounded="xl" class="workspace-menu-card">
-                            <v-list density="compact">
-                                <v-list-subheader class="workspace-menu-subheader">WORKSPACES</v-list-subheader>
+                        <v-card width="280" rounded="xl" elevation="8" class="workspace-menu-card">
+                            <div class="workspace-menu-header">WORKSPACES</div>
+                            <v-list density="compact" nav class="workspace-menu-list">
                                 <v-list-item v-for="workspace in workspaces" :key="workspace.id"
-                                    :active="workspace.id === activeWorkspace?.id"
+                                    :active="workspace.id === activeWorkspace?.id" rounded="lg"
                                     @click="router.post(route('workspaces.switch', workspace.id))">
-                                    <template v-slot:prepend>
-                                        <div class="w-6 h-6 rounded flex items-center justify-center text-white text-xs font-bold mr-2"
+                                    <template #prepend>
+                                        <div class="workspace-menu-avatar"
                                             :style="{ backgroundColor: workspace.color || '#6366F1' }">
                                             {{ workspace.name?.charAt(0)?.toUpperCase() }}
                                         </div>
                                     </template>
-                                    <v-list-item-title>{{ workspace.name }}</v-list-item-title>
+                                    <v-list-item-title class="text-body-2">{{ workspace.name }}</v-list-item-title>
                                 </v-list-item>
-                                <v-divider class="my-2" />
-                                <v-list-item
-                                    prepend-icon="mdi-plus-circle-outline"
-                                    title="Create Workspace"
-                                    class="workspace-create-entry"
-                                    @click="openCreateWorkspaceDialog"
-                                />
+                            </v-list>
+                            <v-divider />
+                            <v-list density="compact" nav>
+                                <v-list-item prepend-icon="mdi-plus-circle-outline" title="Create Workspace"
+                                    rounded="lg" @click="openCreateWorkspaceDialog" />
                             </v-list>
                         </v-card>
                     </v-menu>
                 </div>
 
-                <!-- Navigation Links -->
-                <div :class="isSidebarMini ? 'px-1 py-1' : 'px-2 py-2'">
-                    <v-list density="compact" nav :class="isSidebarMini ? 'rail-nav-list' : ''">
+                <!-- Navigation -->
+                <div class="sidebar-nav-section">
+                    <div v-if="!isSidebarMini" class="sidebar-section-label">GENERAL</div>
+                    <v-list density="compact" nav class="sidebar-nav-list">
                         <v-tooltip v-for="navItem in [
-                            { href: route('dashboard'), active: route().current('dashboard'), icon: 'mdi-home-outline', label: 'Home', show: true },
+                            { href: route('dashboard'), active: route().current('dashboard'), icon: 'mdi-view-dashboard-outline', label: 'Home', show: true },
                             { href: route('my-tasks'), active: route().current('my-tasks'), icon: 'mdi-checkbox-marked-circle-outline', label: 'My Tasks', show: true },
                             { href: activeWorkspace ? route('calendar.index', activeWorkspace.id) : undefined, active: route().current('calendar.*'), icon: 'mdi-calendar-month-outline', label: 'Calendar', show: !!activeWorkspace },
                             { href: route('time-tracking.index'), active: route().current('time-tracking.*'), icon: 'mdi-timer-outline', label: 'Time Tracking', show: true },
-                            { href: activeWorkspace ? route('workspaces.settings', activeWorkspace.id) : undefined, active: route().current('workspaces.settings'), icon: 'mdi-cog-outline', label: 'Settings', show: !!activeWorkspace },
                         ]" :key="navItem.label" location="right" :text="navItem.label" :disabled="!isSidebarMini">
                             <template #activator="{ props: tipProps }">
-                                <v-list-item v-if="navItem.show" v-bind="tipProps" :href="navItem.href" :active="navItem.active"
-                                    :prepend-icon="navItem.icon" :title="isSidebarMini ? undefined : navItem.label" rounded="lg"
-                                    :class="isSidebarMini ? 'rail-nav-item' : ''" />
+                                <v-list-item v-if="navItem.show" v-bind="tipProps" :href="navItem.href"
+                                    :active="navItem.active" :prepend-icon="navItem.icon"
+                                    :title="isSidebarMini ? undefined : navItem.label" rounded="lg"
+                                    class="sidebar-nav-item" :class="{ 'is-mini': isSidebarMini }" />
+                            </template>
+                        </v-tooltip>
+                    </v-list>
+
+                    <v-divider class="sidebar-divider" />
+
+                    <div v-if="!isSidebarMini" class="sidebar-section-label">WORKSPACE</div>
+                    <v-list density="compact" nav class="sidebar-nav-list">
+                        <v-tooltip location="right" text="Settings" :disabled="!isSidebarMini">
+                            <template #activator="{ props: tipProps }">
+                                <v-list-item v-if="activeWorkspace" v-bind="tipProps"
+                                    :href="route('workspaces.settings', activeWorkspace.id)"
+                                    :active="route().current('workspaces.settings')"
+                                    prepend-icon="mdi-cog-outline"
+                                    :title="isSidebarMini ? undefined : 'Settings'"
+                                    rounded="lg" class="sidebar-nav-item" :class="{ 'is-mini': isSidebarMini }" />
                             </template>
                         </v-tooltip>
                     </v-list>
                 </div>
 
-                <v-divider class="my-1" />
+                <v-divider class="sidebar-divider" />
 
                 <!-- Favorites -->
-                <div v-if="activeWorkspace?.starred_spaces?.length" :class="isSidebarMini ? 'px-1 py-1' : 'px-2 py-2'">
-                    <div v-if="!isSidebarMini" class="px-3 py-1 text-xs font-medium text-gray-500 uppercase">
-                        Favorites
+                <div v-if="activeWorkspace?.starred_spaces?.length" class="sidebar-nav-section">
+                    <div v-if="!isSidebarMini" class="sidebar-section-label">
+                        <v-icon size="11" class="mr-1">mdi-star-outline</v-icon>
+                        FAVORITES
                     </div>
-                    <v-list density="compact" nav :class="isSidebarMini ? 'rail-nav-list' : ''">
+                    <v-list density="compact" nav class="sidebar-nav-list">
                         <v-tooltip v-for="space in activeWorkspace?.starred_spaces || []" :key="space.id"
                             location="right" :text="space.name" :disabled="!isSidebarMini">
                             <template #activator="{ props: tipProps }">
                                 <v-list-item v-bind="tipProps"
                                     :href="route('spaces.show', [activeWorkspace.id, space.id])" rounded="lg"
-                                    :class="isSidebarMini ? 'rail-nav-item' : ''">
-                                    <template v-slot:prepend>
-                                        <div class="w-2 h-2 rounded-full" :class="isSidebarMini ? '' : 'mr-3'"
-                                            :style="{ backgroundColor: space.color || '#6366F1' }" />
+                                    class="sidebar-nav-item" :class="{ 'is-mini': isSidebarMini }">
+                                    <template #prepend>
+                                        <div class="space-color-dot" :style="{ backgroundColor: space.color || '#6366F1' }" />
                                     </template>
-                                    <v-list-item-title v-if="!isSidebarMini" class="text-sm">{{ space.name }}</v-list-item-title>
+                                    <v-list-item-title v-if="!isSidebarMini" class="text-body-2">{{ space.name }}</v-list-item-title>
                                 </v-list-item>
                             </template>
                         </v-tooltip>
                     </v-list>
+                    <v-divider class="sidebar-divider" />
                 </div>
 
                 <!-- Spaces -->
-                <div class="flex-1 overflow-y-auto" :class="isSidebarMini ? 'px-1 py-1' : 'px-2 py-2'">
-                    <div v-if="!isSidebarMini" class="flex items-center justify-between px-3 py-1">
-                        <span class="text-xs font-medium text-gray-500 uppercase">Spaces</span>
-                        <v-btn icon variant="text" size="x-small" @click="showCreateSpace = true">
-                            <v-icon size="16">mdi-plus</v-icon>
+                <div class="flex-1 overflow-y-auto sidebar-spaces-section">
+                    <div v-if="!isSidebarMini" class="sidebar-section-label sidebar-section-label--with-action">
+                        <span>SPACES</span>
+                        <v-btn icon variant="text" size="x-small" class="section-add-btn" @click="showCreateSpace = true">
+                            <v-icon size="14">mdi-plus</v-icon>
                         </v-btn>
                     </div>
 
-                    <!-- View All Spaces Link -->
-                    <v-list density="compact" nav class="mb-2" :class="isSidebarMini ? 'rail-nav-list' : ''">
+                    <!-- View All link -->
+                    <v-list density="compact" nav class="sidebar-nav-list mb-1">
                         <v-tooltip location="right" text="View All Spaces" :disabled="!isSidebarMini">
                             <template #activator="{ props: tipProps }">
                                 <v-list-item v-if="activeWorkspace" v-bind="tipProps"
                                     :href="route('workspaces.show', activeWorkspace.id)"
                                     prepend-icon="mdi-view-grid-outline"
-                                    :title="isSidebarMini ? undefined : 'View All Spaces'" rounded="lg"
-                                    :class="isSidebarMini ? 'rail-nav-item text-sm' : 'text-sm'" />
+                                    :title="isSidebarMini ? undefined : 'All Spaces'"
+                                    rounded="lg" class="sidebar-nav-item view-all-spaces" :class="{ 'is-mini': isSidebarMini }" />
                             </template>
                         </v-tooltip>
                     </v-list>
 
-                    <!-- Mini mode: icon-only space list -->
-                    <v-list v-if="isSidebarMini" density="compact" nav class="rail-nav-list">
+                    <!-- Mini mode: icon-only -->
+                    <v-list v-if="isSidebarMini" density="compact" nav class="sidebar-nav-list">
                         <v-tooltip v-for="space in activeWorkspace?.spaces || []" :key="space.id"
                             location="right" :text="space.name">
                             <template #activator="{ props: tipProps }">
                                 <v-list-item v-bind="tipProps"
-                                    :href="route('spaces.show', [activeWorkspace.id, space.id])" rounded="lg"
-                                    class="rail-nav-item">
-                                    <template v-slot:prepend>
-                                        <div class="w-6 h-6 rounded flex items-center justify-center text-white text-xs"
-                                            :style="{ backgroundColor: space.color || '#6366F1' }">
-                                            <v-icon size="14">{{ space.icon || 'mdi-folder-outline' }}</v-icon>
+                                    :href="route('spaces.show', [activeWorkspace.id, space.id])"
+                                    rounded="lg" class="sidebar-nav-item is-mini">
+                                    <template #prepend>
+                                        <div class="space-icon-mini" :style="{ backgroundColor: space.color || '#6366F1' }">
+                                            <v-icon size="13" color="white">{{ space.icon || 'mdi-layers-outline' }}</v-icon>
                                         </div>
                                     </template>
                                 </v-list-item>
@@ -546,19 +584,36 @@ const formatDuration = (seconds) => {
                         </v-tooltip>
                     </v-list>
 
-                    <!-- Full mode: expandable space tree -->
-                    <v-list v-else density="compact" nav>
+                    <!-- Full mode: expandable tree -->
+                    <v-list v-else density="compact" nav class="sidebar-space-tree">
                         <template v-for="space in activeWorkspace?.spaces || []" :key="space.id">
                             <v-list-group :value="space.id">
-                                <template v-slot:activator="{ props: groupProps }">
-                                    <v-list-item v-bind="groupProps" rounded="lg">
-                                        <template v-slot:prepend>
-                                            <div class="w-6 h-6 rounded flex items-center justify-center text-white text-xs mr-2"
-                                                :style="{ backgroundColor: space.color || '#6366F1' }">
-                                                <v-icon size="14">{{ space.icon || 'mdi-folder-outline' }}</v-icon>
+                                <template v-slot:activator="{ props: groupProps, isOpen }">
+                                    <v-list-item v-bind="groupProps" rounded="lg" class="space-tree-item">
+                                        <template #prepend>
+                                            <div class="space-icon" :style="{ backgroundColor: space.color || '#6366F1' }">
+                                                <v-icon size="13" color="white">{{ space.icon || 'mdi-layers-outline' }}</v-icon>
                                             </div>
                                         </template>
-                                        <v-list-item-title class="text-sm font-medium">{{ space.name }}</v-list-item-title>
+                                        <v-list-item-title class="space-name-text">
+                                            {{ space.name }}
+                                        </v-list-item-title>
+                                        <template #append>
+                                            <div class="space-item-actions">
+                                                <v-tooltip location="top" text="Open space">
+                                                    <template #activator="{ props: tipProps }">
+                                                        <v-btn v-bind="tipProps" icon variant="text" size="x-small"
+                                                            class="space-open-btn"
+                                                            @click.stop="router.visit(route('spaces.show', [activeWorkspace?.id, space.id]))">
+                                                            <v-icon size="12">mdi-open-in-new</v-icon>
+                                                        </v-btn>
+                                                    </template>
+                                                </v-tooltip>
+                                                <v-icon size="14" class="space-expand-icon">
+                                                    {{ isOpen ? 'mdi-chevron-down' : 'mdi-chevron-right' }}
+                                                </v-icon>
+                                            </div>
+                                        </template>
                                     </v-list-item>
                                 </template>
 
@@ -566,33 +621,32 @@ const formatDuration = (seconds) => {
                                 <template v-for="folder in space.folders || []" :key="folder.id">
                                     <v-list-group :value="'folder-' + folder.id">
                                         <template v-slot:activator="{ props: folderProps }">
-                                            <v-list-item v-bind="folderProps" rounded="lg" class="pl-8">
-                                                <template v-slot:prepend>
-                                                    <v-icon size="16" class="mr-1">mdi-folder-outline</v-icon>
+                                            <v-list-item v-bind="folderProps" rounded="lg" class="folder-tree-item">
+                                                <template #prepend>
+                                                    <v-icon size="14" class="folder-icon">mdi-folder-outline</v-icon>
                                                 </template>
-                                                <v-list-item-title class="text-sm">{{ folder.name }}</v-list-item-title>
+                                                <v-list-item-title>{{ folder.name }}</v-list-item-title>
                                             </v-list-item>
                                         </template>
-
-                                        <!-- Products in Folder -->
                                         <v-list-item v-for="list in folder.lists || []" :key="list.id"
                                             :href="route('lists.show', [activeWorkspace?.id, space.id, list.id])"
-                                            rounded="lg" class="pl-12">
-                                            <template v-slot:prepend>
-                                                <v-icon size="14" class="mr-1">mdi-package-variant-closed</v-icon>
+                                            rounded="lg" class="list-tree-item">
+                                            <template #prepend>
+                                                <v-icon size="12" class="list-icon">mdi-view-list-outline</v-icon>
                                             </template>
-                                            <v-list-item-title class="text-sm">{{ list.name }}</v-list-item-title>
+                                            <v-list-item-title>{{ list.name }}</v-list-item-title>
                                         </v-list-item>
                                     </v-list-group>
                                 </template>
 
-                                <!-- Products without Folder -->
+                                <!-- Lists without folder -->
                                 <v-list-item v-for="list in space.lists_without_folder || []" :key="list.id"
-                                    :href="route('lists.show', [activeWorkspace?.id, space.id, list.id])" rounded="lg" class="pl-8">
-                                    <template v-slot:prepend>
-                                        <v-icon size="14" class="mr-1">mdi-package-variant-closed</v-icon>
+                                    :href="route('lists.show', [activeWorkspace?.id, space.id, list.id])"
+                                    rounded="lg" class="list-tree-item">
+                                    <template #prepend>
+                                        <v-icon size="12" class="list-icon">mdi-view-list-outline</v-icon>
                                     </template>
-                                    <v-list-item-title class="text-sm">{{ list.name }}</v-list-item-title>
+                                    <v-list-item-title>{{ list.name }}</v-list-item-title>
                                 </v-list-item>
                             </v-list-group>
                         </template>
@@ -600,18 +654,18 @@ const formatDuration = (seconds) => {
                 </div>
 
                 <!-- Sidebar Footer -->
-                <div class="border-t border-[#2d2d30]" :class="isSidebarMini ? 'px-1 py-1' : 'px-3 py-2'">
-                    <v-tooltip location="right" text="Expand" :disabled="!isSidebarMini">
+                <div class="sidebar-footer">
+                    <v-tooltip location="right" :text="isSidebarMini ? 'Expand' : 'Collapse'" :disabled="!isSidebarMini">
                         <template #activator="{ props: tipProps }">
-                            <v-btn v-bind="tipProps" variant="text" :block="!isSidebarMini" size="small"
-                                :icon="isSidebarMini" :class="isSidebarMini ? 'mx-auto' : 'justify-start'"
+                            <button v-bind="tipProps" class="sidebar-collapse-btn" :class="{ 'is-mini': isSidebarMini }"
                                 @click="isSidebarMini = !isSidebarMini">
-                                <v-icon>{{ isSidebarMini ? 'mdi-chevron-right' : 'mdi-chevron-left' }}</v-icon>
-                                <span v-if="!isSidebarMini" class="ml-2 text-sm">Collapse</span>
-                            </v-btn>
+                                <v-icon size="16">{{ isSidebarMini ? 'mdi-chevron-right' : 'mdi-chevron-left' }}</v-icon>
+                                <span v-if="!isSidebarMini">Collapse</span>
+                            </button>
                         </template>
                     </v-tooltip>
                 </div>
+
             </div>
         </v-navigation-drawer>
 
@@ -621,71 +675,77 @@ const formatDuration = (seconds) => {
         </v-main>
 
         <!-- Search Dialog -->
-        <v-dialog v-model="searchDialog" max-width="700" scrollable>
-            <v-card>
-                <v-text-field v-model="searchQuery" placeholder="Search tasks, products, spaces..."
-                    prepend-inner-icon="mdi-magnify" variant="solo" single-line hide-details autofocus
-                    class="search-dialog-input" :loading="isSearching" />
-                <div class="px-4 py-3 d-flex ga-3 flex-wrap">
+        <v-dialog v-model="searchDialog" max-width="680" scrollable rounded="xl">
+            <v-card rounded="xl">
+                <div class="search-header">
+                    <v-icon size="18" color="grey">mdi-magnify</v-icon>
+                    <input v-model="searchQuery" class="search-input" placeholder="Search tasks, products, spaces..."
+                        autofocus />
+                    <v-progress-circular v-if="isSearching" size="16" width="2" indeterminate color="primary" />
+                    <kbd class="search-kbd" v-if="!isSearching">ESC</kbd>
+                </div>
+                <div class="search-filters">
                     <v-select v-model="searchType" :items="searchTypeOptions" item-title="title" item-value="value"
-                        label="Type" hide-details density="compact" variant="outlined" style="min-width: 180px;" />
-                    <v-select v-model="searchWorkspaceId" :items="searchWorkspaceOptions" item-title="title" item-value="value"
-                        label="Workspace" hide-details density="compact" variant="outlined" clearable style="min-width: 220px;" />
+                        label="Type" hide-details density="compact" variant="outlined" style="max-width: 160px;" />
+                    <v-select v-model="searchWorkspaceId" :items="searchWorkspaceOptions" item-title="title"
+                        item-value="value" label="Workspace" hide-details density="compact" variant="outlined"
+                        clearable style="max-width: 200px;" />
                 </div>
                 <v-divider />
-                <v-card-text class="pa-0" style="max-height: 500px;">
-                    <div v-if="!searchQuery || searchQuery.length < 2" class="pa-8 text-center text-gray-500">
-                        <v-icon size="48" class="mb-2">mdi-magnify</v-icon>
-                        <div>Type at least 2 characters to search</div>
+                <v-card-text class="pa-0" style="max-height: 460px; overflow-y: auto;">
+                    <div v-if="!searchQuery || searchQuery.length < 2" class="search-empty">
+                        <v-icon size="40" color="grey-darken-1">mdi-magnify</v-icon>
+                        <div class="text-body-2 text-medium-emphasis mt-2">Type at least 2 characters to search</div>
                     </div>
-                    <div v-else-if="isSearching" class="pa-8 text-center">
-                        <v-progress-circular indeterminate color="primary" />
+                    <div v-else-if="isSearching" class="search-empty">
+                        <v-progress-circular indeterminate color="primary" size="36" />
                     </div>
                     <div v-else-if="!searchResults.tasks.length && !searchResults.lists.length && !searchResults.spaces.length"
-                        class="pa-8 text-center text-gray-500">
-                        <v-icon size="48" class="mb-2">mdi-file-search-outline</v-icon>
-                        <div>No results found for "{{ searchQuery }}"</div>
+                        class="search-empty">
+                        <v-icon size="40" color="grey-darken-1">mdi-text-search</v-icon>
+                        <div class="text-body-2 text-medium-emphasis mt-2">No results for "<strong>{{ searchQuery }}</strong>"</div>
                     </div>
                     <div v-else>
                         <!-- Tasks -->
-                        <v-list v-if="searchResults.tasks.length">
-                            <v-list-subheader>TASKS ({{ searchResults.tasks.length }})</v-list-subheader>
-                            <v-list-item v-for="task in searchResults.tasks" :key="task.id" @click="goToTask(task)">
-                                <template v-slot:prepend>
-                                    <v-icon>mdi-checkbox-marked-circle-outline</v-icon>
+                        <v-list v-if="searchResults.tasks.length" density="compact" nav>
+                            <div class="search-result-label">TASKS — {{ searchResults.tasks.length }}</div>
+                            <v-list-item v-for="task in searchResults.tasks" :key="task.id" rounded="lg"
+                                class="search-result-item" @click="goToTask(task)">
+                                <template #prepend>
+                                    <v-icon size="16" color="primary">mdi-checkbox-marked-circle-outline</v-icon>
                                 </template>
-                                <v-list-item-title>{{ task.name }}</v-list-item-title>
-                                <v-list-item-subtitle>
-                                    {{ task.task_list?.space?.name }} / {{ task.task_list?.name }}
+                                <v-list-item-title class="text-body-2">{{ task.name }}</v-list-item-title>
+                                <v-list-item-subtitle class="text-caption">
+                                    {{ task.task_list?.space?.name }} · {{ task.task_list?.name }}
                                 </v-list-item-subtitle>
                             </v-list-item>
                         </v-list>
 
                         <!-- Products -->
-                        <v-list v-if="searchResults.lists.length">
-                            <v-list-subheader>PRODUCTS ({{ searchResults.lists.length }})</v-list-subheader>
-                            <v-list-item v-for="list in searchResults.lists" :key="list.id" @click="goToList(list)">
-                                <template v-slot:prepend>
-                                    <v-icon>mdi-package-variant-closed</v-icon>
+                        <v-list v-if="searchResults.lists.length" density="compact" nav>
+                            <div class="search-result-label">PRODUCTS — {{ searchResults.lists.length }}</div>
+                            <v-list-item v-for="list in searchResults.lists" :key="list.id" rounded="lg"
+                                class="search-result-item" @click="goToList(list)">
+                                <template #prepend>
+                                    <v-icon size="16" color="warning">mdi-view-list-outline</v-icon>
                                 </template>
-                                <v-list-item-title>{{ list.name }}</v-list-item-title>
-                                <v-list-item-subtitle>{{ list.space?.name }}</v-list-item-subtitle>
+                                <v-list-item-title class="text-body-2">{{ list.name }}</v-list-item-title>
+                                <v-list-item-subtitle class="text-caption">{{ list.space?.name }}</v-list-item-subtitle>
                             </v-list-item>
                         </v-list>
 
                         <!-- Spaces -->
-                        <v-list v-if="searchResults.spaces.length">
-                            <v-list-subheader>SPACES ({{ searchResults.spaces.length }})</v-list-subheader>
-                            <v-list-item v-for="space in searchResults.spaces" :key="space.id"
-                                @click="goToSpace(space)">
-                                <template v-slot:prepend>
-                                    <div class="w-6 h-6 rounded flex items-center justify-center text-white text-xs"
-                                        :style="{ backgroundColor: space.color || '#6366F1' }">
-                                        <v-icon size="14" color="white">{{ space.icon || 'mdi-folder' }}</v-icon>
+                        <v-list v-if="searchResults.spaces.length" density="compact" nav>
+                            <div class="search-result-label">SPACES — {{ searchResults.spaces.length }}</div>
+                            <v-list-item v-for="space in searchResults.spaces" :key="space.id" rounded="lg"
+                                class="search-result-item" @click="goToSpace(space)">
+                                <template #prepend>
+                                    <div class="search-space-icon" :style="{ backgroundColor: space.color || '#6366F1' }">
+                                        <v-icon size="12" color="white">{{ space.icon || 'mdi-layers' }}</v-icon>
                                     </div>
                                 </template>
-                                <v-list-item-title>{{ space.name }}</v-list-item-title>
-                                <v-list-item-subtitle>{{ space.workspace?.name }}</v-list-item-subtitle>
+                                <v-list-item-title class="text-body-2">{{ space.name }}</v-list-item-title>
+                                <v-list-item-subtitle class="text-caption">{{ space.workspace?.name }}</v-list-item-subtitle>
                             </v-list-item>
                         </v-list>
                     </div>
@@ -693,142 +753,157 @@ const formatDuration = (seconds) => {
             </v-card>
         </v-dialog>
 
+
+
+
         <!-- Create Space Dialog -->
-        <v-dialog v-model="showCreateSpace" max-width="500">
-            <v-card>
-                <v-card-title>Create Space</v-card-title>
-                <v-card-text>
-                    <v-text-field v-model="newSpaceName" label="Space Name"
-                        placeholder="e.g., Marketing, Engineering, Sales" variant="outlined" autofocus
-                        @keydown.enter="createSpace" />
+        <v-dialog v-model="showCreateSpace" max-width="480" rounded="xl">
+            <v-card rounded="xl">
+                <div class="dialog-header">
+                    <div class="dialog-header-icon" style="background: rgba(123, 104, 238, 0.12)">
+                        <v-icon color="primary" size="20">mdi-layers-plus</v-icon>
+                    </div>
+                    <div>
+                        <div class="text-subtitle-2 font-weight-bold">Create Space</div>
+                        <div class="text-caption text-medium-emphasis">Add a new space to {{ activeWorkspace?.name }}</div>
+                    </div>
+                    <v-spacer />
+                    <v-btn icon variant="text" size="x-small" @click="showCreateSpace = false">
+                        <v-icon size="18">mdi-close</v-icon>
+                    </v-btn>
+                </div>
+                <v-divider />
+                <v-card-text class="pt-4 d-flex flex-column ga-3">
+                    <v-text-field v-model="newSpaceName" label="Space Name" placeholder="e.g., Marketing, Engineering"
+                        variant="outlined" density="comfortable" hide-details autofocus @keydown.enter="createSpace" />
                     <v-textarea v-model="newSpaceDescription" label="Description (Optional)"
-                        placeholder="What is this space for?" variant="outlined" rows="3" class="mt-4" />
-                    <div class="mt-4">
-                        <div class="text-sm font-medium mb-2">Space Color</div>
-                        <div class="flex gap-2">
-                            <div v-for="color in ['#6366F1', '#EF4444', '#F59E0B', '#10B981', '#3B82F6', '#8B5CF6', '#EC4899', '#6B7280']"
-                                :key="color" class="w-8 h-8 rounded-lg cursor-pointer border-2 transition-all"
-                                :class="{ 'border-white scale-110': newSpaceColor === color, 'border-transparent': newSpaceColor !== color }"
-                                :style="{ backgroundColor: color }" @click="newSpaceColor = color" />
+                        placeholder="What is this space for?" variant="outlined" density="comfortable" rows="2"
+                        hide-details />
+                    <div>
+                        <div class="text-caption text-medium-emphasis mb-2">Space Color</div>
+                        <div class="d-flex align-center ga-3">
+                            <input v-model="newSpaceColor" type="color" class="color-input-native" />
+                            <v-text-field v-model="newSpaceColor" label="Hex" variant="outlined" density="compact"
+                                hide-details class="flex-1"
+                                @blur="newSpaceColor = normalizeHexColor(newSpaceColor, '#6366F1')" />
                         </div>
                     </div>
                 </v-card-text>
-                <v-card-actions>
+                <v-card-actions class="px-4 pb-4">
                     <v-spacer />
-                    <v-btn variant="text" @click="showCreateSpace = false">Cancel</v-btn>
-                    <v-btn color="primary" :loading="isCreatingSpace" @click="createSpace">Create Space</v-btn>
+                    <v-btn variant="text" rounded="lg" @click="showCreateSpace = false">Cancel</v-btn>
+                    <v-btn color="primary" variant="flat" rounded="lg" :loading="isCreatingSpace"
+                        :disabled="!newSpaceName.trim()" @click="createSpace">Create Space</v-btn>
                 </v-card-actions>
             </v-card>
         </v-dialog>
-
         <!-- Create Workspace Dialog -->
-        <v-dialog v-model="showCreateWorkspace" max-width="560">
-            <v-card rounded="xl" class="workspace-dialog">
-                <v-card-title class="d-flex align-center ga-2 pb-2">
-                    <v-icon color="primary">mdi-plus-circle-outline</v-icon>
-                    Create Workspace
-                </v-card-title>
-                <v-card-subtitle>Start a new workspace for a team, client, or initiative.</v-card-subtitle>
-                <v-divider class="mt-3" />
-
-                <v-card-text class="pt-5">
-                    <v-text-field
-                        v-model="newWorkspaceName"
-                        label="Workspace Name"
-                        placeholder="e.g., Product Team, Acme Client"
-                        variant="outlined"
-                        autofocus
-                        @keydown.enter="createWorkspace"
-                    />
-
-                    <v-textarea
-                        v-model="newWorkspaceDescription"
-                        label="Description (Optional)"
-                        placeholder="What will this workspace be used for?"
-                        variant="outlined"
-                        rows="3"
-                        class="mt-3"
-                    />
-
-                    <div class="mt-3">
-                        <div class="text-sm font-medium mb-2">Workspace Color</div>
-                        <div class="d-flex flex-wrap ga-2">
-                            <button
-                                v-for="color in workspaceColorOptions"
-                                :key="color"
-                                type="button"
-                                class="workspace-color-dot"
-                                :class="{ 'workspace-color-dot--active': newWorkspaceColor === color }"
-                                :style="{ backgroundColor: color }"
-                                @click="newWorkspaceColor = color"
-                            />
+        <v-dialog v-model="showCreateWorkspace" max-width="540" rounded="xl">
+            <v-card rounded="xl">
+                <div class="dialog-header">
+                    <div class="dialog-header-icon" style="background: rgba(59, 130, 246, 0.12)">
+                        <v-icon :color="newWorkspaceColor || 'primary'" size="20">{{ newWorkspaceIcon }}</v-icon>
+                    </div>
+                    <div>
+                        <div class="text-subtitle-2 font-weight-bold">Create Workspace</div>
+                        <div class="text-caption text-medium-emphasis">Start a new workspace for a team or project</div>
+                    </div>
+                    <v-spacer />
+                    <v-btn icon variant="text" size="x-small" @click="showCreateWorkspace = false">
+                        <v-icon size="18">mdi-close</v-icon>
+                    </v-btn>
+                </div>
+                <v-divider />
+                <v-card-text class="pt-4 d-flex flex-column ga-3">
+                    <v-text-field v-model="newWorkspaceName" label="Workspace Name"
+                        placeholder="e.g., Product Team, Acme Client" variant="outlined" density="comfortable"
+                        hide-details autofocus @keydown.enter="createWorkspace" />
+                    <v-textarea v-model="newWorkspaceDescription" label="Description (Optional)"
+                        placeholder="What will this workspace be used for?" variant="outlined" density="comfortable"
+                        rows="2" hide-details />
+                    <div class="d-flex ga-3">
+                        <div class="flex-1">
+                            <div class="text-caption text-medium-emphasis mb-2">Color</div>
+                            <div class="d-flex align-center ga-2">
+                                <input v-model="newWorkspaceColor" type="color" class="color-input-native" />
+                                <v-text-field v-model="newWorkspaceColor" label="Hex" variant="outlined"
+                                    density="compact" hide-details class="flex-1"
+                                    @blur="newWorkspaceColor = normalizeHexColor(newWorkspaceColor, '#3B82F6')" />
+                            </div>
+                        </div>
+                        <div class="flex-1">
+                            <div class="text-caption text-medium-emphasis mb-2">Icon</div>
+                            <div class="d-flex flex-wrap ga-1">
+                                <v-btn v-for="icon in workspaceIconOptions" :key="icon" icon variant="tonal"
+                                    size="x-small"
+                                    :color="newWorkspaceIcon === icon ? 'primary' : 'default'"
+                                    @click="newWorkspaceIcon = icon">
+                                    <v-icon size="14">{{ icon }}</v-icon>
+                                </v-btn>
+                            </div>
                         </div>
                     </div>
 
-                    <div class="mt-4">
-                        <div class="text-sm font-medium mb-2">Workspace Icon</div>
-                        <div class="d-flex flex-wrap ga-2">
-                            <v-btn
-                                v-for="icon in workspaceIconOptions"
-                                :key="icon"
-                                icon
-                                variant="tonal"
-                                size="small"
-                                :color="newWorkspaceIcon === icon ? 'primary' : 'default'"
-                                @click="newWorkspaceIcon = icon"
-                            >
-                                <v-icon>{{ icon }}</v-icon>
-                            </v-btn>
-                        </div>
-                    </div>
-
-                    <v-card variant="tonal" rounded="lg" class="mt-4" :color="newWorkspaceColor">
-                        <v-card-text class="d-flex align-center ga-3">
-                            <div class="workspace-preview-icon" :style="{ backgroundColor: newWorkspaceColor }">
-                                <v-icon color="white">{{ newWorkspaceIcon }}</v-icon>
+                    <v-card variant="tonal" rounded="lg" :color="newWorkspaceColor || 'primary'" class="mt-1">
+                        <v-card-text class="d-flex align-center ga-3 py-3">
+                            <div class="workspace-preview-icon" :style="{ backgroundColor: newWorkspaceColor || '#3B82F6' }">
+                                <v-icon color="white" size="18">{{ newWorkspaceIcon }}</v-icon>
                             </div>
                             <div>
-                                <div class="font-weight-bold">{{ newWorkspaceName || 'Workspace Preview' }}</div>
-                                <div class="text-caption text-medium-emphasis">{{ newWorkspaceDescription || 'No description yet' }}</div>
+                                <div class="text-body-2 font-weight-bold">{{ newWorkspaceName || 'Workspace Preview' }}</div>
+                                <div class="text-caption text-medium-emphasis">{{ newWorkspaceDescription || 'No description' }}</div>
                             </div>
                         </v-card-text>
                     </v-card>
                 </v-card-text>
-
-                <v-card-actions class="pa-4">
+                <v-card-actions class="px-4 pb-4">
                     <v-spacer />
-                    <v-btn variant="text" @click="showCreateWorkspace = false">Cancel</v-btn>
-                    <v-btn
-                        color="primary"
-                        :loading="isCreatingWorkspace"
-                        :disabled="!newWorkspaceName.trim()"
-                        @click="createWorkspace"
-                    >
-                        Create Workspace
-                    </v-btn>
+                    <v-btn variant="text" rounded="lg" @click="showCreateWorkspace = false">Cancel</v-btn>
+                    <v-btn color="primary" variant="flat" rounded="lg" :loading="isCreatingWorkspace"
+                        :disabled="!newWorkspaceName.trim()" @click="createWorkspace">Create Workspace</v-btn>
                 </v-card-actions>
             </v-card>
         </v-dialog>
 
         <!-- Global Snackbar -->
-        <v-snackbar v-model="snackbar" :color="snackbarColor" :timeout="3000" location="bottom right">
-            {{ snackbarText }}
-            <template v-slot:actions>
-                <v-btn variant="text" @click="snackbar = false">
-                    Close
+        <v-snackbar v-model="snackbar" :color="snackbarColor" :timeout="3000" location="bottom right" rounded="lg">
+            <div class="d-flex align-center ga-2">
+                <v-icon size="16">{{ snackbarColor === 'success' ? 'mdi-check-circle-outline' : snackbarColor === 'error' ? 'mdi-alert-circle-outline' : 'mdi-information-outline' }}</v-icon>
+                {{ snackbarText }}
+            </div>
+            <template #actions>
+                <v-btn variant="text" size="small" icon @click="snackbar = false">
+                    <v-icon size="16">mdi-close</v-icon>
                 </v-btn>
             </template>
         </v-snackbar>
 
         <!-- Global Confirm Dialog -->
-        <v-dialog v-model="confirmOpen" max-width="400" persistent>
-            <v-card>
-                <v-card-title :class="`text-${dialogColor}`">{{ dialogTitle }}</v-card-title>
-                <v-card-text>{{ dialogMessage }}</v-card-text>
-                <v-card-actions>
+        <v-dialog v-model="confirmOpen" max-width="400" persistent rounded="xl">
+            <v-card rounded="xl">
+                <div class="dialog-header" :class="dialogColor === 'error' ? 'dialog-header--danger' : ''">
+                    <div class="dialog-header-icon"
+                        :style="`background: rgba(${dialogColor === 'error' ? '255,107,107' : '123,104,238'}, 0.12)`">
+                        <v-icon :color="dialogColor || 'primary'" size="20">
+                            {{ dialogColor === 'error' ? 'mdi-alert-circle-outline' : 'mdi-help-circle-outline' }}
+                        </v-icon>
+                    </div>
+                    <div>
+                        <div class="text-subtitle-2 font-weight-bold" :class="dialogColor === 'error' ? 'text-error' : ''">
+                            {{ dialogTitle }}
+                        </div>
+                    </div>
                     <v-spacer />
-                    <v-btn variant="text" @click="onCancel">Cancel</v-btn>
-                    <v-btn :color="dialogColor" @click="onConfirm">Confirm</v-btn>
+                    <v-btn icon variant="text" size="x-small" @click="onCancel">
+                        <v-icon size="18">mdi-close</v-icon>
+                    </v-btn>
+                </div>
+                <v-divider />
+                <v-card-text class="pt-4 text-body-2 text-medium-emphasis">{{ dialogMessage }}</v-card-text>
+                <v-card-actions class="px-4 pb-4">
+                    <v-spacer />
+                    <v-btn variant="text" rounded="lg" @click="onCancel">Cancel</v-btn>
+                    <v-btn :color="dialogColor || 'primary'" variant="flat" rounded="lg" @click="onConfirm">Confirm</v-btn>
                 </v-card-actions>
             </v-card>
         </v-dialog>
@@ -836,25 +911,150 @@ const formatDuration = (seconds) => {
 </template>
 
 <style scoped>
+/* ─── App ─── */
 .clickup-app {
     --v-theme-surface: #1e1e1e;
     --v-theme-surface-light: #2d2d30;
     --v-theme-background: #121212;
 }
 
-.border-b {
-    border-bottom-width: 1px;
-    border-bottom-style: solid;
+/* ─── Topbar ─── */
+.topbar {
+    border-bottom: 1px solid rgba(255, 255, 255, 0.06) !important;
 }
 
-.border-r {
-    border-right-width: 1px;
-    border-right-style: solid;
+.topbar-menu-btn {
+    margin-left: 4px;
 }
 
-.border-t {
-    border-top-width: 1px;
-    border-top-style: solid;
+.topbar-logo {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 0 4px 0 8px;
+    text-decoration: none;
+}
+
+.logo-icon {
+    width: 28px;
+    height: 28px;
+    border-radius: 8px;
+    background: linear-gradient(135deg, #7B68EE, #8B5CF6);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+}
+
+.logo-text {
+    font-size: 15px;
+    font-weight: 700;
+    color: #fff;
+    letter-spacing: -0.01em;
+}
+
+.topbar-search {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 6px 14px;
+    background: rgba(255, 255, 255, 0.05);
+    border: 1px solid rgba(255, 255, 255, 0.07);
+    border-radius: 10px;
+    cursor: pointer;
+    font-size: 13px;
+    color: rgba(255, 255, 255, 0.4);
+    transition: border-color 0.2s, background 0.2s;
+    min-width: 200px;
+    max-width: 320px;
+}
+
+.topbar-search:hover {
+    background: rgba(255, 255, 255, 0.07);
+    border-color: rgba(255, 255, 255, 0.12);
+    color: rgba(255, 255, 255, 0.6);
+}
+
+.topbar-search kbd {
+    margin-left: auto;
+    padding: 1px 6px;
+    background: rgba(255, 255, 255, 0.06);
+    border-radius: 4px;
+    font-size: 11px;
+    color: rgba(255, 255, 255, 0.3);
+    font-family: inherit;
+    border: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.topbar-create-btn {
+    font-weight: 600;
+}
+
+.topbar-icon-btn,
+.topbar-avatar-btn {
+    opacity: 0.8;
+    transition: opacity 0.15s;
+}
+
+.topbar-icon-btn:hover,
+.topbar-avatar-btn:hover {
+    opacity: 1;
+}
+
+.user-avatar-ring {
+    box-shadow: 0 0 0 2px rgba(255, 255, 255, 0.1);
+}
+
+/* ─── Notification panel ─── */
+.notification-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 12px 16px;
+}
+
+.notification-list {
+    padding: 4px 8px;
+}
+
+.notification-item {
+    border-radius: 8px;
+    margin-bottom: 2px;
+}
+
+.notif-dot {
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+    background: #7B68EE;
+    flex-shrink: 0;
+    margin-right: 8px;
+}
+
+.notif-empty {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    padding: 32px 20px;
+}
+
+/* ─── User Menu ─── */
+.user-menu-header {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 14px 16px;
+}
+
+/* ─── Sidebar ─── */
+.sidebar-drawer {
+    border-right: 1px solid rgba(255, 255, 255, 0.06) !important;
+}
+
+.sidebar-inner {
+    display: flex;
+    flex-direction: column;
+    height: 100%;
 }
 
 :deep(.v-navigation-drawer__content) {
@@ -866,90 +1066,492 @@ const formatDuration = (seconds) => {
     background-color: transparent !important;
 }
 
-/* Override Vuetify's default list indentation */
+/* Workspace Selector */
+.sidebar-workspace-area {
+    padding: 10px 8px;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+}
+
+.workspace-selector-btn {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    width: 100%;
+    padding: 8px 10px;
+    border-radius: 10px;
+    border: none;
+    background: transparent;
+    cursor: pointer;
+    transition: background 0.15s;
+    text-align: left;
+}
+
+.workspace-selector-btn:hover {
+    background: rgba(255, 255, 255, 0.05);
+}
+
+.workspace-selector-btn.is-mini {
+    justify-content: center;
+    padding: 6px;
+}
+
+.workspace-avatar {
+    width: 30px;
+    height: 30px;
+    border-radius: 8px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: white;
+    font-weight: 700;
+    font-size: 13px;
+    flex-shrink: 0;
+}
+
+.workspace-info {
+    flex: 1;
+    min-width: 0;
+}
+
+.workspace-name {
+    font-size: 13px;
+    font-weight: 600;
+    color: rgba(255, 255, 255, 0.9);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.workspace-sub {
+    font-size: 10px;
+    color: rgba(255, 255, 255, 0.35);
+    margin-top: 1px;
+}
+
+.workspace-chevron {
+    opacity: 0.4;
+}
+
+/* Workspace Menu */
+.workspace-menu-header {
+    padding: 10px 16px 6px;
+    font-size: 10px;
+    font-weight: 700;
+    letter-spacing: 0.08em;
+    color: rgba(255, 255, 255, 0.3);
+}
+
+.workspace-menu-avatar {
+    width: 24px;
+    height: 24px;
+    border-radius: 6px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: white;
+    font-weight: 700;
+    font-size: 11px;
+    margin-right: 8px;
+    flex-shrink: 0;
+}
+
+/* Navigation sections */
+.sidebar-nav-section {
+    padding: 8px 8px 4px;
+}
+
+.sidebar-nav-section .sidebar-nav-list {
+    padding: 0 !important;
+}
+
+.sidebar-section-label {
+    display: flex;
+    align-items: center;
+    padding: 6px 8px 5px;
+    font-size: 10.5px;
+    font-weight: 700;
+    letter-spacing: 0.07em;
+    color: rgba(255, 255, 255, 0.32);
+    text-transform: uppercase;
+}
+
+.sidebar-section-label--with-action {
+    padding: 4px 4px 6px 8px;
+    justify-content: space-between;
+}
+
+.section-add-btn {
+    opacity: 0.6;
+}
+
+.section-add-btn:hover {
+    opacity: 1;
+}
+
+.sidebar-nav-list {
+    padding: 0 !important;
+}
+
+.sidebar-nav-item {
+    min-height: 36px !important;
+    border-radius: 8px !important;
+    margin-bottom: 2px !important;
+}
+
+.sidebar-nav-item :deep(.v-list-item-title) {
+    font-size: 13px !important;
+    font-weight: 500;
+    letter-spacing: 0.01em;
+}
+
+.sidebar-nav-item :deep(.v-list-item__prepend .v-icon) {
+    font-size: 18px !important;
+    opacity: 0.75;
+}
+
+.sidebar-nav-item.is-mini {
+    min-height: 40px !important;
+    padding: 0 !important;
+}
+
+.sidebar-nav-item.is-mini :deep(.v-list-item__prepend) {
+    width: 60px !important;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin-inline-end: 0 !important;
+}
+
+.sidebar-nav-item.is-mini :deep(.v-list-item__prepend .v-icon) {
+    margin-inline-end: 0 !important;
+    opacity: 0.75;
+}
+
+.sidebar-nav-item.is-mini :deep(.v-list-item__spacer) {
+    display: none !important;
+}
+
+.sidebar-nav-item.is-mini :deep(.v-list-item__content) {
+    display: none !important;
+}
+
+.sidebar-nav-item.is-mini :deep(.v-list-item__append) {
+    display: none !important;
+}
+
+.sidebar-divider {
+    margin: 4px 8px !important;
+    border-color: rgba(255, 255, 255, 0.05) !important;
+}
+
+/* Spaces section */
+.sidebar-spaces-section {
+    padding: 8px 8px 6px;
+}
+
+/* In mini/rail mode, remove horizontal padding so icons center correctly */
+:deep(.v-navigation-drawer--rail) .sidebar-nav-section,
+:deep(.v-navigation-drawer--rail) .sidebar-spaces-section {
+    padding-inline: 0 !important;
+}
+
+.view-all-spaces {
+    opacity: 0.7;
+}
+
+.view-all-spaces:hover {
+    opacity: 1;
+}
+
+/* Space icons */
+.space-color-dot {
+    width: 7px;
+    height: 7px;
+    border-radius: 50%;
+    flex-shrink: 0;
+    margin-right: 10px;
+    margin-left: 4px;
+}
+
+.space-icon-mini {
+    width: 26px;
+    height: 26px;
+    border-radius: 7px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+}
+
+/* Space tree */
+.sidebar-space-tree {
+    padding: 0 !important;
+}
+
+.space-tree-item {
+    min-height: 36px !important;
+    border-radius: 8px !important;
+    margin-bottom: 2px;
+    padding-inline-end: 6px !important;
+}
+
+.space-tree-item :deep(.v-list-item-title) {
+    font-size: 13px !important;
+    font-weight: 600;
+}
+
+.space-icon {
+    width: 22px;
+    height: 22px;
+    border-radius: 6px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+    margin-right: 9px;
+}
+
+.space-name-text {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.space-item-actions {
+    display: flex;
+    align-items: center;
+    gap: 2px;
+}
+
+.space-open-btn {
+    opacity: 0;
+    transition: opacity 0.15s;
+}
+
+.space-tree-item:hover .space-open-btn,
+.space-open-btn:focus-visible {
+    opacity: 0.7;
+}
+
+.space-open-btn:hover {
+    opacity: 1 !important;
+}
+
+.space-expand-icon {
+    opacity: 0.5;
+}
+
+/* Folder & list tree items */
+.folder-tree-item {
+    min-height: 32px !important;
+    border-radius: 7px !important;
+    margin-bottom: 1px;
+}
+
+.folder-tree-item :deep(.v-list-item-title) {
+    font-size: 12.5px !important;
+    font-weight: 500;
+}
+
+.folder-icon {
+    opacity: 0.6;
+}
+
+.list-tree-item {
+    min-height: 30px !important;
+    border-radius: 6px !important;
+    margin-bottom: 1px;
+    opacity: 0.82;
+}
+
+.list-tree-item:hover {
+    opacity: 1;
+}
+
+.list-tree-item :deep(.v-list-item-title) {
+    font-size: 12px !important;
+}
+
+.list-icon {
+    opacity: 0.45;
+}
+
 :deep(.v-list-group__items) {
     --indent-padding: 0px !important;
 }
 
 :deep(.v-list-group__items .v-list-item) {
-    padding-inline-start: 16px !important;
+    padding-inline-start: 18px !important;
 }
 
 :deep(.v-list-group__items .v-list-group__items .v-list-item) {
-    padding-inline-start: 32px !important;
+    padding-inline-start: 34px !important;
 }
 
 :deep(.v-list-item__prepend) {
     width: auto !important;
 }
 
-/* Rail mode overrides */
-:deep(.sidebar-drawer.v-navigation-drawer--rail .rail-nav-list) {
-    padding-block: 2px !important;
+.space-tree-item :deep(.v-list-item__prepend),
+.folder-tree-item :deep(.v-list-item__prepend),
+.list-tree-item :deep(.v-list-item__prepend) {
+    margin-inline-end: 8px !important;
 }
 
-:deep(.sidebar-drawer.v-navigation-drawer--rail .rail-nav-item) {
-    min-height: 42px !important;
-    height: 42px !important;
-    margin-block: 2px !important;
-    padding-inline: 0 !important;
+/* Hide Vuetify's spacer div that adds excess gap after icons in tree items */
+.space-tree-item :deep(.v-list-item__spacer),
+.folder-tree-item :deep(.v-list-item__spacer),
+.list-tree-item :deep(.v-list-item__spacer) {
+    display: none !important;
 }
 
-:deep(.sidebar-drawer.v-navigation-drawer--rail .rail-nav-item .v-list-item__prepend) {
-    margin-right: 0 !important;
-    width: 100% !important;
-    min-width: 0 !important;
-    justify-content: center !important;
+/* In mini mode, hide spacer so icon stays centered */
+.sidebar-nav-item.is-mini :deep(.v-list-item__spacer) {
+    display: none !important;
 }
 
-:deep(.sidebar-drawer.v-navigation-drawer--rail .rail-nav-item .v-list-item__content) {
-    display: none;
+/* Sidebar footer */
+.sidebar-footer {
+    border-top: 1px solid rgba(255, 255, 255, 0.05);
+    padding: 6px 8px;
 }
 
-.search-dialog-input :deep(.v-field) {
-    border-radius: 0;
-}
-
-.workspace-selector-trigger {
-    min-height: 40px;
-}
-
-:deep(.workspace-menu-card .v-list-item--active) {
-    background: rgba(59, 130, 246, 0.16);
-}
-
-.workspace-menu-subheader {
-    letter-spacing: 0.08em;
-}
-
-.workspace-create-entry {
-    border-radius: 10px;
-}
-
-.workspace-color-dot {
-    width: 28px;
-    height: 28px;
-    border-radius: 10px;
-    border: 2px solid transparent;
+.sidebar-collapse-btn {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    width: 100%;
+    padding: 7px 10px;
+    background: transparent;
+    border: none;
+    border-radius: 8px;
     cursor: pointer;
-    transition: transform 0.15s ease, border-color 0.15s ease;
+    font-size: 12px;
+    color: rgba(255, 255, 255, 0.4);
+    transition: background 0.15s, color 0.15s;
 }
 
-.workspace-color-dot:hover {
-    transform: scale(1.06);
+.sidebar-collapse-btn:hover {
+    background: rgba(255, 255, 255, 0.05);
+    color: rgba(255, 255, 255, 0.7);
 }
 
-.workspace-color-dot--active {
-    border-color: rgba(255, 255, 255, 0.9);
-    transform: scale(1.08);
+.sidebar-collapse-btn.is-mini {
+    justify-content: center;
+    padding: 7px;
 }
 
-.workspace-preview-icon {
+/* ─── Search Dialog ─── */
+.search-header {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 12px 16px;
+}
+
+.search-input {
+    flex: 1;
+    background: transparent;
+    border: none;
+    outline: none;
+    font-size: 15px;
+    color: rgba(255, 255, 255, 0.9);
+}
+
+.search-input::placeholder {
+    color: rgba(255, 255, 255, 0.3);
+}
+
+.search-kbd {
+    padding: 2px 6px;
+    background: rgba(255, 255, 255, 0.06);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    border-radius: 4px;
+    font-size: 11px;
+    color: rgba(255, 255, 255, 0.3);
+    font-family: inherit;
+}
+
+.search-filters {
+    display: flex;
+    gap: 10px;
+    padding: 8px 16px;
+    flex-wrap: wrap;
+}
+
+.search-empty {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    padding: 48px 24px;
+}
+
+.search-result-label {
+    padding: 8px 12px 4px;
+    font-size: 10px;
+    font-weight: 700;
+    letter-spacing: 0.08em;
+    color: rgba(255, 255, 255, 0.3);
+}
+
+.search-result-item {
+    margin-bottom: 2px;
+}
+
+.search-space-icon {
+    width: 22px;
+    height: 22px;
+    border-radius: 6px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin-right: 8px;
+}
+
+/* ─── Dialogs (shared) ─── */
+.dialog-header {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 14px 18px;
+}
+
+.dialog-header--danger {
+    background: rgba(255, 107, 107, 0.04);
+}
+
+.dialog-header-icon {
     width: 36px;
     height: 36px;
     border-radius: 10px;
     display: flex;
     align-items: center;
     justify-content: center;
+    flex-shrink: 0;
+}
+
+/* ─── Color Input ─── */
+.color-input-native {
+    width: 44px;
+    height: 36px;
+    border: 1px solid rgba(255, 255, 255, 0.12);
+    border-radius: 8px;
+    background: transparent;
+    padding: 3px;
+    cursor: pointer;
+}
+
+.color-input-native::-webkit-color-swatch-wrapper { padding: 0; }
+.color-input-native::-webkit-color-swatch { border: none; border-radius: 5px; }
+
+/* ─── Workspace preview ─── */
+.workspace-preview-icon {
+    width: 34px;
+    height: 34px;
+    border-radius: 9px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
 }
 </style>
