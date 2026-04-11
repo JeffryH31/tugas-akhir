@@ -129,7 +129,7 @@ class Activity extends Model
         }
 
         $changeList = [];
-        foreach (array_slice($changes, 0, 2, true) as $field => $change) {
+        foreach (array_slice($changes, 0, 3, true) as $field => $change) {
             $rawOld = $change['old'] ?? null;
             $rawNew = $change['new'] ?? null;
 
@@ -146,20 +146,56 @@ class Activity extends Model
                 continue;
             }
 
-            $fieldLabel = str_replace('_', ' ', $field);
-            $changeList[] = "{$fieldLabel}: " . ($oldVal ?? '—') . " -> " . ($newVal ?? '—');
+            $fieldLabel = $this->humanizeFieldName($field);
+
+            if ($oldVal === null && $newVal !== null) {
+                $changeList[] = "set {$fieldLabel} to {$newVal}";
+            } elseif ($oldVal !== null && $newVal === null) {
+                $changeList[] = "cleared {$fieldLabel}";
+            } else {
+                $changeList[] = "changed {$fieldLabel} from {$oldVal} to {$newVal}";
+            }
         }
 
         if (empty($changeList)) {
             return "updated";
         }
 
+        $remaining = count($changes) - 3;
         $summary = implode(', ', $changeList);
-        if (count($changes) > 2) {
-            $summary .= ', ...';
+        if ($remaining > 0) {
+            $summary .= " and {$remaining} more";
         }
 
-        return "updated ({$summary})";
+        return $summary;
+    }
+
+    /**
+     * Convert a snake_case field name to a human-friendly label.
+     */
+    private function humanizeFieldName(string $field): string
+    {
+        $labels = [
+            'name' => 'name',
+            'description' => 'description',
+            'status_id' => 'status',
+            'priority_level' => 'priority',
+            'due_date' => 'due date',
+            'start_date' => 'start date',
+            'baseline_start_date' => 'baseline start date',
+            'baseline_due_date' => 'baseline due date',
+            'time_estimate' => 'time estimate',
+            'optimistic_estimate' => 'optimistic estimate',
+            'most_likely_estimate' => 'most likely estimate',
+            'pessimistic_estimate' => 'pessimistic estimate',
+            'progress' => 'progress',
+            'sprint_id' => 'sprint',
+            'task_list_id' => 'product',
+            'is_archived' => 'archived status',
+            'hourly_rate' => 'hourly rate',
+        ];
+
+        return $labels[$field] ?? str_replace('_', ' ', $field);
     }
 
     /**
@@ -179,15 +215,20 @@ class Activity extends Model
         }
 
         if ($value instanceof DateTimeInterface) {
-            return Carbon::instance($value)->toDateString();
+            return Carbon::instance($value)->format('M j, Y');
         }
 
         if (is_string($value) && preg_match('/^\d{4}-\d{2}-\d{2}(?:[T\s].*)?$/', $value)) {
             try {
-                return Carbon::parse($value)->toDateString();
+                return Carbon::parse($value)->format('M j, Y');
             } catch (\Throwable) {
                 // Fall through and keep the raw value.
             }
+        }
+
+        // Truncate very long text values
+        if (is_string($value) && mb_strlen($value) > 50) {
+            return mb_substr($value, 0, 47) . '...';
         }
 
         return is_scalar($value) ? (string) $value : null;
@@ -251,7 +292,7 @@ class Activity extends Model
         $new = $changes['priority']['new'] ?? null;
 
         if ($new !== null && $old !== null) {
-            return "changed priority to {$new} (from {$old})";
+            return "changed priority from {$old} to {$new}";
         }
 
         if ($new !== null) {
@@ -259,7 +300,7 @@ class Activity extends Model
         }
 
         if ($old !== null) {
-            return "cleared priority (was {$old})";
+            return "cleared priority";
         }
 
         return "changed priority";
@@ -318,7 +359,7 @@ class Activity extends Model
         $new = $changes['duration']['new'] ?? null;
 
         if ($old !== null || $new !== null) {
-            return "updated time entry (" . ($old ?? '0') . "m -> " . ($new ?? '0') . "m)";
+            return "updated time entry from " . $this->formatMinutes($old) . " to " . $this->formatMinutes($new);
         }
 
         return "updated time entry";
@@ -329,9 +370,23 @@ class Activity extends Model
         $duration = $this->properties['duration'] ?? null;
 
         if ($duration !== null) {
-            return "deleted {$duration}m time entry";
+            return "deleted " . $this->formatMinutes($duration) . " time entry";
         }
 
         return "deleted time entry";
+    }
+
+    /**
+     * Format minutes into a human-readable duration string.
+     */
+    private function formatMinutes(mixed $minutes): string
+    {
+        $m = (int) ($minutes ?? 0);
+        if ($m < 60) {
+            return "{$m}m";
+        }
+        $h = intdiv($m, 60);
+        $rem = $m % 60;
+        return $rem > 0 ? "{$h}h {$rem}m" : "{$h}h";
     }
 }

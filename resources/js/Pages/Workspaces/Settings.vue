@@ -465,7 +465,8 @@ const deleteWorkspace = () => {
                     <div>
                         <h1 class="text-h6 font-weight-bold">Workspace Settings</h1>
                         <div class="text-caption text-medium-emphasis mt-1">
-                            Manage <span class="text-primary font-weight-medium">{{ workspace?.name }}</span> — access layers, members, and configuration
+                            Manage <span class="text-primary font-weight-medium">{{ workspace?.name }}</span> — access
+                            layers, members, and configuration
                         </div>
                     </div>
                 </div>
@@ -509,8 +510,7 @@ const deleteWorkspace = () => {
                             <v-icon start size="16">mdi-account-plus-outline</v-icon>
                             Create User
                         </v-btn>
-                        <v-btn size="small" color="primary" variant="flat" rounded="lg"
-                            @click="showAddMember = true">
+                        <v-btn size="small" color="primary" variant="flat" rounded="lg" @click="showAddMember = true">
                             <v-icon start size="16">mdi-account-multiple-plus</v-icon>
                             Add Member
                         </v-btn>
@@ -550,11 +550,16 @@ const deleteWorkspace = () => {
                                 </v-list>
                             </v-card>
                         </v-menu>
-                        <v-chip v-else :color="getRoleBadgeColor(member.pivot?.role || member.role) " size="x-small"
+                        <v-chip v-else :color="getRoleBadgeColor(member.pivot?.role || member.role)" size="x-small"
                             variant="tonal" class="font-weight-bold">
                             {{ (member.pivot?.role || member.role || 'member').toUpperCase() }}
                         </v-chip>
                         <div v-if="isAdmin" class="member-actions">
+                            <v-btn icon variant="text" size="x-small" color="info"
+                                :href="route('workspaces.members.report', [workspace.id, member.id])"
+                                title="Lihat Report">
+                                <v-icon size="15">mdi-chart-box-outline</v-icon>
+                            </v-btn>
                             <v-btn icon variant="text" size="x-small" color="grey" @click="openEditUserDialog(member)">
                                 <v-icon size="15">mdi-pencil-outline</v-icon>
                             </v-btn>
@@ -573,9 +578,6 @@ const deleteWorkspace = () => {
                     <v-icon size="14" color="warning" class="mr-1">mdi-sitemap-outline</v-icon>
                     Scope Access Management
                 </div>
-                <v-alert type="info" variant="tonal" density="compact" rounded="lg" class="mb-4 text-caption">
-                    Space and Product access are managed in dedicated settings pages. Click a space or product below to open its settings.
-                </v-alert>
                 <div class="scope-grid">
                     <div class="scope-card">
                         <div class="scope-card-header">
@@ -596,7 +598,8 @@ const deleteWorkspace = () => {
                                 <v-chip v-if="space.is_private" size="x-small" class="ml-1" color="grey"
                                     variant="outlined">Private</v-chip>
                             </v-btn>
-                            <span v-if="!spaces?.length" class="text-caption text-medium-emphasis">No spaces found.</span>
+                            <span v-if="!spaces?.length" class="text-caption text-medium-emphasis">No spaces
+                                found.</span>
                         </div>
                     </div>
 
@@ -617,7 +620,8 @@ const deleteWorkspace = () => {
                                 <v-icon start size="13">mdi-view-list</v-icon>
                                 {{ project.name }}
                             </v-btn>
-                            <span v-if="!projectLists?.length" class="text-caption text-medium-emphasis">No products found.</span>
+                            <span v-if="!projectLists?.length" class="text-caption text-medium-emphasis">No products
+                                found.</span>
                         </div>
                     </div>
                 </div>
@@ -633,10 +637,12 @@ const deleteWorkspace = () => {
                     <div class="flex-1 min-w-0">
                         <div class="text-body-2 font-weight-bold mb-1">Delete Workspace</div>
                         <div class="text-caption text-medium-emphasis">
-                            Permanently delete this workspace, all spaces, folders, lists, and tasks. This action cannot be undone.
+                            Permanently delete this workspace, all spaces, folders, lists, and tasks. This action cannot
+                            be undone.
                         </div>
                     </div>
-                    <v-btn color="error" variant="outlined" size="small" rounded="lg" @click="showDeleteWorkspace = true">
+                    <v-btn color="error" variant="outlined" size="small" rounded="lg"
+                        @click="showDeleteWorkspace = true">
                         <v-icon start size="16">mdi-delete-outline</v-icon>
                         Delete Workspace
                     </v-btn>
@@ -682,8 +688,8 @@ const deleteWorkspace = () => {
                 <v-card-actions class="px-4 pb-4">
                     <v-spacer />
                     <v-btn variant="text" rounded="lg" @click="showAddMember = false">Cancel</v-btn>
-                    <v-btn color="primary" variant="flat" rounded="lg" :disabled="!selectedUser"
-                        @click="addMember">Add Member</v-btn>
+                    <v-btn color="primary" variant="flat" rounded="lg" :disabled="!selectedUser" @click="addMember">Add
+                        Member</v-btn>
                 </v-card-actions>
             </v-card>
         </v-dialog>
@@ -720,8 +726,8 @@ const deleteWorkspace = () => {
                     </div>
                     <div class="dialog-grid-2">
                         <v-text-field v-model.number="createUserForm.hourly_rate" label="Hourly Rate (Rp)" type="number"
-                            min="0" step="1000" variant="outlined" density="comfortable"
-                            prepend-inner-icon="mdi-cash" hide-details />
+                            min="0" step="1000" variant="outlined" density="comfortable" prepend-inner-icon="mdi-cash"
+                            hide-details />
                         <v-select v-model="createUserForm.role"
                             :items="[{ title: 'Admin', value: 'admin' }, { title: 'Member', value: 'member' }, { title: 'Guest', value: 'guest' }]"
                             label="Workspace Role" variant="outlined" density="comfortable" hide-details />
@@ -755,20 +761,20 @@ const deleteWorkspace = () => {
                 </div>
                 <v-divider />
                 <v-card-text class="pt-4 d-flex flex-column ga-3">
-                    <v-text-field v-model="editUserForm.name" label="Full Name" variant="outlined"
-                        density="comfortable" hide-details />
+                    <v-text-field v-model="editUserForm.name" label="Full Name" variant="outlined" density="comfortable"
+                        hide-details />
                     <v-text-field v-model="editUserForm.email" label="Email" type="email" variant="outlined"
                         density="comfortable" hide-details />
                     <v-text-field v-model.number="editUserForm.hourly_rate" label="Hourly Rate (Rp)" type="number"
-                        min="0" step="1000" variant="outlined" density="comfortable"
-                        prepend-inner-icon="mdi-cash" hide-details />
+                        min="0" step="1000" variant="outlined" density="comfortable" prepend-inner-icon="mdi-cash"
+                        hide-details />
                 </v-card-text>
                 <v-card-actions class="px-4 pb-4">
                     <v-spacer />
                     <v-btn variant="text" rounded="lg" @click="showEditUser = false">Cancel</v-btn>
                     <v-btn color="primary" variant="flat" rounded="lg"
-                        :disabled="!editUserForm.name.trim() || !editUserForm.email.trim()"
-                        @click="updateUser">Save Changes</v-btn>
+                        :disabled="!editUserForm.name.trim() || !editUserForm.email.trim()" @click="updateUser">Save
+                        Changes</v-btn>
                 </v-card-actions>
             </v-card>
         </v-dialog>
@@ -793,7 +799,9 @@ const deleteWorkspace = () => {
                 <v-divider />
                 <v-card-text class="pt-4">
                     <v-alert type="error" variant="tonal" density="compact" rounded="lg" class="mb-4">
-                        Deleting <strong>{{ workspace?.name }}</strong> will permanently remove all spaces, folders, lists, tasks, and time tracking data.
+                        Deleting <strong>{{ workspace?.name }}</strong> will permanently remove all spaces, folders,
+                        lists,
+                        tasks, and time tracking data.
                     </v-alert>
                     <div class="text-caption text-medium-emphasis mb-2">
                         Type <strong class="text-on-surface">{{ workspace?.name }}</strong> to confirm:
@@ -805,8 +813,8 @@ const deleteWorkspace = () => {
                     <v-spacer />
                     <v-btn variant="text" rounded="lg"
                         @click="showDeleteWorkspace = false; confirmationName = ''">Cancel</v-btn>
-                    <v-btn color="error" variant="flat" rounded="lg"
-                        :disabled="confirmationName !== workspace?.name" @click="deleteWorkspace">
+                    <v-btn color="error" variant="flat" rounded="lg" :disabled="confirmationName !== workspace?.name"
+                        @click="deleteWorkspace">
                         <v-icon start size="16">mdi-delete-outline</v-icon>
                         Delete Permanently
                     </v-btn>
@@ -1008,12 +1016,29 @@ const deleteWorkspace = () => {
     flex-shrink: 0;
 }
 
-.bg-warning-subtle { background: rgba(255, 184, 77, 0.12); }
-.bg-success-subtle { background: rgba(107, 201, 80, 0.12); }
-.bg-primary-subtle { background: rgba(123, 104, 238, 0.12); }
-.bg-secondary-subtle { background: rgba(139, 92, 246, 0.12); }
-.bg-info-subtle { background: rgba(73, 204, 249, 0.12); }
-.bg-error-subtle { background: rgba(255, 107, 107, 0.12); }
+.bg-warning-subtle {
+    background: rgba(255, 184, 77, 0.12);
+}
+
+.bg-success-subtle {
+    background: rgba(107, 201, 80, 0.12);
+}
+
+.bg-primary-subtle {
+    background: rgba(123, 104, 238, 0.12);
+}
+
+.bg-secondary-subtle {
+    background: rgba(139, 92, 246, 0.12);
+}
+
+.bg-info-subtle {
+    background: rgba(73, 204, 249, 0.12);
+}
+
+.bg-error-subtle {
+    background: rgba(255, 107, 107, 0.12);
+}
 
 .scope-links {
     display: flex;

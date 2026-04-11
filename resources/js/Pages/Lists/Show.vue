@@ -158,11 +158,22 @@ watch(() => props.list?.id, (id) => {
 const filterStatus = ref([]);
 const filterPriority = ref([]);
 const filterAssignee = ref([]);
+const filterLabel = ref([]);
+const filterSprint = ref(null);
 const searchQuery = ref('');
 
 // Members and priorities from workspace
 const members = computed(() => props.workspace?.members || []);
 const labels = computed(() => props.workspace?.labels || []);
+
+const activeFilterCount = computed(() => {
+    let count = 0;
+    if (filterPriority.value.length) count++;
+    if (filterAssignee.value.length) count++;
+    if (filterLabel.value.length) count++;
+    if (filterSprint.value != null) count++;
+    return count;
+});
 
 // Filtered tasks by status — applies search, priority, and assignee filters
 const filteredTasksByStatus = computed(() => {
@@ -183,6 +194,17 @@ const filteredTasksByStatus = computed(() => {
             tasks = tasks.filter(t =>
                 t.assignees?.some(a => filterAssignee.value.includes(a.id))
             );
+        }
+
+        if (filterLabel.value.length > 0) {
+            tasks = tasks.filter(t =>
+                t.labels?.some(l => filterLabel.value.includes(l.id))
+            );
+        }
+
+        if (filterSprint.value != null) {
+            const sid = Number(filterSprint.value);
+            tasks = tasks.filter(t => Number(t.sprint_id) === sid);
         }
 
         result[statusId] = tasks;
@@ -1474,6 +1496,7 @@ onMounted(() => {
                             <v-btn v-bind="menuProps" variant="outlined" size="small" class="toolbar-filter-btn">
                                 <v-icon start size="16">mdi-filter-variant</v-icon>
                                 Filter
+                                <v-badge v-if="activeFilterCount" :content="activeFilterCount" color="primary" inline class="ml-1" />
                             </v-btn>
                         </template>
                         <v-card width="280" color="surface">
@@ -1484,10 +1507,29 @@ onMounted(() => {
                                     chips closable-chips hide-details class="mb-3" bg-color="#1e1e1e" />
                                 <v-autocomplete v-model="filterAssignee" :items="members" item-title="name"
                                     item-value="id" label="Assignee" variant="outlined" density="compact" multiple chips
-                                    closable-chips hide-details bg-color="#1e1e1e" />
+                                    closable-chips hide-details class="mb-3" bg-color="#1e1e1e" />
+                                <v-autocomplete v-model="filterLabel" :items="labels" item-title="name"
+                                    item-value="id" label="Label" variant="outlined" density="compact" multiple chips
+                                    closable-chips hide-details class="mb-3" bg-color="#1e1e1e">
+                                    <template #chip="{ props: chipProps, item }">
+                                        <v-chip v-bind="chipProps" :color="item.raw.color" size="small" label>
+                                            {{ item.raw.name }}
+                                        </v-chip>
+                                    </template>
+                                    <template #item="{ props: itemProps, item }">
+                                        <v-list-item v-bind="itemProps">
+                                            <template #prepend>
+                                                <v-icon :color="item.raw.color" size="12">mdi-circle</v-icon>
+                                            </template>
+                                        </v-list-item>
+                                    </template>
+                                </v-autocomplete>
+                                <v-autocomplete v-if="parentTask" v-model="filterSprint" :items="sprints" item-title="name"
+                                    item-value="id" label="Sprint" variant="outlined" density="compact"
+                                    clearable hide-details bg-color="#1e1e1e" />
                             </v-card-text>
                             <v-card-actions>
-                                <v-btn variant="text" size="small" @click="filterPriority = []; filterAssignee = []">
+                                <v-btn variant="text" size="small" @click="filterPriority = []; filterAssignee = []; filterLabel = []; filterSprint = null">
                                     Clear All
                                 </v-btn>
                             </v-card-actions>

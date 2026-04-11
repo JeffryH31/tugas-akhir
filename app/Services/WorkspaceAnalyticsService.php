@@ -2,7 +2,6 @@
 
 namespace App\Services;
 
-use App\Models\Space;
 use App\Models\Sprint;
 use App\Models\Subtask;
 use App\Models\Task;
@@ -30,7 +29,8 @@ class WorkspaceAnalyticsService
         $end = $endDate ? Carbon::parse($endDate)->endOfDay() : now()->endOfDay();
 
         $tasksQuery = Task::query()
-            ->whereHas('taskList.space', fn($q) => $q->where('workspace_id', $workspace->id));
+            ->whereHas('taskList.space', fn($q) => $q->where('workspace_id', $workspace->id))
+            ->whereBetween('created_at', [$start, $end]);
 
         $subtasksQuery = Subtask::query()
             ->whereHas('task.taskList.space', fn($q) => $q->where('workspace_id', $workspace->id));
@@ -40,31 +40,6 @@ class WorkspaceAnalyticsService
             ->whereBetween('started_at', [$start, $end]);
 
         $evm = $this->calculateEvm($workspace, $end);
-
-        $completionTrend = collect(range(0, 13))->map(function ($offset) use ($workspace) {
-            $day = now()->subDays(13 - $offset);
-            $count = Subtask::whereHas('task.taskList.space', fn($q) => $q->where('workspace_id', $workspace->id))
-                ->whereDate('completed_at', $day->toDateString())
-                ->count();
-
-            return [
-                'date' => $day->toDateString(),
-                'completed' => $count,
-            ];
-        });
-
-        $throughputBySpace = Space::where('workspace_id', $workspace->id)
-            ->withCount([
-                'tasks as tasks_count',
-                'tasks as archived_tasks_count' => fn($q) => $q->where('tasks.is_archived', true),
-            ])
-            ->get(['id', 'name'])
-            ->map(fn($space) => [
-                'id' => $space->id,
-                'name' => $space->name,
-                'tasks_count' => $space->tasks_count,
-                'archived_tasks_count' => $space->archived_tasks_count,
-            ]);
 
         return [
             'range' => [
@@ -80,16 +55,17 @@ class WorkspaceAnalyticsService
                 'subtasks_overdue' => (clone $subtasksQuery)
                     ->whereNull('completed_at')
                     ->whereNotNull('due_date')
+                    ->whereBetween('due_date', [$start, $end])
                     ->where('due_date', '<', now())
                     ->count(),
                 'active_sprints' => Sprint::whereHas('taskList.space', fn($q) => $q->where('workspace_id', $workspace->id))
                     ->where('is_active', true)
+                    ->where('start_date', '<=', $end)
+                    ->where(fn($q) => $q->whereNull('end_date')->orWhere('end_date', '>=', $start))
                     ->count(),
                 'time_logged_minutes' => (clone $timeQuery)->sum('duration'),
             ],
             'evm' => $evm,
-            'completion_trend' => $completionTrend,
-            'throughput_by_space' => $throughputBySpace,
         ];
     }
 
@@ -105,11 +81,17 @@ class WorkspaceAnalyticsService
     {
         $overview = $this->getOverview($workspace, $startDate, $endDate);
 
-        return collect($overview['throughput_by_space'])->map(fn($row) => [
-            'space' => $row['name'],
-            'tasks_total' => $row['tasks_count'],
-            'tasks_archived' => $row['archived_tasks_count'],
-        ]);
+        $rows = collect();
+
+        foreach ($overview['kpi'] as $metric => $value) {
+            $rows->push(['metric' => $metric, 'value' => $value]);
+        }
+
+        foreach ($overview['evm'] as $metric => $value) {
+            $rows->push(['metric' => 'evm_' . $metric, 'value' => $value]);
+        }
+
+        return $rows;
     }
 
     /**

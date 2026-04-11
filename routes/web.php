@@ -15,6 +15,7 @@ use App\Http\Controllers\TimeEntryController;
 use App\Http\Controllers\RecycleBinController;
 use App\Http\Controllers\WorkspaceAnalyticsController;
 use App\Http\Controllers\WorkspaceController;
+use App\Http\Controllers\WorkspaceMemberReportController;
 use Illuminate\Foundation\Application;
 use Illuminate\Support\Facades\Route;
 use Inertia\Inertia;
@@ -73,6 +74,7 @@ Route::middleware(['auth:sanctum', config('jetstream.auth_session'), 'verified']
                 Route::patch('/role', [WorkspaceController::class, 'updateMemberRole'])->name('workspaces.members.role');
                 Route::post('/users', [WorkspaceController::class, 'createMemberUser'])->name('workspaces.members.users.store');
                 Route::patch('/users', [WorkspaceController::class, 'updateMemberUser'])->name('workspaces.members.users.update');
+                Route::get('/{member}/report', [WorkspaceMemberReportController::class, 'show'])->name('workspaces.members.report');
             });
 
             Route::prefix('labels')->group(function () {

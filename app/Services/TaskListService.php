@@ -61,6 +61,7 @@ class TaskListService
                 'subtasks.status',
                 'subtasks.assignees',
                 'subtasks.labels',
+                'subtasks.sprint',
                 'subtasks.dependencies',
                 'subtasks.dependents',
                 'subtasks.timeEntries.user',

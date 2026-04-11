@@ -211,10 +211,30 @@ const tooltipPosition = ref({ x: 0, y: 0 });
 
 const showTooltip = (subtask, event) => {
     tooltipSubtask.value = subtask;
-    tooltipPosition.value = {
-        x: event.clientX + 10,
-        y: event.clientY + 10,
-    };
+
+    const tooltipWidth = 280;
+    const tooltipHeight = 260;
+    const margin = 12;
+    const vw = window.innerWidth;
+    const vh = window.innerHeight;
+
+    let x = event.clientX + margin;
+    let y = event.clientY + margin;
+
+    // Flip left if overflowing right
+    if (x + tooltipWidth > vw) {
+        x = event.clientX - tooltipWidth - margin;
+    }
+    // Flip up if overflowing bottom
+    if (y + tooltipHeight > vh) {
+        y = event.clientY - tooltipHeight - margin;
+    }
+
+    // Clamp to viewport edges
+    x = Math.max(4, x);
+    y = Math.max(4, y);
+
+    tooltipPosition.value = { x, y };
 };
 
 const hideTooltip = () => {

@@ -2,6 +2,21 @@
 defineProps({
     activities: { type: Array, default: () => [] },
 });
+
+const formatTime = (dateStr) => {
+    const date = new Date(dateStr);
+    const now = new Date();
+    const diffMs = now - date;
+    const diffMin = Math.floor(diffMs / 60000);
+    const diffHr = Math.floor(diffMs / 3600000);
+    const diffDay = Math.floor(diffMs / 86400000);
+
+    if (diffMin < 1) return 'just now';
+    if (diffMin < 60) return `${diffMin}m ago`;
+    if (diffHr < 24) return `${diffHr}h ago`;
+    if (diffDay < 7) return `${diffDay}d ago`;
+    return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+};
 </script>
 
 <template>
@@ -12,14 +27,16 @@ defineProps({
         </div>
         <div v-else class="activity-list">
             <div v-for="activity in activities" :key="activity.id" class="activity-item">
-                <v-avatar :color="activity.user?.avatar_color" size="24">
+                <v-avatar :color="activity.user?.avatar_color" size="28">
                     <span class="text-[10px]">{{ activity.user?.initials }}</span>
                 </v-avatar>
-                <div class="flex-1 text-body-2">
-                    <span class="font-weight-medium">{{ activity.user?.name }}</span>
-                    <span class="text-grey ml-1">{{ activity.description }}</span>
-                    <div class="text-caption text-grey-darken-1 mt-1">
-                        {{ new Date(activity.created_at).toLocaleString() }}
+                <div class="flex-1 min-w-0">
+                    <div class="text-body-2">
+                        <span class="font-weight-medium">{{ activity.user?.name }}</span>
+                        <span class="text-grey"> {{ activity.description }}</span>
+                    </div>
+                    <div class="text-caption text-grey-darken-1 mt-0.5">
+                        {{ formatTime(activity.created_at) }}
                     </div>
                 </div>
             </div>
