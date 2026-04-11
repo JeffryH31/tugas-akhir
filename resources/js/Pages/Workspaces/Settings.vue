@@ -37,7 +37,7 @@ const createUserForm = ref({
     email: '',
     password: '',
     password_confirmation: '',
-    hourly_rate: 25,
+    hourly_rate: 150000,
     role: 'member',
 });
 
@@ -45,7 +45,7 @@ const editUserForm = ref({
     user_id: null,
     name: '',
     email: '',
-    hourly_rate: 25,
+    hourly_rate: 150000,
 });
 
 const addMember = () => {
@@ -63,8 +63,7 @@ const addMember = () => {
                 showAddMember.value = false;
                 selectedUser.value = null;
                 selectedRole.value = 'member';
-            }
-            }
+            },
         }
     );
 };
@@ -75,7 +74,7 @@ const openCreateUserDialog = () => {
         email: '',
         password: '',
         password_confirmation: '',
-        hourly_rate: 25,
+        hourly_rate: 150000,
         role: 'member',
     };
     showCreateUser.value = true;
@@ -98,7 +97,7 @@ const createUser = () => {
                     email: '',
                     password: '',
                     password_confirmation: '',
-                    hourly_rate: 25,
+                    hourly_rate: 150000,
                     role: 'member',
                 };
             },
@@ -112,7 +111,7 @@ const openEditUserDialog = (member) => {
         user_id: member.id,
         name: member.name || '',
         email: member.email || '',
-        hourly_rate: Number(member.hourly_rate ?? 25),
+        hourly_rate: Number(member.hourly_rate ?? 150000),
     };
     showEditUser.value = true;
 };
@@ -720,9 +719,9 @@ const deleteWorkspace = () => {
                             type="password" variant="outlined" density="comfortable" hide-details />
                     </div>
                     <div class="dialog-grid-2">
-                        <v-text-field v-model.number="createUserForm.hourly_rate" label="Hourly Rate ($)" type="number"
-                            min="0" step="0.01" variant="outlined" density="comfortable"
-                            prepend-inner-icon="mdi-currency-usd" hide-details />
+                        <v-text-field v-model.number="createUserForm.hourly_rate" label="Hourly Rate (Rp)" type="number"
+                            min="0" step="1000" variant="outlined" density="comfortable"
+                            prepend-inner-icon="mdi-cash" hide-details />
                         <v-select v-model="createUserForm.role"
                             :items="[{ title: 'Admin', value: 'admin' }, { title: 'Member', value: 'member' }, { title: 'Guest', value: 'guest' }]"
                             label="Workspace Role" variant="outlined" density="comfortable" hide-details />
@@ -760,9 +759,9 @@ const deleteWorkspace = () => {
                         density="comfortable" hide-details />
                     <v-text-field v-model="editUserForm.email" label="Email" type="email" variant="outlined"
                         density="comfortable" hide-details />
-                    <v-text-field v-model.number="editUserForm.hourly_rate" label="Hourly Rate ($)" type="number"
-                        min="0" step="0.01" variant="outlined" density="comfortable"
-                        prepend-inner-icon="mdi-currency-usd" hide-details />
+                    <v-text-field v-model.number="editUserForm.hourly_rate" label="Hourly Rate (Rp)" type="number"
+                        min="0" step="1000" variant="outlined" density="comfortable"
+                        prepend-inner-icon="mdi-cash" hide-details />
                 </v-card-text>
                 <v-card-actions class="px-4 pb-4">
                     <v-spacer />

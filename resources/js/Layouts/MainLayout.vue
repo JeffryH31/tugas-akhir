@@ -303,14 +303,6 @@ const formatDuration = (seconds) => {
                 <v-icon size="20">mdi-menu</v-icon>
             </v-btn>
 
-            <!-- Logo -->
-            <Link :href="route('dashboard')" class="topbar-logo">
-                <div class="logo-icon">
-                    <v-icon size="18" color="white">mdi-hexagon-multiple</v-icon>
-                </div>
-                <span v-if="!smAndDown" class="logo-text">Projex</span>
-            </Link>
-
             <v-spacer />
 
             <!-- Search -->
@@ -503,6 +495,16 @@ const formatDuration = (seconds) => {
 
                     <div v-if="!isSidebarMini" class="sidebar-section-label">WORKSPACE</div>
                     <v-list density="compact" nav class="sidebar-nav-list">
+                        <v-tooltip location="right" text="Analytics" :disabled="!isSidebarMini">
+                            <template #activator="{ props: tipProps }">
+                                <v-list-item v-if="activeWorkspace" v-bind="tipProps"
+                                    :href="route('workspaces.analytics', activeWorkspace.id)"
+                                    :active="route().current('workspaces.analytics')"
+                                    prepend-icon="mdi-chart-areaspline"
+                                    :title="isSidebarMini ? undefined : 'Analytics'"
+                                    rounded="lg" class="sidebar-nav-item" :class="{ 'is-mini': isSidebarMini }" />
+                            </template>
+                        </v-tooltip>
                         <v-tooltip location="right" text="Settings" :disabled="!isSidebarMini">
                             <template #activator="{ props: tipProps }">
                                 <v-list-item v-if="activeWorkspace" v-bind="tipProps"

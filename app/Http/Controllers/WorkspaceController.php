@@ -7,8 +7,8 @@ use App\Http\Requests\StoreWorkspaceRequest;
 use App\Http\Requests\UpdateWorkspaceRequest;
 use App\Models\User;
 use App\Models\Workspace;
+use App\Services\AccessService;
 use App\Services\WorkspaceService;
-use Illuminate\Foundation\Auth\Access\AuthorizesRequests;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Hash;
@@ -18,10 +18,9 @@ use Inertia\Response;
 
 class WorkspaceController extends Controller
 {
-    use AuthorizesRequests;
-
     public function __construct(
-        protected WorkspaceService $workspaceService
+        protected WorkspaceService $workspaceService,
+        protected AccessService $accessService,
     ) {}
 
     /**
@@ -54,7 +53,7 @@ class WorkspaceController extends Controller
      */
     public function settings(Request $request, Workspace $workspace): Response
     {
-        $this->authorize('view', $workspace);
+        abort_unless($this->accessService->canViewWorkspace($request->user(), $workspace), 403);
 
         $workspace->load([
             'members',
@@ -136,7 +135,7 @@ class WorkspaceController extends Controller
      */
     public function show(Request $request, Workspace $workspace): Response
     {
-        $this->authorize('view', $workspace);
+        abort_unless($this->accessService->canViewWorkspace($request->user(), $workspace), 403);
 
         $workspace->load([
             'spaces' => fn($q) => $q->withCount(['lists', 'tasks'])
@@ -153,9 +152,9 @@ class WorkspaceController extends Controller
      */
     public function update(UpdateWorkspaceRequest $request, Workspace $workspace): RedirectResponse
     {
-        try {
-            $this->authorize('update', $workspace);
+        abort_unless($this->accessService->canManageWorkspace($request->user(), $workspace), 403);
 
+        try {
             $this->workspaceService->update(
                 $workspace,
                 $request->validated(),
@@ -173,7 +172,7 @@ class WorkspaceController extends Controller
      */
     public function destroy(Request $request, Workspace $workspace): RedirectResponse
     {
-        $this->authorize('delete', $workspace);
+        abort_unless($this->accessService->canDeleteWorkspace($request->user(), $workspace), 403);
 
         try {
             $this->workspaceService->delete($workspace, $request->user());
@@ -196,9 +195,9 @@ class WorkspaceController extends Controller
             'role' => 'nullable|in:admin,member,guest',
         ]);
 
-        try {
-            $this->authorize('update', $workspace);
+        abort_unless($this->accessService->canManageWorkspace($request->user(), $workspace), 403);
 
+        try {
             $user = User::findOrFail($validated['user_id']);
 
             $this->workspaceService->addMember(
@@ -223,9 +222,9 @@ class WorkspaceController extends Controller
             'user_id' => 'required|exists:users,id',
         ]);
 
-        try {
-            $this->authorize('update', $workspace);
+        abort_unless($this->accessService->canManageWorkspace($request->user(), $workspace), 403);
 
+        try {
             $user = User::findOrFail($validated['user_id']);
             if ((int) $workspace->owner_id === (int) $user->id) {
                 return redirect()->back()->withErrors(['error' => 'Workspace owner cannot be removed.']);
@@ -253,8 +252,9 @@ class WorkspaceController extends Controller
             'role' => 'required|in:admin,member,guest',
         ]);
 
+        abort_unless($this->accessService->canManageWorkspace($request->user(), $workspace), 403);
+
         try {
-            $this->authorize('update', $workspace);
 
             $user = User::findOrFail($validated['user_id']);
             if ((int) $workspace->owner_id === (int) $user->id) {
@@ -287,14 +287,14 @@ class WorkspaceController extends Controller
             'role' => ['nullable', 'in:admin,member,guest'],
         ]);
 
-        try {
-            $this->authorize('update', $workspace);
+        abort_unless($this->accessService->canManageWorkspace($request->user(), $workspace), 403);
 
+        try {
             $user = User::create([
                 'name' => $validated['name'],
                 'email' => $validated['email'],
                 'password' => Hash::make($validated['password']),
-                'hourly_rate' => $validated['hourly_rate'] ?? 25,
+                'hourly_rate' => $validated['hourly_rate'] ?? 150000,
             ]);
 
             $this->workspaceService->addMember(
@@ -327,8 +327,9 @@ class WorkspaceController extends Controller
             'hourly_rate' => ['nullable', 'numeric', 'min:0'],
         ]);
 
+        abort_unless($this->accessService->canManageWorkspace($request->user(), $workspace), 403);
+
         try {
-            $this->authorize('update', $workspace);
 
             $user = User::findOrFail($validated['user_id']);
             if (!$workspace->isMember($user)) {

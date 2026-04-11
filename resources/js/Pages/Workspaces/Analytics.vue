@@ -77,7 +77,7 @@ const exportCsv = () => {
             <div class="grid grid-cols-1 sm:grid-cols-3 gap-3 mb-5">
                 <v-card v-for="card in evmCards" :key="card.label" class="pa-4">
                     <div class="text-xs text-gray-400">{{ card.label }}</div>
-                    <div class="text-2xl font-semibold mt-1">${{ card.value }}</div>
+                    <div class="text-2xl font-semibold mt-1">Rp {{ card.value }}</div>
                     <div class="text-xs text-gray-500 mt-1">{{ card.hint }}</div>
                 </v-card>
             </div>
@@ -92,7 +92,7 @@ const exportCsv = () => {
                             <div class="text-xs text-gray-400">Cost Variance (CV)</div>
                             <div class="text-lg font-semibold"
                                 :class="(evm.cv ?? 0) >= 0 ? 'text-green-500' : 'text-red-500'">
-                                ${{ (evm.cv ?? 0).toFixed(2) }}
+                                Rp {{ (evm.cv ?? 0).toFixed(2) }}
                             </div>
                             <div class="text-xs text-gray-500">{{ (evm.cv ?? 0) >= 0 ? 'Under budget' : 'Over budget' }}
                             </div>
@@ -101,7 +101,7 @@ const exportCsv = () => {
                             <div class="text-xs text-gray-400">Schedule Variance (SV)</div>
                             <div class="text-lg font-semibold"
                                 :class="(evm.sv ?? 0) >= 0 ? 'text-green-500' : 'text-red-500'">
-                                ${{ (evm.sv ?? 0).toFixed(2) }}
+                                Rp {{ (evm.sv ?? 0).toFixed(2) }}
                             </div>
                             <div class="text-xs text-gray-500">
                                 {{ (evm.sv ?? 0) >= 0 ? 'Ahead of schedule' : 'Behind schedule' }}

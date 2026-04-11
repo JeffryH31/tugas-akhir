@@ -446,6 +446,18 @@ class AccessService
     }
 
     /**
+     * Determine whether a user can delete a workspace (owner only).
+     *
+     * @param User $user
+     * @param Workspace $workspace
+     * @return bool
+     */
+    public function canDeleteWorkspace(User $user, Workspace $workspace): bool
+    {
+        return (int) $workspace->owner_id === (int) $user->id;
+    }
+
+    /**
      * Determine whether a user can view workspace analytics.
      *
      * @param User $user
