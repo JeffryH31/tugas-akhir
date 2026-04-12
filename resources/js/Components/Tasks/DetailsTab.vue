@@ -583,12 +583,6 @@ const removeSuccessor = (suc) => depFetch('DELETE', { subtask_id: suc.id, depend
                         <span v-if="!displayedAssignees.length" class="text-caption text-grey">
                             {{ isSubtask ? 'No assignees yet' : 'No subtask assignees yet' }}
                         </span>
-
-                        <v-chip v-if="!isSubtask && displayedAssignees.length" size="x-small" variant="tonal"
-                            color="info">
-                            Synced from subtasks
-                        </v-chip>
-
                         <v-menu v-if="isSubtask">
                             <template v-slot:activator="{ props: menuProps }">
                                 <v-btn v-bind="menuProps" icon variant="tonal" size="x-small" color="grey">

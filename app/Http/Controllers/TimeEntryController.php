@@ -38,7 +38,7 @@ class TimeEntryController extends Controller
         ]);
 
         $user = $request->user();
-        
+
         $entries = $this->timeTrackingService->getEntriesForUser(
             $user,
             $validated['start_date'] ?? null,
@@ -53,35 +53,37 @@ class TimeEntryController extends Controller
                 'listsWithoutFolder',
             ])->orderBy('position'),
         ])->get();
-        
+
         $activeWorkspaceId = session('active_workspace_id', $workspaces->first()?->id);
         $activeWorkspace = $workspaces->firstWhere('id', $activeWorkspaceId) ?? $workspaces->first();
 
-        $today = now()->startOfDay();
-        $weekStart = now()->startOfWeek();
-        $monthStart = now()->startOfMonth();
-
-        $stats = [
-            'today' => TimeEntry::where('user_id', $user->id)
-                ->whereDate('started_at', '>=', $today)
-                ->sum('duration'),
-            'week' => TimeEntry::where('user_id', $user->id)
-                ->whereDate('started_at', '>=', $weekStart)
-                ->sum('duration'),
-            'month' => TimeEntry::where('user_id', $user->id)
-                ->whereDate('started_at', '>=', $monthStart)
-                ->sum('duration'),
-            'billable' => TimeEntry::where('user_id', $user->id)
-                ->where('is_billable', true)
-                ->whereDate('started_at', '>=', $monthStart)
-                ->sum('duration'),
-        ];
+        // Flat list of active subtasks for the "Log Time" dialog
+        $subtasks = $activeWorkspace
+            ? \App\Models\Subtask::query()
+            ->whereNull('completed_at')
+            ->whereNull('deleted_at')
+            ->whereHas('task.taskList.space', fn($q) => $q->where('workspace_id', $activeWorkspace->id))
+            ->with(['task.taskList.space'])
+            ->orderByDesc('updated_at')
+            ->limit(200)
+            ->get()
+            ->map(fn($s) => [
+                'id'         => $s->id,
+                'name'       => $s->name,
+                'task_id'    => $s->task->id,
+                'task_name'  => $s->task->name,
+                'list_id'    => $s->task->taskList->id,
+                'list_name'  => $s->task->taskList->name,
+                'space_id'   => $s->task->taskList->space->id,
+                'space_name' => $s->task->taskList->space->name,
+            ])
+            : collect();
 
         return Inertia::render('TimeTracking/Index', [
             'activeWorkspace' => $activeWorkspace,
             'entries' => $entries,
             'runningTimer' => $runningTimer,
-            'stats' => $stats,
+            'subtasks' => $subtasks,
         ]);
     }
 
@@ -201,7 +203,7 @@ class TimeEntryController extends Controller
     {
         try {
             abort_unless($this->accessService->canManageTimeEntry($request->user(), $entry), 403);
-            
+
             $updatedEntry = $this->timeTrackingService->updateEntry($entry, $request->validated(), $request->user());
 
             return redirect()->back()->with([
@@ -213,21 +215,7 @@ class TimeEntryController extends Controller
         }
     }
 
-    /**
-     * Delete time entry.
-     */
-    public function destroy(Request $request, TimeEntry $entry): RedirectResponse
-    {
-        try {
-            abort_unless($this->accessService->canManageTimeEntry($request->user(), $entry), 403);
-            
-            $this->timeTrackingService->deleteEntry($entry, $request->user());
 
-            return redirect()->back()->with('success', 'Time entry deleted successfully.');
-        } catch (\Exception $e) {
-            return redirect()->back()->withErrors(['error' => 'Failed to delete time entry: ' . $e->getMessage()]);
-        }
-    }
 
     /**
      * Get workspace time report.

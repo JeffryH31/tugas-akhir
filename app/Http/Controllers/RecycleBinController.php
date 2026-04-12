@@ -60,7 +60,7 @@ class RecycleBinController extends Controller
 
     public function restore(Request $request, Workspace $workspace): RedirectResponse
     {
-        abort_unless($this->accessService->canViewWorkspace($request->user(), $workspace), 403);
+        abort_unless($this->accessService->canManageWorkspace($request->user(), $workspace), 403);
 
         $validated = $request->validate([
             'type' => ['required', 'in:list,task,subtask,time_entry'],

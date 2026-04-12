@@ -164,7 +164,7 @@ class TaskController extends Controller
         abort_unless((int) $space->workspace_id === (int) $workspace->id, 404);
         abort_unless((int) $list->space_id === (int) $space->id, 404);
         abort_unless((int) $task->task_list_id === (int) $list->id, 404);
-        abort_unless($this->accessService->canManageTaskStructure($request->user(), $list), 403);
+        abort_unless($this->accessService->canOperateTasks($request->user(), $list), 403);
         $validated = $request->validate([
             'priority_level' => 'nullable|integer|in:1,2,3,4',
         ]);

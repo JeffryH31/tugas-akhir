@@ -169,11 +169,11 @@ class TimeTrackingService
             ->orderBy('started_at', 'desc');
 
         if ($startDate) {
-            $query->where('started_at', '>=', $startDate);
+            $query->whereDate('started_at', '>=', $startDate);
         }
 
         if ($endDate) {
-            $query->where('started_at', '<=', $endDate);
+            $query->whereDate('started_at', '<=', $endDate);
         }
 
         return $query->get();

@@ -38,6 +38,7 @@ class FolderService
                 'slug' => Str::slug($data['name']),
                 'description' => $data['description'] ?? null,
                 'color' => $data['color'] ?? null,
+                'is_hidden' => $data['is_hidden'] ?? false,
                 'created_by' => $user->id,
             ]);
 

@@ -52,7 +52,6 @@ Route::middleware(['auth:sanctum', config('jetstream.auth_session'), 'verified']
 
     Route::prefix('time-entries')->group(function () {
         Route::patch('/{entry}', [TimeEntryController::class, 'update'])->name('time-entries.update');
-        Route::delete('/{entry}', [TimeEntryController::class, 'destroy'])->name('time-entries.destroy');
     });
 
     Route::prefix('workspaces')->group(function () {
@@ -191,9 +190,7 @@ Route::middleware(['auth:sanctum', config('jetstream.auth_session'), 'verified']
                                     Route::prefix('subtasks/{subtask}/time-entries')->group(function () {
                                         Route::post('/', [TimeEntryController::class, 'store'])->name('tasks.subtasks.time-entries.store');
 
-                                        Route::prefix('{entry}')->group(function () {
-                                            Route::delete('/', [TimeEntryController::class, 'destroy'])->name('tasks.subtasks.time-entries.destroy');
-                                        });
+
                                     });
 
                                     Route::prefix('timer')->group(function () {

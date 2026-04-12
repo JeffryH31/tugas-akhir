@@ -479,4 +479,33 @@ class TaskService
 
         return $this->applyFilters($query, $filters)->distinct()->get();
     }
+
+    /**
+     * Get subtasks assigned to a user (dashboard "Assigned to me").
+     *
+     * Returns subtasks where the user is explicitly in the subtask_assignees pivot.
+     * Eager-loads the parent task + list/space/workspace for breadcrumb display.
+     */
+    public function getMySubtasks(User $user, array $filters = []): Collection
+    {
+        $query = \App\Models\Subtask::query()
+            ->whereHas('assignees', fn($q) => $q->where('users.id', $user->id))
+            ->whereNull('completed_at')
+            ->with([
+                'task.taskList.space.workspace',
+                'status',
+                'labels',
+                'assignees',
+            ])
+            ->orderByRaw('CASE WHEN due_date IS NOT NULL THEN 0 ELSE 1 END')
+            ->orderBy('due_date')
+            ->orderBy('priority_level');
+
+        if (!empty($filters['is_overdue'])) {
+            $query->whereNotNull('due_date')
+                  ->where('due_date', '<', now());
+        }
+
+        return $query->get();
+    }
 }

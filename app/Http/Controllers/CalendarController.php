@@ -33,9 +33,30 @@ class CalendarController extends Controller
             'members',
         ]);
 
+        $user = $request->user();
+        $workspaceRole = $this->accessService->getWorkspaceRole($user, $workspace);
+
         $subtasks = Subtask::query()
-            ->whereHas('task.taskList.space', function ($query) use ($workspace) {
-                $query->where('workspace_id', $workspace->id);
+            ->whereHas('task.taskList', function ($query) use ($workspace, $user, $workspaceRole) {
+                $query->whereHas('space', function ($sq) use ($workspace, $user, $workspaceRole) {
+                    $sq->where('workspace_id', $workspace->id);
+
+                    // Non-admin users cannot see private spaces unless they're a space member
+                    if (!in_array($workspaceRole, ['owner', 'admin'], true)) {
+                        $sq->where(function ($pq) use ($user) {
+                            $pq->where('is_private', false)
+                               ->orWhereHas('members', fn($m) => $m->where('user_id', $user->id));
+                        });
+                    }
+                });
+
+                // Workspace owner/admin can see all; others only see products they belong to
+                if (!in_array($workspaceRole, ['owner', 'admin'], true)) {
+                    $query->where(function ($q) use ($user) {
+                        $q->whereHas('members', fn($m) => $m->where('user_id', $user->id))
+                          ->orWhereDoesntHave('members'); // products without configured members
+                    });
+                }
             })
             ->where(function ($query) use ($startDate, $endDate) {
                 $query->whereBetween('due_date', [$startDate, $endDate])

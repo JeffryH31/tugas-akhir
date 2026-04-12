@@ -83,6 +83,8 @@ class CommentController extends Controller
      */
     public function resolve(Request $request, Comment $comment): RedirectResponse
     {
+        abort_unless($this->accessService->canResolveComment($request->user(), $comment), 403);
+
         try {
             $this->commentService->resolve($comment, $request->user());
 
@@ -97,6 +99,8 @@ class CommentController extends Controller
      */
     public function unresolve(Request $request, Comment $comment): RedirectResponse
     {
+        abort_unless($this->accessService->canResolveComment($request->user(), $comment), 403);
+
         try {
             $this->commentService->unresolve($comment, $request->user());
 

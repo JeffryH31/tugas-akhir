@@ -91,7 +91,7 @@ class Space extends Model
     public function starredBy(): BelongsToMany
     {
         return $this->belongsToMany(User::class, 'starred_spaces', 'space_id', 'user_id')
-            ->withTimestamps();
+            ->withPivot('workspace_id', 'starred_at');
     }
 
     public function folders(): HasMany

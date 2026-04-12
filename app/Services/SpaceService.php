@@ -249,7 +249,7 @@ class SpaceService
                 COUNT(*) as total,
                 SUM(CASE WHEN subtasks.completed_at IS NOT NULL THEN 1 ELSE 0 END) as completed,
                 SUM(CASE WHEN subtasks.completed_at IS NULL AND statuses.type IN ("in_progress", "review") THEN 1 ELSE 0 END) as in_progress,
-                SUM(CASE WHEN subtasks.completed_at IS NULL AND subtasks.due_date IS NOT NULL AND subtasks.due_date < NOW() THEN 1 ELSE 0 END) as overdue
+                SUM(CASE WHEN subtasks.completed_at IS NULL AND subtasks.due_date IS NOT NULL AND subtasks.due_date < CURRENT_TIMESTAMP THEN 1 ELSE 0 END) as overdue
             ')
             ->first();
 
