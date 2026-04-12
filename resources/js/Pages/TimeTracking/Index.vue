@@ -304,8 +304,8 @@ watch(() => props.runningTimer, (newTimer) => {
                             <div class="flex items-center gap-3 min-w-0">
                                 <v-icon size="20" color="error" class="animate-pulse shrink-0">mdi-timer-sand</v-icon>
                                 <div class="min-w-0">
-                                    <div class="text-sm font-medium truncate">{{ runningTimer.subtask?.name ?? 'Unknown
-                                        task' }}
+                                    <div class="text-sm font-medium truncate">
+                                        {{ runningTimer.subtask?.name ?? 'Unknown task' }}
                                     </div>
                                     <div class="text-xs opacity-70 truncate">
                                         {{ runningTimer.subtask?.task?.name }}
@@ -317,7 +317,7 @@ watch(() => props.runningTimer, (newTimer) => {
                             </div>
                             <div class="flex items-center gap-3 shrink-0">
                                 <span class="text-xl font-mono tabular-nums tracking-tight">{{ formatRunningTime
-                                    }}</span>
+                                }}</span>
                                 <v-btn color="error" size="small" variant="flat" prepend-icon="mdi-stop"
                                     @click="stopTimer(runningTimer)">
                                     Stop
@@ -485,8 +485,8 @@ watch(() => props.runningTimer, (newTimer) => {
                             <div class="flex items-center gap-2">
                                 <v-icon size="16" color="grey">mdi-checkbox-marked-circle-outline</v-icon>
                                 <div class="min-w-0">
-                                    <div class="text-sm font-medium truncate">{{ editingEntry.subtask?.name ?? 'Unknown
-                                        subtask' }}
+                                    <div class="text-sm font-medium truncate">
+                                        {{ editingEntry.subtask?.name ?? 'Unknown subtask' }}
                                     </div>
                                     <div class="text-xs text-gray-500 mt-0.5 truncate">{{
                                         editingEntry.subtask?.task?.name }}</div>
