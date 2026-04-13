@@ -99,7 +99,7 @@ class CpmController extends Controller
         $validated = $request->validate([
             'subtask_id' => 'required|exists:subtasks,id',
             'depends_on_id' => 'required|exists:subtasks,id',
-            'type' => 'nullable|in:blocks,blocked_by,relates_to',
+            'type' => 'nullable|in:blocks,relates_to',
         ]);
 
         $subtask = Subtask::findOrFail($validated['subtask_id']);

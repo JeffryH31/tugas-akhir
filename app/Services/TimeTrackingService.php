@@ -185,15 +185,17 @@ class TimeTrackingService
     public function getTaskTimeSummary(Task $task): array
     {
         $entries = $task->timeEntries;
+        $totalMinutes = $entries->sum('duration');
+        $estimatedMinutes = $task->subtasks()->sum('time_estimate');
 
         return [
-            'total_minutes' => $entries->sum('duration'),
-            'total_formatted' => $this->formatMinutes($entries->sum('duration')),
-            'estimated_minutes' => $task->time_estimate,
-            'estimated_formatted' => $task->time_estimate_formatted,
-            'remaining_minutes' => max(0, ($task->time_estimate ?? 0) - $entries->sum('duration')),
-            'progress' => $task->time_estimate > 0
-                ? min(100, round(($entries->sum('duration') / $task->time_estimate) * 100, 1))
+            'total_minutes' => $totalMinutes,
+            'total_formatted' => $this->formatMinutes($totalMinutes),
+            'estimated_minutes' => $estimatedMinutes,
+            'estimated_formatted' => $this->formatMinutes($estimatedMinutes),
+            'remaining_minutes' => max(0, $estimatedMinutes - $totalMinutes),
+            'progress' => $estimatedMinutes > 0
+                ? min(100, round(($totalMinutes / $estimatedMinutes) * 100, 1))
                 : 0,
             'entries_count' => $entries->count(),
             'billable_minutes' => $entries->where('is_billable', true)->sum('duration'),

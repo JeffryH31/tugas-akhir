@@ -16,7 +16,6 @@ return new class extends Migration
             $table->foreignId('workspace_id')->constrained()->cascadeOnDelete();
             $table->string('name');
             $table->string('slug');
-            $table->text('description')->nullable();
             $table->string('color', 7)->default('#6366F1');
             $table->string('icon')->nullable();
             $table->boolean('is_private')->default(false);
@@ -34,7 +33,7 @@ return new class extends Migration
             $table->id();
             $table->foreignId('space_id')->constrained()->cascadeOnDelete();
             $table->foreignId('user_id')->constrained()->cascadeOnDelete();
-            $table->string('role')->default('member');
+            $table->enum('role', ['manager', 'member', 'guest'])->default('member');
             $table->timestamps();
 
             $table->unique(['space_id', 'user_id']);
@@ -48,6 +47,7 @@ return new class extends Migration
             $table->foreignId('space_id')->constrained()->cascadeOnDelete();
             $table->foreignId('workspace_id')->constrained()->cascadeOnDelete();
             $table->timestamp('starred_at')->useCurrent();
+            $table->timestamps();
 
             $table->unique(['user_id', 'space_id']);
             $table->index(['user_id', 'workspace_id']);

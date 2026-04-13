@@ -346,30 +346,6 @@ const openCreateSpace = () => {
 
                 <!-- Right Sidebar -->
                 <div class="dashboard-sidebar">
-                    <!-- Spaces Overview Card -->
-                    <v-card v-if="activeWorkspace" variant="outlined" rounded="lg" class="mb-4" hover
-                        :href="route('workspaces.show', activeWorkspace.id)">
-                        <v-card-title class="flex items-center gap-2">
-                            <v-icon size="20" color="purple">mdi-view-grid</v-icon>
-                            Spaces Overview
-                        </v-card-title>
-                        <v-card-text>
-                            <div class="text-center py-4">
-                                <div class="text-4xl font-bold text-purple-500 mb-2">
-                                    {{ activeWorkspace?.spaces?.length || 0 }}
-                                </div>
-                                <div class="text-sm text-gray-500 mb-3">
-                                    {{ activeWorkspace?.spaces?.length === 1 ? 'Space' : 'Spaces' }} in workspace
-                                </div>
-                                <v-btn color="purple" variant="tonal" size="small" block
-                                    :href="route('workspaces.show', activeWorkspace.id)">
-                                    <v-icon start size="16">mdi-view-grid-outline</v-icon>
-                                    View All Spaces
-                                </v-btn>
-                            </div>
-                        </v-card-text>
-                    </v-card>
-
                     <!-- Time Tracking Widget -->
                     <v-card variant="outlined" rounded="lg" class="mb-4">
                         <v-card-title class="flex items-center gap-2">

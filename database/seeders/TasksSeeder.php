@@ -175,7 +175,7 @@ class TasksSeeder extends Seeder
         ]);
 
         foreach ($definition['assignees'] as $userId) {
-            $task->assignees()->attach([$userId => ['assigned_at' => now(), 'assigned_by' => $definition['created_by']]]);
+            $task->assignees()->attach([$userId => ['assigned_by' => $definition['created_by']]]);
         }
 
         if ($definition['labels'] !== []) {

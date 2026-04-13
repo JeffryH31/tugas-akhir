@@ -148,12 +148,12 @@ test('scoped bindings reject task outside list context', function () {
     ]);
 
     actingAs($owner)
-        ->get(route('tasks.show', [
+        ->patch(route('tasks.update', [
             $hierarchy['workspace']->id,
             $hierarchy['space']->id,
             $hierarchy['list']->id,
             $otherTask->id,
-        ]))
+        ]), ['name' => 'Hacked'])
         ->assertNotFound();
 });
 

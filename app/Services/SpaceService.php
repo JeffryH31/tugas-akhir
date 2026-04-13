@@ -83,7 +83,6 @@ class SpaceService
                 'workspace_id' => $workspace->id,
                 'name' => $data['name'],
                 'slug' => Str::slug($data['name']),
-                'description' => $data['description'] ?? null,
                 'color' => $data['color'] ?? '#6366F1',
                 'icon' => $data['icon'] ?? null,
                 'is_private' => $data['is_private'] ?? false,
@@ -105,11 +104,10 @@ class SpaceService
     public function update(Space $space, array $data, User $user): Space
     {
         $changes = [];
-        $oldValues = $space->only(['name', 'description', 'color', 'is_private']);
+        $oldValues = $space->only(['name', 'color', 'is_private']);
 
         $space->update([
             'name' => $data['name'] ?? $space->name,
-            'description' => $data['description'] ?? $space->description,
             'color' => $data['color'] ?? $space->color,
             'icon' => $data['icon'] ?? $space->icon,
             'is_private' => $data['is_private'] ?? $space->is_private,

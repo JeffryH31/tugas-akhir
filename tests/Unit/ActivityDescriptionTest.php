@@ -9,7 +9,7 @@ test('created action returns "created"', function () {
         'changes' => [],
     ]);
 
-    expect($activity->description)->toBe('created');
+    expect($activity->description)->toBe('created My Subtask');
 });
 
 test('updated with single field set returns "set X to Y"', function () {
@@ -229,7 +229,7 @@ test('deleted action returns "deleted"', function () {
         'changes' => [],
     ]);
 
-    expect($activity->description)->toBe('deleted');
+    expect($activity->description)->toBe('deleted My Subtask');
 });
 
 test('deleted_subtask includes subject name', function () {

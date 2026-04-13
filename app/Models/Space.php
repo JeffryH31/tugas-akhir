@@ -18,7 +18,6 @@ class Space extends Model
         'workspace_id',
         'name',
         'slug',
-        'description',
         'color',
         'icon',
         'is_private',

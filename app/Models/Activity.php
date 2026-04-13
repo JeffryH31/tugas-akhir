@@ -88,9 +88,9 @@ class Activity extends Model
         $subjectName = $this->properties['name'] ?? 'item';
 
         return match ($this->action) {
-            'created'              => "created",
+            'created'              => "created {$subjectName}",
             'updated'              => $this->buildUpdateDescription(),
-            'deleted'              => "deleted",
+            'deleted'              => "deleted {$subjectName}",
             'completed'            => "completed {$subjectName}",
             'reopened'             => "reopened {$subjectName}",
             'assigned'             => $this->buildAssignDescription(),

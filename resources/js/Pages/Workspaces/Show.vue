@@ -11,7 +11,6 @@ const props = defineProps({
 // Create Space dialog
 const showCreateSpace = ref(false);
 const newSpaceName = ref('');
-const newSpaceDescription = ref('');
 const newSpaceColor = ref('#6366F1');
 
 const normalizeHexColor = (value, fallback = '#6366F1') => {
@@ -28,14 +27,12 @@ const createSpace = () => {
         route('spaces.store', props.workspace.id),
         {
             name: newSpaceName.value.trim(),
-            description: newSpaceDescription.value.trim() || null,
             color: normalizeHexColor(newSpaceColor.value),
         },
         {
             preserveScroll: true,
             onSuccess: () => {
                 newSpaceName.value = '';
-                newSpaceDescription.value = '';
                 newSpaceColor.value = '#6366F1';
                 showCreateSpace.value = false;
             },
@@ -71,9 +68,6 @@ const createSpace = () => {
                             </div>
                             <div class="flex-1 min-w-0">
                                 <div class="font-semibold text-lg mb-1">{{ space.name }}</div>
-                                <p v-if="space.description" class="text-sm text-gray-500 line-clamp-2">
-                                    {{ space.description }}
-                                </p>
                                 <div class="flex items-center gap-4 mt-3 text-sm text-gray-400">
                                     <div class="flex items-center gap-1">
                                         <v-icon size="16">mdi-package-variant-closed</v-icon>
@@ -105,8 +99,6 @@ const createSpace = () => {
                 <v-card-text>
                     <v-text-field v-model="newSpaceName" label="Space Name" placeholder="e.g., Marketing, Development"
                         variant="outlined" autofocus class="mb-3" @keydown.enter="createSpace" />
-                    <v-textarea v-model="newSpaceDescription" label="Description (Optional)" variant="outlined" rows="3"
-                        class="mb-3" />
                     <div>
                         <div class="text-sm font-medium mb-2">Space Color</div>
                         <div class="d-flex align-center ga-3">

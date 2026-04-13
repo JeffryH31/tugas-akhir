@@ -25,15 +25,11 @@ class Task extends Model
         'description',
         'position',
         'is_archived',
-        'is_template',
-        'custom_fields',
         'created_by',
     ];
 
     protected $casts = [
         'is_archived' => 'boolean',
-        'is_template' => 'boolean',
-        'custom_fields' => 'array',
         'priority_level' => PriorityLevel::class,
     ];
 
@@ -122,8 +118,7 @@ class Task extends Model
     public function assignees(): BelongsToMany
     {
         return $this->belongsToMany(User::class, 'task_assignees')
-            ->withPivot('assigned_at', 'assigned_by')
-            ->withTimestamps();
+            ->withPivot('assigned_by');
     }
 
     public function labels(): BelongsToMany
@@ -202,7 +197,6 @@ class Task extends Model
     {
         $this->assignees()->syncWithoutDetaching([
             $user->id => [
-                'assigned_at' => now(),
                 'assigned_by' => $assignedBy?->id,
             ]
         ]);

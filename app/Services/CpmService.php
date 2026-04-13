@@ -120,7 +120,7 @@ class CpmService
      */
     protected function isSchedulingDependency(?string $type): bool
     {
-        return in_array($type, ['blocks', 'blocked_by'], true);
+        return $type === 'blocks';
     }
 
     /**

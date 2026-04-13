@@ -82,7 +82,7 @@ class User extends Authenticatable
     public function workspaces(): BelongsToMany
     {
         return $this->belongsToMany(Workspace::class, 'workspace_members')
-            ->withPivot('role', 'joined_at')
+            ->withPivot('role')
             ->withTimestamps();
     }
 
@@ -109,8 +109,7 @@ class User extends Authenticatable
     public function assignedTasks(): BelongsToMany
     {
         return $this->belongsToMany(Task::class, 'task_assignees')
-            ->withPivot('assigned_at', 'assigned_by')
-            ->withTimestamps();
+            ->withPivot('assigned_by');
     }
 
     public function timeEntries(): HasMany

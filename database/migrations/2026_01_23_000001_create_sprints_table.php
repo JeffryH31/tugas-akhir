@@ -13,7 +13,8 @@ return new class extends Migration
     {
         Schema::create('sprints', function (Blueprint $table) {
             $table->id();
-            $table->foreignId('space_id')->constrained()->onDelete('cascade');
+            $table->foreignId('space_id')->constrained()->cascadeOnDelete();
+            $table->foreignId('task_list_id')->nullable()->constrained('task_lists')->nullOnDelete();
             $table->string('name');
             $table->text('goal')->nullable();
             $table->date('start_date');
@@ -21,10 +22,10 @@ return new class extends Migration
             $table->boolean('is_active')->default(false);
             $table->integer('position')->default(0);
             $table->timestamps();
-            $table->softDeletes();
 
             $table->index('is_active');
             $table->index('space_id');
+            $table->index('task_list_id');
         });
     }
 

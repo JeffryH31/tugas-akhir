@@ -26,7 +26,6 @@ return new class extends Migration
             $table->timestamp('edited_at')->nullable();
 
             $table->timestamps();
-            $table->softDeletes();
 
             $table->index(['task_id', 'created_at']);
             $table->index('user_id');

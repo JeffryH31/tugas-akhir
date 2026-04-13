@@ -123,14 +123,17 @@ class TaskList extends Model
 
     public function getCompletedTaskCountAttribute(): int
     {
-        return $this->allTasks()->whereNotNull('completed_at')->count();
+        return $this->allTasks()
+            ->whereHas('subtasks', fn($q) => $q->whereNotNull('completed_at'))
+            ->whereDoesntHave('subtasks', fn($q) => $q->whereNull('completed_at'))
+            ->count();
     }
 
     public function getProgressAttribute(): float
     {
         $total = $this->task_count;
         if ($total === 0) return 0;
-        
+
         return round(($this->completed_task_count / $total) * 100, 1);
     }
 

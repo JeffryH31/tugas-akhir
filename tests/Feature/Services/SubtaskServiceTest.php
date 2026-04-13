@@ -96,7 +96,6 @@ test('update assignees logs assigned and unassigned activities', function () {
 
     $subtask = $this->createSubtask($this->hierarchy['task']);
     $subtask->assignees()->attach($user1->id, [
-        'assigned_at' => now(),
         'assigned_by' => $this->owner->id,
     ]);
 

@@ -38,7 +38,6 @@ class SubtaskResource extends JsonResource
             'time_spent' => $this->time_spent,
             'progress' => $this->progress,
             'position' => $this->position,
-            'is_archived' => $this->is_archived,
             'is_overdue' => $this->isOverdue(),
             'is_completed' => $this->isCompleted(),
             'schedule_variance_minutes' => $this->baseline_due_date && $this->due_date

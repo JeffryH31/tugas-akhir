@@ -138,7 +138,7 @@ class SubtasksSeeder extends Seeder
         $subtask = Subtask::create($attributes);
 
         foreach ($assignees as $userId) {
-            $subtask->assignees()->attach([$userId => ['assigned_at' => now(), 'assigned_by' => $attributes['created_by']]]);
+            $subtask->assignees()->attach([$userId => ['assigned_by' => $attributes['created_by']]]);
         }
 
         if ($labels !== []) {

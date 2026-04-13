@@ -20,7 +20,6 @@ return new class extends Migration
             $table->decimal('hourly_rate', 12, 2)->default(44000.00);
             $table->timestamp('last_notifications_read_at')->nullable();
             $table->rememberToken();
-            $table->foreignId('current_team_id')->nullable();
             $table->string('profile_photo_path', 2048)->nullable();
             $table->timestamps();
         });

@@ -95,6 +95,6 @@ class DashboardController extends Controller
     {
         $request->user()->markNotificationsRead();
 
-        return back()->with('success', 'Notifications marked as read.');
+        return back();
     }
 }

@@ -24,9 +24,7 @@ return new class extends Migration
             $table->integer('position')->default(0);
 
             $table->boolean('is_archived')->default(false);
-            $table->boolean('is_template')->default(false);
 
-            $table->json('custom_fields')->nullable();
             $table->foreignId('created_by')->nullable()->constrained('users')->nullOnDelete();
 
             $table->timestamps();
@@ -41,9 +39,7 @@ return new class extends Migration
             $table->id();
             $table->foreignId('task_id')->constrained()->cascadeOnDelete();
             $table->foreignId('user_id')->constrained()->cascadeOnDelete();
-            $table->timestamp('assigned_at')->useCurrent();
             $table->foreignId('assigned_by')->nullable()->constrained('users')->nullOnDelete();
-            $table->timestamps();
 
             $table->unique(['task_id', 'user_id']);
             $table->index('user_id');
@@ -63,7 +59,7 @@ return new class extends Migration
             $table->id();
             $table->foreignId('task_id')->constrained()->cascadeOnDelete();
             $table->foreignId('depends_on_task_id')->constrained('tasks')->cascadeOnDelete();
-            $table->enum('dependency_type', ['blocks', 'blocked_by', 'relates_to'])->default('blocks');
+            $table->enum('dependency_type', ['blocks', 'relates_to'])->default('blocks');
             $table->timestamps();
 
             $table->unique(['task_id', 'depends_on_task_id']);

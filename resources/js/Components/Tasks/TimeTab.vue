@@ -14,7 +14,7 @@ const props = defineProps({
 });
 
 const formatDuration = (seconds) => {
-    if (!seconds) return 'Not set';
+    if (!seconds) return '0m';
     const h = Math.floor(seconds / 3600);
     const m = Math.floor((seconds % 3600) / 60);
     return h > 0 ? `${h}h ${m}m` : `${m}m`;
@@ -207,6 +207,18 @@ const deleteEntry = async (entryId) => {
                     <div class="text-subtitle-1 font-weight-bold"
                         :class="(task.time_spent || 0) > task.time_estimate ? 'text-error' : ''">
                         {{ formatDuration((task.time_spent || 0) * 60) }}
+                    </div>
+                </div>
+            </div>
+
+            <div class="time-summary-card">
+                <div class="time-summary-icon bg-warning-subtle">
+                    <v-icon size="18" color="warning">mdi-clock-outline</v-icon>
+                </div>
+                <div>
+                    <div class="text-caption text-medium-emphasis mb-1">Estimate</div>
+                    <div class="text-subtitle-1 font-weight-bold">
+                        {{ formatTimeEstimate(task.time_estimate) }}
                     </div>
                 </div>
             </div>
@@ -411,6 +423,10 @@ const deleteEntry = async (entryId) => {
 
 .bg-error-subtle {
     background: rgba(255, 107, 107, 0.12);
+}
+
+.bg-warning-subtle {
+    background: rgba(255, 183, 77, 0.12);
 }
 
 /* ─── Section Card ─── */

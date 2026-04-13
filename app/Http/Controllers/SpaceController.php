@@ -112,7 +112,6 @@ class SpaceController extends Controller
             'space' => [
                 'id' => $space->id,
                 'name' => $space->name,
-                'description' => $space->description,
                 'is_private' => (bool) $space->is_private,
             ],
             'products' => $space->lists

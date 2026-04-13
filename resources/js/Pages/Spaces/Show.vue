@@ -67,12 +67,10 @@ const toggleFolder = (folderId) => {
 // Edit space dialog
 const showEditSpace = ref(false);
 const editSpaceName = ref('');
-const editSpaceDescription = ref('');
 const editSpaceColor = ref('');
 
 const openEditSpace = () => {
     editSpaceName.value = props.space.name;
-    editSpaceDescription.value = props.space.description || '';
     editSpaceColor.value = props.space.color || '#6366F1';
     showEditSpace.value = true;
 };
@@ -91,7 +89,6 @@ const updateSpace = () => {
         route('spaces.update', [props.workspace.id, props.space.id]),
         {
             name: editSpaceName.value.trim(),
-            description: editSpaceDescription.value.trim() || null,
             color: normalizeHexColor(editSpaceColor.value),
         },
         {
@@ -324,7 +321,6 @@ watch(() => props.productsByStatus, () => {
                     </div>
                     <div>
                         <h1 class="text-2xl font-bold">{{ space?.name }}</h1>
-                        <p v-if="space?.description" class="text-gray-500 mt-1">{{ space.description }}</p>
                     </div>
                 </div>
 
@@ -591,8 +587,6 @@ watch(() => props.productsByStatus, () => {
                 <v-card-text>
                     <v-text-field v-model="editSpaceName" label="Space Name" variant="outlined" autofocus
                         class="mb-4" />
-                    <v-textarea v-model="editSpaceDescription" label="Description (Optional)" variant="outlined"
-                        rows="3" class="mb-4" />
                     <div>
                         <div class="text-sm font-medium mb-2">Space Color</div>
                         <div class="d-flex align-center ga-3">

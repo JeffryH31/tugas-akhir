@@ -35,8 +35,6 @@ class Subtask extends Model
         'time_spent',
         'progress',
         'position',
-        'is_archived',
-        'custom_fields',
         'created_by',
         'completed_by',
     ];
@@ -53,8 +51,6 @@ class Subtask extends Model
         'pessimistic_estimate' => 'integer',
         'time_spent' => 'integer',
         'progress' => 'integer',
-        'is_archived' => 'boolean',
-        'custom_fields' => 'array',
         'priority_level' => PriorityLevel::class,
     ];
 
@@ -119,8 +115,7 @@ class Subtask extends Model
     public function assignees(): BelongsToMany
     {
         return $this->belongsToMany(User::class, 'subtask_assignees')
-            ->withTimestamps()
-            ->withPivot(['assigned_at', 'assigned_by']);
+            ->withPivot(['assigned_by']);
     }
 
     public function labels(): BelongsToMany
@@ -166,16 +161,6 @@ class Subtask extends Model
         return $this->belongsToMany(Subtask::class, 'subtask_dependencies', 'depends_on_subtask_id', 'subtask_id')
             ->withPivot('dependency_type')
             ->withTimestamps();
-    }
-
-    public function scopeActive($query)
-    {
-        return $query->where('is_archived', false);
-    }
-
-    public function scopeArchived($query)
-    {
-        return $query->where('is_archived', true);
     }
 
     public function scopeCompleted($query)
@@ -254,7 +239,7 @@ class Subtask extends Model
     {
         return $this->dependencies()
             ->whereNull('completed_at')
-            ->wherePivotIn('dependency_type', ['blocks', 'blocked_by'])
+            ->wherePivotIn('dependency_type', ['blocks'])
             ->exists();
     }
 
@@ -262,7 +247,7 @@ class Subtask extends Model
     {
         return $this->dependencies()
             ->whereNull('completed_at')
-            ->wherePivotIn('dependency_type', ['blocks', 'blocked_by'])
+            ->wherePivotIn('dependency_type', ['blocks'])
             ->pluck('name')
             ->toArray();
     }

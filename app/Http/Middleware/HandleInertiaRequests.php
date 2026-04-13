@@ -4,8 +4,14 @@ namespace App\Http\Middleware;
 
 use App\Http\Resources\ActivityResource;
 use App\Models\Activity;
+use App\Models\Folder;
+use App\Models\Space;
+use App\Models\Subtask;
+use App\Models\Task;
+use App\Models\TaskList;
 use App\Models\TimeEntry;
 use App\Models\Workspace;
+use Illuminate\Database\Eloquent\Relations\MorphTo;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\ViewErrorBag;
@@ -105,11 +111,24 @@ class HandleInertiaRequests extends Middleware
             }
         }
 
+        // Actions too noisy / low-value for notifications
+        $notificationIgnoredActions = ['timer_started', 'timer_stopped', 'time_updated', 'time_deleted'];
+
         $notifications = $request->user()
             ? Activity::query()
             ->whereIn('workspace_id', $notificationWorkspaceIds ?? [])
             ->where('user_id', '!=', $request->user()->id)
-            ->with('user')
+            ->whereNotIn('action', $notificationIgnoredActions)
+            ->with(['user', 'subject' => function (MorphTo $morphTo) {
+                $morphTo->morphWith([
+                    Task::class    => ['taskList.space'],
+                    Subtask::class => ['task.taskList.space'],
+                    TaskList::class => ['space'],
+                    Folder::class  => ['space'],
+                    Space::class   => [],
+                    Workspace::class => [],
+                ]);
+            }])
             ->latest()
             ->limit(10)
             ->get()
@@ -119,6 +138,7 @@ class HandleInertiaRequests extends Middleware
             ? Activity::query()
             ->whereIn('workspace_id', $notificationWorkspaceIds ?? [])
             ->where('user_id', '!=', $request->user()->id)
+            ->whereNotIn('action', $notificationIgnoredActions)
             ->when(
                 $request->user()->last_notifications_read_at,
                 fn($q) => $q->where('created_at', '>', $request->user()->last_notifications_read_at)
@@ -138,7 +158,8 @@ class HandleInertiaRequests extends Middleware
                 ? $request->session()->get('errors')->getBag('default')->getMessages()
                 : [])->map(fn($messages) => $messages[0] ?? null)->filter()->values(),
             'notifications' => ActivityResource::collection($notifications),
-            'unreadNotificationsCount' => $unreadNotificationsCount,
+            'unreadNotificationsCount' => min($unreadNotificationsCount, 10),
+            'notificationsLastReadAt' => $request->user()?->last_notifications_read_at?->toISOString(),
             'runningTimer' => fn() => $request->user() ? TimeEntry::where('user_id', $request->user()->id)
                 ->where('is_running', true)
                 ->with('subtask.task.taskList.space')

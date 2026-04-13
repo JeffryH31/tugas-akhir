@@ -117,7 +117,6 @@ test('deleteSprint clears sprint_id on all subtasks then deletes', function () {
 
     expect($subtask->fresh()->sprint_id)->toBeNull();
     expect(Sprint::find($sprint->id))->toBeNull();
-    expect(Sprint::withTrashed()->find($sprint->id))->not->toBeNull();
 });
 
 test('getBacklogSubtasks returns only subtasks with null sprint_id', function () {

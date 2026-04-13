@@ -53,36 +53,6 @@ class TaskController extends Controller
     }
 
     /**
-     * Display the specified task (Full detail view).
-     */
-    public function show(Request $request, Workspace $workspace, Space $space, TaskList $list, Task $task): Response
-    {
-        abort_unless((int) $space->workspace_id === (int) $workspace->id, 404);
-        abort_unless((int) $list->space_id === (int) $space->id, 404);
-        abort_unless((int) $task->task_list_id === (int) $list->id, 404);
-        abort_unless($this->accessService->canViewProject($request->user(), $list), 403);
-        $task = $this->taskService->getTaskWithRelations($task);
-
-        $workspace->load([
-            'spaces' => fn($q) => $q->with([
-                'folders.lists',
-                'listsWithoutFolder',
-            ])->orderBy('position'),
-            'members' => fn($q) => $q->select('users.id', 'users.name', 'users.email', 'users.profile_photo_path'),
-            'labels' => fn($q) => $q->orderBy('name'),
-        ]);
-
-        return Inertia::render('Tasks/Show', [
-            'workspace' => $workspace,
-            'space' => $space,
-            'list' => $list,
-            'task' => new TaskResource($task),
-            'statuses' => $space->statuses()->orderBy('position')->get(),
-            'sprints' => $list->sprints()->orderBy('position')->get(),
-        ]);
-    }
-
-    /**
      * Update the specified task.
      */
     public function update(UpdateTaskRequest $request, Workspace $workspace, Space $space, TaskList $list, Task $task): RedirectResponse

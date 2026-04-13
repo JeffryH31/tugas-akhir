@@ -212,7 +212,7 @@ test('getMySubtasks returns only subtasks assigned to user', function () {
     $task->assign($this->owner);
 
     $subtaskAssigned = $this->createSubtask($task, ['name' => 'Assigned Sub']);
-    $subtaskAssigned->assignees()->attach($this->owner->id, ['assigned_at' => now(), 'assigned_by' => $this->owner->id]);
+    $subtaskAssigned->assignees()->attach($this->owner->id, ['assigned_by' => $this->owner->id]);
 
     $subtaskUnassigned = $this->createSubtask($task, ['name' => 'Unassigned Sub']);
 
@@ -226,10 +226,10 @@ test('getMySubtasks excludes completed subtasks', function () {
     $task = $this->service->create(['name' => 'Parent'], $this->hierarchy['list'], $this->owner);
 
     $active = $this->createSubtask($task, ['name' => 'Active']);
-    $active->assignees()->attach($this->owner->id, ['assigned_at' => now(), 'assigned_by' => $this->owner->id]);
+    $active->assignees()->attach($this->owner->id, ['assigned_by' => $this->owner->id]);
 
     $done = $this->createSubtask($task, ['name' => 'Done', 'completed_at' => now()]);
-    $done->assignees()->attach($this->owner->id, ['assigned_at' => now(), 'assigned_by' => $this->owner->id]);
+    $done->assignees()->attach($this->owner->id, ['assigned_by' => $this->owner->id]);
 
     $mySubtasks = $this->service->getMySubtasks($this->owner);
 
@@ -244,16 +244,16 @@ test('getMySubtasks with is_overdue filter returns only overdue subtasks', funct
         'name' => 'Overdue',
         'due_date' => now()->subDays(3),
     ]);
-    $overdue->assignees()->attach($this->owner->id, ['assigned_at' => now(), 'assigned_by' => $this->owner->id]);
+    $overdue->assignees()->attach($this->owner->id, ['assigned_by' => $this->owner->id]);
 
     $future = $this->createSubtask($task, [
         'name' => 'Future',
         'due_date' => now()->addDays(5),
     ]);
-    $future->assignees()->attach($this->owner->id, ['assigned_at' => now(), 'assigned_by' => $this->owner->id]);
+    $future->assignees()->attach($this->owner->id, ['assigned_by' => $this->owner->id]);
 
     $noDue = $this->createSubtask($task, ['name' => 'No Due']);
-    $noDue->assignees()->attach($this->owner->id, ['assigned_at' => now(), 'assigned_by' => $this->owner->id]);
+    $noDue->assignees()->attach($this->owner->id, ['assigned_by' => $this->owner->id]);
 
     $overdueSubtasks = $this->service->getMySubtasks($this->owner, ['is_overdue' => true]);
 

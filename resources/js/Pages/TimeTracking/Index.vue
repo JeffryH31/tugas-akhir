@@ -103,11 +103,10 @@ const formatDateTime = (dateString) => {
 const goToTask = (entry) => {
     const task = entry?.subtask?.task;
     if (!task) return;
-    router.visit(route('tasks.show', [
+    router.visit(route('lists.show', [
         props.activeWorkspace.id,
         task.task_list?.space_id,
         task.task_list_id,
-        task.id,
     ]));
 };
 

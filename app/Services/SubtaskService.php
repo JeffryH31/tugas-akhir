@@ -47,7 +47,6 @@ class SubtaskService
                 $assignees = [];
                 foreach ($data['assignee_ids'] as $assigneeId) {
                     $assignees[$assigneeId] = [
-                        'assigned_at' => now(),
                         'assigned_by' => $user->id,
                     ];
                 }
@@ -168,7 +167,7 @@ class SubtaskService
 
                 $pivotData = [];
                 foreach ($newAssigneeIds as $assigneeId) {
-                    $pivotData[$assigneeId] = ['assigned_at' => now(), 'assigned_by' => $user->id];
+                    $pivotData[$assigneeId] = ['assigned_by' => $user->id];
                 }
                 $subtask->assignees()->sync($pivotData);
 

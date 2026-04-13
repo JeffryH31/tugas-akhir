@@ -155,7 +155,6 @@ Route::middleware(['auth:sanctum', config('jetstream.auth_session'), 'verified']
                                 Route::post('/reorder', [TaskController::class, 'reorder'])->name('tasks.reorder');
 
                                 Route::prefix('{task}')->scopeBindings()->group(function () {
-                                    Route::get('/', [TaskController::class, 'show'])->name('tasks.show');
                                     Route::patch('/', [TaskController::class, 'update'])->name('tasks.update');
                                     Route::delete('/', [TaskController::class, 'destroy'])->name('tasks.destroy');
                                     Route::patch('/status', [TaskController::class, 'changeStatus'])->name('tasks.change-status');

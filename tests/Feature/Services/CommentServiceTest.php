@@ -56,7 +56,6 @@ test('delete comment soft deletes and logs activity', function () {
     $this->service->delete($comment, $this->owner);
 
     expect(Comment::find($comment->id))->toBeNull();
-    expect(Comment::withTrashed()->find($comment->id))->not->toBeNull();
 
     $activity = Activity::where('action', 'comment_deleted')->first();
     expect($activity)->not->toBeNull();

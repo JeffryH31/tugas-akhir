@@ -55,7 +55,6 @@ test('getReport stats reflect logged time entries', function () {
 test('getReport includes active subtasks assigned to member', function () {
     $subtask = $this->createSubtask($this->hierarchy['task'], ['name' => 'Active Work']);
     $subtask->assignees()->attach($this->owner->id, [
-        'assigned_at' => now(),
         'assigned_by' => $this->owner->id,
     ]);
 
@@ -71,7 +70,6 @@ test('getReport excludes completed subtasks from active list', function () {
         'completed_at' => now(),
     ]);
     $completed->assignees()->attach($this->owner->id, [
-        'assigned_at' => now(),
         'assigned_by' => $this->owner->id,
     ]);
 
@@ -87,7 +85,6 @@ test('getReport includes recently completed subtasks', function () {
         'completed_at' => now()->subDays(2),
     ]);
     $completed->assignees()->attach($this->owner->id, [
-        'assigned_at' => now()->subDays(5),
         'assigned_by' => $this->owner->id,
     ]);
 
@@ -174,7 +171,6 @@ test('getReport scopes data to workspace', function () {
 
     $otherSubtask = $this->createSubtask($otherHierarchy['task'], ['name' => 'Other Workspace Work']);
     $otherSubtask->assignees()->attach($this->owner->id, [
-        'assigned_at' => now(),
         'assigned_by' => $otherOwner->id,
     ]);
 
