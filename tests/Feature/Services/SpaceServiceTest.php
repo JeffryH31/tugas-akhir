@@ -116,10 +116,10 @@ test('updateMemberRole changes role', function () {
     $member = $this->createUser();
     $this->hierarchy['space']->members()->attach($member->id, ['role' => 'member']);
 
-    $this->service->updateMemberRole($this->hierarchy['space'], $member, 'manager', $this->owner);
+    $this->service->updateMemberRole($this->hierarchy['space'], $member, 'admin', $this->owner);
 
     $updated = $this->hierarchy['space']->members()->where('user_id', $member->id)->first();
-    expect($updated->pivot->role)->toBe('manager');
+    expect($updated->pivot->role)->toBe('admin');
 });
 
 test('removeMember detaches user', function () {

@@ -4,6 +4,7 @@ import { Head, Link, router, usePage } from '@inertiajs/vue3';
 import { useDisplay } from 'vuetify';
 import { useSnackbar } from '@/composables/useSnackbar';
 import { useConfirmDialog } from '@/composables/useConfirmDialog';
+import ColorPicker from '@/Components/ColorPicker.vue';
 
 const props = defineProps({
     title: String,
@@ -835,15 +836,7 @@ const formatDuration = (seconds) => {
                 <v-card-text class="pt-4 d-flex flex-column ga-3">
                     <v-text-field v-model="newSpaceName" label="Space Name" placeholder="e.g., Marketing, Engineering"
                         variant="outlined" density="comfortable" hide-details autofocus @keydown.enter="createSpace" />
-                    <div>
-                        <div class="text-caption text-medium-emphasis mb-2">Space Color</div>
-                        <div class="d-flex align-center ga-3">
-                            <input v-model="newSpaceColor" type="color" class="color-input-native" />
-                            <v-text-field v-model="newSpaceColor" label="Hex" variant="outlined" density="compact"
-                                hide-details class="flex-1"
-                                @blur="newSpaceColor = normalizeHexColor(newSpaceColor, '#6366F1')" />
-                        </div>
-                    </div>
+                    <ColorPicker v-model="newSpaceColor" label="Space Color" />
                 </v-card-text>
                 <v-card-actions class="px-4 pb-4">
                     <v-spacer />
@@ -874,15 +867,7 @@ const formatDuration = (seconds) => {
                     <v-text-field v-model="newWorkspaceName" label="Workspace Name"
                         placeholder="e.g., Product Team, Acme Client" variant="outlined" density="comfortable"
                         hide-details autofocus @keydown.enter="createWorkspace" />
-                    <div>
-                        <div class="text-caption text-medium-emphasis mb-2">Color</div>
-                        <div class="d-flex align-center ga-2">
-                            <input v-model="newWorkspaceColor" type="color" class="color-input-native" />
-                            <v-text-field v-model="newWorkspaceColor" label="Hex" variant="outlined"
-                                density="compact" hide-details class="flex-1"
-                                @blur="newWorkspaceColor = normalizeHexColor(newWorkspaceColor, '#3B82F6')" />
-                        </div>
-                    </div>
+                    <ColorPicker v-model="newWorkspaceColor" />
                 </v-card-text>
                 <v-card-actions class="px-4 pb-4">
                     <v-spacer />
@@ -1578,25 +1563,5 @@ const formatDuration = (seconds) => {
     align-items: center;
     justify-content: center;
     flex-shrink: 0;
-}
-
-/* ─── Color Input ─── */
-.color-input-native {
-    width: 44px;
-    height: 36px;
-    border: 1px solid rgba(255, 255, 255, 0.12);
-    border-radius: 8px;
-    background: transparent;
-    padding: 3px;
-    cursor: pointer;
-}
-
-.color-input-native::-webkit-color-swatch-wrapper {
-    padding: 0;
-}
-
-.color-input-native::-webkit-color-swatch {
-    border: none;
-    border-radius: 5px;
 }
 </style>

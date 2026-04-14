@@ -13,6 +13,7 @@ import { ref, computed, provide, watch, onMounted } from 'vue';
 import { Head, router, usePage } from '@inertiajs/vue3';
 import MainLayout from '@/Layouts/MainLayout.vue';
 import StatusColumn from '@/Components/Tasks/StatusColumn.vue';
+import ColorPicker from '@/Components/ColorPicker.vue';
 import TaskDetailPanel from '@/Components/Tasks/TaskDetailPanel.vue';
 import GanttChart from '@/Components/Cpm/GanttChart.vue';
 import CpmSummary from '@/Components/Cpm/CpmSummary.vue';
@@ -1596,18 +1597,7 @@ onMounted(() => {
                             <v-text-field v-model="newStatusName" placeholder="Status name" variant="outlined"
                                 density="compact" hide-details autofocus class="mb-2" @keydown.enter="addStatus"
                                 @keydown.escape="showAddStatus = false" />
-                            <div class="d-flex align-center ga-3 mb-3">
-                                <input v-model="newStatusColor" type="color" class="color-input-native" />
-                                <v-text-field
-                                    v-model="newStatusColor"
-                                    label="Hex Color"
-                                    variant="outlined"
-                                    density="compact"
-                                    hide-details
-                                    class="flex-1"
-                                    @blur="newStatusColor = normalizeHexColor(newStatusColor)"
-                                />
-                            </div>
+                            <ColorPicker v-model="newStatusColor" class="mb-3" />
                             <div class="flex gap-2">
                                 <v-btn color="primary" size="small" @click="addStatus">Add</v-btn>
                                 <v-btn variant="text" size="small" @click="showAddStatus = false">Cancel</v-btn>
@@ -2674,24 +2664,5 @@ onMounted(() => {
     white-space: nowrap;
     flex: 1;
     min-width: 0;
-}
-
-.color-input-native {
-    width: 44px;
-    height: 36px;
-    border: 1px solid rgba(255, 255, 255, 0.14);
-    border-radius: 8px;
-    background: transparent;
-    padding: 4px;
-    cursor: pointer;
-}
-
-.color-input-native::-webkit-color-swatch-wrapper {
-    padding: 0;
-}
-
-.color-input-native::-webkit-color-swatch {
-    border: none;
-    border-radius: 5px;
 }
 </style>

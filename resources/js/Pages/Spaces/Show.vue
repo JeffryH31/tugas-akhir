@@ -5,6 +5,7 @@
 import { ref, computed, watch } from 'vue';
 import { Head, router } from '@inertiajs/vue3';
 import MainLayout from '@/Layouts/MainLayout.vue';
+import ColorPicker from '@/Components/ColorPicker.vue';
 
 const props = defineProps({
     workspace: Object,
@@ -587,15 +588,7 @@ watch(() => props.productsByStatus, () => {
                 <v-card-text>
                     <v-text-field v-model="editSpaceName" label="Space Name" variant="outlined" autofocus
                         class="mb-4" />
-                    <div>
-                        <div class="text-sm font-medium mb-2">Space Color</div>
-                        <div class="d-flex align-center ga-3">
-                            <input v-model="editSpaceColor" type="color" class="color-input-native" />
-                            <v-text-field v-model="editSpaceColor" label="Hex Color" variant="outlined"
-                                density="compact" hide-details class="flex-1"
-                                @blur="editSpaceColor = normalizeHexColor(editSpaceColor)" />
-                        </div>
-                    </div>
+                    <ColorPicker v-model="editSpaceColor" label="Space Color" />
                 </v-card-text>
                 <v-card-actions>
                     <v-spacer />
@@ -949,25 +942,6 @@ watch(() => props.productsByStatus, () => {
     display: flex;
     align-items: center;
     gap: 4px;
-}
-
-.color-input-native {
-    width: 48px;
-    height: 38px;
-    border: 1px solid rgba(255, 255, 255, 0.14);
-    border-radius: 8px;
-    background: transparent;
-    padding: 4px;
-    cursor: pointer;
-}
-
-.color-input-native::-webkit-color-swatch-wrapper {
-    padding: 0;
-}
-
-.color-input-native::-webkit-color-swatch {
-    border: none;
-    border-radius: 5px;
 }
 
 .board-column__empty {

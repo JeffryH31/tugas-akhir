@@ -98,10 +98,10 @@ test('workspace owner can manage space', function () {
     expect($this->access->canManageSpace($this->owner, $this->hierarchy['space']))->toBeTrue();
 });
 
-test('space manager can manage space', function () {
+test('space admin can manage space', function () {
     $manager = $this->createUser();
     $this->hierarchy['workspace']->addMember($manager, 'member');
-    $this->hierarchy['space']->members()->attach($manager->id, ['role' => 'manager']);
+    $this->hierarchy['space']->members()->attach($manager->id, ['role' => 'admin']);
 
     expect($this->access->canManageSpace($manager, $this->hierarchy['space']))->toBeTrue();
 });
@@ -228,9 +228,9 @@ test('getWorkspaceRole returns correct role', function () {
 test('getSpaceRole returns correct role', function () {
     $spaceMember = $this->createUser();
     $this->hierarchy['workspace']->addMember($spaceMember, 'member');
-    $this->hierarchy['space']->members()->attach($spaceMember->id, ['role' => 'manager']);
+    $this->hierarchy['space']->members()->attach($spaceMember->id, ['role' => 'admin']);
 
-    expect($this->access->getSpaceRole($spaceMember, $this->hierarchy['space']))->toBe('manager');
+    expect($this->access->getSpaceRole($spaceMember, $this->hierarchy['space']))->toBe('admin');
     expect($this->access->getSpaceRole($this->owner, $this->hierarchy['space']))->toBeNull();
 });
 

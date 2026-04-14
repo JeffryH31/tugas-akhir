@@ -17,18 +17,14 @@ const selectedUserId = ref(null);
 const selectedRole = ref('member');
 
 const spaceRoleItems = [
-    { title: 'Owner', value: 'owner' },
     { title: 'Admin', value: 'admin' },
-    { title: 'Manager', value: 'manager' },
     { title: 'Member', value: 'member' },
     { title: 'Guest', value: 'guest' },
 ];
 
 const getSpaceRoleBadgeColor = (role) => {
     switch (role) {
-        case 'owner': return 'error';
         case 'admin': return 'warning';
-        case 'manager': return 'info';
         case 'member': return 'primary';
         case 'guest': return 'grey';
         default: return 'grey';

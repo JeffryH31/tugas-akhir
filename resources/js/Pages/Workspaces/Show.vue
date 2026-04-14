@@ -2,6 +2,7 @@
 import { ref } from 'vue';
 import { Head, router } from '@inertiajs/vue3';
 import MainLayout from '@/Layouts/MainLayout.vue';
+import ColorPicker from '@/Components/ColorPicker.vue';
 
 const props = defineProps({
     workspace: Object,
@@ -99,21 +100,7 @@ const createSpace = () => {
                 <v-card-text>
                     <v-text-field v-model="newSpaceName" label="Space Name" placeholder="e.g., Marketing, Development"
                         variant="outlined" autofocus class="mb-3" @keydown.enter="createSpace" />
-                    <div>
-                        <div class="text-sm font-medium mb-2">Space Color</div>
-                        <div class="d-flex align-center ga-3">
-                            <input v-model="newSpaceColor" type="color" class="color-input-native" />
-                            <v-text-field
-                                v-model="newSpaceColor"
-                                label="Hex Color"
-                                variant="outlined"
-                                density="compact"
-                                hide-details
-                                class="flex-1"
-                                @blur="newSpaceColor = normalizeHexColor(newSpaceColor)"
-                            />
-                        </div>
-                    </div>
+                    <ColorPicker v-model="newSpaceColor" label="Space Color" />
                 </v-card-text>
                 <v-card-actions>
                     <v-spacer />
@@ -165,24 +152,5 @@ const createSpace = () => {
     -webkit-line-clamp: 2;
     -webkit-box-orient: vertical;
     overflow: hidden;
-}
-
-.color-input-native {
-    width: 48px;
-    height: 38px;
-    border: 1px solid rgba(255, 255, 255, 0.14);
-    border-radius: 8px;
-    background: transparent;
-    padding: 4px;
-    cursor: pointer;
-}
-
-.color-input-native::-webkit-color-swatch-wrapper {
-    padding: 0;
-}
-
-.color-input-native::-webkit-color-swatch {
-    border: none;
-    border-radius: 5px;
 }
 </style>

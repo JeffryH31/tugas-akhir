@@ -6,6 +6,7 @@ import { ref, computed } from 'vue';
 import { router } from '@inertiajs/vue3';
 import draggable from 'vuedraggable';
 import TaskCard from './TaskCard.vue';
+import ColorPicker from '@/Components/ColorPicker.vue';
 
 const props = defineProps({
     status: {
@@ -270,21 +271,7 @@ const handleTaskOpen = (task) => {
                     <v-text-field v-model="editStatusForm.name" label="Status Name" variant="outlined"
                         density="comfortable" class="mb-3" />
 
-                    <div class="mb-3">
-                        <label class="text-sm text-gray-400 mb-2 block">Color</label>
-                        <div class="d-flex align-center ga-3">
-                            <input v-model="editStatusForm.color" type="color" class="color-input-native" />
-                            <v-text-field
-                                v-model="editStatusForm.color"
-                                label="Hex Color"
-                                variant="outlined"
-                                density="compact"
-                                hide-details
-                                class="flex-1"
-                                @blur="editStatusForm.color = normalizeHexColor(editStatusForm.color)"
-                            />
-                        </div>
-                    </div>
+                    <ColorPicker v-model="editStatusForm.color" />
                 </v-card-text>
                 <v-divider />
                 <v-card-actions class="pa-4">
@@ -432,25 +419,6 @@ const handleTaskOpen = (task) => {
 .add-task-form :deep(*:focus-visible) {
     outline: none !important;
     box-shadow: none !important;
-}
-
-.color-input-native {
-    width: 44px;
-    height: 36px;
-    border: 1px solid rgba(255, 255, 255, 0.14);
-    border-radius: 8px;
-    background: transparent;
-    padding: 4px;
-    cursor: pointer;
-}
-
-.color-input-native::-webkit-color-swatch-wrapper {
-    padding: 0;
-}
-
-.color-input-native::-webkit-color-swatch {
-    border: none;
-    border-radius: 5px;
 }
 
 .add-task-form :deep(.v-field__input) {

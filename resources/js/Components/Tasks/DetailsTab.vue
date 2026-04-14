@@ -3,6 +3,7 @@ import { ref, computed, watch } from 'vue';
 import { router } from '@inertiajs/vue3';
 import { PRIORITIES, PRIORITY_MAP } from '@/constants/priorities';
 import { useConfirmDialog } from '@/composables/useConfirmDialog';
+import ColorPicker from '@/Components/ColorPicker.vue';
 import {
     getFallbackCompletionTarget,
     getStoredSubtaskCompletionTarget,
@@ -1173,13 +1174,7 @@ const removeSuccessor = (suc) => depFetch('DELETE', { subtask_id: suc.id, depend
                     <v-text-field v-model="labelForm.name" label="Label name" variant="outlined" density="compact"
                         autofocus class="mb-3" />
 
-                    <v-text-field v-model="labelForm.color" label="Color (#RRGGBB)" variant="outlined" density="compact"
-                        class="mb-3" @blur="labelForm.color = normalizeLabelColor(labelForm.color)" />
-
-                    <div class="d-flex align-center ga-3 mb-3">
-                        <input v-model="labelForm.color" type="color" class="color-input-native" />
-                        <div class="text-caption text-grey">Choose any color with the picker</div>
-                    </div>
+                    <ColorPicker v-model="labelForm.color" />
                 </v-card-text>
 
                 <v-card-actions>
@@ -1341,25 +1336,6 @@ const removeSuccessor = (suc) => depFetch('DELETE', { subtask_id: suc.id, depend
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
-}
-
-.color-input-native {
-    width: 44px;
-    height: 36px;
-    border: 1px solid rgba(255, 255, 255, 0.14);
-    border-radius: 8px;
-    background: transparent;
-    padding: 4px;
-    cursor: pointer;
-}
-
-.color-input-native::-webkit-color-swatch-wrapper {
-    padding: 0;
-}
-
-.color-input-native::-webkit-color-swatch {
-    border: none;
-    border-radius: 5px;
 }
 
 .prop-row--top {

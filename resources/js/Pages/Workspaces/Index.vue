@@ -2,6 +2,7 @@
 import { ref } from 'vue';
 import { Head, router } from '@inertiajs/vue3';
 import MainLayout from '@/Layouts/MainLayout.vue';
+import ColorPicker from '@/Components/ColorPicker.vue';
 
 const props = defineProps({
     workspaces: Array,
@@ -11,12 +12,6 @@ const showCreateDialog = ref(false);
 const workspaceName = ref('');
 const workspaceColor = ref('#3B82F6');
 const isCreating = ref(false);
-
-const PRESET_COLORS = [
-    '#3B82F6', '#6366F1', '#8B5CF6', '#EC4899',
-    '#EF4444', '#F97316', '#EAB308', '#22C55E',
-    '#14B8A6', '#06B6D4',
-];
 
 const normalizeHexColor = (value, fallback = '#3B82F6') => {
     const raw = (value || '').trim();
@@ -133,18 +128,7 @@ const createWorkspace = () => {
                     />
 
                     <div class="mt-4">
-                        <div class="text-sm text-gray-600 mb-2">Color</div>
-                        <div class="color-picker-row">
-                            <button
-                                v-for="color in PRESET_COLORS"
-                                :key="color"
-                                class="color-swatch"
-                                :class="{ 'color-swatch--active': workspaceColor === color }"
-                                :style="{ backgroundColor: color }"
-                                type="button"
-                                @click="workspaceColor = color"
-                            />
-                        </div>
+                        <ColorPicker v-model="workspaceColor" />
                     </div>
                 </v-card-text>
 
@@ -246,28 +230,5 @@ const createWorkspace = () => {
     margin-bottom: 8px;
 }
 
-/* Color picker */
-.color-picker-row {
-    display: flex;
-    gap: 8px;
-    flex-wrap: wrap;
-}
 
-.color-swatch {
-    width: 28px;
-    height: 28px;
-    border-radius: 50%;
-    border: 2px solid transparent;
-    cursor: pointer;
-    transition: transform 0.15s, border-color 0.15s;
-}
-
-.color-swatch:hover {
-    transform: scale(1.15);
-}
-
-.color-swatch--active {
-    border-color: white;
-    box-shadow: 0 0 0 2px #6366F1;
-}
 </style>

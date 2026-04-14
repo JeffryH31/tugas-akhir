@@ -37,11 +37,8 @@ use App\Models\Workspace;
  *
  *  SPACE LEVEL (space_members — only required for private spaces)
  *  ┌──────────┬────────────────────────────────────────────────────┐
- *  │ owner    │ Full space control. Manage settings, statuses.    │
- *  ├──────────┼────────────────────────────────────────────────────┤
- *  │ admin    │ Manage space settings, statuses, folders.         │
- *  ├──────────┼────────────────────────────────────────────────────┤
- *  │ manager  │ Manage space structure (folders).                 │
+ *  │ admin    │ Manage space settings, statuses, folders,         │
+ *  │          │ and space members.                                │
  *  ├──────────┼────────────────────────────────────────────────────┤
  *  │ member   │ View space and products. Must have product role   │
  *  │          │ to perform task-level operations.                 │
@@ -74,9 +71,7 @@ class AccessService
     public const WORKSPACE_MEMBER = 'member';
     public const WORKSPACE_GUEST = 'guest';
 
-    public const SPACE_OWNER = 'owner';
     public const SPACE_ADMIN = 'admin';
-    public const SPACE_MANAGER = 'manager';
     public const SPACE_MEMBER = 'member';
     public const SPACE_GUEST = 'guest';
 
@@ -201,9 +196,7 @@ class AccessService
         }
 
         return in_array($this->getSpaceRole($user, $space), [
-            self::SPACE_OWNER,
             self::SPACE_ADMIN,
-            self::SPACE_MANAGER,
             self::SPACE_MEMBER,
             self::SPACE_GUEST,
         ], true);
@@ -225,9 +218,7 @@ class AccessService
         }
 
         return in_array($this->getSpaceRole($user, $space), [
-            self::SPACE_OWNER,
             self::SPACE_ADMIN,
-            self::SPACE_MANAGER,
         ], true);
     }
 
@@ -271,7 +262,7 @@ class AccessService
     }
 
     /**
-     * Determine whether a user can manage a product (settings, archive, etc.).
+     * Determine whether a user can manage a product (settings, etc.).
      *
      * Workspace owner/admin can always manage products.
      */

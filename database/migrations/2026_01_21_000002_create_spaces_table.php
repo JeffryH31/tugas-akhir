@@ -33,7 +33,7 @@ return new class extends Migration
             $table->id();
             $table->foreignId('space_id')->constrained()->cascadeOnDelete();
             $table->foreignId('user_id')->constrained()->cascadeOnDelete();
-            $table->enum('role', ['manager', 'member', 'guest'])->default('member');
+            $table->enum('role', ['admin', 'member', 'guest'])->default('member');
             $table->timestamps();
 
             $table->unique(['space_id', 'user_id']);
