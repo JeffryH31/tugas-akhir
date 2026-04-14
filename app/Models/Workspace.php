@@ -17,17 +17,13 @@ class Workspace extends Model
     protected $fillable = [
         'name',
         'slug',
-        'description',
         'color',
-        'icon',
         'owner_id',
         'is_personal',
-        'settings',
     ];
 
     protected $casts = [
         'is_personal' => 'boolean',
-        'settings' => 'array',
     ];
 
     protected static function boot(): void

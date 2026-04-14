@@ -12,7 +12,7 @@ class TasksSeeder extends Seeder
 
     public function run(): void
     {
-        $sasya = $this->demoUser('admin@example.com');
+        $admin = $this->demoUser('admin@example.com');
         $andi = $this->demoUser('andi@example.com');
         $dian = $this->demoUser('dian@example.com');
         $budi = $this->demoUser('budi@example.com');
@@ -23,7 +23,7 @@ class TasksSeeder extends Seeder
             'list' => 'Inventory Module',
             'status' => ['Manufacturing', 'In Progress'],
             'priority_level' => 1,
-            'created_by' => $sasya->id,
+            'created_by' => $admin->id,
             'position' => 0,
             'assignees' => [$budi->id, $dian->id],
             'labels' => ['Feature'],
@@ -59,7 +59,7 @@ class TasksSeeder extends Seeder
             'list' => 'Reporting',
             'status' => ['Manufacturing', 'Backlog'],
             'priority_level' => 3,
-            'created_by' => $sasya->id,
+            'created_by' => $admin->id,
             'position' => 0,
             'assignees' => [],
             'labels' => ['Feature', 'Documentation'],
@@ -83,7 +83,7 @@ class TasksSeeder extends Seeder
             'list' => 'Order Management',
             'status' => ['B2B', 'In Progress'],
             'priority_level' => 2,
-            'created_by' => $sasya->id,
+            'created_by' => $admin->id,
             'position' => 0,
             'assignees' => [$budi->id, $dian->id],
             'labels' => ['Feature'],
@@ -107,7 +107,7 @@ class TasksSeeder extends Seeder
             'list' => 'Invoice System',
             'status' => ['B2B', 'To Do'],
             'priority_level' => 3,
-            'created_by' => $sasya->id,
+            'created_by' => $admin->id,
             'position' => 0,
             'assignees' => [$budi->id],
             'labels' => [],

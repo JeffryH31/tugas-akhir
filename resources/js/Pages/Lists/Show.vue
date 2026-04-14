@@ -17,7 +17,7 @@ import TaskDetailPanel from '@/Components/Tasks/TaskDetailPanel.vue';
 import GanttChart from '@/Components/Cpm/GanttChart.vue';
 import CpmSummary from '@/Components/Cpm/CpmSummary.vue';
 import { useConfirmDialog } from '@/composables/useConfirmDialog';
-import { PRIORITIES } from '@/constants/priorities';
+import { PRIORITIES, getPriority } from '@/constants/priorities';
 import {
     getStoredSubtaskCompletionTarget,
 } from '@/utils/subtaskCompletionAutomation';
@@ -202,7 +202,7 @@ const filteredTasksByStatus = computed(() => {
             );
         }
 
-        if (filterSprint.value != null) {
+        if (filterSprint.value != null && props.parentTask) {
             const sid = Number(filterSprint.value);
             tasks = tasks.filter(t => Number(t.sprint_id) === sid);
         }
@@ -891,20 +891,6 @@ const duplicateList = () => {
     );
 };
 
-// Archive list
-const archiveList = () => {
-    router.post(
-        route('lists.archive', [props.workspace.id, props.space.id, props.list.id]),
-        {},
-        {
-            preserveScroll: true,
-            onSuccess: () => {
-                router.visit(route('spaces.show', [props.workspace.id, props.space.id]));
-            }
-        }
-    );
-};
-
 // Delete list dialog
 const showDeleteList = ref(false);
 
@@ -1579,8 +1565,6 @@ onMounted(() => {
                                     @click="openMoveToFolder" />
                                 <v-list-item prepend-icon="mdi-content-copy" title="Duplicate Product"
                                     @click="duplicateList" />
-                                <v-list-item prepend-icon="mdi-archive-outline" title="Archive Product"
-                                    @click="archiveList" />
                                 <v-divider />
                                 <v-list-item prepend-icon="mdi-delete-outline" title="Delete Product" class="text-error"
                                     @click="showDeleteList = true" />
@@ -1633,7 +1617,7 @@ onMounted(() => {
                 </div>
             </div>
 
-            <!-- List View (TODO) -->
+            <!-- List View -->
             <div v-else-if="viewMode === 'list'" class="list-view">
                 <v-card variant="outlined" rounded="lg">
                     <v-table>
@@ -1668,9 +1652,9 @@ onMounted(() => {
                                         </v-chip>
                                     </td>
                                     <td>
-                                        <v-chip v-if="task.priority" :color="task.priority.color" size="small"
+                                        <v-chip v-if="task.priority_level" :color="getPriority(task.priority_level)?.color" size="small"
                                             variant="tonal">
-                                            {{ task.priority.name }}
+                                            {{ getPriority(task.priority_level)?.name }}
                                         </v-chip>
                                         <span v-else class="text-gray-500">-</span>
                                     </td>

@@ -200,21 +200,8 @@ const isCreatingSpace = ref(false);
 
 const showCreateWorkspace = ref(false);
 const newWorkspaceName = ref('');
-const newWorkspaceDescription = ref('');
 const newWorkspaceColor = ref('#3B82F6');
-const newWorkspaceIcon = ref('mdi-briefcase-outline');
 const isCreatingWorkspace = ref(false);
-
-const workspaceIconOptions = [
-    'mdi-briefcase-outline',
-    'mdi-office-building-outline',
-    'mdi-account-group-outline',
-    'mdi-rocket-launch-outline',
-    'mdi-chart-box-outline',
-    'mdi-code-braces',
-    'mdi-lightbulb-outline',
-    'mdi-storefront-outline',
-];
 
 const normalizeHexColor = (value, fallback) => {
     const raw = (value || '').trim();
@@ -248,9 +235,7 @@ const createSpace = () => {
 
 const openCreateWorkspaceDialog = () => {
     newWorkspaceName.value = '';
-    newWorkspaceDescription.value = '';
     newWorkspaceColor.value = '#3B82F6';
-    newWorkspaceIcon.value = 'mdi-briefcase-outline';
     showCreateWorkspace.value = true;
 };
 
@@ -262,9 +247,7 @@ const createWorkspace = () => {
         route('workspaces.store'),
         {
             name: newWorkspaceName.value.trim(),
-            description: newWorkspaceDescription.value.trim() || null,
             color: normalizeHexColor(newWorkspaceColor.value, '#3B82F6'),
-            icon: newWorkspaceIcon.value,
         },
         {
             preserveScroll: true,
@@ -875,7 +858,7 @@ const formatDuration = (seconds) => {
             <v-card rounded="xl">
                 <div class="dialog-header">
                     <div class="dialog-header-icon" style="background: rgba(59, 130, 246, 0.12)">
-                        <v-icon :color="newWorkspaceColor || 'primary'" size="20">{{ newWorkspaceIcon }}</v-icon>
+                        <v-icon color="primary" size="20">mdi-briefcase-outline</v-icon>
                     </div>
                     <div>
                         <div class="text-subtitle-2 font-weight-bold">Create Workspace</div>
@@ -891,44 +874,15 @@ const formatDuration = (seconds) => {
                     <v-text-field v-model="newWorkspaceName" label="Workspace Name"
                         placeholder="e.g., Product Team, Acme Client" variant="outlined" density="comfortable"
                         hide-details autofocus @keydown.enter="createWorkspace" />
-                    <v-textarea v-model="newWorkspaceDescription" label="Description (Optional)"
-                        placeholder="What will this workspace be used for?" variant="outlined" density="comfortable"
-                        rows="2" hide-details />
-                    <div class="d-flex ga-3">
-                        <div class="flex-1">
-                            <div class="text-caption text-medium-emphasis mb-2">Color</div>
-                            <div class="d-flex align-center ga-2">
-                                <input v-model="newWorkspaceColor" type="color" class="color-input-native" />
-                                <v-text-field v-model="newWorkspaceColor" label="Hex" variant="outlined"
-                                    density="compact" hide-details class="flex-1"
-                                    @blur="newWorkspaceColor = normalizeHexColor(newWorkspaceColor, '#3B82F6')" />
-                            </div>
-                        </div>
-                        <div class="flex-1">
-                            <div class="text-caption text-medium-emphasis mb-2">Icon</div>
-                            <div class="d-flex flex-wrap ga-1">
-                                <v-btn v-for="icon in workspaceIconOptions" :key="icon" icon variant="tonal"
-                                    size="x-small" :color="newWorkspaceIcon === icon ? 'primary' : 'default'"
-                                    @click="newWorkspaceIcon = icon">
-                                    <v-icon size="14">{{ icon }}</v-icon>
-                                </v-btn>
-                            </div>
+                    <div>
+                        <div class="text-caption text-medium-emphasis mb-2">Color</div>
+                        <div class="d-flex align-center ga-2">
+                            <input v-model="newWorkspaceColor" type="color" class="color-input-native" />
+                            <v-text-field v-model="newWorkspaceColor" label="Hex" variant="outlined"
+                                density="compact" hide-details class="flex-1"
+                                @blur="newWorkspaceColor = normalizeHexColor(newWorkspaceColor, '#3B82F6')" />
                         </div>
                     </div>
-
-                    <v-card variant="tonal" rounded="lg" :color="newWorkspaceColor || 'primary'" class="mt-1">
-                        <v-card-text class="d-flex align-center ga-3 py-3">
-                            <div class="workspace-preview-icon"
-                                :style="{ backgroundColor: newWorkspaceColor || '#3B82F6' }">
-                                <v-icon color="white" size="18">{{ newWorkspaceIcon }}</v-icon>
-                            </div>
-                            <div>
-                                <div class="text-body-2 font-weight-bold">{{ newWorkspaceName || 'Workspace Preview' }}
-                                </div>
-                                <div class="text-caption text-medium-emphasis">{{ newWorkspaceDescription || 'No description' }}</div>
-                            </div>
-                        </v-card-text>
-                    </v-card>
                 </v-card-text>
                 <v-card-actions class="px-4 pb-4">
                     <v-spacer />
@@ -1644,16 +1598,5 @@ const formatDuration = (seconds) => {
 .color-input-native::-webkit-color-swatch {
     border: none;
     border-radius: 5px;
-}
-
-/* ─── Workspace preview ─── */
-.workspace-preview-icon {
-    width: 34px;
-    height: 34px;
-    border-radius: 9px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    flex-shrink: 0;
 }
 </style>

@@ -368,41 +368,7 @@ class TaskListService
         });
     }
 
-    /**
-     * Archive a list.
-     *
-     * @param TaskList $list Target list.
-     * @param User $user Current actor.
-     * @return TaskList
-     */
-    public function archive(TaskList $list, User $user): TaskList
-    {
-        $list->archive();
 
-        Activity::log($list->space->workspace, $user, $list, 'archived', [
-            'name' => $list->name,
-        ]);
-
-        return $list->fresh();
-    }
-
-    /**
-     * Unarchive a list.
-     *
-     * @param TaskList $list Target list.
-     * @param User $user Current actor.
-     * @return TaskList
-     */
-    public function unarchive(TaskList $list, User $user): TaskList
-    {
-        $list->unarchive();
-
-        Activity::log($list->space->workspace, $user, $list, 'unarchived', [
-            'name' => $list->name,
-        ]);
-
-        return $list->fresh();
-    }
 
     /**
      * Move a list to another folder (or root when null).

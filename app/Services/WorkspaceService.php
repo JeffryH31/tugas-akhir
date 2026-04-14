@@ -35,9 +35,7 @@ class WorkspaceService
             $workspace = Workspace::create([
                 'name' => $data['name'],
                 'slug' => Str::slug($data['name']),
-                'description' => $data['description'] ?? null,
                 'color' => $data['color'] ?? '#7C3AED',
-                'icon' => $data['icon'] ?? null,
                 'owner_id' => $owner->id,
                 'is_personal' => $data['is_personal'] ?? false,
             ]);
@@ -59,9 +57,7 @@ class WorkspaceService
 
         $workspace->update([
             'name' => $data['name'] ?? $workspace->name,
-            'description' => $data['description'] ?? $workspace->description,
             'color' => $data['color'] ?? $workspace->color,
-            'icon' => $data['icon'] ?? $workspace->icon,
         ]);
 
         if ($oldName !== $workspace->name) {

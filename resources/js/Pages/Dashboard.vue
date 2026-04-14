@@ -5,7 +5,6 @@
  * Features:
  * - My Tasks overview
  * - Overdue tasks alert
- * - Recent activity
  * - Time tracking summary
  * - Quick actions
  */
@@ -177,6 +176,7 @@ const createWorkspace = () => {
     isProcessing.value = true;
     router.post(route('workspaces.store'), {
         name: newWorkspaceName.value.trim(),
+        color: '#3B82F6',
     }, {
         preserveScroll: true,
         onSuccess: () => {
@@ -209,8 +209,10 @@ const goToFirstSpaceOrWorkspaces = () => {
 
 // Open create space dialog
 const openCreateSpace = () => {
-    if (typeof window !== 'undefined' && window.openCreateSpaceDialog) {
+    if (typeof window !== 'undefined' && typeof window.openCreateSpaceDialog === 'function') {
         window.openCreateSpaceDialog();
+    } else {
+        showSnackbar('Please use the sidebar to create a space.', 'info');
     }
 };
 </script>

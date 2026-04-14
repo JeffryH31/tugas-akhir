@@ -13,7 +13,6 @@ function createWorkspaceHierarchy(User $owner, string $suffix = 'A'): array
 {
     $workspace = Workspace::create([
         'name' => "Workspace {$suffix}",
-        'description' => "Workspace {$suffix} description",
         'color' => '#1D4ED8',
         'owner_id' => $owner->id,
     ]);
@@ -54,7 +53,6 @@ test('non-member cannot switch active workspace', function () {
 
     $foreignWorkspace = Workspace::create([
         'name' => 'Foreign Workspace',
-        'description' => 'Foreign workspace description',
         'color' => '#7C3AED',
         'owner_id' => $otherOwner->id,
     ]);
@@ -70,7 +68,6 @@ test('workspace admin cannot delete workspace unless owner', function () {
 
     $workspace = Workspace::create([
         'name' => 'Admin Delete Guard',
-        'description' => 'Admin Delete Guard description',
         'color' => '#0EA5E9',
         'owner_id' => $owner->id,
     ]);
@@ -90,7 +87,6 @@ test('recycle bin requires workspace membership', function () {
 
     $workspace = Workspace::create([
         'name' => 'Recycle Bin Guard',
-        'description' => 'Recycle Bin Guard description',
         'color' => '#0891B2',
         'owner_id' => $owner->id,
     ]);
@@ -106,7 +102,6 @@ test('cannot attach label from different workspace to task', function () {
     $primary = createWorkspaceHierarchy($owner, 'Primary');
     $secondaryWorkspace = Workspace::create([
         'name' => 'Secondary Workspace',
-        'description' => 'Secondary Workspace description',
         'color' => '#DC2626',
         'owner_id' => $owner->id,
     ]);

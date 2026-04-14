@@ -120,8 +120,8 @@ const removeMember = (member) => {
 
             <v-card variant="outlined" rounded="lg" class="mt-6">
                 <v-card-text class="d-flex flex-wrap align-center ga-2">
-                    <v-chip :color="list?.is_archived ? 'warning' : 'success'" variant="tonal" size="small">
-                        {{ list?.is_archived ? 'Archived Product' : 'Active Product' }}
+                    <v-chip color="success" variant="tonal" size="small">
+                        Active Product
                     </v-chip>
                     <v-chip color="primary" variant="tonal" size="small">
                         {{ members?.length || 0 }} members

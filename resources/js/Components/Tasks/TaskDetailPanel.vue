@@ -142,6 +142,21 @@ const deleteTask = async () => {
     }
 };
 
+// Duplicate task
+const duplicateTask = () => {
+    router.post(
+        route('tasks.duplicate', [props.workspace.id, props.space.id, props.list.id, props.task.id]),
+        {},
+        {
+            preserveScroll: true,
+            onSuccess: () => {
+                window.showSnackbar?.('Task duplicated!', 'success');
+                router.reload({ only: ['task', 'tasksByStatus'] });
+            },
+        }
+    );
+};
+
 // Main task ID for comments route (always the parent when viewing a subtask)
 const mainTaskId = computed(() => isSubtask.value ? props.parentTask?.id : props.task?.id);
 
@@ -201,8 +216,8 @@ onUnmounted(() => stopTimerInterval());
                         </template>
                         <v-card color="surface" min-width="160">
                             <v-list density="compact">
-                                <v-list-item prepend-icon="mdi-content-copy" title="Duplicate" />
-                                <v-list-item prepend-icon="mdi-archive-outline" title="Archive" />
+                                <v-list-item prepend-icon="mdi-content-copy" title="Duplicate"
+                                    @click="duplicateTask" />
                                 <v-divider />
                                 <v-list-item prepend-icon="mdi-delete-outline" title="Delete" class="text-error"
                                     @click="deleteTask" />

@@ -101,13 +101,16 @@ const formatDateTime = (dateString) => {
 
 // ── Navigation ────────────────────────────────────────────────────────
 const goToTask = (entry) => {
-    const task = entry?.subtask?.task;
+    const subtask = entry?.subtask;
+    const task = subtask?.task;
     if (!task) return;
-    router.visit(route('lists.show', [
+    const baseUrl = route('lists.show', [
         props.activeWorkspace.id,
         task.task_list?.space_id,
         task.task_list_id,
-    ]));
+    ]);
+    const url = `${baseUrl}?task_id=${task.id}&open_subtask_id=${subtask.id}`;
+    router.visit(url);
 };
 
 // ── Timer (uses fetch to avoid Inertia redirect issues) ───────────────

@@ -34,10 +34,12 @@ const isSprintActive = computed(() => {
 });
 
 const isSprintCompleted = computed(() => {
+    if (props.sprint?.is_active) return false;
+    if (!props.sprint?.end_date) return false;
     const today = new Date();
     today.setHours(0, 0, 0, 0);
     const end = new Date(props.sprint.end_date);
-    return !props.sprint?.is_active && today > end;
+    return today > end;
 });
 
 const validBacklogSubtasks = computed(() => (props.backlogSubtasks || []).filter((s) => !!s.task));
@@ -91,7 +93,7 @@ const openTask = (subtask) => {
     }
     detailTask.value = subtask;
     detailParentTask.value = parentTask;
-    detailList.value = { id: parentTask.task_list_id };
+    detailList.value = props.list;
     showDetail.value = true;
 };
 

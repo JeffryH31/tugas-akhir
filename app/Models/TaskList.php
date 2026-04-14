@@ -143,21 +143,7 @@ class TaskList extends Model
         return $query->where('is_archived', false);
     }
 
-    public function scopeArchived($query)
-    {
-        return $query->where('is_archived', true);
-    }
 
-
-    public function archive(): void
-    {
-        $this->update(['is_archived' => true]);
-    }
-
-    public function unarchive(): void
-    {
-        $this->update(['is_archived' => false]);
-    }
 
     public function getBreadcrumbs(): array
     {

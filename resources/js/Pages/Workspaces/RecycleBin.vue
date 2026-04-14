@@ -9,7 +9,7 @@ const props = defineProps({
 });
 
 const activeTab = ref('tasks');
-const restoring = ref(false);
+const restoringIds = ref(new Set());
 const searchQuery = ref('');
 const sortBy = ref('deleted_desc');
 
@@ -28,12 +28,21 @@ const totals = computed(() => ({
 }));
 
 const restoreItem = (type, id) => {
-    if (restoring.value) return;
-    restoring.value = true;
+    if (restoringIds.value.has(`${type}-${id}`)) return;
+    restoringIds.value.add(`${type}-${id}`);
 
     router.post(route('workspaces.recycle-bin.restore', props.workspace.id), { type, id }, {
         preserveScroll: true,
-        onFinish: () => { restoring.value = false; },
+        onFinish: () => { restoringIds.value.delete(`${type}-${id}`); },
+    });
+};
+
+const isRestoring = (type, id) => restoringIds.value.has(`${type}-${id}`);
+
+const formatDate = (dateString) => {
+    if (!dateString) return '-';
+    return new Date(dateString).toLocaleDateString('en-GB', {
+        day: '2-digit', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit',
     });
 };
 
@@ -160,8 +169,8 @@ const sortedFilteredItems = computed(() => {
                                 <tr v-for="task in sortedFilteredItems" :key="task.id">
                                     <td>{{ task.name }}</td>
                                     <td>{{ task.task_list?.name }} / {{ task.task_list?.space?.name }}</td>
-                                    <td>{{ task.deleted_at }}</td>
-                                    <td><v-btn size="small" color="primary" :loading="restoring"
+                                    <td>{{ formatDate(task.deleted_at) }}</td>
+                                    <td><v-btn size="small" color="primary" :loading="isRestoring('task', task.id)"
                                             @click="restoreItem('task', task.id)">Restore</v-btn></td>
                                 </tr>
                                 <tr v-if="sortedFilteredItems.length === 0">
@@ -188,8 +197,8 @@ const sortedFilteredItems = computed(() => {
                                 <tr v-for="subtask in sortedFilteredItems" :key="subtask.id">
                                     <td>{{ subtask.name }}</td>
                                     <td>{{ subtask.task?.name }}</td>
-                                    <td>{{ subtask.deleted_at }}</td>
-                                    <td><v-btn size="small" color="primary" :loading="restoring"
+                                    <td>{{ formatDate(subtask.deleted_at) }}</td>
+                                    <td><v-btn size="small" color="primary" :loading="isRestoring('subtask', subtask.id)"
                                             @click="restoreItem('subtask', subtask.id)">Restore</v-btn></td>
                                 </tr>
                                 <tr v-if="sortedFilteredItems.length === 0">
@@ -216,8 +225,8 @@ const sortedFilteredItems = computed(() => {
                                 <tr v-for="list in sortedFilteredItems" :key="list.id">
                                     <td>{{ list.name }}</td>
                                     <td>{{ list.space?.name }}</td>
-                                    <td>{{ list.deleted_at }}</td>
-                                    <td><v-btn size="small" color="primary" :loading="restoring"
+                                    <td>{{ formatDate(list.deleted_at) }}</td>
+                                    <td><v-btn size="small" color="primary" :loading="isRestoring('list', list.id)"
                                             @click="restoreItem('list', list.id)">Restore</v-btn></td>
                                 </tr>
                                 <tr v-if="sortedFilteredItems.length === 0">
@@ -246,8 +255,8 @@ const sortedFilteredItems = computed(() => {
                                     <td>{{ entry.user?.name }}</td>
                                     <td>{{ entry.subtask?.name }}</td>
                                     <td>{{ entry.duration }}</td>
-                                    <td>{{ entry.deleted_at }}</td>
-                                    <td><v-btn size="small" color="primary" :loading="restoring"
+                                    <td>{{ formatDate(entry.deleted_at) }}</td>
+                                    <td><v-btn size="small" color="primary" :loading="isRestoring('time_entry', entry.id)"
                                             @click="restoreItem('time_entry', entry.id)">Restore</v-btn></td>
                                 </tr>
                                 <tr v-if="sortedFilteredItems.length === 0">

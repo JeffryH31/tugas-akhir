@@ -21,7 +21,6 @@ class WorkspacesSeeder extends Seeder
         $workspace = Workspace::create([
             'name' => 'MIS Department',
             'slug' => 'mis-department',
-            'description' => 'Divisi IT In-House — Mengelola sistem informasi untuk sektor Manufacturing, B2B, dan B2C',
             'owner_id' => $sasya->id,
             'color' => '#6366F1',
         ]);

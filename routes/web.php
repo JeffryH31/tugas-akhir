@@ -141,8 +141,7 @@ Route::middleware(['auth:sanctum', config('jetstream.auth_session'), 'verified']
                             Route::get('/settings', [TaskListController::class, 'settings'])->name('lists.settings');
                             Route::patch('/', [TaskListController::class, 'update'])->name('lists.update');
                             Route::delete('/', [TaskListController::class, 'destroy'])->name('lists.destroy');
-                            Route::post('/archive', [TaskListController::class, 'archive'])->name('lists.archive');
-                            Route::post('/unarchive', [TaskListController::class, 'unarchive'])->name('lists.unarchive');
+
                             Route::post('/move-to-folder', [TaskListController::class, 'moveToFolder'])->name('lists.move-to-folder');
                             Route::post('/duplicate', [TaskListController::class, 'duplicate'])->name('lists.duplicate');
                             Route::patch('/change-status', [TaskListController::class, 'changeStatus'])->name('lists.change-status');

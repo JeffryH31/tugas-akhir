@@ -167,6 +167,7 @@ const changeRole = (member, newRole) => {
 
 const getRoleBadgeColor = (role) => {
     switch (role) {
+        case 'owner': return 'purple';
         case 'admin': return 'error';
         case 'member': return 'primary';
         case 'guest': return 'grey';
@@ -313,7 +314,8 @@ const selectedProjectRole = ref('development_team');
 
 const projectOptions = computed(() => {
     return (props.projectLists || []).map((project) => ({
-        title: `${project.name} - ${project.space?.name || 'Unknown Space'}${project.is_archived ? ' (Archived)' : ''}`,
+        title: `${project.name} - ${project.space?.name || 'Unknown Space'}`,
+
         value: project.id,
     }));
 });

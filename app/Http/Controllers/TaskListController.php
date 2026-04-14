@@ -173,31 +173,7 @@ class TaskListController extends Controller
             ->with('success', 'List deleted successfully.');
     }
 
-    /**
-     * Archive the specified list.
-     */
-    public function archive(Request $request, Workspace $workspace, Space $space, TaskList $list): RedirectResponse
-    {
-        abort_unless((int) $space->workspace_id === (int) $workspace->id, 404);
-        abort_unless((int) $list->space_id === (int) $space->id, 404);
-        abort_unless($this->accessService->canManageProject($request->user(), $list), 403);
-        $this->taskListService->archive($list, $request->user());
 
-        return back()->with('success', 'List archived successfully.');
-    }
-
-    /**
-     * Unarchive the specified list.
-     */
-    public function unarchive(Request $request, Workspace $workspace, Space $space, TaskList $list): RedirectResponse
-    {
-        abort_unless((int) $space->workspace_id === (int) $workspace->id, 404);
-        abort_unless((int) $list->space_id === (int) $space->id, 404);
-        abort_unless($this->accessService->canManageProject($request->user(), $list), 403);
-        $this->taskListService->unarchive($list, $request->user());
-
-        return back()->with('success', 'List restored successfully.');
-    }
 
     /**
      * Move list to folder.

@@ -485,7 +485,7 @@ watch(() => props.productsByStatus, () => {
 
                     <div v-if="!collapsedFolders[folder.id]" class="folder-lists" :class="{
                         'folder-lists--empty': !(folder.lists?.length),
-                        'drag-over': dragOverFolder === folder.id
+                        'drag-over': draggedList !== null && dragOverFolder === folder.id
                     }" @dragover="handleDragOver($event, folder.id)" @dragleave="handleDragLeave($event, folder.id)"
                         @drop="handleDrop($event, folder.id)">
                         <div v-for="list in folder.lists" :key="list.id" class="list-item" draggable="true"
@@ -513,7 +513,7 @@ watch(() => props.productsByStatus, () => {
                 <!-- Lists without folder -->
                 <div v-if="space?.lists_without_folder?.length || space?.folders?.length" class="root-lists-zone"
                     :class="{
-                        'drag-over': dragOverFolder === null,
+                        'drag-over': draggedList !== null && dragOverFolder === null,
                         'root-lists-zone--empty': !space?.lists_without_folder?.length
                     }" @dragover="handleDragOver($event, null)" @dragleave="handleDragLeave($event, null)"
                     @drop="handleDrop($event, null)">

@@ -234,13 +234,13 @@ const filteredSubtasks = computed(() => {
             subtask.task?.name.toLowerCase().includes(searchQuery.value.toLowerCase());
 
         const matchesAssignee = !filterAssignee.value ||
-            subtask.assigned_to_id === filterAssignee.value;
+            (subtask.assignees || []).some(a => a.id === filterAssignee.value);
 
         const matchesPriority = !filterPriority.value ||
-            subtask.priority_id === filterPriority.value;
+            subtask.priority_level === filterPriority.value;
 
         const matchesStatus = !filterStatus.value ||
-            subtask.status_id === filterStatus.value;
+            subtask.status?.id === filterStatus.value;
 
         return matchesSearch && matchesAssignee && matchesPriority && matchesStatus;
     });
@@ -250,17 +250,26 @@ const filteredSubtasks = computed(() => {
 const assigneeOptions = computed(() => {
     const assignees = new Map();
     props.subtasks.forEach(st => {
-        if (st.assignee) assignees.set(st.assignee.id, st.assignee);
+        (st.assignees || []).forEach(a => {
+            if (a?.id) assignees.set(a.id, a);
+        });
     });
     return Array.from(assignees.values());
 });
 
+const PRIORITY_LABELS = { 1: 'Urgent', 2: 'High', 3: 'Normal', 4: 'Low' };
+const PRIORITY_COLORS = { 1: '#EF4444', 2: '#F97316', 3: '#3B82F6', 4: '#9CA3AF' };
+
 const priorityOptions = computed(() => {
-    const priorities = new Map();
+    const levels = new Set();
     props.subtasks.forEach(st => {
-        if (st.priority) priorities.set(st.priority.id, st.priority);
+        if (st.priority_level) levels.add(st.priority_level);
     });
-    return Array.from(priorities.values());
+    return Array.from(levels).sort().map(level => ({
+        id: level,
+        name: PRIORITY_LABELS[level] || `P${level}`,
+        color: PRIORITY_COLORS[level] || '#9CA3AF',
+    }));
 });
 
 const statusOptions = computed(() => {
@@ -297,11 +306,6 @@ const getSpanningSubtasksForDate = (date) => {
         }
         return false;
     });
-};
-
-// Get subtasks for a specific date and time slot
-const getSubtasksForDateAndTime = (date, timeSlot) => {
-    return getSubtasksForDate(date);
 };
 
 // Check if date is today
@@ -405,10 +409,23 @@ const handleDrop = (date, event) => {
     if (!subtaskData) return;
 
     const subtask = JSON.parse(subtaskData);
+    const task = subtask.task;
+    const space = task?.task_list?.space;
+    if (!space || !task) return;
+
     const newDueDate = date.toISOString().split('T')[0];
 
-    router.put(route('subtasks.update', subtask.id), {
+    router.patch(route('tasks.subtasks.update', [
+        space.workspace_id,
+        space.id,
+        task.task_list_id || task.task_list?.id,
+        task.id,
+        subtask.id,
+    ]), {
         due_date: newDueDate,
+    }, {
+        preserveScroll: true,
+        onSuccess: () => loadCalendarData(),
     });
 };
 

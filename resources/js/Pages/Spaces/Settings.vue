@@ -224,7 +224,7 @@ const removeMember = (member) => {
                         v-for="product in products"
                         :key="product.id"
                         :title="product.name"
-                        :subtitle="product.is_archived ? 'Archived product' : 'Active product'"
+                        subtitle="Active product"
                         prepend-icon="mdi-view-grid-outline"
                         @click="router.visit(route('lists.settings', [workspace.id, space.id, product.id]))"
                     >

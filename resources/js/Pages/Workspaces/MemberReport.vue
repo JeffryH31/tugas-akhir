@@ -1,5 +1,5 @@
 <script setup>
-import { computed, ref } from 'vue';
+import { computed, ref, onMounted, onUnmounted } from 'vue';
 import { Link } from '@inertiajs/vue3';
 import MainLayout from '@/Layouts/MainLayout.vue';
 
@@ -48,10 +48,25 @@ const recentlyCompleted = computed(() => props.report?.recentlyCompleted ?? []);
 const recentEntries = computed(() => props.report?.recentEntries ?? []);
 const recentActivity = computed(() => props.report?.recentActivity ?? []);
 
-// Elapsed timer display
+// Elapsed timer display — ticks every minute
+const timerExtraMinutes = ref(0);
+let timerInterval = null;
+
 const elapsedMs = computed(() => {
     if (!runningTimer.value) return 0;
-    return runningTimer.value.elapsed_minutes;
+    return (runningTimer.value.elapsed_minutes || 0) + timerExtraMinutes.value;
+});
+
+onMounted(() => {
+    if (runningTimer.value) {
+        timerInterval = setInterval(() => {
+            timerExtraMinutes.value += 1;
+        }, 60000);
+    }
+});
+
+onUnmounted(() => {
+    if (timerInterval) clearInterval(timerInterval);
 });
 
 // Tabs

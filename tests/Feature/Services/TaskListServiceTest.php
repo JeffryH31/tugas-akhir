@@ -112,14 +112,6 @@ test('removeMember detaches user', function () {
     expect($this->hierarchy['list']->members()->where('user_id', $dev->id)->exists())->toBeFalse();
 });
 
-test('archive and unarchive list', function () {
-    $archived = $this->service->archive($this->hierarchy['list'], $this->owner);
-    expect($archived->is_archived)->toBeTrue();
-
-    $unarchived = $this->service->unarchive($this->hierarchy['list']->fresh(), $this->owner);
-    expect($unarchived->is_archived)->toBeFalse();
-});
-
 test('moveToFolder changes folder_id', function () {
     $folder = Folder::create([
         'space_id' => $this->hierarchy['space']->id,

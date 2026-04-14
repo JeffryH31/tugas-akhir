@@ -31,16 +31,27 @@ class WorkspaceAnalyticsController extends Controller
         $spaces = $workspace->spaces()->select('id', 'name')->get();
 
         // Build map: user_id → [space_ids] based on explicit space membership
+        // Owner/admin roles get access to ALL spaces
         $spaceMemberMap = [];
         if ($canManage) {
+            $allSpaceIds = $spaces->pluck('id')->toArray();
+
             $rows = DB::table('space_members')
-                ->whereIn('space_id', $spaces->pluck('id'))
+                ->whereIn('space_id', $allSpaceIds)
                 ->select('space_id', 'user_id')
                 ->get();
 
             foreach ($rows as $row) {
                 $spaceMemberMap[$row->user_id][] = $row->space_id;
             }
+
+            // Owner/admin members get all space IDs so they appear in every space filter
+            $workspace->members->each(function ($m) use (&$spaceMemberMap, $allSpaceIds) {
+                $role = $m->pivot?->role;
+                if (in_array($role, ['owner', 'admin'], true)) {
+                    $spaceMemberMap[$m->id] = $allSpaceIds;
+                }
+            });
         }
 
         $members = $canManage

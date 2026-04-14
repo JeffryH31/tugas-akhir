@@ -29,7 +29,6 @@ trait CreatesWorkspaceHierarchy
     {
         $workspace = Workspace::create([
             'name' => "Workspace {$suffix}",
-            'description' => "Test workspace {$suffix}",
             'color' => '#1D4ED8',
             'owner_id' => $owner->id,
         ]);
