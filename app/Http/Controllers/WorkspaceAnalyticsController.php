@@ -31,7 +31,7 @@ class WorkspaceAnalyticsController extends Controller
         $spaces = $workspace->spaces()->select('id', 'name')->get();
 
         // Build map: user_id → [space_ids] based on explicit space membership
-        // Owner/admin roles get access to ALL spaces
+        // Admin role gets access to ALL spaces
         $spaceMemberMap = [];
         if ($canManage) {
             $allSpaceIds = $spaces->pluck('id')->toArray();
@@ -48,7 +48,7 @@ class WorkspaceAnalyticsController extends Controller
             // Owner/admin members get all space IDs so they appear in every space filter
             $workspace->members->each(function ($m) use (&$spaceMemberMap, $allSpaceIds) {
                 $role = $m->pivot?->role;
-                if (in_array($role, ['owner', 'admin'], true)) {
+                if (in_array($role, ['admin'], true)) {
                     $spaceMemberMap[$m->id] = $allSpaceIds;
                 }
             });

@@ -32,8 +32,8 @@ const formatTime = (dateStr) => {
                 </v-avatar>
                 <div class="flex-1 min-w-0">
                     <div class="text-body-2">
-                        <span class="font-weight-medium">{{ activity.user?.name }}</span>
-                        <span class="text-grey"> {{ activity.description }}</span>
+                        <span class="font-weight-medium">{{ activity.user?.name }}</span> <span class="text-grey">{{
+                            activity.description }}</span>
                     </div>
                     <div class="text-caption text-grey-darken-1 mt-0.5">
                         {{ formatTime(activity.created_at) }}

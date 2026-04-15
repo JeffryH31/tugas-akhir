@@ -97,7 +97,7 @@ const createWorkspace = () => {
                     <div class="empty-state-icon">
                         <v-icon size="72" color="primary">mdi-briefcase-outline</v-icon>
                     </div>
-                    <h2 class="empty-state-title">No workspaces yet</h2>
+                    <h2 class="empty-state-title text-white">No workspaces yet</h2>
                     <p class="empty-state-subtitle">
                         Create your first workspace to start managing projects and your team.
                     </p>

@@ -142,15 +142,21 @@ const deleteTask = async () => {
     }
 };
 
-// Duplicate task
+// Duplicate task / subtask
 const duplicateTask = () => {
+    const url = isSubtask.value
+        ? route('tasks.subtasks.duplicate', [props.workspace.id, props.space.id, props.list.id, props.parentTask.id, props.task.id])
+        : route('tasks.duplicate', [props.workspace.id, props.space.id, props.list.id, props.task.id]);
     router.post(
-        route('tasks.duplicate', [props.workspace.id, props.space.id, props.list.id, props.task.id]),
+        url,
         {},
         {
             preserveScroll: true,
             onSuccess: () => {
-                window.showSnackbar?.('Task duplicated!', 'success');
+                window.showSnackbar?.(
+                    isSubtask.value ? 'Subtask duplicated!' : 'Task duplicated!',
+                    'success'
+                );
                 router.reload({ only: ['task', 'tasksByStatus'] });
             },
         }

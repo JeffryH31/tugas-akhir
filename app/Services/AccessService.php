@@ -19,20 +19,12 @@ use App\Models\Workspace;
  *
  *  WORKSPACE LEVEL (workspace_members)
  *  ┌──────────┬────────────────────────────────────────────────────┐
- *  │ owner    │ Full control. Manage workspace settings, members, │
- *  │          │ delete workspace. View analytics. God-mode access │
- *  │          │ to ALL product-level operations.                  │
- *  ├──────────┼────────────────────────────────────────────────────┤
- *  │ admin    │ Manage workspace settings, members, analytics.    │
- *  │          │ Can view ALL spaces & products for oversight.     │
- *  │          │ Can manage product membership (assign people).    │
- *  │          │ CANNOT edit tasks/subtasks unless assigned a      │
- *  │          │ product-level role.                               │
+ *  │ admin    │ God-mode. Full control over workspace settings,   │
+ *  │          │ members, analytics, all spaces & products.        │
+ *  │          │ Automatic bypass on ALL product-level operations. │
  *  ├──────────┼────────────────────────────────────────────────────┤
  *  │ member   │ Access public spaces. Join products via invite.   │
  *  │          │ Cannot manage workspace settings.                 │
- *  ├──────────┼────────────────────────────────────────────────────┤
- *  │ guest    │ Read-only access to non-private spaces.           │
  *  └──────────┴────────────────────────────────────────────────────┘
  *
  *  SPACE LEVEL (space_members — only required for private spaces)
@@ -66,10 +58,8 @@ use App\Models\Workspace;
  */
 class AccessService
 {
-    public const WORKSPACE_OWNER = 'owner';
     public const WORKSPACE_ADMIN = 'admin';
     public const WORKSPACE_MEMBER = 'member';
-    public const WORKSPACE_GUEST = 'guest';
 
     public const SPACE_ADMIN = 'admin';
     public const SPACE_MEMBER = 'member';
@@ -79,16 +69,6 @@ class AccessService
     public const PROJECT_MANAGER = 'project_manager';
     public const PROJECT_DEVELOPER = 'development_team';
     public const PROJECT_GUEST = 'guest';
-
-    // ── Helpers ─────────────────────────────────────────────────────
-
-    /**
-     * Check if user is the workspace owner (owner_id on the workspace record).
-     */
-    protected function isWorkspaceOwner(User $user, Workspace $workspace): bool
-    {
-        return (int) $workspace->owner_id === (int) $user->id;
-    }
 
     // ── Role getters ────────────────────────────────────────────────
 
@@ -147,15 +127,15 @@ class AccessService
      */
     public function canManageWorkspace(User $user, Workspace $workspace): bool
     {
-        return in_array($this->getWorkspaceRole($user, $workspace), [self::WORKSPACE_OWNER, self::WORKSPACE_ADMIN], true);
+        return $this->getWorkspaceRole($user, $workspace) === self::WORKSPACE_ADMIN;
     }
 
     /**
-     * Determine whether a user can delete a workspace (owner only).
+     * Determine whether a user can delete a workspace (admin only).
      */
     public function canDeleteWorkspace(User $user, Workspace $workspace): bool
     {
-        return $this->isWorkspaceOwner($user, $workspace);
+        return $this->getWorkspaceRole($user, $workspace) === self::WORKSPACE_ADMIN;
     }
 
     /**
@@ -164,7 +144,6 @@ class AccessService
     public function canViewAnalytics(User $user, Workspace $workspace): bool
     {
         return in_array($this->getWorkspaceRole($user, $workspace), [
-            self::WORKSPACE_OWNER,
             self::WORKSPACE_ADMIN,
             self::WORKSPACE_MEMBER,
         ], true);
@@ -175,7 +154,7 @@ class AccessService
     /**
      * Determine whether a user can view a space.
      *
-     * Workspace owner/admin can always view every space.
+     * Workspace admin can always view every space.
      * Public spaces are visible to all workspace members.
      * Private spaces require explicit space membership.
      */
@@ -187,12 +166,12 @@ class AccessService
 
         $workspaceRole = $this->getWorkspaceRole($user, $space->workspace);
 
-        if (in_array($workspaceRole, [self::WORKSPACE_OWNER, self::WORKSPACE_ADMIN], true)) {
+        if ($workspaceRole === self::WORKSPACE_ADMIN) {
             return true;
         }
 
         if (!$space->is_private) {
-            return in_array($workspaceRole, [self::WORKSPACE_MEMBER, self::WORKSPACE_GUEST], true);
+            return $workspaceRole === self::WORKSPACE_MEMBER;
         }
 
         return in_array($this->getSpaceRole($user, $space), [
@@ -205,11 +184,11 @@ class AccessService
     /**
      * Determine whether a user can manage a space (settings, statuses, folders).
      *
-     * Workspace owner/admin can always manage spaces.
+     * Workspace admin can always manage spaces.
      */
     public function canManageSpace(User $user, Space $space): bool
     {
-        if (in_array($this->getWorkspaceRole($user, $space->workspace), [self::WORKSPACE_OWNER, self::WORKSPACE_ADMIN], true)) {
+        if ($this->getWorkspaceRole($user, $space->workspace) === self::WORKSPACE_ADMIN) {
             return true;
         }
 
@@ -227,7 +206,7 @@ class AccessService
     /**
      * Determine whether a user can view a product.
      *
-     * Workspace owner/admin can view all products (oversight).
+     * Workspace admin can view all products (oversight).
      * Otherwise, requires a product role or inherits from space
      * when no product members have been configured yet.
      */
@@ -237,7 +216,7 @@ class AccessService
             return false;
         }
 
-        if (in_array($this->getWorkspaceRole($user, $list->space->workspace), [self::WORKSPACE_OWNER, self::WORKSPACE_ADMIN], true)) {
+        if ($this->getWorkspaceRole($user, $list->space->workspace) === self::WORKSPACE_ADMIN) {
             return true;
         }
 
@@ -264,11 +243,11 @@ class AccessService
     /**
      * Determine whether a user can manage a product (settings, etc.).
      *
-     * Workspace owner/admin can always manage products.
+     * Workspace admin can always manage products.
      */
     public function canManageProduct(User $user, TaskList $list): bool
     {
-        if (in_array($this->getWorkspaceRole($user, $list->space->workspace), [self::WORKSPACE_OWNER, self::WORKSPACE_ADMIN], true)) {
+        if ($this->getWorkspaceRole($user, $list->space->workspace) === self::WORKSPACE_ADMIN) {
             return true;
         }
 
@@ -284,11 +263,11 @@ class AccessService
     /**
      * Determine whether a user can delete a product.
      *
-     * Workspace owner/admin can always delete.
+     * Workspace admin can always delete.
      */
     public function canDeleteProduct(User $user, TaskList $list): bool
     {
-        if (in_array($this->getWorkspaceRole($user, $list->space->workspace), [self::WORKSPACE_OWNER, self::WORKSPACE_ADMIN], true)) {
+        if ($this->getWorkspaceRole($user, $list->space->workspace) === self::WORKSPACE_ADMIN) {
             return true;
         }
 
@@ -304,12 +283,12 @@ class AccessService
     /**
      * Determine whether a user can manage product members.
      *
-     * Workspace owner/admin can always manage product membership
+     * Workspace admin can always manage product membership
      * (to assign people to products).
      */
     public function canManageProductMembers(User $user, TaskList $list): bool
     {
-        if (in_array($this->getWorkspaceRole($user, $list->space->workspace), [self::WORKSPACE_OWNER, self::WORKSPACE_ADMIN], true)) {
+        if ($this->getWorkspaceRole($user, $list->space->workspace) === self::WORKSPACE_ADMIN) {
             return true;
         }
 
@@ -345,7 +324,7 @@ class AccessService
      */
     public function canOperateTasks(User $user, TaskList $list): bool
     {
-        if ($this->isWorkspaceOwner($user, $list->space->workspace)) {
+        if ($this->getWorkspaceRole($user, $list->space->workspace) === self::WORKSPACE_ADMIN) {
             return true;
         }
 
@@ -365,7 +344,7 @@ class AccessService
      */
     public function canManageTaskStructure(User $user, TaskList $list): bool
     {
-        if ($this->isWorkspaceOwner($user, $list->space->workspace)) {
+        if ($this->getWorkspaceRole($user, $list->space->workspace) === self::WORKSPACE_ADMIN) {
             return true;
         }
 
@@ -396,7 +375,7 @@ class AccessService
      */
     public function canAssignTasks(User $user, TaskList $list): bool
     {
-        if ($this->isWorkspaceOwner($user, $list->space->workspace)) {
+        if ($this->getWorkspaceRole($user, $list->space->workspace) === self::WORKSPACE_ADMIN) {
             return true;
         }
 
@@ -411,7 +390,7 @@ class AccessService
      */
     public function canTrackTime(User $user, TaskList $list): bool
     {
-        if ($this->isWorkspaceOwner($user, $list->space->workspace)) {
+        if ($this->getWorkspaceRole($user, $list->space->workspace) === self::WORKSPACE_ADMIN) {
             return true;
         }
 
@@ -445,9 +424,9 @@ class AccessService
             return true;
         }
 
-        // Workspace owner can moderate any comment
+        // Workspace admin can moderate any comment
         $workspace = $comment->task->taskList->space->workspace;
-        return $this->isWorkspaceOwner($user, $workspace);
+        return $this->getWorkspaceRole($user, $workspace) === self::WORKSPACE_ADMIN;
     }
 
     /**
@@ -463,7 +442,7 @@ class AccessService
 
         $list = $comment->task->taskList;
 
-        if ($this->isWorkspaceOwner($user, $list->space->workspace)) {
+        if ($this->getWorkspaceRole($user, $list->space->workspace) === self::WORKSPACE_ADMIN) {
             return true;
         }
 

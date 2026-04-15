@@ -138,8 +138,14 @@ class Activity extends Model
                 continue;
             }
 
-            $oldVal = $this->formatChangeValue($rawOld);
-            $newVal = $this->formatChangeValue($rawNew);
+            $minuteFields = ['time_estimate', 'optimistic_estimate', 'most_likely_estimate', 'pessimistic_estimate'];
+            if (in_array($field, $minuteFields, true)) {
+                $oldVal = $rawOld !== null ? $this->formatMinutes((int) $rawOld) : null;
+                $newVal = $rawNew !== null ? $this->formatMinutes((int) $rawNew) : null;
+            } else {
+                $oldVal = $this->formatChangeValue($rawOld);
+                $newVal = $this->formatChangeValue($rawNew);
+            }
 
             // Guard against no-op logs where values are equivalent after normalization.
             if ($oldVal === $newVal) {

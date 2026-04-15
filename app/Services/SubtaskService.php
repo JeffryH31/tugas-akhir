@@ -308,4 +308,36 @@ class SubtaskService
             }
         });
     }
+
+    /**
+     * Duplicate a subtask
+     */
+    public function duplicate(Subtask $subtask, User $user): Subtask
+    {
+        return DB::transaction(function () use ($subtask, $user) {
+            $newSubtask = $subtask->replicate([
+                'subtask_id',
+                'completed_at',
+                'completed_by',
+                'time_spent',
+                'position',
+            ]);
+            $newSubtask->name = $subtask->name . ' (Copy)';
+            $newSubtask->save();
+
+            $newSubtask->assignees()->sync($subtask->assignees->pluck('id'));
+            $newSubtask->labels()->sync($subtask->labels->pluck('id'));
+
+            $task = $subtask->task;
+            Activity::log(
+                $task->taskList->space->workspace,
+                $user,
+                $task,
+                'duplicated',
+                ['name' => $newSubtask->name, 'original_name' => $subtask->name]
+            );
+
+            return $newSubtask;
+        });
+    }
 }

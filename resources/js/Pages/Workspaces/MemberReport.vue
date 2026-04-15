@@ -37,7 +37,7 @@ const fmtDate = (d) => {
 const priorityLabel = (v) => ['', 'Urgent', 'High', 'Normal', 'Low'][v] ?? '-';
 const priorityColor = (v) => ['', 'error', 'orange', 'primary', 'grey'][v] ?? 'grey';
 
-const roleColor = (r) => ({ owner: 'purple', admin: 'primary', manager: 'teal', member: 'default', guest: 'grey' }[r] ?? 'default');
+const roleColor = (r) => ({ admin: 'primary', manager: 'teal', member: 'default', guest: 'grey' }[r] ?? 'default');
 
 const stats = computed(() => props.report?.stats ?? {});
 const runningTimer = computed(() => props.report?.runningTimer);

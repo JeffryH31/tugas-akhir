@@ -24,7 +24,7 @@ class WorkspacePolicy
     {
         return $workspace->members()
             ->wherePivot('user_id', $user->id)  
-            ->wherePivotIn('role', ['owner', 'admin'])
+            ->wherePivotIn('role', ['admin'])
             ->exists();
     }
 
@@ -33,6 +33,9 @@ class WorkspacePolicy
      */
     public function delete(User $user, Workspace $workspace): bool
     {
-        return $workspace->owner_id === $user->id;
+        return $workspace->members()
+            ->wherePivot('user_id', $user->id)
+            ->wherePivotIn('role', ['admin'])
+            ->exists();
     }
 }

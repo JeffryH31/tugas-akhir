@@ -35,7 +35,7 @@ const evm = computed(() => props.analytics?.evm ?? {});
 const cpiColor = computed(() => (evm.value.cpi ?? 1) >= 1 ? 'success' : 'error');
 const spiColor = computed(() => (evm.value.spi ?? 1) >= 1 ? 'success' : 'error');
 
-const roleColor = (r) => ({ owner: 'purple', admin: 'primary', manager: 'teal', member: 'default', guest: 'grey' }[r] ?? 'default');
+const roleColor = (r) => ({ admin: 'primary', manager: 'teal', member: 'default', guest: 'grey' }[r] ?? 'default');
 
 const memberSearch = ref('');
 const memberSpaceFilter = ref(null);

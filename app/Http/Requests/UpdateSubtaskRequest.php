@@ -27,7 +27,7 @@ class UpdateSubtaskRequest extends FormRequest
                 function ($attribute, $value, $fail) use ($subtask) {
                     if (!$value) return;
                     $startDate = $this->input('start_date', $subtask->start_date);
-                    if ($startDate && $value < $startDate) {
+                    if ($startDate && substr($value, 0, 10) < substr((string) $startDate, 0, 10)) {
                         $fail('Due date must be after or equal to start date.');
                     }
                 },

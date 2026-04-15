@@ -184,7 +184,8 @@ const tempDueDate = ref(null);
 
 watch(showStartDatePicker, (isOpen) => { if (isOpen) tempStartDate.value = props.task.start_date ? String(props.task.start_date).substring(0, 10) : null; });
 const updateStartDate = () => {
-    if (tempStartDate.value && props.task.due_date && tempStartDate.value > props.task.due_date) {
+    const dueDay = props.task.due_date ? String(props.task.due_date).substring(0, 10) : null;
+    if (tempStartDate.value && dueDay && tempStartDate.value > dueDay) {
         window.showSnackbar?.('Start date cannot be after due date.', 'error'); return;
     }
     const old = props.task.start_date;
@@ -201,7 +202,8 @@ const updateStartDate = () => {
 };
 watch(showDueDatePicker, (isOpen) => { if (isOpen) tempDueDate.value = props.task.due_date ? String(props.task.due_date).substring(0, 10) : null; });
 const updateDueDate = () => {
-    if (tempDueDate.value && props.task.start_date && tempDueDate.value < props.task.start_date) {
+    const startDay = props.task.start_date ? String(props.task.start_date).substring(0, 10) : null;
+    if (tempDueDate.value && startDay && tempDueDate.value < startDay) {
         window.showSnackbar?.('Due date cannot be before start date.', 'error'); return;
     }
     const old = props.task.due_date;
@@ -222,10 +224,13 @@ const showTimeEstimatePicker = ref(false);
 const tempTimeEstimate = ref(0);
 watch(showTimeEstimatePicker, (isOpen) => { if (isOpen) tempTimeEstimate.value = (props.task.time_estimate || 0) / 60; });
 const updateTimeEstimate = () => {
-    const hours = parseFloat(tempTimeEstimate.value) || 0;
-    if (hours < 0) { window.showSnackbar?.('Time estimate cannot be negative.', 'error'); return; }
-    if (hours > 8760) { window.showSnackbar?.('Time estimate cannot exceed 1 year.', 'error'); return; }
-    const total = hours * 60;
+    const raw = parseFloat(tempTimeEstimate.value) || 0;
+    if (raw < 0) { window.showSnackbar?.('Time estimate cannot be negative.', 'error'); return; }
+    if (raw > 8760) { window.showSnackbar?.('Time estimate cannot exceed 1 year.', 'error'); return; }
+    if (!/^\d+(\.\d)?$/.test(String(tempTimeEstimate.value).trim())) {
+        window.showSnackbar?.('Maximum 1 decimal place allowed.', 'error'); return;
+    }
+    const total = Math.round(raw * 60);
     const old = props.task.time_estimate;
     props.task.time_estimate = total;
     showTimeEstimatePicker.value = false;
@@ -869,7 +874,7 @@ const removeSuccessor = (suc) => depFetch('DELETE', { subtask_id: suc.id, depend
                             <v-card color="surface" min-width="280">
                                 <v-card-text class="pb-0">
                                     <v-text-field v-model="tempTimeEstimate" type="number" label="Estimate (hours)"
-                                        variant="outlined" density="compact" hide-details step="0.5" min="0" />
+                                        variant="outlined" density="compact" hide-details step="0.1" min="0" />
                                 </v-card-text>
                                 <v-card-actions>
                                     <v-btn v-if="localTask.time_estimate" size="small" variant="text" color="error"

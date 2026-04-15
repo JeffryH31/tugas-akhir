@@ -192,6 +192,66 @@ const moveListToFolder = () => {
     );
 };
 
+// Edit list dialog
+const showEditList = ref(false);
+const editingList = ref(null);
+const editListName = ref('');
+
+const openEditList = (list) => {
+    editingList.value = list;
+    editListName.value = list.name;
+    showEditList.value = true;
+};
+
+const updateList = () => {
+    if (!editListName.value.trim() || !editingList.value) return;
+
+    router.patch(
+        route('lists.update', [props.workspace.id, props.space.id, editingList.value.id]),
+        { name: editListName.value.trim() },
+        {
+            preserveScroll: true,
+            onSuccess: () => {
+                showEditList.value = false;
+                editingList.value = null;
+            }
+        }
+    );
+};
+
+// Delete list dialog
+const showDeleteList = ref(false);
+const deletingList = ref(null);
+
+const openDeleteList = (list) => {
+    deletingList.value = list;
+    showDeleteList.value = true;
+};
+
+const confirmDeleteList = () => {
+    if (!deletingList.value) return;
+
+    router.delete(
+        route('lists.destroy', [props.workspace.id, props.space.id, deletingList.value.id]),
+        {
+            preserveScroll: true,
+            onSuccess: () => {
+                showDeleteList.value = false;
+                deletingList.value = null;
+            }
+        }
+    );
+};
+
+// Duplicate list
+const duplicateList = (list) => {
+    router.post(
+        route('lists.duplicate', [props.workspace.id, props.space.id, list.id]),
+        {},
+        { preserveScroll: true }
+    );
+};
+
 // Hierarchy drag-and-drop (move product between folder/root)
 const draggedList = ref(null);
 const dragOverFolder = ref(null);
@@ -266,6 +326,24 @@ const availableFolders = computed(() => {
 // View mode: 'hierarchy' (folders + products) or 'board' (kanban by status)
 const viewMode = ref('hierarchy');
 
+// Hierarchy search
+const hierarchySearch = ref('');
+
+const filteredFolders = computed(() => {
+    const q = hierarchySearch.value.trim().toLowerCase();
+    if (!q) return props.space?.folders || [];
+    return (props.space?.folders || []).map(folder => ({
+        ...folder,
+        lists: (folder.lists || []).filter(l => l.name.toLowerCase().includes(q)),
+    })).filter(folder => folder.name.toLowerCase().includes(q) || folder.lists.length > 0);
+});
+
+const filteredListsWithoutFolder = computed(() => {
+    const q = hierarchySearch.value.trim().toLowerCase();
+    if (!q) return props.space?.lists_without_folder || [];
+    return (props.space?.lists_without_folder || []).filter(l => l.name.toLowerCase().includes(q));
+});
+
 // Product kanban board state
 const localProductsByStatus = ref({});
 
@@ -283,6 +361,52 @@ const initProductsByStatus = () => {
 watch(() => props.productsByStatus, () => {
     localProductsByStatus.value = initProductsByStatus();
 }, { deep: true, immediate: true });
+
+// Board drag-and-drop state
+const boardDraggedItem = ref(null);      // { element, fromStatusId }
+const boardDragOverStatus = ref(null);   // status.id being hovered
+
+const boardDragStart = (event, element, fromStatusId) => {
+    boardDraggedItem.value = { element, fromStatusId };
+    event.dataTransfer.effectAllowed = 'move';
+    event.dataTransfer.setData('text/plain', String(element.id));
+};
+
+const boardDragOver = (event, statusId) => {
+    event.preventDefault();
+    event.dataTransfer.dropEffect = 'move';
+    boardDragOverStatus.value = statusId;
+};
+
+const boardDragLeave = (statusId) => {
+    if (boardDragOverStatus.value === statusId) {
+        boardDragOverStatus.value = null;
+    }
+};
+
+const boardDrop = (event, toStatusId) => {
+    event.preventDefault();
+    boardDragOverStatus.value = null;
+
+    const dragged = boardDraggedItem.value;
+    boardDraggedItem.value = null;
+
+    if (!dragged || dragged.fromStatusId === toStatusId) return;
+
+    // Optimistic UI update
+    const fromCol = localProductsByStatus.value[dragged.fromStatusId] || [];
+    const toCol = localProductsByStatus.value[toStatusId] || [];
+    const idx = fromCol.findIndex(p => p.id === dragged.element.id);
+    if (idx === -1) return;
+    const [moved] = fromCol.splice(idx, 1);
+    toCol.push(moved);
+
+    router.patch(
+        route('lists.change-status', [props.workspace.id, props.space.id, dragged.element.id]),
+        { status_id: toStatusId },
+        { preserveScroll: true }
+    );
+};
 
 </script>
 
@@ -410,10 +534,28 @@ watch(() => props.productsByStatus, () => {
                 </v-btn-toggle>
             </div>
 
+            <!-- Hierarchy Search -->
+            <div v-if="viewMode === 'hierarchy'" class="mb-3">
+                <v-text-field
+                    v-model="hierarchySearch"
+                    placeholder="Search products..."
+                    prepend-inner-icon="mdi-magnify"
+                    variant="outlined"
+                    density="compact"
+                    hide-details
+                    clearable
+                    style="max-width: 320px;"
+                />
+            </div>
+
             <!-- Board View (Product Kanban) -->
             <div v-if="viewMode === 'board'" class="product-board">
                 <div class="board-columns">
-                    <div v-for="status in space?.statuses" :key="status.id" class="board-column">
+                    <div v-for="status in space?.statuses" :key="status.id" class="board-column"
+                        :class="{ 'board-column--drag-over': boardDragOverStatus === status.id }"
+                        @dragover="boardDragOver($event, status.id)"
+                        @dragleave="boardDragLeave(status.id)"
+                        @drop="boardDrop($event, status.id)">
                         <!-- Column Header -->
                         <div class="board-column__header">
                             <div class="flex items-center gap-2">
@@ -430,6 +572,10 @@ watch(() => props.productsByStatus, () => {
                             <div class="board-column__list">
                                 <div v-for="element in (localProductsByStatus[status.id] || [])" :key="element.id"
                                     class="product-card"
+                                    :class="{ 'product-card--dragging': boardDraggedItem?.element?.id === element.id }"
+                                    draggable="true"
+                                    @dragstart="boardDragStart($event, element, status.id)"
+                                    @dragend="boardDraggedItem = null"
                                     @click="router.visit(route('lists.show', [workspace.id, space.id, element.id]))">
                                     <div class="product-card__status-bar" :style="{ backgroundColor: status.color }" />
                                     <div class="product-card__body">
@@ -460,7 +606,7 @@ watch(() => props.productsByStatus, () => {
             <!-- Hierarchy View (Content) -->
             <div v-else class="space-content">
                 <!-- Folders -->
-                <div v-for="folder in space?.folders" :key="folder.id" class="folder-item">
+                <div v-for="folder in filteredFolders" :key="folder.id" class="folder-item">
                     <div class="folder-header" @click="toggleFolder(folder.id)">
                         <div class="flex items-center gap-2">
                             <v-icon size="20">
@@ -484,7 +630,7 @@ watch(() => props.productsByStatus, () => {
                         </div>
                     </div>
 
-                    <div v-if="!collapsedFolders[folder.id]" class="folder-lists" :class="{
+                    <div v-if="!collapsedFolders[folder.id] || hierarchySearch.trim()" class="folder-lists" :class="{
                         'folder-lists--empty': !(folder.lists?.length),
                         'drag-over': draggedList !== null && dragOverFolder === folder.id
                     }" @dragover="handleDragOver($event, folder.id)" @dragleave="handleDragLeave($event, folder.id)"
@@ -502,6 +648,18 @@ watch(() => props.productsByStatus, () => {
                                 <v-btn icon variant="text" size="x-small" @click.stop="openMoveList(list)">
                                     <v-icon size="16">mdi-folder-move-outline</v-icon>
                                 </v-btn>
+                                <v-btn icon variant="text" size="x-small" @click.stop="openEditList(list)">
+                                    <v-icon size="16">mdi-pencil-outline</v-icon>
+                                </v-btn>
+                                <v-btn icon variant="text" size="x-small" @click.stop="openDeleteList(list)">
+                                    <v-icon size="16" color="error">mdi-delete-outline</v-icon>
+                                </v-btn>
+                                <v-btn icon variant="text" size="x-small" @click.stop="duplicateList(list)">
+                                    <v-icon size="16">mdi-content-copy</v-icon>
+                                </v-btn>
+                                <v-btn icon variant="text" size="x-small" @click.stop="router.visit(route('lists.settings', [workspace.id, space.id, list.id]))">
+                                    <v-icon size="16">mdi-account-cog-outline</v-icon>
+                                </v-btn>
                             </div>
                         </div>
 
@@ -512,13 +670,13 @@ watch(() => props.productsByStatus, () => {
                 </div>
 
                 <!-- Lists without folder -->
-                <div v-if="space?.lists_without_folder?.length || space?.folders?.length" class="root-lists-zone"
+                <div v-if="filteredListsWithoutFolder.length || filteredFolders.length" class="root-lists-zone"
                     :class="{
                         'drag-over': draggedList !== null && dragOverFolder === null,
                         'root-lists-zone--empty': !space?.lists_without_folder?.length
                     }" @dragover="handleDragOver($event, null)" @dragleave="handleDragLeave($event, null)"
                     @drop="handleDrop($event, null)">
-                    <div v-for="list in space?.lists_without_folder" :key="list.id"
+                    <div v-for="list in filteredListsWithoutFolder" :key="list.id"
                         class="list-item list-item--standalone" draggable="true"
                         @dragstart="handleDragStart($event, list)"
                         @click="router.visit(route('lists.show', [workspace.id, space.id, list.id]))">
@@ -532,6 +690,18 @@ watch(() => props.productsByStatus, () => {
                             <v-btn icon variant="text" size="x-small" @click.stop="openMoveList(list)">
                                 <v-icon size="16">mdi-folder-move-outline</v-icon>
                             </v-btn>
+                            <v-btn icon variant="text" size="x-small" @click.stop="openEditList(list)">
+                                <v-icon size="16">mdi-pencil-outline</v-icon>
+                            </v-btn>
+                            <v-btn icon variant="text" size="x-small" @click.stop="openDeleteList(list)">
+                                <v-icon size="16" color="error">mdi-delete-outline</v-icon>
+                            </v-btn>
+                            <v-btn icon variant="text" size="x-small" @click.stop="duplicateList(list)">
+                                <v-icon size="16">mdi-content-copy</v-icon>
+                            </v-btn>
+                            <v-btn icon variant="text" size="x-small" @click.stop="router.visit(route('lists.settings', [workspace.id, space.id, list.id]))">
+                                <v-icon size="16">mdi-account-cog-outline</v-icon>
+                            </v-btn>
                             <v-icon size="16" color="grey">mdi-chevron-right</v-icon>
                         </div>
                     </div>
@@ -539,7 +709,7 @@ watch(() => props.productsByStatus, () => {
                 </div>
 
                 <!-- Empty State -->
-                <div v-if="!space?.folders?.length && !space?.lists_without_folder?.length" class="empty-state">
+                <div v-if="!filteredFolders.length && !filteredListsWithoutFolder.length" class="empty-state">
                     <v-icon size="80" color="grey-darken-1" class="mb-4">mdi-folder-open-outline</v-icon>
                     <h2 class="text-xl font-semibold mb-2">This space is empty</h2>
                     <p class="text-gray-500">Get started by creating a product or folder</p>
@@ -645,6 +815,38 @@ watch(() => props.productsByStatus, () => {
                     <v-spacer />
                     <v-btn variant="text" @click="showDeleteFolder = false">Cancel</v-btn>
                     <v-btn color="error" @click="confirmDeleteFolder">Delete</v-btn>
+                </v-card-actions>
+            </v-card>
+        </v-dialog>
+
+        <!-- Edit Product Dialog -->
+        <v-dialog v-model="showEditList" max-width="400">
+            <v-card>
+                <v-card-title>Edit Product</v-card-title>
+                <v-card-text>
+                    <v-text-field v-model="editListName" label="Product Name" variant="outlined" autofocus
+                        @keydown.enter="updateList" />
+                </v-card-text>
+                <v-card-actions>
+                    <v-spacer />
+                    <v-btn variant="text" @click="showEditList = false">Cancel</v-btn>
+                    <v-btn color="primary" @click="updateList">Update</v-btn>
+                </v-card-actions>
+            </v-card>
+        </v-dialog>
+
+        <!-- Delete Product Dialog -->
+        <v-dialog v-model="showDeleteList" max-width="400">
+            <v-card>
+                <v-card-title class="text-error">Delete Product?</v-card-title>
+                <v-card-text>
+                    Are you sure you want to delete "{{ deletingList?.name }}"? This will also delete all tasks within
+                    this product. This action cannot be undone.
+                </v-card-text>
+                <v-card-actions>
+                    <v-spacer />
+                    <v-btn variant="text" @click="showDeleteList = false">Cancel</v-btn>
+                    <v-btn color="error" @click="confirmDeleteList">Delete</v-btn>
                 </v-card-actions>
             </v-card>
         </v-dialog>
@@ -899,13 +1101,18 @@ watch(() => props.productsByStatus, () => {
     border: 1px solid #2e2e3e;
     border-radius: 8px;
     overflow: hidden;
-    cursor: pointer;
-    transition: background-color 0.15s, border-color 0.15s;
+    cursor: grab;
+    transition: background-color 0.15s, border-color 0.15s, opacity 0.15s;
 }
 
 .product-card:hover {
     background-color: #242438;
     border-color: #3e3e5e;
+}
+
+.product-card--dragging {
+    opacity: 0.4;
+    cursor: grabbing;
 }
 
 .product-card__status-bar {
@@ -949,5 +1156,12 @@ watch(() => props.productsByStatus, () => {
     font-size: 12px;
     text-align: center;
     padding: 12px;
+}
+
+.board-column--drag-over .board-column__list {
+    outline: 2px dashed #6366f1;
+    outline-offset: 4px;
+    border-radius: 6px;
+    background-color: rgba(99, 102, 241, 0.06);
 }
 </style>

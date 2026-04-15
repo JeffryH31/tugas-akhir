@@ -21,7 +21,7 @@ const isAdmin = computed(() => {
     const currentMember = props.members?.find((member) => member.id === currentUserId);
     const role = currentMember?.pivot?.role || currentMember?.role;
 
-    return role === 'owner' || role === 'admin';
+    return role === 'admin';
 });
 
 // Add member dialog
@@ -167,10 +167,8 @@ const changeRole = (member, newRole) => {
 
 const getRoleBadgeColor = (role) => {
     switch (role) {
-        case 'owner': return 'purple';
         case 'admin': return 'error';
         case 'member': return 'primary';
-        case 'guest': return 'grey';
         default: return 'grey';
     }
 };
@@ -206,7 +204,7 @@ const canManageSelectedSpace = computed(() => {
     const currentUserId = page.props?.auth?.user?.id;
     const spaceMember = selectedSpace.value?.members?.find((member) => member.id === currentUserId);
 
-    return ['owner', 'admin', 'manager'].includes(spaceMember?.role || '');
+    return ['admin', 'manager'].includes(spaceMember?.role || '');
 });
 
 const availableSpaceUsers = computed(() => {
@@ -290,10 +288,9 @@ const removeSpaceMember = async (space, member) => {
 };
 
 const canModifyWorkspaceMember = (member) => {
-    const role = member?.pivot?.role || member?.role;
     const currentUserId = page.props?.auth?.user?.id;
 
-    return role !== 'owner' && member?.id !== currentUserId;
+    return member?.id !== currentUserId;
 };
 
 const projectRoleItems = [
@@ -424,7 +421,7 @@ const confirmationName = ref('');
 
 const accessLayers = [
     { title: 'General Website', desc: 'Global account access — login, profile, and security settings.', icon: 'mdi-web', color: 'primary', hex: '#7B68EE' },
-    { title: 'Workspace Access', desc: 'Owner / Admin / Member / Guest roles for workspace-wide capabilities.', icon: 'mdi-view-dashboard-outline', color: 'info', hex: '#49CCF9' },
+    { title: 'Workspace Access', desc: 'Admin / Member roles for workspace-wide capabilities.', icon: 'mdi-view-dashboard-outline', color: 'info', hex: '#49CCF9' },
     { title: 'Space Access', desc: 'Private/public visibility and space-level membership control.', icon: 'mdi-layers-outline', color: 'warning', hex: '#FFB84D' },
     { title: 'Product Access', desc: 'Product-level roles: owner, manager, developer, guest.', icon: 'mdi-view-list-outline', color: 'success', hex: '#6BC950' },
 ];
@@ -543,8 +540,6 @@ const deleteWorkspace = () => {
                                         prepend-icon="mdi-shield-crown-outline" />
                                     <v-list-item title="Member" @click="changeRole(member, 'member')"
                                         prepend-icon="mdi-account-outline" />
-                                    <v-list-item title="Guest" @click="changeRole(member, 'guest')"
-                                        prepend-icon="mdi-account-eye-outline" />
                                 </v-list>
                             </v-card>
                         </v-menu>
@@ -680,7 +675,7 @@ const deleteWorkspace = () => {
                         </template>
                     </v-select>
                     <v-select v-model="selectedRole"
-                        :items="[{ title: 'Admin', value: 'admin' }, { title: 'Member', value: 'member' }, { title: 'Guest', value: 'guest' }]"
+                        :items="[{ title: 'Admin', value: 'admin' }, { title: 'Member', value: 'member' }]"
                         label="Role" variant="outlined" density="comfortable" />
                 </v-card-text>
                 <v-card-actions class="px-4 pb-4">
@@ -727,7 +722,7 @@ const deleteWorkspace = () => {
                             min="0" step="1000" variant="outlined" density="comfortable" prepend-inner-icon="mdi-cash"
                             hide-details />
                         <v-select v-model="createUserForm.role"
-                            :items="[{ title: 'Admin', value: 'admin' }, { title: 'Member', value: 'member' }, { title: 'Guest', value: 'guest' }]"
+                            :items="[{ title: 'Admin', value: 'admin' }, { title: 'Member', value: 'member' }]"
                             label="Workspace Role" variant="outlined" density="comfortable" hide-details />
                     </div>
                 </v-card-text>

@@ -348,6 +348,7 @@ const handleTaskComplete = (task) => {
                 if (errors.dependency && window.showSnackbar) {
                     window.showSnackbar(errors.dependency, 'error');
                 }
+                router.reload({ only: ['tasksByStatus'] });
             }
         }
     );

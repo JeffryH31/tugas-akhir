@@ -42,7 +42,7 @@ class CalendarController extends Controller
                     $sq->where('workspace_id', $workspace->id);
 
                     // Non-admin users cannot see private spaces unless they're a space member
-                    if (!in_array($workspaceRole, ['owner', 'admin'], true)) {
+                    if ($workspaceRole !== 'admin') {
                         $sq->where(function ($pq) use ($user) {
                             $pq->where('is_private', false)
                                ->orWhereHas('members', fn($m) => $m->where('user_id', $user->id));
@@ -50,8 +50,8 @@ class CalendarController extends Controller
                     }
                 });
 
-                // Workspace owner/admin can see all; others only see products they belong to
-                if (!in_array($workspaceRole, ['owner', 'admin'], true)) {
+                // Workspace admin can see all; others only see products they belong to
+                if ($workspaceRole !== 'admin') {
                     $query->where(function ($q) use ($user) {
                         $q->whereHas('members', fn($m) => $m->where('user_id', $user->id))
                           ->orWhereDoesntHave('members'); // products without configured members

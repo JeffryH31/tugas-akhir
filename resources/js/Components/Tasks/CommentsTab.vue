@@ -49,11 +49,10 @@ const submitComment = () => {
         <!-- Comment Input -->
         <div class="section-card mb-4">
             <div class="pa-3">
-                <v-textarea v-model="newComment" placeholder="Write a comment..." variant="outlined"
-                    rows="3" hide-details auto-grow :disabled="isSubmitting" />
+                <v-textarea v-model="newComment" placeholder="Write a comment..." variant="outlined" rows="3"
+                    hide-details auto-grow :disabled="isSubmitting" />
                 <div class="d-flex justify-end mt-2">
-                    <v-btn color="primary" size="small" variant="flat"
-                        :disabled="!newComment.trim() || isSubmitting"
+                    <v-btn color="primary" size="small" variant="flat" :disabled="!newComment.trim() || isSubmitting"
                         :loading="isSubmitting" @click="submitComment">
                         <v-icon start size="14">mdi-send</v-icon>
                         Comment
@@ -79,7 +78,14 @@ const submitComment = () => {
                     <div class="d-flex align-center ga-2 mb-1">
                         <span class="text-body-2 font-weight-medium">{{ comment.user?.name }}</span>
                         <span class="text-caption text-grey">
-                            {{ new Date(comment.created_at).toLocaleDateString() }}
+                            {{ new Date(comment.created_at).toLocaleDateString('en-US', {
+                                month: 'short', day:
+                                    'numeric', year: 'numeric'
+                            }) }} at
+                            {{ new Date(comment.created_at).toLocaleTimeString('en-US', {
+                                hour: '2-digit', minute:
+                                    '2-digit'
+                            }) }}
                         </span>
                     </div>
                     <div class="text-body-2 comment-content">{{ comment.content }}</div>

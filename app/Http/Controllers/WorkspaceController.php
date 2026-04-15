@@ -192,7 +192,7 @@ class WorkspaceController extends Controller
     {
         $validated = $request->validate([
             'user_id' => 'required|exists:users,id',
-            'role' => 'nullable|in:admin,member,guest',
+            'role' => 'nullable|in:admin,member',
         ]);
 
         abort_unless($this->accessService->canManageWorkspace($request->user(), $workspace), 403);
@@ -226,9 +226,6 @@ class WorkspaceController extends Controller
 
         try {
             $user = User::findOrFail($validated['user_id']);
-            if ((int) $workspace->owner_id === (int) $user->id) {
-                return redirect()->back()->withErrors(['error' => 'Workspace owner cannot be removed.']);
-            }
 
             if ((int) $request->user()->id === (int) $user->id) {
                 return redirect()->back()->withErrors(['error' => 'You cannot remove yourself from workspace.']);
@@ -249,7 +246,7 @@ class WorkspaceController extends Controller
     {
         $validated = $request->validate([
             'user_id' => 'required|exists:users,id',
-            'role' => 'required|in:admin,member,guest',
+            'role' => 'required|in:admin,member',
         ]);
 
         abort_unless($this->accessService->canManageWorkspace($request->user(), $workspace), 403);
@@ -257,9 +254,6 @@ class WorkspaceController extends Controller
         try {
 
             $user = User::findOrFail($validated['user_id']);
-            if ((int) $workspace->owner_id === (int) $user->id) {
-                return redirect()->back()->withErrors(['error' => 'Workspace owner role cannot be changed.']);
-            }
 
             $this->workspaceService->updateMemberRole(
                 $workspace,
@@ -284,7 +278,7 @@ class WorkspaceController extends Controller
             'email' => ['required', 'email', 'max:255', 'unique:users,email'],
             'password' => ['required', 'string', 'min:8', 'confirmed'],
             'hourly_rate' => ['nullable', 'numeric', 'min:0'],
-            'role' => ['nullable', 'in:admin,member,guest'],
+            'role' => ['nullable', 'in:admin,member'],
         ]);
 
         abort_unless($this->accessService->canManageWorkspace($request->user(), $workspace), 403);

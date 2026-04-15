@@ -86,7 +86,23 @@ class SubtaskController extends Controller
             return redirect()->back()->withErrors(['error' => $e->getMessage()]);
         }
     }
-
+    /**
+     * Duplicate the specified subtask.
+     */
+    public function duplicate(Request $request, Workspace $workspace, Space $space, TaskList $list, Task $task, Subtask $subtask): RedirectResponse
+    {
+        abort_unless((int) $space->workspace_id === (int) $workspace->id, 404);
+        abort_unless((int) $list->space_id === (int) $space->id, 404);
+        abort_unless((int) $task->task_list_id === (int) $list->id, 404);
+        abort_unless((int) $subtask->task_id === (int) $task->id, 404);
+        abort_unless($this->accessService->canManageTaskStructure($request->user(), $list), 403);
+        try {
+            $this->subtaskService->duplicate($subtask, $request->user());
+            return redirect()->back()->with('success', 'Subtask duplicated successfully.');
+        } catch (\Exception $e) {
+            return redirect()->back()->withErrors(['error' => 'Failed to duplicate subtask: ' . $e->getMessage()]);
+        }
+    }
     /**
      * Mark subtask as completed.
      */

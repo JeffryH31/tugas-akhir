@@ -43,7 +43,7 @@ class Workspace extends Model
         });
 
         static::created(function ($workspace) {
-            $workspace->members()->attach($workspace->owner_id, ['role' => 'owner']);
+            $workspace->members()->attach($workspace->owner_id, ['role' => 'admin']);
         });
     }
 
