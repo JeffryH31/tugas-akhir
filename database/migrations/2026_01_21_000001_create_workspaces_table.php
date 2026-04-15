@@ -16,12 +16,9 @@ return new class extends Migration
             $table->string('name');
             $table->string('slug')->unique();
             $table->string('color', 7)->default('#7C3AED');
-            $table->foreignId('owner_id')->constrained('users')->cascadeOnDelete();
             $table->boolean('is_personal')->default(false);
             $table->timestamps();
             $table->softDeletes();
-
-            $table->index(['owner_id', 'is_personal']);
         });
 
         Schema::create('workspace_members', function (Blueprint $table) {

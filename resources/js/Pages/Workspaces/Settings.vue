@@ -621,7 +621,7 @@ const deleteWorkspace = () => {
             </div>
 
             <!-- Danger Zone -->
-            <div class="danger-zone">
+            <div v-if="isAdmin" class="danger-zone">
                 <div class="danger-zone-header">
                     <v-icon size="16" color="error" class="mr-1">mdi-alert-circle-outline</v-icon>
                     <span>Danger Zone</span>

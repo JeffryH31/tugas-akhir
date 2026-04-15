@@ -410,20 +410,13 @@ const deleteWorkspaceLabel = async () => {
 
 // ===== Assignees =====
 const displayedAssignees = computed(() => {
+    // For subtasks: show that subtask's own assignees
     if (props.isSubtask) {
         return props.localTask?.assignees || [];
     }
 
-    const subtasks = props.localTask?.subtasks || [];
-    const seen = new Set();
-
-    return subtasks
-        .flatMap((subtask) => subtask.assignees || [])
-        .filter((assignee) => {
-            if (seen.has(assignee.id)) return false;
-            seen.add(assignee.id);
-            return true;
-        });
+    // For tasks: show task-level assignees
+    return props.localTask?.assignees || [];
 });
 
 const toggleAssignee = (userId) => {
@@ -587,7 +580,7 @@ const removeSuccessor = (suc) => depFetch('DELETE', { subtask_id: suc.id, depend
                         </v-tooltip>
 
                         <span v-if="!displayedAssignees.length" class="text-caption text-grey">
-                            {{ isSubtask ? 'No assignees yet' : 'No subtask assignees yet' }}
+                            No assignees yet
                         </span>
                         <v-menu v-if="isSubtask">
                             <template v-slot:activator="{ props: menuProps }">

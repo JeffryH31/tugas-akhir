@@ -13,8 +13,8 @@ class ViewsSeeder extends Seeder
     public function run(): void
     {
         $sasya = $this->demoUser('admin@example.com');
-        $dian = $this->demoUser('dian@example.com');
-        $budi = $this->demoUser('budi@example.com');
+        $dian = $this->demoUser('christopher@example.com');
+        $budi = $this->demoUser('marvel@example.com');
 
         View::create(['task_list_id' => $this->demoTaskList('Inventory Module')->id, 'user_id' => $sasya->id, 'name' => 'Board', 'type' => 'board', 'is_default' => true, 'position' => 0]);
         View::create(['task_list_id' => $this->demoTaskList('Inventory Module')->id, 'user_id' => $sasya->id, 'name' => 'Gantt', 'type' => 'gantt', 'position' => 1]);

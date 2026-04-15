@@ -101,6 +101,65 @@ const exportCsv = () => {
                     <div class="text-xs text-gray-400">{{ card.label }}</div>
                     <div class="text-2xl font-semibold mt-1">{{ card.value }}</div>
                 </v-card>
+
+            </div>
+            <!-- Team Section — only for owner/admin -->
+            <div v-if="canManage && members.length" class="my-5">
+                <div class="text-lg font-semibold mb-4">
+                    <v-icon size="20" class="mr-2">mdi-account-group-outline</v-icon>
+                    Team Member Reports
+                </div>
+                <v-card>
+                    <div class="flex items-center gap-3 px-4 py-3 border-b border-white/8">
+                        <v-text-field v-model="memberSearch" placeholder="Search name or email..."
+                            prepend-inner-icon="mdi-magnify" density="compact" variant="outlined" hide-details clearable
+                            style="max-width: 280px" />
+                        <v-autocomplete v-model="memberSpaceFilter" :items="spaces" item-title="name" item-value="id"
+                            placeholder="All Spaces" density="compact" variant="outlined" hide-details clearable
+                            style="max-width: 220px" />
+                        <v-chip v-if="memberSpaceFilter || memberSearch" size="small" variant="tonal" color="primary"
+                            class="ml-auto shrink-0">
+                            {{ filteredMembers.length }} of {{ members.length }} members
+                        </v-chip>
+                    </div>
+                    <v-data-table :headers="memberHeaders" :items="filteredMembers" items-per-page="10"
+                        class="elevation-0">
+                        <template #item.name="{ item }">
+                            <div class="flex items-center gap-2 py-1">
+                                <v-avatar size="32" :color="item.avatar_color" class="text-white font-bold shrink-0">
+                                    <v-img v-if="item.profile_photo_url" :src="item.profile_photo_url" />
+                                    <span v-else class="text-xs">{{ item.initials }}</span>
+                                </v-avatar>
+                                <div>
+                                    <div class="text-sm font-medium">{{ item.name }}</div>
+                                    <div class="text-xs text-gray-400">{{ item.email }}</div>
+                                </div>
+                            </div>
+                        </template>
+                        <template #item.running_on="{ item }">
+                            <div v-if="item.running_on" class="py-1">
+                                <div class="flex items-center gap-1 text-xs">
+                                    <v-icon size="12" color="success">mdi-circle</v-icon>
+                                    <span class="font-medium truncate max-w-48">{{ item.running_on.subtask }}</span>
+                                </div>
+                                <div class="text-xs text-gray-400 truncate max-w-48 mt-0.5">
+                                    {{ [item.running_on.space, item.running_on.task].filter(Boolean).join(' › ') }}
+                                </div>
+                            </div>
+                            <span v-else class="text-xs text-gray-400">—</span>
+                        </template>
+                        <template #item.hourly_rate="{ item }">
+                            Rp {{ Number(item.hourly_rate).toLocaleString('id-ID') }}
+                        </template>
+                        <template #item.actions="{ item }">
+                            <v-btn size="small" color="primary" variant="tonal"
+                                :href="route('workspaces.members.report', [workspace.id, item.id])"
+                                prepend-icon="mdi-chart-box-outline">
+                                View Report
+                            </v-btn>
+                        </template>
+                    </v-data-table>
+                </v-card>
             </div>
 
             <!-- EVM KPI Cards -->
@@ -141,105 +200,19 @@ const exportCsv = () => {
                             <div class="text-xs text-gray-400">Cost Performance Index (CPI)</div>
                             <v-chip :color="cpiColor" size="small" class="mt-1">{{ (evm.cpi ?? 1).toFixed(2) }}</v-chip>
                             <div class="text-xs text-gray-500 mt-1">{{ (evm.cpi ?? 1) >= 1 ? 'Efficient' : 'Inefficient'
-                            }}</div>
+                                }}</div>
                         </div>
                         <div>
                             <div class="text-xs text-gray-400">Schedule Performance Index (SPI)</div>
                             <v-chip :color="spiColor" size="small" class="mt-1">{{ (evm.spi ?? 1).toFixed(2) }}</v-chip>
                             <div class="text-xs text-gray-500 mt-1">{{ (evm.spi ?? 1) >= 1 ? 'On schedule' : 'Delayed'
-                            }}</div>
+                                }}</div>
                         </div>
                     </div>
                 </v-card-text>
             </v-card>
 
-            <!-- Team Section — only for owner/admin -->
-            <div v-if="canManage && members.length" class="mt-5">
-                <div class="text-lg font-semibold mb-4">
-                    <v-icon size="20" class="mr-2">mdi-account-group-outline</v-icon>
-                    Team Member Reports
-                </div>
-                <v-card>
-                    <div class="flex items-center gap-3 px-4 py-3 border-b border-white/8">
-                        <v-text-field
-                            v-model="memberSearch"
-                            placeholder="Search name or email..."
-                            prepend-inner-icon="mdi-magnify"
-                            density="compact"
-                            variant="outlined"
-                            hide-details
-                            clearable
-                            style="max-width: 280px"
-                        />
-                        <v-autocomplete
-                            v-model="memberSpaceFilter"
-                            :items="spaces"
-                            item-title="name"
-                            item-value="id"
-                            placeholder="All Spaces"
-                            density="compact"
-                            variant="outlined"
-                            hide-details
-                            clearable
-                            style="max-width: 220px"
-                        />
-                        <v-chip
-                            v-if="memberSpaceFilter || memberSearch"
-                            size="small"
-                            variant="tonal"
-                            color="primary"
-                            class="ml-auto shrink-0"
-                        >
-                            {{ filteredMembers.length }} of {{ members.length }} members
-                        </v-chip>
-                    </div>
-                    <v-data-table
-                        :headers="memberHeaders"
-                        :items="filteredMembers"
-                        items-per-page="10"
-                        class="elevation-0"
-                    >
-                        <template #item.name="{ item }">
-                            <div class="flex items-center gap-2 py-1">
-                                <v-avatar size="32" :color="item.avatar_color" class="text-white font-bold shrink-0">
-                                    <v-img v-if="item.profile_photo_url" :src="item.profile_photo_url" />
-                                    <span v-else class="text-xs">{{ item.initials }}</span>
-                                </v-avatar>
-                                <div>
-                                    <div class="text-sm font-medium">{{ item.name }}</div>
-                                    <div class="text-xs text-gray-400">{{ item.email }}</div>
-                                </div>
-                            </div>
-                        </template>
-                        <template #item.running_on="{ item }">
-                            <div v-if="item.running_on" class="py-1">
-                                <div class="flex items-center gap-1 text-xs">
-                                    <v-icon size="12" color="success">mdi-circle</v-icon>
-                                    <span class="font-medium truncate max-w-48">{{ item.running_on.subtask }}</span>
-                                </div>
-                                <div class="text-xs text-gray-400 truncate max-w-48 mt-0.5">
-                                    {{ [item.running_on.space, item.running_on.task].filter(Boolean).join(' › ') }}
-                                </div>
-                            </div>
-                            <span v-else class="text-xs text-gray-400">—</span>
-                        </template>
-                        <template #item.hourly_rate="{ item }">
-                            Rp {{ Number(item.hourly_rate).toLocaleString('id-ID') }}
-                        </template>
-                        <template #item.actions="{ item }">
-                            <v-btn
-                                size="small"
-                                color="primary"
-                                variant="tonal"
-                                :href="route('workspaces.members.report', [workspace.id, item.id])"
-                                prepend-icon="mdi-chart-box-outline"
-                            >
-                                View Report
-                            </v-btn>
-                        </template>
-                    </v-data-table>
-                </v-card>
-            </div>
+
         </div>
     </MainLayout>
 </template>

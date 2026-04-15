@@ -23,15 +23,15 @@ trait CreatesWorkspaceHierarchy
      * Create a full workspace → space → statuses → list → task hierarchy.
      *
      * Space::created() auto-creates 4 default statuses (Open, In Progress, Review, Completed).
-     * Workspace::created() auto-attaches $owner as 'owner' member.
+     * The $owner is explicitly attached as 'admin' member.
      */
     protected function createFullHierarchy(User $owner, string $suffix = 'A'): array
     {
         $workspace = Workspace::create([
             'name' => "Workspace {$suffix}",
             'color' => '#1D4ED8',
-            'owner_id' => $owner->id,
         ]);
+        $workspace->addMember($owner, 'admin');
 
         $space = Space::create([
             'workspace_id' => $workspace->id,

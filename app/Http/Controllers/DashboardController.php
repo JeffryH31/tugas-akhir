@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\Activity;
 use App\Models\TimeEntry;
 use App\Models\Workspace;
 use App\Services\AccessService;
@@ -48,8 +49,8 @@ class DashboardController extends Controller
             ]);
         }
 
-        $myTasks = $this->taskService->getMyTasks($user);
-        $overdueTasks = $this->taskService->getMyTasks($user, ['is_overdue' => true]);
+        $mySubtasks = $this->taskService->getMySubtasks($user);
+        $overdueSubtasks = $this->taskService->getMySubtasks($user, ['is_overdue' => true]);
 
         // Get running timer if any
         $runningTimer = TimeEntry::where('user_id', $user->id)
@@ -66,13 +67,36 @@ class DashboardController extends Controller
             ? 0
             : $workdayStart->diffInMinutes(now()->min($workdayEnd));
         $weekCapacity = now()->startOfWeek()->diffInWeekdays(now()->endOfDay()->min(now())) * 8 * 60;
-        $todoCount = collect($myTasks)->filter(fn($task) => ($task->subtasks ?? collect())->contains(fn($subtask) => is_null($subtask->completed_at)))->count();
+        $todoCount = $mySubtasks->count();
+
+        // Recent activity in the active workspace (last 15 events)
+        $recentActivity = $activeWorkspace
+            ? Activity::where('workspace_id', $activeWorkspace->id)
+                ->with('user')
+                ->latest()
+                ->limit(15)
+                ->get()
+                ->map(fn($a) => [
+                    'id'           => $a->id,
+                    'action'       => $a->action,
+                    'description'  => $a->description,
+                    'properties'   => $a->properties,
+                    'created_at'   => $a->created_at,
+                    'user' => $a->user ? [
+                        'id'                => $a->user->id,
+                        'name'              => $a->user->name,
+                        'initials'          => $a->user->initials,
+                        'avatar_color'      => $a->user->avatar_color,
+                        'profile_photo_url' => $a->user->profile_photo_url,
+                    ] : null,
+                ])
+            : [];
 
         return Inertia::render('Dashboard', [
             'workspaces' => $workspaces,
             'activeWorkspace' => $activeWorkspace,
-            'myTasks' => $myTasks,
-            'overdueTasks' => $overdueTasks,
+            'mySubtasks' => $mySubtasks,
+            'overdueSubtasks' => $overdueSubtasks,
             'runningTimer' => $runningTimer,
             'timeStats' => [
                 'today' => $todayTimeSpent,
@@ -81,6 +105,7 @@ class DashboardController extends Controller
                 'idle_week' => max(0, $weekCapacity - $weekTimeSpent),
                 'todo_count' => $todoCount,
             ],
+            'recentActivity' => $recentActivity,
         ]);
     }
 

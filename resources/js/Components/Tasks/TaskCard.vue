@@ -23,6 +23,14 @@ const props = defineProps({
         type: Boolean,
         default: true,
     },
+    highlightedSubtask: {
+        type: Object,
+        default: null,
+    },
+    parentTaskName: {
+        type: String,
+        default: null,
+    },
 });
 
 const emit = defineEmits(['click', 'complete', 'open-detail']);
@@ -76,7 +84,8 @@ const subtaskProgress = computed(() => {
     };
 });
 
-// Display assignees: use direct assignees first, fallback to aggregated from subtasks
+// Display assignees: prefer highlighted subtask assignees (dashboard context),
+// then direct task assignees, then aggregated from all subtasks.
 const displayAssignees = computed(() => {
     const toList = (value) => {
         if (Array.isArray(value)) return value;
@@ -84,6 +93,12 @@ const displayAssignees = computed(() => {
         if (value && typeof value === 'object') return Object.values(value).filter(Boolean);
         return [];
     };
+
+    // When a highlighted subtask is provided, show its assignees
+    if (props.highlightedSubtask) {
+        const subtaskAssignees = toList(props.highlightedSubtask.assignees);
+        if (subtaskAssignees.length) return subtaskAssignees;
+    }
 
     const directAssignees = toList(props.task.assignees);
     if (directAssignees.length) return directAssignees;
@@ -147,6 +162,11 @@ const openDetail = () => {
                 </v-tooltip>
             </div>
 
+            <!-- Parent task context (subtask mode) — shown above subtask name -->
+            <div v-if="parentTaskName" class="cu-card__subtask-hint">
+                <span class="cu-card__subtask-hint-text">{{ parentTaskName }}</span>
+            </div>
+
             <!-- Task name row -->
             <div class="cu-card__name-row">
                 <button v-if="showCheckbox" class="cu-card__checkbox"
@@ -154,9 +174,16 @@ const openDetail = () => {
                     :style="!isCompleted ? { borderColor: statusColor } : {}" @click="toggleComplete">
                     <v-icon v-if="isCompleted" size="12" color="white">mdi-check</v-icon>
                 </button>
+                <v-icon v-if="parentTaskName" size="11" color="grey-lighten-1" class="flex-shrink-0">mdi-subdirectory-arrow-right</v-icon>
                 <span class="cu-card__name" :class="{ 'cu-card__name--done': isCompleted }">
                     {{ task.name }}
                 </span>
+            </div>
+
+            <!-- Highlighted subtask -->
+            <div v-if="!parentTaskName && highlightedSubtask" class="cu-card__subtask-hint">
+                <v-icon size="11" color="grey-lighten-1">mdi-subdirectory-arrow-right</v-icon>
+                <span class="cu-card__subtask-hint-text">{{ highlightedSubtask.name }}</span>
             </div>
 
             <!-- Labels -->

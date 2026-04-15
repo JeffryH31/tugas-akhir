@@ -13,9 +13,9 @@ class TasksSeeder extends Seeder
     public function run(): void
     {
         $admin = $this->demoUser('admin@example.com');
-        $andi = $this->demoUser('andi@example.com');
-        $dian = $this->demoUser('dian@example.com');
-        $budi = $this->demoUser('budi@example.com');
+        $andi = $this->demoUser('kevin@example.com');
+        $dian = $this->demoUser('christopher@example.com');
+        $budi = $this->demoUser('marvel@example.com');
 
         $this->createTask([
             'name' => 'Sistem Manajemen Inventory',

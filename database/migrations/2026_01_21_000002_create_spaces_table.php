@@ -20,7 +20,6 @@ return new class extends Migration
             $table->string('icon')->nullable();
             $table->boolean('is_private')->default(false);
             $table->integer('position')->default(0);
-            $table->json('settings')->nullable();
             $table->foreignId('created_by')->nullable()->constrained('users')->nullOnDelete();
             $table->timestamps();
             $table->softDeletes();

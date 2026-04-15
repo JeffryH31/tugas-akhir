@@ -13,18 +13,18 @@ class WorkspacesSeeder extends Seeder
     public function run(): void
     {
         $sasya = $this->demoUser('admin@example.com');
-        $andi = $this->demoUser('andi@example.com');
-        $dian = $this->demoUser('dian@example.com');
-        $budi = $this->demoUser('budi@example.com');
-        $rina = $this->demoUser('rina@example.com');
+        $andi = $this->demoUser('kevin@example.com');
+        $dian = $this->demoUser('christopher@example.com');
+        $budi = $this->demoUser('marvel@example.com');
+        $rina = $this->demoUser('devin@example.com');
 
         $workspace = Workspace::create([
             'name' => 'MIS Department',
             'slug' => 'mis-department',
-            'owner_id' => $sasya->id,
             'color' => '#6366F1',
         ]);
 
+        $workspace->addMember($sasya, 'admin');
         $workspace->addMember($andi, 'admin');
         $workspace->addMember($dian, 'member');
         $workspace->addMember($budi, 'member');

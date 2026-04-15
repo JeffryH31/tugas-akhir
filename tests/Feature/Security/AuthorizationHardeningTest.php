@@ -14,8 +14,8 @@ function createWorkspaceHierarchy(User $owner, string $suffix = 'A'): array
     $workspace = Workspace::create([
         'name' => "Workspace {$suffix}",
         'color' => '#1D4ED8',
-        'owner_id' => $owner->id,
     ]);
+    $workspace->addMember($owner, 'admin');
 
     $space = Space::create([
         'workspace_id' => $workspace->id,
@@ -54,29 +54,26 @@ test('non-member cannot switch active workspace', function () {
     $foreignWorkspace = Workspace::create([
         'name' => 'Foreign Workspace',
         'color' => '#7C3AED',
-        'owner_id' => $otherOwner->id,
     ]);
+    $foreignWorkspace->addMember($otherOwner, 'admin');
 
     actingAs($owner)
         ->post(route('workspaces.switch', $foreignWorkspace->id))
         ->assertForbidden();
 });
 
-test('workspace admin cannot delete workspace unless owner', function () {
-    $owner = User::factory()->create();
+test('workspace member cannot delete workspace', function () {
     $admin = User::factory()->create();
+    $member = User::factory()->create();
 
     $workspace = Workspace::create([
-        'name' => 'Admin Delete Guard',
+        'name' => 'Delete Guard',
         'color' => '#0EA5E9',
-        'owner_id' => $owner->id,
     ]);
+    $workspace->addMember($admin, 'admin');
+    $workspace->addMember($member, 'member');
 
-    $workspace->members()->syncWithoutDetaching([
-        $admin->id => ['role' => 'admin'],
-    ]);
-
-    actingAs($admin)
+    actingAs($member)
         ->delete(route('workspaces.destroy', $workspace->id))
         ->assertForbidden();
 });
@@ -88,8 +85,8 @@ test('recycle bin requires workspace membership', function () {
     $workspace = Workspace::create([
         'name' => 'Recycle Bin Guard',
         'color' => '#0891B2',
-        'owner_id' => $owner->id,
     ]);
+    $workspace->addMember($owner, 'admin');
 
     actingAs($stranger)
         ->get(route('workspaces.recycle-bin.index', $workspace->id))
@@ -103,8 +100,8 @@ test('cannot attach label from different workspace to task', function () {
     $secondaryWorkspace = Workspace::create([
         'name' => 'Secondary Workspace',
         'color' => '#DC2626',
-        'owner_id' => $owner->id,
     ]);
+    $secondaryWorkspace->addMember($owner, 'admin');
 
     $foreignLabel = Label::create([
         'workspace_id' => $secondaryWorkspace->id,
@@ -159,8 +156,8 @@ test('cannot create folder using parent from another space', function () {
         'name' => 'Folder Scope Guard',
         'description' => 'Folder Scope Guard description',
         'color' => '#16A34A',
-        'owner_id' => $owner->id,
     ]);
+    $workspace->addMember($owner, 'admin');
 
     $spaceA = Space::create([
         'workspace_id' => $workspace->id,
@@ -200,12 +197,9 @@ test('workspace member without manage permission cannot create folder', function
         'name' => 'Folder Permission Guard',
         'description' => 'Folder Permission Guard description',
         'color' => '#9333EA',
-        'owner_id' => $owner->id,
     ]);
-
-    $workspace->members()->syncWithoutDetaching([
-        $member->id => ['role' => 'member'],
-    ]);
+    $workspace->addMember($owner, 'admin');
+    $workspace->addMember($member, 'member');
 
     $space = Space::create([
         'workspace_id' => $workspace->id,

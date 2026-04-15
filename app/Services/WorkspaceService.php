@@ -36,9 +36,11 @@ class WorkspaceService
                 'name' => $data['name'],
                 'slug' => Str::slug($data['name']),
                 'color' => $data['color'] ?? '#7C3AED',
-                'owner_id' => $owner->id,
                 'is_personal' => $data['is_personal'] ?? false,
             ]);
+
+            // Creator is always the first admin
+            $workspace->addMember($owner, 'admin');
 
             Activity::log($workspace, $owner, $workspace, 'created', [
                 'name' => $workspace->name,

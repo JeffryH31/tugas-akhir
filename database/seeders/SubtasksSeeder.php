@@ -13,10 +13,10 @@ class SubtasksSeeder extends Seeder
     public function run(): void
     {
         $sasya = $this->demoUser('admin@example.com');
-        $andi = $this->demoUser('andi@example.com');
-        $dian = $this->demoUser('dian@example.com');
-        $budi = $this->demoUser('budi@example.com');
-        $rina = $this->demoUser('rina@example.com');
+        $andi = $this->demoUser('kevin@example.com');
+        $dian = $this->demoUser('christopher@example.com');
+        $budi = $this->demoUser('marvel@example.com');
+        $rina = $this->demoUser('devin@example.com');
 
         $invTask = $this->demoTask('Sistem Manajemen Inventory');
         $iS1 = $this->createSubtask(['name' => 'Desain database inventory', 'task_id' => $invTask->id, 'status_id' => $this->demoStatus('Manufacturing', 'Done')->id, 'priority_level' => 2, 'time_estimate' => 180, 'position' => 0, 'created_by' => $budi->id, 'sprint_id' => $this->demoSprint('MFG Sprint 1 — ERP Foundation')->id, 'start_date' => now()->subWeeks(4), 'due_date' => now()->subWeeks(4)->addDay(), 'completed_at' => now()->subWeeks(4)->addDay()], [$budi->id], ['Documentation']);

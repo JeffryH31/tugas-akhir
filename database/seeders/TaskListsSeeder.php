@@ -13,10 +13,10 @@ class TaskListsSeeder extends Seeder
     public function run(): void
     {
         $sasya = $this->demoUser('admin@example.com');
-        $andi = $this->demoUser('andi@example.com');
-        $dian = $this->demoUser('dian@example.com');
-        $budi = $this->demoUser('budi@example.com');
-        $rina = $this->demoUser('rina@example.com');
+        $andi = $this->demoUser('kevin@example.com');
+        $dian = $this->demoUser('christopher@example.com');
+        $budi = $this->demoUser('marvel@example.com');
+        $rina = $this->demoUser('devin@example.com');
 
         $lists = [
             ['name' => 'Inventory Module', 'space' => 'Manufacturing', 'folder' => 'ERP System', 'position' => 0, 'created_by' => $budi->id, 'status' => ['Manufacturing', 'In Progress'], 'members' => [[$budi, 'project_owner'], [$sasya, 'project_manager'], [$dian, 'development_team'], [$rina, 'development_team']]],

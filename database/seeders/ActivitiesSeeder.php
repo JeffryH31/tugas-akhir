@@ -14,9 +14,9 @@ class ActivitiesSeeder extends Seeder
     {
         $workspace = $this->demoWorkspace();
         $sasya = $this->demoUser('admin@example.com');
-        $andi = $this->demoUser('andi@example.com');
-        $dian = $this->demoUser('dian@example.com');
-        $budi = $this->demoUser('budi@example.com');
+        $andi = $this->demoUser('kevin@example.com');
+        $dian = $this->demoUser('christopher@example.com');
+        $budi = $this->demoUser('marvel@example.com');
 
         $activities = [
             [$sasya, $this->demoTask('Sistem Manajemen Inventory'), 'created', ['name' => 'Sistem Manajemen Inventory'], now()->subWeeks(4)],

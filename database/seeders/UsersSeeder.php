@@ -13,11 +13,11 @@ class UsersSeeder extends Seeder
         $password = Hash::make('password');
 
         $users = [
-            ['name' => 'Sasya Rahma',    'email' => 'admin@example.com', 'hourly_rate' => 100000],
-            ['name' => 'Andi Fullstack', 'email' => 'andi@example.com',  'hourly_rate' => 44000],
-            ['name' => 'Dian Frontend',  'email' => 'dian@example.com',  'hourly_rate' => 50000],
-            ['name' => 'Budi Backend',   'email' => 'budi@example.com',  'hourly_rate' => 50000],
-            ['name' => 'Rina QA',        'email' => 'rina@example.com',  'hourly_rate' => 40000],
+            ['name' => 'Jeff',        'email' => 'admin@example.com', 'hourly_rate' => 100000],
+            ['name' => 'Kevin',       'email' => 'kevin@example.com',  'hourly_rate' => 44000],
+            ['name' => 'Christopher', 'email' => 'christopher@example.com',  'hourly_rate' => 50000],
+            ['name' => 'Marvel',      'email' => 'marvel@example.com',  'hourly_rate' => 50000],
+            ['name' => 'Devin',       'email' => 'devin@example.com',  'hourly_rate' => 40000],
         ];
 
         foreach ($users as $data) {

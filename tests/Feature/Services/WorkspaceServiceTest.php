@@ -19,7 +19,7 @@ test('create workspace', function () {
 
     expect($workspace)->toBeInstanceOf(Workspace::class);
     expect($workspace->name)->toBe('My Workspace');
-    expect($workspace->owner_id)->toBe($this->owner->id);
+    expect($workspace->members()->where('user_id', $this->owner->id)->wherePivot('role', 'admin')->exists())->toBeTrue();
 });
 
 test('create workspace logs created activity', function () {

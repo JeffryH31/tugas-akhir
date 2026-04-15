@@ -470,10 +470,7 @@ class TaskService
     public function getMyTasks(User $user, array $filters = []): Collection
     {
         $query = Task::query()
-            ->where(function ($q) use ($user) {
-                $q->whereHas('assignees', fn($assignees) => $assignees->where('users.id', $user->id))
-                    ->orWhereHas('subtasks.assignees', fn($assignees) => $assignees->where('users.id', $user->id));
-            })
+            ->whereHas('subtasks.assignees', fn($assignees) => $assignees->where('users.id', $user->id))
             ->with(['taskList.space.workspace', 'status', 'labels', 'assignees', 'subtasks.assignees'])
             ->orderBy('position');
 

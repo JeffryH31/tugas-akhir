@@ -19,18 +19,18 @@ class DatabaseSeeder extends Seeder
     {
         $this->call([
             UsersSeeder::class,
-            // WorkspacesSeeder::class,
-            // LabelsSeeder::class,
-            // SpacesSeeder::class,
-            // StatusesSeeder::class,
-            // FoldersSeeder::class,
-            // TaskListsSeeder::class,
-            // TasksSeeder::class,
-            // SubtasksSeeder::class,
-            // TimeEntriesSeeder::class,
-            // CommentsSeeder::class,
-            // ActivitiesSeeder::class,
-            // ViewsSeeder::class,
+            WorkspacesSeeder::class,
+            LabelsSeeder::class,
+            SpacesSeeder::class,
+            StatusesSeeder::class,
+            FoldersSeeder::class,
+            TaskListsSeeder::class,
+            TasksSeeder::class,
+            SubtasksSeeder::class,
+            TimeEntriesSeeder::class,
+            CommentsSeeder::class,
+            ActivitiesSeeder::class,
+            ViewsSeeder::class,
         ]);
 
         $this->command->info('');
@@ -50,11 +50,11 @@ class DatabaseSeeder extends Seeder
         $this->command->info('Views:        ' . View::count());
         $this->command->info('');
         $this->command->info('Login (all password: "password"):');
-        $this->command->info('  admin@example.com  — Sasya Rahma (IT Manager / Owner)');
-        $this->command->info('  andi@example.com   — Andi Fullstack');
-        $this->command->info('  dian@example.com   — Dian Frontend');
-        $this->command->info('  budi@example.com   — Budi Backend');
-        $this->command->info('  rina@example.com   — Rina QA');
+        $this->command->info('  admin@example.com  — Jeff (IT Manager / Admin)');
+        $this->command->info('  kevin@example.com   — Kevin');
+        $this->command->info('  christopher@example.com   — Christopher');
+        $this->command->info('  marvel@example.com   — Marvel');
+        $this->command->info('  devin@example.com   — Devin');
         $this->command->info('');
         $this->command->info('CPM Demo: Open "Sistem Manajemen Inventory" task -> Gantt view');
     }

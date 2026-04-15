@@ -17,10 +17,11 @@ import { useSnackbar } from '@/composables/useSnackbar';
 const props = defineProps({
     workspaces: Array,
     activeWorkspace: Object,
-    myTasks: Array,
-    overdueTasks: Array,
+    mySubtasks: Array,
+    overdueSubtasks: Array,
     runningTimer: Object,
     timeStats: Object,
+    recentActivity: Array,
 });
 
 // Active tab for tasks
@@ -30,29 +31,33 @@ const page = usePage();
 
 const currentUserId = computed(() => page.props?.auth?.user?.id || null);
 
-const getAssignedSubtaskId = (task) => {
-    if (!currentUserId.value || !Array.isArray(task?.subtasks)) return null;
-    const assigned = task.subtasks.find((subtask) =>
-        Array.isArray(subtask?.assignees) && subtask.assignees.some((assignee) => assignee.id === currentUserId.value)
-    );
+// Map a subtask to a task-like object for TaskCard rendering
+const mapSubtaskToCard = (subtask) => ({
+    id: subtask.id,
+    name: subtask.name,
+    status: subtask.status,
+    labels: subtask.labels || [],
+    priority_level: subtask.priority_level,
+    due_date: subtask.due_date,
+    time_spent: subtask.time_spent,
+    completed_at: subtask.completed_at,
+    assignees: subtask.assignees || [],
+    task_list: subtask.task?.task_list,
+    task_list_id: subtask.task?.task_list_id,
+    // Extra context for navigation
+    _subtask_id: subtask.id,
+    _task: subtask.task,
+});
 
-    return assigned?.id || null;
-};
-
-const buildTaskDeepLink = (task) => {
+const buildSubtaskDeepLink = (cardItem) => {
+    const task = cardItem._task;
+    if (!task) return '#';
     const workspaceId = task.task_list?.space?.workspace_id || props.activeWorkspace?.id;
     const spaceId = task.task_list?.space_id;
     const listId = task.task_list_id;
-    const taskId = task.id;
 
     const baseUrl = route('lists.show', [workspaceId, spaceId, listId]);
-    const assignedSubtaskId = getAssignedSubtaskId(task);
-
-    if (assignedSubtaskId) {
-        return `${baseUrl}?task_id=${taskId}&open_subtask_id=${assignedSubtaskId}`;
-    }
-
-    return `${baseUrl}?open_task_id=${taskId}`;
+    return `${baseUrl}?task_id=${task.id}&open_subtask_id=${cardItem._subtask_id}`;
 };
 
 // Format duration (input is in minutes from backend)
@@ -137,17 +142,18 @@ const createQuickTask = () => {
     );
 };
 
-// Recent tasks (limit to 10)
-const recentTasks = computed(() => props.myTasks?.slice(0, 10) || []);
+// Subtask cards (limit to 15)
+const recentSubtasks = computed(() => (props.mySubtasks || []).slice(0, 15).map(mapSubtaskToCard));
+const overdueCards = computed(() => (props.overdueSubtasks || []).map(mapSubtaskToCard));
 
-// Handle task complete — tasks don't support completion (only subtasks do)
+// Handle task complete — not supported from dashboard card
 const handleTaskComplete = (task) => {
-    showSnackbar('Tasks cannot be completed directly. Complete subtasks instead.', 'info');
+    showSnackbar('Open the subtask to change its status.', 'info');
 };
 
 // Handle task open
-const handleTaskOpen = (task) => {
-    router.visit(buildTaskDeepLink(task));
+const handleTaskOpen = (cardItem) => {
+    router.visit(buildSubtaskDeepLink(cardItem));
 };
 
 // Navigate to the task containing the running timer's subtask
@@ -165,27 +171,6 @@ const goToTimerTask = () => {
     // Open subtask board and auto-open running subtask detail panel
     const url = `${baseUrl}?task_id=${t.id}&open_subtask_id=${subtask?.id}`;
     router.visit(url);
-};
-
-// Create workspace dialog
-const showCreateWorkspace = ref(false);
-const newWorkspaceName = ref('');
-
-const createWorkspace = () => {
-    if (!newWorkspaceName.value.trim() || isProcessing.value) return;
-    isProcessing.value = true;
-    router.post(route('workspaces.store'), {
-        name: newWorkspaceName.value.trim(),
-        color: '#3B82F6',
-    }, {
-        preserveScroll: true,
-        onSuccess: () => {
-            newWorkspaceName.value = '';
-            showCreateWorkspace.value = false;
-            router.reload({ only: ['workspaces', 'activeWorkspace'] });
-        },
-        onFinish: () => { isProcessing.value = false; }
-    });
 };
 
 // Navigate to first space or workspaces page
@@ -215,6 +200,56 @@ const openCreateSpace = () => {
         showSnackbar('Please use the sidebar to create a space.', 'info');
     }
 };
+
+// Recent activity helpers
+const activityIcon = (action) => {
+    const icons = {
+        created: 'mdi-plus-circle-outline',
+        updated: 'mdi-pencil-outline',
+        deleted: 'mdi-trash-can-outline',
+        completed: 'mdi-check-circle-outline',
+        reopened: 'mdi-restore',
+        assigned: 'mdi-account-plus-outline',
+        unassigned: 'mdi-account-minus-outline',
+        commented: 'mdi-comment-outline',
+        comment_resolved: 'mdi-comment-check-outline',
+        time_logged: 'mdi-clock-outline',
+        timer_started: 'mdi-play-circle-outline',
+        timer_stopped: 'mdi-stop-circle-outline',
+        status_changed: 'mdi-swap-horizontal',
+        priority_changed: 'mdi-flag-outline',
+        archived: 'mdi-archive-outline',
+        label_added: 'mdi-tag-outline',
+        label_removed: 'mdi-tag-off-outline',
+        duplicated: 'mdi-content-copy',
+    };
+    return icons[action] ?? 'mdi-information-outline';
+};
+
+const activityColor = (action) => {
+    const colors = {
+        completed: 'success',
+        created: 'primary',
+        deleted: 'error',
+        timer_started: 'teal',
+        timer_stopped: 'blue-grey',
+        time_logged: 'blue',
+        commented: 'indigo',
+        comment_resolved: 'success',
+        status_changed: 'warning',
+        priority_changed: 'orange',
+    };
+    return colors[action] ?? 'grey';
+};
+
+const fmtRelative = (ts) => {
+    if (!ts) return '';
+    const diff = Math.floor((Date.now() - new Date(ts).getTime()) / 1000);
+    if (diff < 60) return 'just now';
+    if (diff < 3600) return `${Math.floor(diff / 60)}m ago`;
+    if (diff < 86400) return `${Math.floor(diff / 3600)}h ago`;
+    return `${Math.floor(diff / 86400)}d ago`;
+};
 </script>
 
 <template>
@@ -241,10 +276,10 @@ const openCreateSpace = () => {
                 <!-- Left Column -->
                 <div class="dashboard-main">
                     <!-- Overdue Alert -->
-                    <v-alert v-if="overdueTasks?.length" type="warning" variant="tonal" class="mb-4" closable>
-                        <v-alert-title>{{ overdueTasks.length }} Overdue Task{{ overdueTasks.length > 1 ? 's' : ''
-                            }}</v-alert-title>
-                        You have tasks that need your attention.
+                    <v-alert v-if="overdueCards?.length" type="warning" variant="tonal" class="mb-4" closable>
+                        <v-alert-title>{{ overdueCards.length }} Overdue Subtask{{ overdueCards.length > 1 ? 's' : ''
+                        }}</v-alert-title>
+                        You have subtasks that need your attention.
                     </v-alert>
 
                     <!-- Quick Create -->
@@ -309,35 +344,39 @@ const openCreateSpace = () => {
                             <v-tab value="my-tasks">Assigned to me</v-tab>
                             <v-tab value="overdue">
                                 Overdue
-                                <v-badge v-if="overdueTasks?.length" :content="overdueTasks.length" color="error" inline
+                                <v-badge v-if="overdueCards?.length" :content="overdueCards.length" color="error" inline
                                     class="ml-1" />
                             </v-tab>
                         </v-tabs>
 
                         <v-tabs-window v-model="activeTaskTab">
                             <v-tabs-window-item value="my-tasks">
-                                <div v-if="!recentTasks.length" class="pa-8 text-center text-gray-500">
+                                <div v-if="!recentSubtasks.length" class="pa-8 text-center text-gray-500">
                                     <v-icon size="48" class="mb-2">mdi-checkbox-marked-circle-outline</v-icon>
-                                    <div>No tasks assigned to you</div>
+                                    <div>No subtasks assigned to you</div>
                                 </div>
-                                <div v-else class="pa-2">
+                                <div v-else class="pa-2 overflow-y-auto" style="max-height: 600px;">
                                     <div class="space-y-2">
-                                        <TaskCard v-for="task in recentTasks" :key="task.id" :task="task" show-list
-                                            :show-checkbox="false" @complete="handleTaskComplete"
+                                        <TaskCard v-for="item in recentSubtasks" :key="item._subtask_id" :task="item" show-list
+                                            :show-checkbox="false"
+                                            :parent-task-name="item._task?.name"
+                                            @complete="handleTaskComplete"
                                             @open-detail="handleTaskOpen" />
                                     </div>
                                 </div>
                             </v-tabs-window-item>
 
                             <v-tabs-window-item value="overdue">
-                                <div v-if="!overdueTasks?.length" class="pa-8 text-center text-gray-500">
+                                <div v-if="!overdueCards?.length" class="pa-8 text-center text-gray-500">
                                     <v-icon size="48" class="mb-2">mdi-check-circle</v-icon>
-                                    <div>No overdue tasks!</div>
+                                    <div>No overdue subtasks!</div>
                                 </div>
-                                <div v-else class="pa-2">
+                                <div v-else class="pa-2 overflow-y-auto" style="max-height: 600px;">
                                     <div class="space-y-2">
-                                        <TaskCard v-for="task in overdueTasks" :key="task.id" :task="task" show-list
-                                            :show-checkbox="false" @complete="handleTaskComplete"
+                                        <TaskCard v-for="item in overdueCards" :key="item._subtask_id" :task="item" show-list
+                                            :show-checkbox="false"
+                                            :parent-task-name="item._task?.name"
+                                            @complete="handleTaskComplete"
                                             @open-detail="handleTaskOpen" />
                                     </div>
                                 </div>
@@ -390,52 +429,54 @@ const openCreateSpace = () => {
                         </v-card-text>
                     </v-card>
 
-                    <!-- Workspaces -->
+                    <!-- Recent Activity -->
                     <v-card variant="outlined" rounded="lg" class="mb-4">
-                        <v-card-title class="flex items-center justify-between">
-                            <span>Workspaces</span>
-                            <v-btn icon variant="text" size="x-small" @click="showCreateWorkspace = true">
-                                <v-icon size="18">mdi-plus</v-icon>
-                            </v-btn>
-                        </v-card-title>
-                        <v-card-text class="pa-2">
-                            <v-list density="compact" nav>
-                                <v-list-item v-for="workspace in workspaces" :key="workspace.id"
-                                    :active="workspace.id === activeWorkspace?.id" rounded="lg"
-                                    @click="router.post(route('workspaces.switch', workspace.id))">
-                                    <template v-slot:prepend>
-                                        <div class="w-8 h-8 rounded-lg flex items-center justify-center text-white font-bold text-sm mr-3"
-                                            :style="{ backgroundColor: workspace.color || '#6366F1' }">
-                                            {{ workspace.name?.charAt(0)?.toUpperCase() }}
+                        <div class="flex items-center gap-1.5 px-3 pt-3 pb-2">
+                            <v-icon size="16" color="primary">mdi-timeline-clock-outline</v-icon>
+                            <span class="text-sm font-semibold">Recent Activity</span>
+                        </div>
+
+                        <div v-if="!recentActivity?.length" class="pa-6 text-center text-gray-500">
+                            <v-icon size="36" class="mb-2">mdi-timeline-outline</v-icon>
+                            <div class="text-sm">No activity yet</div>
+                        </div>
+
+                        <div v-else class="overflow-y-auto" style="max-height: 320px;">
+                            <template v-for="(a, idx) in recentActivity" :key="a.id">
+                                <div class="flex items-start gap-2 px-3 py-2">
+                                    <v-avatar :color="a.user?.avatar_color || 'primary'" size="28"
+                                        class="flex-shrink-0 mt-0.5">
+                                        <img v-if="a.user?.profile_photo_url" :src="a.user.profile_photo_url" />
+                                        <span v-else class="text-[9px] font-bold">{{ a.user?.initials ?? '?' }}</span>
+                                    </v-avatar>
+
+                                    <div class="flex-1 min-w-0">
+                                        <div class="text-xs leading-tight">
+                                            <span class="font-medium text-white">{{ a.user?.name ?? 'Someone' }}</span>
+                                            <span class="text-gray-400 ml-1">{{ a.description }}</span>
                                         </div>
-                                    </template>
-                                    <v-list-item-title>{{ workspace.name }}</v-list-item-title>
-                                    <v-list-item-subtitle>{{ workspace.spaces_count || 0 }}
-                                        spaces</v-list-item-subtitle>
-                                </v-list-item>
-                            </v-list>
-                        </v-card-text>
+                                        <div v-if="a.properties?.name"
+                                            class="text-[10px] text-gray-500 truncate mt-0.5">
+                                            {{ a.properties.name }}
+                                        </div>
+                                    </div>
+
+                                    <div class="flex flex-col items-end gap-1 flex-shrink-0">
+                                        <v-icon :color="activityColor(a.action)" size="14">{{ activityIcon(a.action)
+                                            }}</v-icon>
+                                        <span class="text-[9px] text-gray-500 whitespace-nowrap">{{
+                                            fmtRelative(a.created_at) }}</span>
+                                    </div>
+                                </div>
+                                <v-divider v-if="idx < recentActivity.length - 1" class="opacity-30" />
+                            </template>
+                        </div>
                     </v-card>
 
                 </div>
             </div>
         </div>
 
-        <!-- Create Workspace Dialog -->
-        <v-dialog v-model="showCreateWorkspace" max-width="400">
-            <v-card>
-                <v-card-title>Create Workspace</v-card-title>
-                <v-card-text>
-                    <v-text-field v-model="newWorkspaceName" label="Workspace Name" placeholder="e.g., My Company"
-                        variant="outlined" autofocus @keydown.enter="createWorkspace" />
-                </v-card-text>
-                <v-card-actions>
-                    <v-spacer />
-                    <v-btn variant="text" @click="showCreateWorkspace = false">Cancel</v-btn>
-                    <v-btn color="primary" :loading="isProcessing" @click="createWorkspace">Create</v-btn>
-                </v-card-actions>
-            </v-card>
-        </v-dialog>
     </MainLayout>
 </template>
 
