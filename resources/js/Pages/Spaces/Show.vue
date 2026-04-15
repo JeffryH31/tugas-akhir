@@ -12,6 +12,8 @@ const props = defineProps({
     space: Object,
     statistics: Object,
     productsByStatus: Object,
+    canManageSpace: Boolean,
+    canManageWorkspace: Boolean,
 });
 
 // Create folder dialog
@@ -470,11 +472,13 @@ const boardDrop = (event, toStatusId) => {
                                 <v-list-item prepend-icon="mdi-shield-home-outline" title="Space Access"
                                     @click="router.visit(route('spaces.settings', [workspace.id, space.id]))"
                                     class="px-4" />
-                                <v-list-item prepend-icon="mdi-pencil-outline" title="Edit Space" @click="openEditSpace"
-                                    class="px-4" />
-                                <v-divider />
-                                <v-list-item prepend-icon="mdi-delete-outline" title="Delete Space"
-                                    class="text-error px-4" @click="showDeleteSpace = true" />
+                                <v-list-item v-if="canManageSpace" prepend-icon="mdi-pencil-outline" title="Edit Space"
+                                    @click="openEditSpace" class="px-4" />
+                                <template v-if="canManageWorkspace">
+                                    <v-divider />
+                                    <v-list-item prepend-icon="mdi-delete-outline" title="Delete Space"
+                                        class="text-error px-4" @click="showDeleteSpace = true" />
+                                </template>
                             </v-list>
                         </v-card>
                     </v-menu>
@@ -511,17 +515,6 @@ const boardDrop = (event, toStatusId) => {
 
             <!-- Actions -->
             <div class="actions-row">
-                <v-btn color="primary" @click="showCreateList = true">
-                    <v-icon start>mdi-plus</v-icon>
-                    New Product
-                </v-btn>
-                <v-btn variant="outlined" @click="showCreateFolder = true">
-                    <v-icon start>mdi-folder-plus-outline</v-icon>
-                    New Folder
-                </v-btn>
-
-                <v-spacer />
-
                 <v-btn-toggle v-model="viewMode" mandatory density="compact" variant="outlined" divided>
                     <v-btn value="hierarchy" size="small">
                         <v-icon start size="16">mdi-file-tree</v-icon>
@@ -532,20 +525,22 @@ const boardDrop = (event, toStatusId) => {
                         Board
                     </v-btn>
                 </v-btn-toggle>
-            </div>
 
-            <!-- Hierarchy Search -->
-            <div v-if="viewMode === 'hierarchy'" class="mb-3">
-                <v-text-field
-                    v-model="hierarchySearch"
-                    placeholder="Search products..."
-                    prepend-inner-icon="mdi-magnify"
-                    variant="outlined"
-                    density="compact"
-                    hide-details
-                    clearable
-                    style="max-width: 320px;"
-                />
+                <v-spacer />
+
+                <!-- Hierarchy Search -->
+                <v-text-field v-if="viewMode === 'hierarchy'" v-model="hierarchySearch"
+                    placeholder="Search products..." prepend-inner-icon="mdi-magnify" variant="outlined"
+                    density="compact" hide-details clearable style="max-width: 320px;" />
+
+                <v-btn v-if="canManageSpace" color="primary" @click="showCreateList = true">
+                    <v-icon start>mdi-plus</v-icon>
+                    New Product
+                </v-btn>
+                <v-btn v-if="canManageSpace" variant="outlined" @click="showCreateFolder = true">
+                    <v-icon start>mdi-folder-plus-outline</v-icon>
+                    New Folder
+                </v-btn>
             </div>
 
             <!-- Board View (Product Kanban) -->
@@ -553,8 +548,7 @@ const boardDrop = (event, toStatusId) => {
                 <div class="board-columns">
                     <div v-for="status in space?.statuses" :key="status.id" class="board-column"
                         :class="{ 'board-column--drag-over': boardDragOverStatus === status.id }"
-                        @dragover="boardDragOver($event, status.id)"
-                        @dragleave="boardDragLeave(status.id)"
+                        @dragover="boardDragOver($event, status.id)" @dragleave="boardDragLeave(status.id)"
                         @drop="boardDrop($event, status.id)">
                         <!-- Column Header -->
                         <div class="board-column__header">
@@ -573,8 +567,7 @@ const boardDrop = (event, toStatusId) => {
                                 <div v-for="element in (localProductsByStatus[status.id] || [])" :key="element.id"
                                     class="product-card"
                                     :class="{ 'product-card--dragging': boardDraggedItem?.element?.id === element.id }"
-                                    draggable="true"
-                                    @dragstart="boardDragStart($event, element, status.id)"
+                                    draggable="true" @dragstart="boardDragStart($event, element, status.id)"
                                     @dragend="boardDraggedItem = null"
                                     @click="router.visit(route('lists.show', [workspace.id, space.id, element.id]))">
                                     <div class="product-card__status-bar" :style="{ backgroundColor: status.color }" />
@@ -617,14 +610,16 @@ const boardDrop = (event, toStatusId) => {
                             <span class="text-gray-500 text-sm">({{ folder.lists?.length || 0 }} products)</span>
                         </div>
                         <div class="folder-actions">
-                            <v-btn icon variant="text" size="x-small"
+                            <v-btn v-if="canManageSpace" icon variant="text" size="x-small"
                                 @click.stop="selectedFolderId = folder.id; showCreateList = true">
                                 <v-icon size="16">mdi-plus</v-icon>
                             </v-btn>
-                            <v-btn icon variant="text" size="x-small" @click.stop="openEditFolder(folder)">
+                            <v-btn v-if="canManageSpace" icon variant="text" size="x-small"
+                                @click.stop="openEditFolder(folder)">
                                 <v-icon size="16">mdi-pencil</v-icon>
                             </v-btn>
-                            <v-btn icon variant="text" size="x-small" @click.stop="openDeleteFolder(folder)">
+                            <v-btn v-if="canManageSpace" icon variant="text" size="x-small"
+                                @click.stop="openDeleteFolder(folder)">
                                 <v-icon size="16" color="error">mdi-delete</v-icon>
                             </v-btn>
                         </div>
@@ -635,29 +630,35 @@ const boardDrop = (event, toStatusId) => {
                         'drag-over': draggedList !== null && dragOverFolder === folder.id
                     }" @dragover="handleDragOver($event, folder.id)" @dragleave="handleDragLeave($event, folder.id)"
                         @drop="handleDrop($event, folder.id)">
-                        <div v-for="list in folder.lists" :key="list.id" class="list-item" draggable="true"
+                        <div v-for="list in folder.lists" :key="list.id" class="list-item" :draggable="canManageSpace"
                             @dragstart="handleDragStart($event, list)"
                             @click="router.visit(route('lists.show', [workspace.id, space.id, list.id]))">
                             <div class="flex items-center gap-3">
-                                <v-icon size="18" class="drag-handle cursor-move" @click.stop>mdi-drag</v-icon>
+                                <v-icon v-if="canManageSpace" size="18" class="drag-handle cursor-move"
+                                    @click.stop>mdi-drag</v-icon>
                                 <v-icon size="18">mdi-package-variant-closed</v-icon>
                                 <span>{{ list.name }}</span>
                             </div>
                             <div class="list-meta">
                                 <span class="text-gray-500 text-sm">{{ list.tasks_count || 0 }} tasks</span>
-                                <v-btn icon variant="text" size="x-small" @click.stop="openMoveList(list)">
+                                <v-btn v-if="canManageSpace" icon variant="text" size="x-small"
+                                    @click.stop="openMoveList(list)">
                                     <v-icon size="16">mdi-folder-move-outline</v-icon>
                                 </v-btn>
-                                <v-btn icon variant="text" size="x-small" @click.stop="openEditList(list)">
+                                <v-btn v-if="canManageSpace" icon variant="text" size="x-small"
+                                    @click.stop="openEditList(list)">
                                     <v-icon size="16">mdi-pencil-outline</v-icon>
                                 </v-btn>
-                                <v-btn icon variant="text" size="x-small" @click.stop="openDeleteList(list)">
+                                <v-btn v-if="canManageSpace" icon variant="text" size="x-small"
+                                    @click.stop="openDeleteList(list)">
                                     <v-icon size="16" color="error">mdi-delete-outline</v-icon>
                                 </v-btn>
-                                <v-btn icon variant="text" size="x-small" @click.stop="duplicateList(list)">
+                                <v-btn v-if="canManageSpace" icon variant="text" size="x-small"
+                                    @click.stop="duplicateList(list)">
                                     <v-icon size="16">mdi-content-copy</v-icon>
                                 </v-btn>
-                                <v-btn icon variant="text" size="x-small" @click.stop="router.visit(route('lists.settings', [workspace.id, space.id, list.id]))">
+                                <v-btn icon variant="text" size="x-small"
+                                    @click.stop="router.visit(route('lists.settings', [workspace.id, space.id, list.id]))">
                                     <v-icon size="16">mdi-account-cog-outline</v-icon>
                                 </v-btn>
                             </div>
@@ -670,36 +671,41 @@ const boardDrop = (event, toStatusId) => {
                 </div>
 
                 <!-- Lists without folder -->
-                <div v-if="filteredListsWithoutFolder.length || filteredFolders.length" class="root-lists-zone"
-                    :class="{
-                        'drag-over': draggedList !== null && dragOverFolder === null,
-                        'root-lists-zone--empty': !space?.lists_without_folder?.length
-                    }" @dragover="handleDragOver($event, null)" @dragleave="handleDragLeave($event, null)"
+                <div v-if="filteredListsWithoutFolder.length || filteredFolders.length" class="root-lists-zone" :class="{
+                    'drag-over': draggedList !== null && dragOverFolder === null,
+                    'root-lists-zone--empty': !space?.lists_without_folder?.length
+                }" @dragover="handleDragOver($event, null)" @dragleave="handleDragLeave($event, null)"
                     @drop="handleDrop($event, null)">
                     <div v-for="list in filteredListsWithoutFolder" :key="list.id"
-                        class="list-item list-item--standalone" draggable="true"
+                        class="list-item list-item--standalone" :draggable="canManageSpace"
                         @dragstart="handleDragStart($event, list)"
                         @click="router.visit(route('lists.show', [workspace.id, space.id, list.id]))">
                         <div class="flex items-center gap-3">
-                            <v-icon size="18" class="drag-handle cursor-move" @click.stop>mdi-drag</v-icon>
+                            <v-icon v-if="canManageSpace" size="18" class="drag-handle cursor-move"
+                                @click.stop>mdi-drag</v-icon>
                             <v-icon size="18">mdi-package-variant-closed</v-icon>
                             <span class="font-medium">{{ list.name }}</span>
                         </div>
                         <div class="list-meta">
                             <span class="text-gray-500 text-sm">{{ list.tasks_count || 0 }} tasks</span>
-                            <v-btn icon variant="text" size="x-small" @click.stop="openMoveList(list)">
+                            <v-btn v-if="canManageSpace" icon variant="text" size="x-small"
+                                @click.stop="openMoveList(list)">
                                 <v-icon size="16">mdi-folder-move-outline</v-icon>
                             </v-btn>
-                            <v-btn icon variant="text" size="x-small" @click.stop="openEditList(list)">
+                            <v-btn v-if="canManageSpace" icon variant="text" size="x-small"
+                                @click.stop="openEditList(list)">
                                 <v-icon size="16">mdi-pencil-outline</v-icon>
                             </v-btn>
-                            <v-btn icon variant="text" size="x-small" @click.stop="openDeleteList(list)">
+                            <v-btn v-if="canManageSpace" icon variant="text" size="x-small"
+                                @click.stop="openDeleteList(list)">
                                 <v-icon size="16" color="error">mdi-delete-outline</v-icon>
                             </v-btn>
-                            <v-btn icon variant="text" size="x-small" @click.stop="duplicateList(list)">
+                            <v-btn v-if="canManageSpace" icon variant="text" size="x-small"
+                                @click.stop="duplicateList(list)">
                                 <v-icon size="16">mdi-content-copy</v-icon>
                             </v-btn>
-                            <v-btn icon variant="text" size="x-small" @click.stop="router.visit(route('lists.settings', [workspace.id, space.id, list.id]))">
+                            <v-btn icon variant="text" size="x-small"
+                                @click.stop="router.visit(route('lists.settings', [workspace.id, space.id, list.id]))">
                                 <v-icon size="16">mdi-account-cog-outline</v-icon>
                             </v-btn>
                             <v-icon size="16" color="grey">mdi-chevron-right</v-icon>

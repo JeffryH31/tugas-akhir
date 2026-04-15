@@ -92,50 +92,44 @@ const removeMember = (member) => {
 </script>
 
 <template>
+
     <Head :title="`${space?.name} Space Access`" />
 
     <MainLayout :title="`${space?.name} Access Settings`">
         <div class="settings-page">
             <div class="settings-header">
                 <div class="d-flex align-center ga-2 mb-2">
-                    <v-btn variant="text" size="small" @click="router.visit(route('spaces.show', [workspace.id, space.id]))">
+                    <v-btn variant="text" size="small"
+                        @click="router.visit(route('spaces.show', [workspace.id, space.id]))">
                         <v-icon start size="16">mdi-arrow-left</v-icon>
                         Back to Space
                     </v-btn>
-                    <v-btn variant="text" size="small" @click="router.visit(route('workspaces.settings', workspace.id))">
+                    <v-btn variant="text" size="small"
+                        @click="router.visit(route('workspaces.settings', workspace.id))">
                         <v-icon start size="16">mdi-cog-outline</v-icon>
                         Workspace Settings
                     </v-btn>
                 </div>
                 <h1 class="text-2xl font-bold">Space Access Settings</h1>
                 <p class="text-gray-500 mt-1">Manage membership and roles for {{ space?.name }}</p>
+                <div class="d-flex align-center ga-4 mt-3">
+                    <div class="d-flex align-center ga-1 text-medium-emphasis">
+                        <v-icon size="15">mdi-account-multiple-outline</v-icon>
+                        <span class="text-sm">{{ members?.length || 0 }} members</span>
+                    </div>
+                    <span class="text-gray-600">·</span>
+                    <div class="d-flex align-center ga-1 text-medium-emphasis">
+                        <v-icon size="15">mdi-view-grid-outline</v-icon>
+                        <span class="text-sm">{{ products?.length || 0 }} products</span>
+                    </div>
+                </div>
             </div>
-
-            <v-card variant="outlined" rounded="lg" class="mt-6">
-                <v-card-text class="d-flex flex-wrap align-center ga-2">
-                    <v-chip :color="space?.is_private ? 'warning' : 'success'" variant="tonal" size="small">
-                        {{ space?.is_private ? 'Private Space' : 'Public Space' }}
-                    </v-chip>
-                    <v-chip color="primary" variant="tonal" size="small">
-                        {{ members?.length || 0 }} members
-                    </v-chip>
-                    <v-chip color="info" variant="tonal" size="small">
-                        {{ products?.length || 0 }} products
-                    </v-chip>
-                </v-card-text>
-            </v-card>
 
             <v-card variant="outlined" rounded="lg" class="mt-6">
                 <v-card-title class="d-flex align-center justify-space-between">
                     <span>Space Members</span>
-                    <v-btn
-                        v-if="canManageMembers"
-                        color="warning"
-                        size="small"
-                        variant="tonal"
-                        :disabled="!availableUsers?.length"
-                        @click="openAddMemberDialog"
-                    >
+                    <v-btn v-if="canManageMembers" color="warning" size="small" variant="tonal"
+                        :disabled="!availableUsers?.length" @click="openAddMemberDialog">
                         <v-icon start size="16">mdi-account-plus</v-icon>
                         Add Space Member
                     </v-btn>
@@ -165,23 +159,15 @@ const removeMember = (member) => {
                             <td>
                                 <v-menu v-if="canManageMembers && member.role !== 'owner'">
                                     <template #activator="{ props: menuProps }">
-                                        <v-chip
-                                            v-bind="menuProps"
-                                            :color="getSpaceRoleBadgeColor(member.role)"
-                                            size="small"
-                                            class="cursor-pointer"
-                                        >
+                                        <v-chip v-bind="menuProps" :color="getSpaceRoleBadgeColor(member.role)"
+                                            size="small" class="cursor-pointer">
                                             {{ member.role?.toUpperCase() }}
                                         </v-chip>
                                     </template>
                                     <v-card color="surface">
                                         <v-list density="compact">
-                                            <v-list-item
-                                                v-for="role in spaceRoleItems"
-                                                :key="role.value"
-                                                :title="role.title"
-                                                @click="changeMemberRole(member, role.value)"
-                                            />
+                                            <v-list-item v-for="role in spaceRoleItems" :key="role.value"
+                                                :title="role.title" @click="changeMemberRole(member, role.value)" />
                                         </v-list>
                                     </v-card>
                                 </v-menu>
@@ -190,15 +176,8 @@ const removeMember = (member) => {
                                 </v-chip>
                             </td>
                             <td>
-                                <v-btn
-                                    v-if="canManageMembers"
-                                    icon
-                                    variant="text"
-                                    size="small"
-                                    color="error"
-                                    :disabled="member.role === 'owner'"
-                                    @click="removeMember(member)"
-                                >
+                                <v-btn v-if="canManageMembers" icon variant="text" size="small" color="error"
+                                    :disabled="member.role === 'owner'" @click="removeMember(member)">
                                     <v-icon size="18">mdi-delete</v-icon>
                                 </v-btn>
                             </td>
@@ -216,19 +195,15 @@ const removeMember = (member) => {
                 <v-card-title>Product Access Shortcuts</v-card-title>
                 <v-divider />
                 <v-list>
-                    <v-list-item
-                        v-for="product in products"
-                        :key="product.id"
-                        :title="product.name"
-                        subtitle="Active product"
-                        prepend-icon="mdi-view-grid-outline"
-                        @click="router.visit(route('lists.settings', [workspace.id, space.id, product.id]))"
-                    >
+                    <v-list-item v-for="product in products" :key="product.id" :title="product.name"
+                        subtitle="Active product" prepend-icon="mdi-view-grid-outline"
+                        @click="router.visit(route('lists.settings', [workspace.id, space.id, product.id]))">
                         <template #append>
                             <v-icon>mdi-chevron-right</v-icon>
                         </template>
                     </v-list-item>
-                    <v-list-item v-if="!products?.length" title="No products in this space yet" prepend-icon="mdi-information-outline" />
+                    <v-list-item v-if="!products?.length" title="No products in this space yet"
+                        prepend-icon="mdi-information-outline" />
                 </v-list>
             </v-card>
         </div>
@@ -241,15 +216,8 @@ const removeMember = (member) => {
                         All workspace members are already assigned to this space.
                     </v-alert>
 
-                    <v-select
-                        v-model="selectedUserId"
-                        :items="availableUsers"
-                        item-title="name"
-                        item-value="id"
-                        label="Select Workspace Member"
-                        variant="outlined"
-                        class="mb-4"
-                    >
+                    <v-select v-model="selectedUserId" :items="availableUsers" item-title="name" item-value="id"
+                        label="Select Workspace Member" variant="outlined" class="mb-4">
                         <template #item="{ props: itemProps, item }">
                             <v-list-item v-bind="itemProps">
                                 <template #prepend>
@@ -263,23 +231,13 @@ const removeMember = (member) => {
                         </template>
                     </v-select>
 
-                    <v-select
-                        v-model="selectedRole"
-                        :items="spaceRoleItems"
-                        item-title="title"
-                        item-value="value"
-                        label="Space Role"
-                        variant="outlined"
-                    />
+                    <v-select v-model="selectedRole" :items="spaceRoleItems" item-title="title" item-value="value"
+                        label="Space Role" variant="outlined" />
                 </v-card-text>
                 <v-card-actions>
                     <v-spacer />
                     <v-btn variant="text" @click="showAddMemberDialog = false">Cancel</v-btn>
-                    <v-btn
-                        color="warning"
-                        :disabled="!selectedUserId || !availableUsers?.length"
-                        @click="addMember"
-                    >
+                    <v-btn color="warning" :disabled="!selectedUserId || !availableUsers?.length" @click="addMember">
                         Add Member
                     </v-btn>
                 </v-card-actions>

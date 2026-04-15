@@ -31,6 +31,11 @@ const props = defineProps({
     statuses: Array,
     sprints: Array,
     parentTask: Object,
+    canManageProduct: Boolean,
+    canDeleteProduct: Boolean,
+    canManageTaskStructure: Boolean,
+    canOperateTasks: Boolean,
+    canManageSpace: Boolean,
 });
 
 const page = usePage();
@@ -1561,15 +1566,17 @@ onMounted(() => {
                             <v-list density="compact">
                                 <v-list-item prepend-icon="mdi-account-lock-outline" title="Product Access"
                                     @click="router.visit(route('lists.settings', [workspace.id, space.id, list.id]))" />
-                                <v-list-item prepend-icon="mdi-pencil-outline" title="Edit Product"
+                                <v-list-item v-if="canManageProduct" prepend-icon="mdi-pencil-outline" title="Edit Product"
                                     @click="openEditList" />
-                                <v-list-item prepend-icon="mdi-folder-move-outline" title="Move to Folder"
+                                <v-list-item v-if="canManageSpace" prepend-icon="mdi-folder-move-outline" title="Move to Folder"
                                     @click="openMoveToFolder" />
-                                <v-list-item prepend-icon="mdi-content-copy" title="Duplicate Product"
+                                <v-list-item v-if="canManageProduct" prepend-icon="mdi-content-copy" title="Duplicate Product"
                                     @click="duplicateList" />
-                                <v-divider />
-                                <v-list-item prepend-icon="mdi-delete-outline" title="Delete Product" class="text-error"
-                                    @click="showDeleteList = true" />
+                                <template v-if="canDeleteProduct">
+                                    <v-divider />
+                                    <v-list-item prepend-icon="mdi-delete-outline" title="Delete Product" class="text-error"
+                                        @click="showDeleteList = true" />
+                                </template>
                             </v-list>
                         </v-card>
                     </v-menu>
@@ -1583,11 +1590,11 @@ onMounted(() => {
                     <!-- Status Columns -->
                     <StatusColumn v-for="status in statuses" :key="status.id" :status="status" :statuses="statuses"
                         :tasks="filteredTasksByStatus[status.id] || []" :workspace="workspace" :space="space"
-                        :list="list" :parent-task="parentTask" @task-moved="handleTaskMoved"
+                        :list="list" :parent-task="parentTask" :can-add-task="canOperateTasks" @task-moved="handleTaskMoved"
                         @task-complete="handleTaskComplete" @task-open="handleTaskOpen" @add-task="handleAddTask" />
 
                     <!-- Add Status Column -->
-                    <div class="add-status-column">
+                    <div v-if="canManageSpace" class="add-status-column">
                         <v-btn v-if="!showAddStatus" variant="text" block class="add-status-btn"
                             @click="showAddStatus = true">
                             <v-icon start>mdi-plus</v-icon>
@@ -1857,7 +1864,7 @@ onMounted(() => {
                         label="Sort by" density="compact" variant="outlined" hide-details bg-color="#1e1e1e"
                         class="sprint-select" />
 
-                    <v-btn color="primary" prepend-icon="mdi-plus" @click="openCreateSprintDialog">
+                    <v-btn v-if="canManageTaskStructure" color="primary" prepend-icon="mdi-plus" @click="openCreateSprintDialog">
                         Create Sprint
                     </v-btn>
                 </div>
@@ -1886,7 +1893,7 @@ onMounted(() => {
                                     <v-icon start size="14">{{ getSprintStateMeta(sprint).icon }}</v-icon>
                                     {{ getSprintStateMeta(sprint).label }}
                                 </v-chip>
-                                <v-menu>
+                                <v-menu v-if="canManageTaskStructure">
                                     <template #activator="{ props: menuProps }">
                                         <v-btn v-bind="menuProps" icon="mdi-dots-vertical" size="x-small"
                                             variant="text" />

@@ -37,6 +37,10 @@ const props = defineProps({
         type: Array,
         default: () => [],
     },
+    canAddTask: {
+        type: Boolean,
+        default: true,
+    },
 });
 
 const emit = defineEmits(['task-moved', 'task-complete', 'task-open', 'add-task']);
@@ -235,7 +239,7 @@ const handleTaskOpen = (task) => {
         <!-- Bottom Footer (Jira/ClickUp style) -->
         <div class="column-footer">
             <!-- Add Task Form -->
-            <div v-if="showAddTask" class="add-task-form">
+            <div v-if="canAddTask && showAddTask" class="add-task-form">
                 <v-card variant="outlined" rounded="lg">
                     <v-card-text class="pa-3">
                         <v-text-field v-model="newTaskName" placeholder="Task name" variant="plain" density="compact"
@@ -253,7 +257,7 @@ const handleTaskOpen = (task) => {
             </div>
 
             <!-- Add Task Button (when form is hidden) -->
-            <v-btn v-if="!showAddTask" variant="text" block class="add-task-btn" @click="showAddTask = true">
+            <v-btn v-if="canAddTask && !showAddTask" variant="text" block class="add-task-btn" @click="showAddTask = true">
                 <v-icon start size="16">mdi-plus</v-icon>
                 {{ parentTask ? 'Add Subtask' : 'Add Task' }}
             </v-btn>

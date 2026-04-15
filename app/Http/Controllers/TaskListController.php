@@ -95,6 +95,11 @@ class TaskListController extends Controller
             'sprints' => $list->sprints()->withCount('subtasks')->orderBy('position')->get(),
             'parentTask' => $parentTask,
             'projectMembers' => $list->members()->get(['users.id', 'users.name', 'users.email']),
+            'canManageProduct' => $this->accessService->canManageProduct($request->user(), $list),
+            'canDeleteProduct' => $this->accessService->canDeleteProduct($request->user(), $list),
+            'canManageTaskStructure' => $this->accessService->canManageTaskStructure($request->user(), $list),
+            'canOperateTasks' => $this->accessService->canOperateTasks($request->user(), $list),
+            'canManageSpace' => $this->accessService->canManageSpace($request->user(), $space),
         ]);
     }
 

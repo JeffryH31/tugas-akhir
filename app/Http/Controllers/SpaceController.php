@@ -81,6 +81,8 @@ class SpaceController extends Controller
             'space' => $space,
             'statistics' => $statistics,
             'productsByStatus' => $productsByStatus,
+            'canManageSpace' => $this->accessService->canManageSpace($request->user(), $space),
+            'canManageWorkspace' => $this->accessService->canManageWorkspace($request->user(), $workspace),
         ]);
     }
 

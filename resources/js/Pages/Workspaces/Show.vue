@@ -7,6 +7,7 @@ import ColorPicker from '@/Components/ColorPicker.vue';
 const props = defineProps({
     workspace: Object,
     statistics: Object,
+    canManageWorkspace: Boolean,
 });
 
 // Create Space dialog
@@ -51,7 +52,7 @@ const createSpace = () => {
                     <h1 class="text-2xl font-bold mb-1">{{ workspace?.name }}</h1>
                     <p class="text-gray-500">Manage your spaces and projects</p>
                 </div>
-                <v-btn color="primary" @click="showCreateSpace = true">
+                <v-btn v-if="canManageWorkspace" color="primary" @click="showCreateSpace = true">
                     <v-icon start>mdi-plus</v-icon>
                     Create Space
                 </v-btn>

@@ -55,6 +55,7 @@ class RecycleBinController extends Controller
                 'subtasks' => $subtasks,
                 'time_entries' => $timeEntries,
             ],
+            'canRestore' => $this->accessService->canManageWorkspace($request->user(), $workspace),
         ]);
     }
 

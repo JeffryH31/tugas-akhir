@@ -144,6 +144,7 @@ class WorkspaceController extends Controller
 
         return Inertia::render('Workspaces/Show', [
             'workspace' => $workspace,
+            'canManageWorkspace' => $this->accessService->canManageWorkspace($request->user(), $workspace),
         ]);
     }
 

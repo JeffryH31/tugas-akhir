@@ -162,7 +162,7 @@ const openDetail = () => {
                 </v-tooltip>
             </div>
 
-            <!-- Parent task context (subtask mode) — shown above subtask name -->
+            <!-- Parent task context -->
             <div v-if="parentTaskName" class="cu-card__subtask-hint">
                 <span class="cu-card__subtask-hint-text">{{ parentTaskName }}</span>
             </div>
