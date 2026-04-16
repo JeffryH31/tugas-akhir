@@ -433,7 +433,7 @@ const boardDrop = (event, toStatusId) => {
                     <div class="flex items-center gap-2">
                         <div class="w-4 h-4 rounded flex items-center justify-center text-white text-xs"
                             :style="{ backgroundColor: space?.color || '#6366F1' }">
-                            <v-icon size="10" color="white">{{ space?.icon || 'mdi-folder' }}</v-icon>
+                            <v-icon size="10" color="white">mdi-folder</v-icon>
                         </div>
                         <span class="font-medium text-white">{{ space?.name }}</span>
                     </div>
@@ -444,7 +444,7 @@ const boardDrop = (event, toStatusId) => {
             <div class="space-header">
                 <div class="flex items-center gap-4">
                     <div class="space-icon" :style="{ backgroundColor: space?.color || '#6366F1' }">
-                        <v-icon color="white">{{ space?.icon || 'mdi-folder-outline' }}</v-icon>
+                        <v-icon color="white">mdi-folder-outline</v-icon>
                     </div>
                     <div>
                         <h1 class="text-2xl font-bold">{{ space?.name }}</h1>

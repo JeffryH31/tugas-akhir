@@ -365,60 +365,6 @@ const formatDuration = (seconds) => {
             </v-menu>
 
             <!-- Notifications -->
-            <v-menu v-model="notificationMenuOpen" location="bottom end"
-                @update:model-value="(open) => open && markNotificationsRead()">
-                <template v-slot:activator="{ props: notificationProps }">
-                    <v-btn v-bind="notificationProps" icon variant="text" size="small" class="mr-1 topbar-icon-btn">
-                        <v-badge :content="unreadNotificationsCount" :model-value="unreadNotificationsCount > 0"
-                            color="error" floating>
-                            <v-icon size="20">mdi-bell-outline</v-icon>
-                        </v-badge>
-                    </v-btn>
-                </template>
-                <v-card min-width="360" max-width="420" rounded="xl">
-                    <div class="notification-header">
-                        <span class="text-subtitle-2 font-weight-bold">Notifications</span>
-                        <v-chip v-if="unreadNotificationsCount" size="x-small" variant="tonal" color="error">
-                            {{ unreadNotificationsCount }} new
-                        </v-chip>
-                    </div>
-                    <v-divider />
-                    <v-list density="compact" max-height="400" class="overflow-auto notification-list">
-                        <v-list-item v-for="notification in notifications" :key="notification.id" rounded="lg"
-                            class="notification-item" :class="{ 'notification-item--unread': isUnread(notification) }"
-                            :href="notification.subject_url || undefined"
-                            :style="notification.subject_url ? 'cursor:pointer' : ''">
-                            <template #prepend>
-                                <v-avatar :color="notification.user?.avatar_color || 'primary'" size="32"
-                                    class="notif-avatar">
-                                    <span class="text-[10px] font-weight-bold">{{ notification.user?.initials }}</span>
-                                </v-avatar>
-                            </template>
-                            <v-list-item-title class="text-body-2 notif-title">
-                                <span class="font-weight-medium">{{ notification.user?.name }}</span>
-                                <span class="text-medium-emphasis"> {{ notification.description }}</span>
-                            </v-list-item-title>
-                            <v-list-item-subtitle class="text-caption d-flex align-center ga-1 mt-1">
-                                <span>{{ notification.created_at_human }}</span>
-                                <template v-if="notification.context">
-                                    <span class="text-medium-emphasis">·</span>
-                                    <span class="text-medium-emphasis">{{ notification.context }}</span>
-                                </template>
-                                <v-icon v-if="notification.subject_url" size="10" color="grey"
-                                    class="ml-auto">mdi-arrow-right</v-icon>
-                            </v-list-item-subtitle>
-                            <template #append>
-                                <div v-if="isUnread(notification)" class="notif-dot-inline" />
-                            </template>
-                        </v-list-item>
-                        <div v-if="!notifications.length" class="notif-empty">
-                            <v-icon size="28" color="grey-darken-1">mdi-bell-sleep-outline</v-icon>
-                            <div class="text-caption text-medium-emphasis mt-2">You're all caught up!</div>
-                        </div>
-                    </v-list>
-                </v-card>
-            </v-menu>
-
             <!-- User Menu -->
             <v-menu v-model="userMenuOpen" :close-on-content-click="false" location="bottom end">
                 <template v-slot:activator="{ props: menuProps }">
@@ -626,8 +572,7 @@ const formatDuration = (seconds) => {
                                     <template #prepend>
                                         <div class="space-icon-mini"
                                             :style="{ backgroundColor: space.color || '#6366F1' }">
-                                            <v-icon size="13" color="white">{{ space.icon || 'mdi-layers-outline'
-                                                }}</v-icon>
+                                            <v-icon size="13" color="white">mdi-layers-outline</v-icon>
                                         </div>
                                     </template>
                                 </v-list-item>
@@ -644,8 +589,7 @@ const formatDuration = (seconds) => {
                                         <template #prepend>
                                             <div class="space-icon"
                                                 :style="{ backgroundColor: space.color || '#6366F1' }">
-                                                <v-icon size="13" color="white">{{ space.icon || 'mdi-layers-outline'
-                                                    }}</v-icon>
+                                                <v-icon size="13" color="white">mdi-layers-outline</v-icon>
                                             </div>
                                         </template>
                                         <v-list-item-title class="space-name-text">
@@ -799,7 +743,7 @@ const formatDuration = (seconds) => {
                                 <template #prepend>
                                     <div class="search-space-icon"
                                         :style="{ backgroundColor: space.color || '#6366F1' }">
-                                        <v-icon size="12" color="white">{{ space.icon || 'mdi-layers' }}</v-icon>
+                                        <v-icon size="12" color="white">mdi-layers</v-icon>
                                     </div>
                                 </template>
                                 <v-list-item-title class="text-body-2">{{ space.name }}</v-list-item-title>

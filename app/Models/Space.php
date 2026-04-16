@@ -19,7 +19,6 @@ class Space extends Model
         'name',
         'slug',
         'color',
-        'icon',
         'position',
         'settings',
         'created_by',

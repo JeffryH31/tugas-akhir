@@ -17,16 +17,15 @@ class SpacesSeeder extends Seeder
 
         foreach (
             [
-                ['name' => 'Manufacturing', 'color' => '#F97316', 'icon' => 'mdi-factory', 'position' => 0],
-                ['name' => 'B2B', 'color' => '#3B82F6', 'icon' => 'mdi-handshake', 'position' => 1],
-                ['name' => 'B2C', 'color' => '#10B981', 'icon' => 'mdi-cart', 'position' => 2],
+                ['name' => 'Manufacturing', 'color' => '#F97316', 'position' => 0],
+                ['name' => 'B2B', 'color' => '#3B82F6', 'position' => 1],
+                ['name' => 'B2C', 'color' => '#10B981', 'position' => 2],
             ] as $space
         ) {
             Space::create([
                 'workspace_id' => $workspace->id,
                 'name' => $space['name'],
                 'color' => $space['color'],
-                'icon' => $space['icon'],
                 'position' => $space['position'],
                 'created_by' => $sasya->id,
             ]);

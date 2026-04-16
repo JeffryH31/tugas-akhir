@@ -114,7 +114,6 @@ class SpaceService
                 'name' => $data['name'],
                 'slug' => Str::slug($data['name']),
                 'color' => $data['color'] ?? '#6366F1',
-                'icon' => $data['icon'] ?? null,
                 'created_by' => $user->id,
             ]);
 
@@ -138,7 +137,6 @@ class SpaceService
         $space->update([
             'name' => $data['name'] ?? $space->name,
             'color' => $data['color'] ?? $space->color,
-            'icon' => $data['icon'] ?? $space->icon,
         ]);
 
         foreach ($oldValues as $key => $oldValue) {

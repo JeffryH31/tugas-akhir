@@ -1419,7 +1419,7 @@ onMounted(() => {
                     <div class="flex items-center gap-2">
                         <div class="w-4 h-4 rounded flex items-center justify-center text-white text-xs"
                             :style="{ backgroundColor: space?.color || '#6366F1' }">
-                            <v-icon size="10" color="white">{{ space?.icon || 'mdi-folder' }}</v-icon>
+                            <v-icon size="10" color="white">mdi-folder</v-icon>
                         </div>
                         <a :href="route('spaces.show', [workspace.id, space.id])"
                             class="text-gray-400 hover:text-white">

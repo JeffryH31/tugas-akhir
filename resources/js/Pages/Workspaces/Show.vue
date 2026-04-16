@@ -66,7 +66,7 @@ const createSpace = () => {
                         <div class="flex items-start gap-3">
                             <div class="w-12 h-12 rounded-lg flex items-center justify-center text-white flex-shrink-0"
                                 :style="{ backgroundColor: space.color || '#6366F1' }">
-                                <v-icon color="white" size="24">{{ space.icon || 'mdi-folder' }}</v-icon>
+                                <v-icon color="white" size="24">mdi-folder</v-icon>
                             </div>
                             <div class="flex-1 min-w-0">
                                 <div class="font-semibold text-lg mb-1">{{ space.name }}</div>
