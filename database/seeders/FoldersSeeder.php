@@ -12,7 +12,7 @@ class FoldersSeeder extends Seeder
 
     public function run(): void
     {
-        $sasya = $this->demoUser('jefadminf@example.com');
+        $sasya = $this->demoUser('admin@example.com');
         $andi = $this->demoUser('kevin@example.com');
         $dian = $this->demoUser('christopher@example.com');
 
