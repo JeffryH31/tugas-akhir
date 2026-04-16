@@ -567,7 +567,7 @@ const boardDrop = (event, toStatusId) => {
                                 <div v-for="element in (localProductsByStatus[status.id] || [])" :key="element.id"
                                     class="product-card"
                                     :class="{ 'product-card--dragging': boardDraggedItem?.element?.id === element.id }"
-                                    draggable="true" @dragstart="boardDragStart($event, element, status.id)"
+                                    :draggable="canManageSpace" @dragstart="boardDragStart($event, element, status.id)"
                                     @dragend="boardDraggedItem = null"
                                     @click="router.visit(route('lists.show', [workspace.id, space.id, element.id]))">
                                     <div class="product-card__status-bar" :style="{ backgroundColor: status.color }" />

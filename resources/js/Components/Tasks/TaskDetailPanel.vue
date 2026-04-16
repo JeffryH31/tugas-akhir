@@ -29,6 +29,8 @@ const props = defineProps({
     members: { type: Array, default: () => [] },
     labels: { type: Array, default: () => [] },
     sprints: { type: Array, default: () => [] },
+    canOperateTasks: { type: Boolean, default: false },
+    canManageTaskStructure: { type: Boolean, default: false },
 });
 
 const emit = defineEmits(['update:modelValue', 'updated', 'view-subtasks']);
@@ -180,12 +182,12 @@ onUnmounted(() => stopTimerInterval());
             <div class="panel-header">
                 <div class="d-flex align-center ga-2">
                     <!-- Complete Button (subtask only) -->
-                    <v-btn v-if="isSubtask"
+                    <v-btn v-if="isSubtask && canOperateTasks"
                         :icon="isCompleted ? 'mdi-checkbox-marked-circle' : 'mdi-checkbox-blank-circle-outline'"
                         :color="isCompleted ? 'success' : 'grey'" variant="text" size="small" @click="toggleComplete" />
 
                     <!-- Status Chip -->
-                    <v-menu>
+                    <v-menu :disabled="!canOperateTasks">
                         <template v-slot:activator="{ props: menuProps }">
                             <v-chip v-bind="menuProps" :color="localTask.status?.color" size="small" variant="flat"
                                 class="cursor-pointer font-weight-medium">
@@ -214,7 +216,7 @@ onUnmounted(() => stopTimerInterval());
                 </div>
 
                 <div class="d-flex align-center">
-                    <v-menu>
+                    <v-menu v-if="canManageTaskStructure">
                         <template v-slot:activator="{ props: menuProps }">
                             <v-btn v-bind="menuProps" icon variant="text" size="small">
                                 <v-icon size="20">mdi-dots-horizontal</v-icon>
@@ -238,7 +240,7 @@ onUnmounted(() => stopTimerInterval());
 
             <!-- ===== Task Name ===== -->
             <div class="px-5 pt-4 pb-2">
-                <div v-if="!isEditing" class="task-name-display" @click="isEditing = true">
+                <div v-if="!isEditing" class="task-name-display" @click="canOperateTasks && (isEditing = true)">
                     {{ localTask.name }}
                 </div>
                 <v-text-field v-else v-model="editedName" variant="outlined" density="compact" hide-details autofocus
@@ -282,6 +284,7 @@ onUnmounted(() => stopTimerInterval());
                             :members="members" :labels="labels" :sprints="sprints"
                             :sibling-subtasks="siblingSubtasks" :is-tracking="isTracking"
                             :format-tracking-duration="formatTrackingDuration" :is-timer-loading="isTimerLoading"
+                            :can-operate-tasks="canOperateTasks" :can-manage-task-structure="canManageTaskStructure"
                             @start-tracking="startTracking" @stop-tracking="stopTracking" @updated="emit('updated')"
                             @view-subtasks="emit('view-subtasks', $event)" />
                     </v-tabs-window-item>

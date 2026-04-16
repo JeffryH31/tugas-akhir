@@ -21,7 +21,6 @@ function createWorkspaceHierarchy(User $owner, string $suffix = 'A'): array
         'workspace_id' => $workspace->id,
         'name' => "Space {$suffix}",
         'description' => "Space {$suffix} description",
-        'is_private' => false,
         'created_by' => $owner->id,
     ]);
 
@@ -163,7 +162,6 @@ test('cannot create folder using parent from another space', function () {
         'workspace_id' => $workspace->id,
         'name' => 'Space A',
         'description' => 'Space A description',
-        'is_private' => false,
         'created_by' => $owner->id,
     ]);
 
@@ -171,7 +169,6 @@ test('cannot create folder using parent from another space', function () {
         'workspace_id' => $workspace->id,
         'name' => 'Space B',
         'description' => 'Space B description',
-        'is_private' => false,
         'created_by' => $owner->id,
     ]);
 
@@ -205,9 +202,11 @@ test('workspace member without manage permission cannot create folder', function
         'workspace_id' => $workspace->id,
         'name' => 'Public Space',
         'description' => 'Public Space description',
-        'is_private' => false,
         'created_by' => $owner->id,
     ]);
+
+    // Add member to space so they can view it
+    $space->members()->attach($member->id, ['role' => 'member']);
 
     actingAs($member)
         ->post(route('folders.store', [$workspace->id, $space->id]), [

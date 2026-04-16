@@ -58,20 +58,31 @@ class SpaceController extends Controller
     {
         abort_unless((int) $space->workspace_id === (int) $workspace->id, 404);
         abort_unless($this->accessService->canViewSpace($request->user(), $space), 403);
-        $space = $this->spaceService->getWithHierarchy($space);
+        $space = $this->spaceService->getWithHierarchy($space, $request->user());
         $statistics = $this->spaceService->getStatistics($space);
 
         // Annotate is_starred for the current user.
         $space->is_starred = $space->starredBy()->where('user_id', $request->user()->id)->exists();
 
         // Products (TaskLists) grouped by status for kanban
-        $productsByStatus = $this->spaceService->getProductsByStatus($space);
+        $productsByStatus = $this->spaceService->getProductsByStatus($space, $request->user());
+
+        $user = $request->user();
+        $isWsAdmin = $this->accessService->canManageWorkspace($user, $workspace);
+        $listFilter = function ($q) use ($user, $isWsAdmin) {
+            return $isWsAdmin ? $q : $q->whereHas('members', fn($mq) => $mq->where('user_id', $user->id));
+        };
 
         $workspace->load([
-            'spaces' => fn($q) => $q->with([
-                'folders.lists',
-                'listsWithoutFolder',
-            ])->orderBy('position'),
+            'spaces' => function ($q) use ($user, $isWsAdmin, $listFilter) {
+                if (!$isWsAdmin) {
+                    $q->whereHas('members', fn($mq) => $mq->where('user_id', $user->id));
+                }
+                $q->with([
+                    'folders.lists' => $listFilter,
+                    'listsWithoutFolder' => $listFilter,
+                ])->orderBy('position');
+            },
             'members',
             'labels',
         ]);
@@ -114,7 +125,6 @@ class SpaceController extends Controller
             'space' => [
                 'id' => $space->id,
                 'name' => $space->name,
-                'is_private' => (bool) $space->is_private,
             ],
             'products' => $space->lists
                 ->map(fn($list) => [

@@ -20,14 +20,12 @@ class Space extends Model
         'slug',
         'color',
         'icon',
-        'is_private',
         'position',
         'settings',
         'created_by',
     ];
 
     protected $casts = [
-        'is_private' => 'boolean',
         'settings' => 'array',
     ];
 
@@ -142,12 +140,6 @@ class Space extends Model
     public function getInitialsAttribute(): string
     {
         return strtoupper(substr($this->name, 0, 1));
-    }
-
-
-    public function scopePublic($query)
-    {
-        return $query->where('is_private', false);
     }
 
 

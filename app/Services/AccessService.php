@@ -27,7 +27,7 @@ use App\Models\Workspace;
  *  │          │ Cannot manage workspace settings.                 │
  *  └──────────┴────────────────────────────────────────────────────┘
  *
- *  SPACE LEVEL (space_members — only required for private spaces)
+ *  SPACE LEVEL (space_members — required for all spaces)
  *  ┌──────────┬────────────────────────────────────────────────────┐
  *  │ admin    │ Manage space settings, statuses, folders,         │
  *  │          │ and space members.                                │
@@ -155,8 +155,7 @@ class AccessService
      * Determine whether a user can view a space.
      *
      * Workspace admin can always view every space.
-     * Public spaces are visible to all workspace members.
-     * Private spaces require explicit space membership.
+     * Otherwise requires explicit space membership.
      */
     public function canViewSpace(User $user, Space $space): bool
     {
@@ -164,14 +163,8 @@ class AccessService
             return false;
         }
 
-        $workspaceRole = $this->getWorkspaceRole($user, $space->workspace);
-
-        if ($workspaceRole === self::WORKSPACE_ADMIN) {
+        if ($this->getWorkspaceRole($user, $space->workspace) === self::WORKSPACE_ADMIN) {
             return true;
-        }
-
-        if (!$space->is_private) {
-            return $workspaceRole === self::WORKSPACE_MEMBER;
         }
 
         return in_array($this->getSpaceRole($user, $space), [
@@ -229,9 +222,7 @@ class AccessService
             return true;
         }
 
-        // Fallback: if product membership has not been configured yet,
-        // inherit view access from the parent space.
-        return !$list->members()->exists();
+        return false;
     }
 
     /** Alias of canViewProduct for project terminology. */

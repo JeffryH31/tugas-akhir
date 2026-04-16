@@ -143,6 +143,24 @@ class TaskList extends Model
         return $query->where('is_archived', false);
     }
 
+    /**
+     * Scope: only products the user can access (member of, or workspace admin).
+     */
+    public function scopeAccessibleBy($query, User $user)
+    {
+        $wsAdminIds = \Illuminate\Support\Facades\DB::table('workspace_members')
+            ->where('user_id', $user->id)
+            ->where('role', 'admin')
+            ->pluck('workspace_id');
+
+        return $query->where(function ($q) use ($user, $wsAdminIds) {
+            // Workspace admins see everything in their workspaces
+            $q->whereHas('space', fn($sq) => $sq->whereIn('workspace_id', $wsAdminIds))
+              // Or user is an explicit product member
+              ->orWhereHas('members', fn($mq) => $mq->where('user_id', $user->id));
+        });
+    }
+
 
 
     public function getBreadcrumbs(): array

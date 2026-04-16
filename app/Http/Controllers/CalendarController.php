@@ -41,21 +41,15 @@ class CalendarController extends Controller
                 $query->whereHas('space', function ($sq) use ($workspace, $user, $workspaceRole) {
                     $sq->where('workspace_id', $workspace->id);
 
-                    // Non-admin users cannot see private spaces unless they're a space member
+                    // Non-admin users can only see spaces they are a member of
                     if ($workspaceRole !== 'admin') {
-                        $sq->where(function ($pq) use ($user) {
-                            $pq->where('is_private', false)
-                               ->orWhereHas('members', fn($m) => $m->where('user_id', $user->id));
-                        });
+                        $sq->whereHas('members', fn($m) => $m->where('user_id', $user->id));
                     }
                 });
 
                 // Workspace admin can see all; others only see products they belong to
                 if ($workspaceRole !== 'admin') {
-                    $query->where(function ($q) use ($user) {
-                        $q->whereHas('members', fn($m) => $m->where('user_id', $user->id))
-                          ->orWhereDoesntHave('members'); // products without configured members
-                    });
+                    $query->whereHas('members', fn($m) => $m->where('user_id', $user->id));
                 }
             })
             ->where(function ($query) use ($startDate, $endDate) {

@@ -83,11 +83,28 @@ class HandleInertiaRequests extends Middleware
             }
 
             if ($activeWorkspace) {
+                $user = $request->user();
+                $wsRole = $activeWorkspace->members()
+                    ->where('user_id', $user->id)
+                    ->first()?->pivot?->role;
+                $isWsAdmin = $wsRole === 'admin';
+
+                $listAccessFilter = function ($query) use ($user, $isWsAdmin) {
+                    if ($isWsAdmin) {
+                        return $query;
+                    }
+                    return $query->whereHas('members', fn($mq) => $mq->where('user_id', $user->id));
+                };
+
                 $activeWorkspace->load([
-                    'spaces' => function ($query) {
+                    'spaces' => function ($query) use ($user, $isWsAdmin, $listAccessFilter) {
+                        // Non-admin users only see spaces they are a member of
+                        if (!$isWsAdmin) {
+                            $query->whereHas('members', fn($mq) => $mq->where('user_id', $user->id));
+                        }
                         $query->with([
-                            'folders.lists',
-                            'listsWithoutFolder'
+                            'folders.lists' => $listAccessFilter,
+                            'listsWithoutFolder' => $listAccessFilter,
                         ])->orderBy('position');
                     },
                     'labels' => fn($q) => $q->orderBy('name'),

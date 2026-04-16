@@ -63,19 +63,24 @@ test('only owner can delete workspace', function () {
 
 // ── Space-level ─────────────────────────────────────────────────────
 
-test('member can view public space', function () {
+test('workspace member without space membership cannot view space', function () {
     $member = $this->createUser();
     $this->hierarchy['workspace']->addMember($member, 'member');
+
+    expect($this->access->canViewSpace($member, $this->hierarchy['space']))->toBeFalse();
+});
+
+test('workspace member with space membership can view space', function () {
+    $member = $this->createUser();
+    $this->hierarchy['workspace']->addMember($member, 'member');
+    $this->hierarchy['space']->members()->attach($member->id, ['role' => 'member']);
 
     expect($this->access->canViewSpace($member, $this->hierarchy['space']))->toBeTrue();
 });
 
-test('only explicit members can view private space', function () {
+test('only explicit members can view space', function () {
     $member = $this->createUser();
     $spaceMember = $this->createUser();
-
-    // Make space private
-    $this->hierarchy['space']->update(['is_private' => true]);
 
     // Add both as workspace members
     $this->hierarchy['workspace']->addMember($member, 'member');
@@ -88,8 +93,7 @@ test('only explicit members can view private space', function () {
     expect($this->access->canViewSpace($member, $this->hierarchy['space']))->toBeFalse();
 });
 
-test('workspace owner can always view private space', function () {
-    $this->hierarchy['space']->update(['is_private' => true]);
+test('workspace owner can always view any space', function () {
 
     expect($this->access->canViewSpace($this->owner, $this->hierarchy['space']))->toBeTrue();
 });

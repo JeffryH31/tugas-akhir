@@ -38,7 +38,6 @@ trait CreatesWorkspaceHierarchy
             'name' => "Space {$suffix}",
             'description' => "Test space {$suffix}",
             'color' => '#6366F1',
-            'is_private' => false,
             'created_by' => $owner->id,
         ]);
 

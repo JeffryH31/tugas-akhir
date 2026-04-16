@@ -17,6 +17,8 @@ const props = defineProps({
     statuses: Array,
     labels: Array,
     members: Array,
+    canManageTaskStructure: { type: Boolean, default: false },
+    canOperateTasks: { type: Boolean, default: false },
 });
 
 const { confirm: confirmDialog } = useConfirmDialog();
@@ -192,11 +194,11 @@ const onDropToBacklog = () => {
                         </div>
                     </div>
                     <div class="flex items-center gap-2">
-                        <v-btn v-if="!isSprintActive && !isSprintCompleted" color="success" prepend-icon="mdi-play"
+                        <v-btn v-if="canManageTaskStructure && !isSprintActive && !isSprintCompleted" color="success" prepend-icon="mdi-play"
                             @click="startSprint">
                             Start Sprint
                         </v-btn>
-                        <v-btn v-if="isSprintActive" color="warning" prepend-icon="mdi-check" @click="completeSprint">
+                        <v-btn v-if="canManageTaskStructure && isSprintActive" color="warning" prepend-icon="mdi-check" @click="completeSprint">
                             Complete Sprint
                         </v-btn>
                     </div>
@@ -244,10 +246,10 @@ const onDropToBacklog = () => {
                             <div class="space-y-2">
                                 <div v-for="subtask in validBacklogSubtasks" :key="subtask.id" class="relative"
                                     :class="{ 'drag-item--dragging': draggingSubtaskId === subtask.id }"
-                                    draggable="true" @dragstart="onDragStart(subtask, 'backlog', $event)"
+                                    :draggable="canManageTaskStructure" @dragstart="onDragStart(subtask, 'backlog', $event)"
                                     @dragend="onDragEnd">
                                     <TaskCard :task="subtask" :show-checkbox="false" @open-detail="openTask" />
-                                    <v-btn icon="mdi-plus" size="x-small" variant="text" color="primary"
+                                    <v-btn v-if="canManageTaskStructure" icon="mdi-plus" size="x-small" variant="text" color="primary"
                                         class="!absolute top-2 right-2 z-10" @click.stop="addTaskToSprint(subtask)" />
                                 </div>
                                 <div v-if="validBacklogSubtasks.length === 0" class="text-center py-8 text-gray-500">
@@ -271,10 +273,10 @@ const onDropToBacklog = () => {
                             <div class="space-y-2">
                                 <div v-for="subtask in validSprintSubtasks" :key="subtask.id" class="relative"
                                     :class="{ 'drag-item--dragging': draggingSubtaskId === subtask.id }"
-                                    draggable="true" @dragstart="onDragStart(subtask, 'sprint', $event)"
+                                    :draggable="canManageTaskStructure" @dragstart="onDragStart(subtask, 'sprint', $event)"
                                     @dragend="onDragEnd">
                                     <TaskCard :task="subtask" :show-checkbox="false" @open-detail="openTask" />
-                                    <v-btn icon="mdi-minus" size="x-small" variant="text" color="error"
+                                    <v-btn v-if="canManageTaskStructure" icon="mdi-minus" size="x-small" variant="text" color="error"
                                         class="!absolute top-2 right-2 z-10"
                                         @click.stop="removeTaskFromSprint(subtask)" />
                                 </div>
@@ -328,6 +330,8 @@ const onDropToBacklog = () => {
             :statuses="statuses"
             :members="members"
             :labels="labels"
+            :can-operate-tasks="canOperateTasks"
+            :can-manage-task-structure="canManageTaskStructure"
         />
     </MainLayout>
 </template>

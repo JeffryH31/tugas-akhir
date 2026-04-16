@@ -93,6 +93,8 @@ class SprintController extends Controller
             'statuses' => $space->statuses,
             'labels' => $workspace->labels,
             'members' => $workspace->members,
+            'canManageTaskStructure' => $list ? $this->accessService->canManageTaskStructure($request->user(), $list) : false,
+            'canOperateTasks' => $list ? $this->accessService->canOperateTasks($request->user(), $list) : false,
         ]);
     }
 

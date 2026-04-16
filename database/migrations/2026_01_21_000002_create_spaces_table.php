@@ -18,7 +18,6 @@ return new class extends Migration
             $table->string('slug');
             $table->string('color', 7)->default('#6366F1');
             $table->string('icon')->nullable();
-            $table->boolean('is_private')->default(false);
             $table->integer('position')->default(0);
             $table->foreignId('created_by')->nullable()->constrained('users')->nullOnDelete();
             $table->timestamps();

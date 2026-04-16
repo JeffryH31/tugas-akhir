@@ -186,7 +186,7 @@ const selectedSpaceRole = ref('member');
 
 const spaceOptions = computed(() => {
     return (props.spaces || []).map((space) => ({
-        title: `${space.name}${space.is_private ? ' (Private)' : ''}`,
+        title: space.name,
         value: space.id,
     }));
 });
@@ -422,7 +422,7 @@ const confirmationName = ref('');
 const accessLayers = [
     { title: 'General Website', desc: 'Global account access — login, profile, and security settings.', icon: 'mdi-web', color: 'primary', hex: '#7B68EE' },
     { title: 'Workspace Access', desc: 'Admin / Member roles for workspace-wide capabilities.', icon: 'mdi-view-dashboard-outline', color: 'info', hex: '#49CCF9' },
-    { title: 'Space Access', desc: 'Private/public visibility and space-level membership control.', icon: 'mdi-layers-outline', color: 'warning', hex: '#FFB84D' },
+    { title: 'Space Access', desc: 'Space-level membership control — manage who can access each space.', icon: 'mdi-layers-outline', color: 'warning', hex: '#FFB84D' },
     { title: 'Product Access', desc: 'Product-level roles: owner, manager, developer, guest.', icon: 'mdi-view-list-outline', color: 'success', hex: '#6BC950' },
 ];
 
@@ -588,8 +588,6 @@ const deleteWorkspace = () => {
                                 @click="router.visit(route('spaces.settings', [workspace.id, space.id]))">
                                 <v-icon start size="13">mdi-layers</v-icon>
                                 {{ space.name }}
-                                <v-chip v-if="space.is_private" size="x-small" class="ml-1" color="grey"
-                                    variant="outlined">Private</v-chip>
                             </v-btn>
                             <span v-if="!spaces?.length" class="text-caption text-medium-emphasis">No spaces
                                 found.</span>

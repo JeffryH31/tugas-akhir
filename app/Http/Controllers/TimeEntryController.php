@@ -48,10 +48,13 @@ class TimeEntryController extends Controller
         $runningTimer = $this->timeTrackingService->getRunningTimer($user);
 
         $workspaces = $user->workspaces()->with([
-            'spaces' => fn($q) => $q->with([
-                'folders.lists',
-                'listsWithoutFolder',
-            ])->orderBy('position'),
+            'spaces' => function ($q) use ($user) {
+                $q->whereHas('members', fn($mq) => $mq->where('user_id', $user->id));
+                $q->with([
+                    'folders.lists' => fn($lq) => $lq->accessibleBy($user),
+                    'listsWithoutFolder' => fn($lq) => $lq->accessibleBy($user),
+                ])->orderBy('position');
+            },
         ])->get();
 
         $activeWorkspaceId = session('active_workspace_id', $workspaces->first()?->id);
@@ -62,7 +65,10 @@ class TimeEntryController extends Controller
             ? \App\Models\Subtask::query()
             ->whereNull('completed_at')
             ->whereNull('deleted_at')
-            ->whereHas('task.taskList.space', fn($q) => $q->where('workspace_id', $activeWorkspace->id))
+            ->whereHas('task.taskList', fn($q) => $q
+                ->whereHas('space', fn($sq) => $sq->where('workspace_id', $activeWorkspace->id))
+                ->accessibleBy($user)
+            )
             ->with(['task.taskList.space'])
             ->orderByDesc('updated_at')
             ->limit(200)

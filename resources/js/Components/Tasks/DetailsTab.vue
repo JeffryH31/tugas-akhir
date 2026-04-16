@@ -29,6 +29,8 @@ const props = defineProps({
     isTracking: Boolean,
     formatTrackingDuration: String,
     isTimerLoading: Boolean,
+    canOperateTasks: { type: Boolean, default: false },
+    canManageTaskStructure: { type: Boolean, default: false },
 });
 
 const emit = defineEmits(['start-tracking', 'stop-tracking', 'updated', 'view-subtasks']);
@@ -531,7 +533,7 @@ const removeSuccessor = (suc) => depFetch('DELETE', { subtask_id: suc.id, depend
                     Priority
                 </div>
                 <div class="prop-value">
-                    <v-menu>
+                    <v-menu :disabled="!canOperateTasks">
                         <template v-slot:activator="{ props: menuProps }">
                             <v-btn v-bind="menuProps" :color="currentPriority?.color || 'grey'" variant="tonal"
                                 size="small" class="text-none">
@@ -571,18 +573,19 @@ const removeSuccessor = (suc) => depFetch('DELETE', { subtask_id: suc.id, depend
                         <v-tooltip v-for="assignee in displayedAssignees" :key="assignee.id" location="top">
                             <template v-slot:activator="{ props: tooltipProps }">
                                 <v-avatar v-bind="tooltipProps" :color="assignee.avatar_color || 'primary'" size="28"
-                                    class="elevation-1" :class="{ 'cursor-pointer': isSubtask }"
-                                    @click="isSubtask ? toggleAssignee(assignee.id) : null">
+                                    class="elevation-1" :class="{ 'cursor-pointer': isSubtask && canOperateTasks }"
+                                    @click="isSubtask && canOperateTasks ? toggleAssignee(assignee.id) : null">
                                     <span class="text-xs font-weight-medium">{{ assignee.initials }}</span>
                                 </v-avatar>
                             </template>
-                            <span>{{ assignee.name }}{{ isSubtask ? ' (click to remove)' : '' }}</span>
+                            <span>{{ assignee.name }}{{ isSubtask && canOperateTasks ? ' (click to remove)' : ''
+                                }}</span>
                         </v-tooltip>
 
                         <span v-if="!displayedAssignees.length" class="text-caption text-grey">
                             No assignees yet
                         </span>
-                        <v-menu v-if="isSubtask">
+                        <v-menu v-if="isSubtask && canOperateTasks">
                             <template v-slot:activator="{ props: menuProps }">
                                 <v-btn v-bind="menuProps" icon variant="tonal" size="x-small" color="grey">
                                     <v-icon size="14">mdi-plus</v-icon>
@@ -622,10 +625,10 @@ const removeSuccessor = (suc) => depFetch('DELETE', { subtask_id: suc.id, depend
                 <div class="prop-value">
                     <div class="d-flex align-center ga-1 flex-wrap">
                         <v-chip v-for="label in localTask.labels" :key="label.id" :color="label.color" size="small"
-                            variant="flat" closable @click:close="removeLabel(label)">
+                            variant="flat" :closable="canOperateTasks" @click:close="removeLabel(label)">
                             {{ label.name }}
                         </v-chip>
-                        <v-menu :close-on-content-click="false">
+                        <v-menu v-if="canOperateTasks" :close-on-content-click="false">
                             <template v-slot:activator="{ props: menuProps }">
                                 <v-btn v-bind="menuProps" icon variant="tonal" size="x-small" color="grey">
                                     <v-icon size="14">mdi-plus</v-icon>
@@ -645,7 +648,7 @@ const removeSuccessor = (suc) => depFetch('DELETE', { subtask_id: suc.id, depend
                                                 <v-icon v-if="isLabelSelected(label.id)" size="16" color="primary">
                                                     mdi-check
                                                 </v-icon>
-                                                <v-btn icon variant="text" size="x-small"
+                                                <v-btn v-if="canManageTaskStructure" icon variant="text" size="x-small"
                                                     @click.stop="openEditLabelEditor(label)">
                                                     <v-icon size="14">mdi-pencil-outline</v-icon>
                                                 </v-btn>
@@ -661,7 +664,7 @@ const removeSuccessor = (suc) => depFetch('DELETE', { subtask_id: suc.id, depend
 
                                 <v-divider />
 
-                                <div class="pa-2 d-flex justify-end">
+                                <div v-if="canManageTaskStructure" class="pa-2 d-flex justify-end">
                                     <v-btn size="small" variant="tonal" color="primary" @click="openCreateLabelEditor">
                                         <v-icon start size="14">mdi-plus</v-icon>
                                         Create Label
@@ -684,7 +687,7 @@ const removeSuccessor = (suc) => depFetch('DELETE', { subtask_id: suc.id, depend
                         Sprint
                     </div>
                     <div class="prop-value">
-                        <v-menu>
+                        <v-menu :disabled="!canManageTaskStructure">
                             <template v-slot:activator="{ props: menuProps }">
                                 <v-btn v-bind="menuProps" variant="text" size="small" class="text-none"
                                     :color="currentTaskSprint ? (isSprintActive(currentTaskSprint) ? 'success' : 'primary') : 'grey'">
@@ -737,7 +740,8 @@ const removeSuccessor = (suc) => depFetch('DELETE', { subtask_id: suc.id, depend
                         Start Date
                     </div>
                     <div class="prop-value">
-                        <v-menu v-model="showStartDatePicker" :close-on-content-click="false">
+                        <v-menu v-model="showStartDatePicker" :close-on-content-click="false"
+                            :disabled="!canOperateTasks">
                             <template v-slot:activator="{ props: menuProps }">
                                 <v-btn v-bind="menuProps" variant="text" size="small" class="text-none"
                                     :color="localTask.start_date ? 'primary' : 'grey'">
@@ -772,7 +776,8 @@ const removeSuccessor = (suc) => depFetch('DELETE', { subtask_id: suc.id, depend
                         Due Date
                     </div>
                     <div class="prop-value">
-                        <v-menu v-model="showDueDatePicker" :close-on-content-click="false">
+                        <v-menu v-model="showDueDatePicker" :close-on-content-click="false"
+                            :disabled="!canOperateTasks">
                             <template v-slot:activator="{ props: menuProps }">
                                 <v-btn v-bind="menuProps" variant="text" size="small" class="text-none"
                                     :color="localTask.due_date ? 'primary' : 'grey'">
@@ -806,7 +811,7 @@ const removeSuccessor = (suc) => depFetch('DELETE', { subtask_id: suc.id, depend
                         Automation
                     </div>
                     <div class="prop-value">
-                        <v-menu location="bottom start">
+                        <v-menu location="bottom start" :disabled="!canManageTaskStructure">
                             <template v-slot:activator="{ props: menuProps }">
                                 <v-btn v-bind="menuProps" variant="text" size="small" class="text-none"
                                     :color="completionTargetStatusIdState ? 'primary' : 'grey'">
@@ -857,7 +862,8 @@ const removeSuccessor = (suc) => depFetch('DELETE', { subtask_id: suc.id, depend
                         Estimate
                     </div>
                     <div class="prop-value">
-                        <v-menu v-model="showTimeEstimatePicker" :close-on-content-click="false">
+                        <v-menu v-model="showTimeEstimatePicker" :close-on-content-click="false"
+                            :disabled="!canOperateTasks">
                             <template v-slot:activator="{ props: menuProps }">
                                 <v-btn v-bind="menuProps" variant="text" size="small" class="text-none"
                                     :color="localTask.time_estimate ? 'primary' : 'grey'">
@@ -892,7 +898,7 @@ const removeSuccessor = (suc) => depFetch('DELETE', { subtask_id: suc.id, depend
                         PERT
                     </div>
                     <div class="prop-value">
-                        <v-menu v-model="showPertPicker" :close-on-content-click="false">
+                        <v-menu v-model="showPertPicker" :close-on-content-click="false" :disabled="!canOperateTasks">
                             <template v-slot:activator="{ props: menuProps }">
                                 <v-btn v-bind="menuProps" variant="text" size="small" class="text-none"
                                     :color="localTask.pert_expected_estimate ? 'primary' : 'grey'">
@@ -940,7 +946,8 @@ const removeSuccessor = (suc) => depFetch('DELETE', { subtask_id: suc.id, depend
                             variant="tonal">
                             {{ formatVariance(localTask.schedule_variance_minutes) }} variance
                         </v-chip>
-                        <v-btn size="x-small" variant="tonal" color="primary" @click="setBaselineFromCurrent">
+                        <v-btn v-if="canManageTaskStructure" size="x-small" variant="tonal" color="primary"
+                            @click="setBaselineFromCurrent">
                             Set from current dates
                         </v-btn>
                     </div>
@@ -959,9 +966,9 @@ const removeSuccessor = (suc) => depFetch('DELETE', { subtask_id: suc.id, depend
                             <code class="timer-display" :class="{ 'timer-display--active': isTracking }">
                 {{ formatTrackingDuration }}
             </code>
-                            <v-btn v-if="!isTracking" icon="mdi-play" color="success" variant="tonal" size="x-small"
-                                :loading="isTimerLoading" @click="$emit('start-tracking')" />
-                            <v-btn v-else icon="mdi-stop" color="error" variant="tonal" size="x-small"
+                            <v-btn v-if="!isTracking && canOperateTasks" icon="mdi-play" color="success" variant="tonal"
+                                size="x-small" :loading="isTimerLoading" @click="$emit('start-tracking')" />
+                            <v-btn v-else-if="isTracking" icon="mdi-stop" color="error" variant="tonal" size="x-small"
                                 :loading="isTimerLoading" @click="$emit('stop-tracking')" />
                         </div>
                     </div>
@@ -1004,7 +1011,7 @@ const removeSuccessor = (suc) => depFetch('DELETE', { subtask_id: suc.id, depend
                     </div>
                     <div class="prop-value d-flex align-center ga-3">
                         <v-slider :model-value="localTask.progress ?? 0" min="0" max="100" step="1" density="compact"
-                            hide-details thumb-label class="progress-slider"
+                            hide-details thumb-label class="progress-slider" :disabled="!canOperateTasks"
                             :color="(localTask.progress ?? 0) >= 100 ? 'success' : 'primary'" @end="updateProgress" />
                         <span class="text-body-2">{{ localTask.progress ?? 0 }}%</span>
                     </div>
@@ -1021,12 +1028,12 @@ const removeSuccessor = (suc) => depFetch('DELETE', { subtask_id: suc.id, depend
                     <div class="prop-value">
                         <div class="d-flex flex-wrap ga-1 align-center">
                             <v-chip v-for="dep in (localTask?.dependencies || [])" :key="dep.id" size="small"
-                                color="warning" variant="tonal" closable :disabled="dependencyLoading"
-                                @click:close="removeDependency(dep)">
+                                color="warning" variant="tonal" :closable="canOperateTasks"
+                                :disabled="dependencyLoading" @click:close="removeDependency(dep)">
                                 <v-icon start size="12">mdi-clock-outline</v-icon>
                                 {{ dep.name }}
                             </v-chip>
-                            <v-menu :close-on-content-click="false">
+                            <v-menu v-if="canOperateTasks" :close-on-content-click="false">
                                 <template v-slot:activator="{ props: menuProps }">
                                     <v-btn v-bind="menuProps" icon variant="tonal" size="x-small" color="grey"
                                         :loading="dependencyLoading">
@@ -1071,12 +1078,12 @@ const removeSuccessor = (suc) => depFetch('DELETE', { subtask_id: suc.id, depend
                     <div class="prop-value">
                         <div class="d-flex flex-wrap ga-1 align-center">
                             <v-chip v-for="dep in (localTask?.dependents || [])" :key="'s-' + dep.id" size="small"
-                                color="error" variant="tonal" closable :disabled="dependencyLoading"
+                                color="error" variant="tonal" :closable="canOperateTasks" :disabled="dependencyLoading"
                                 @click:close="removeSuccessor(dep)">
                                 <v-icon start size="12">mdi-hand-back-left</v-icon>
                                 {{ dep.name }}
                             </v-chip>
-                            <v-menu :close-on-content-click="false">
+                            <v-menu v-if="canOperateTasks" :close-on-content-click="false">
                                 <template v-slot:activator="{ props: menuProps }">
                                     <v-btn v-bind="menuProps" icon variant="tonal" size="x-small" color="grey"
                                         :loading="dependencyLoading">
@@ -1130,7 +1137,7 @@ const removeSuccessor = (suc) => depFetch('DELETE', { subtask_id: suc.id, depend
             <v-divider />
             <div v-if="localTask.subtasks?.length" class="subtask-checklist">
                 <div v-for="sub in localTask.subtasks" :key="sub.id" class="subtask-check-item"
-                    @click="toggleSubtask(sub)">
+                    @click="canOperateTasks && toggleSubtask(sub)">
                     <v-icon :color="sub.completed_at ? 'success' : '#555'" size="18">
                         {{ sub.completed_at ? 'mdi-checkbox-marked-circle' : 'mdi-checkbox-blank-circle-outline' }}
                     </v-icon>
@@ -1157,11 +1164,11 @@ const removeSuccessor = (suc) => depFetch('DELETE', { subtask_id: suc.id, depend
             </div>
             <div class="px-3 pb-3">
                 <v-textarea v-model="editedDescription" placeholder="Add a description..." variant="outlined" rows="3"
-                    hide-details auto-grow @blur="saveDescription" />
+                    hide-details auto-grow :readonly="!canOperateTasks" @blur="saveDescription" />
             </div>
         </div>
 
-        <v-dialog v-model="showLabelEditor" max-width="420">
+        <v-dialog v-if="canManageTaskStructure" v-model="showLabelEditor" max-width="420">
             <v-card>
                 <v-card-title class="d-flex align-center ga-2">
                     <v-icon :color="editingLabel ? 'warning' : 'primary'">mdi-label-outline</v-icon>

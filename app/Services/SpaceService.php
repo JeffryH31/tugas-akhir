@@ -33,28 +33,36 @@ class SpaceService
     }
 
     /**
-     * Get a space with full hierarchy
+     * Get a space with full hierarchy, filtering products by user access.
      */
-    public function getWithHierarchy(Space $space): Space
+    public function getWithHierarchy(Space $space, ?User $user = null): Space
     {
+        $listFilter = $this->buildListAccessFilter($user, $space);
+
         return $space->load([
             'workspace',
             'folders' => fn($q) => $q->with([
                 'children',
-                'lists' => fn($lq) => $lq->with('status')->withCount('tasks')->orderBy('position'),
+                'lists' => fn($lq) => $listFilter($lq)->with('status')->withCount('tasks')->orderBy('position'),
             ])->orderBy('position'),
-            'listsWithoutFolder' => fn($q) => $q->with('status')->withCount('tasks')->orderBy('position'),
+            'listsWithoutFolder' => fn($q) => $listFilter($q)->with('status')->withCount('tasks')->orderBy('position'),
             'statuses' => fn($q) => $q->orderBy('position'),
             'labels',
         ]);
     }
 
     /**
-     * Get products (TaskLists) grouped by status for kanban board
+     * Get products (TaskLists) grouped by status for kanban board, filtered by user access.
      */
-    public function getProductsByStatus(Space $space): array
+    public function getProductsByStatus(Space $space, ?User $user = null): array
     {
-        $lists = $space->lists()
+        $query = $space->lists();
+
+        if ($user) {
+            $query->accessibleBy($user);
+        }
+
+        $lists = $query
             ->with(['status', 'folder'])
             ->withCount('tasks')
             ->orderBy('position')
@@ -74,6 +82,28 @@ class SpaceService
     }
 
     /**
+     * Build a closure that filters a TaskList query by user access.
+     */
+    private function buildListAccessFilter(?User $user, Space $space): \Closure
+    {
+        return function ($query) use ($user, $space) {
+            if (!$user) {
+                return $query;
+            }
+
+            $wsRole = $space->workspace
+                ? $space->workspace->members()->where('user_id', $user->id)->first()?->pivot?->role
+                : null;
+
+            if ($wsRole === 'admin') {
+                return $query;
+            }
+
+            return $query->whereHas('members', fn($mq) => $mq->where('user_id', $user->id));
+        };
+    }
+
+    /**
      * Create a new space
      */
     public function create(array $data, Workspace $workspace, User $user): Space
@@ -85,7 +115,6 @@ class SpaceService
                 'slug' => Str::slug($data['name']),
                 'color' => $data['color'] ?? '#6366F1',
                 'icon' => $data['icon'] ?? null,
-                'is_private' => $data['is_private'] ?? false,
                 'created_by' => $user->id,
             ]);
 
@@ -104,13 +133,12 @@ class SpaceService
     public function update(Space $space, array $data, User $user): Space
     {
         $changes = [];
-        $oldValues = $space->only(['name', 'color', 'is_private']);
+        $oldValues = $space->only(['name', 'color']);
 
         $space->update([
             'name' => $data['name'] ?? $space->name,
             'color' => $data['color'] ?? $space->color,
             'icon' => $data['icon'] ?? $space->icon,
-            'is_private' => $data['is_private'] ?? $space->is_private,
         ]);
 
         foreach ($oldValues as $key => $oldValue) {

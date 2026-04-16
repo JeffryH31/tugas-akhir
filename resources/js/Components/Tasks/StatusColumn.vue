@@ -41,6 +41,10 @@ const props = defineProps({
         type: Boolean,
         default: true,
     },
+    canManageSpace: {
+        type: Boolean,
+        default: false,
+    },
 });
 
 const emit = defineEmits(['task-moved', 'task-complete', 'task-open', 'add-task']);
@@ -200,10 +204,10 @@ const handleTaskOpen = (task) => {
             </div>
 
             <div class="column-actions">
-                <v-btn icon variant="text" size="x-small" @click="showAddTask = true">
+                <v-btn v-if="canAddTask" icon variant="text" size="x-small" @click="showAddTask = true">
                     <v-icon size="16">mdi-plus</v-icon>
                 </v-btn>
-                <v-menu>
+                <v-menu v-if="canManageSpace">
                     <template v-slot:activator="{ props: menuProps }">
                         <v-btn v-bind="menuProps" icon variant="text" size="x-small">
                             <v-icon size="16">mdi-dots-horizontal</v-icon>

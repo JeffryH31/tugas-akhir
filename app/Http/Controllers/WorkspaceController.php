@@ -105,7 +105,6 @@ class WorkspaceController extends Controller
                 return [
                     'id' => $space->id,
                     'name' => $space->name,
-                    'is_private' => (bool) $space->is_private,
                     'members' => $space->members->map(function ($member) {
                         return [
                             'id' => $member->id,

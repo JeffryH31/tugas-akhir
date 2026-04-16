@@ -1590,7 +1590,7 @@ onMounted(() => {
                     <!-- Status Columns -->
                     <StatusColumn v-for="status in statuses" :key="status.id" :status="status" :statuses="statuses"
                         :tasks="filteredTasksByStatus[status.id] || []" :workspace="workspace" :space="space"
-                        :list="list" :parent-task="parentTask" :can-add-task="canOperateTasks" @task-moved="handleTaskMoved"
+                        :list="list" :parent-task="parentTask" :can-add-task="canOperateTasks" :can-manage-space="canManageSpace" @task-moved="handleTaskMoved"
                         @task-complete="handleTaskComplete" @task-open="handleTaskOpen" @add-task="handleAddTask" />
 
                     <!-- Add Status Column -->
@@ -1976,7 +1976,8 @@ onMounted(() => {
         <!-- Task Detail Panel -->
         <TaskDetailPanel v-model="showTaskDetail" :task="selectedTask" :workspace="workspace" :space="space"
             :list="list" :parent-task="parentTask" :statuses="statuses" :members="members" :labels="labels"
-            :sprints="sprints" :sibling-subtasks="siblingSubtasks" @view-subtasks="viewSubtasks"
+            :sprints="sprints" :sibling-subtasks="siblingSubtasks" :can-operate-tasks="canOperateTasks"
+            :can-manage-task-structure="canManageTaskStructure" @view-subtasks="viewSubtasks"
             @updated="refreshTasks" />
 
         <!-- Create/Edit Sprint Dialog -->

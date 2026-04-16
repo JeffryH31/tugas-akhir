@@ -61,11 +61,22 @@ class CpmController extends Controller
 
         $cpmResult = $this->cpmService->analyze($task);
 
+        $user = $request->user();
+        $isWsAdmin = $this->accessService->canManageWorkspace($user, $workspace);
+        $listFilter = function ($q) use ($user, $isWsAdmin) {
+            return $isWsAdmin ? $q : $q->whereHas('members', fn($mq) => $mq->where('user_id', $user->id));
+        };
+
         $workspace->load([
-            'spaces' => fn($q) => $q->with([
-                'folders.lists',
-                'listsWithoutFolder',
-            ])->orderBy('position'),
+            'spaces' => function ($q) use ($user, $isWsAdmin, $listFilter) {
+                if (!$isWsAdmin) {
+                    $q->whereHas('members', fn($mq) => $mq->where('user_id', $user->id));
+                }
+                $q->with([
+                    'folders.lists' => $listFilter,
+                    'listsWithoutFolder' => $listFilter,
+                ])->orderBy('position');
+            },
             'members',
             'labels',
         ]);

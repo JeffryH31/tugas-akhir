@@ -37,15 +37,13 @@ test('create space logs created activity', function () {
     expect($activity)->not->toBeNull();
 });
 
-test('create space with custom color and private flag', function () {
+test('create space with custom color', function () {
     $space = $this->service->create([
-        'name' => 'Private Space',
+        'name' => 'Custom Space',
         'color' => '#FF0000',
-        'is_private' => true,
     ], $this->hierarchy['workspace'], $this->owner);
 
     expect($space->color)->toBe('#FF0000');
-    expect($space->is_private)->toBeTrue();
 });
 
 test('update space changes name and logs activity', function () {

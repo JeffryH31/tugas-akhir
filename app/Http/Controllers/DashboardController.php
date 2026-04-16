@@ -38,12 +38,24 @@ class DashboardController extends Controller
         $activeWorkspace = $workspaces->firstWhere('id', $activeWorkspaceId) ?? $workspaces->first();
 
         if ($activeWorkspace) {
+            $wsRole = $activeWorkspace->members()
+                ->where('user_id', $user->id)->first()?->pivot?->role;
+            $isWsAdmin = $wsRole === 'admin';
+            $listFilter = function ($q) use ($user, $isWsAdmin) {
+                return $isWsAdmin ? $q : $q->whereHas('members', fn($mq) => $mq->where('user_id', $user->id));
+            };
+
             $activeWorkspace->load([
-                'spaces' => fn($q) => $q->with([
-                    'folders' => fn($fq) => $fq->with('lists')->orderBy('position'),
-                    'listsWithoutFolder' => fn($lq) => $lq->orderBy('position'),
-                    'statuses' => fn($sq) => $sq->orderBy('position'),
-                ])->orderBy('position'),
+                'spaces' => function ($q) use ($user, $isWsAdmin, $listFilter) {
+                    if (!$isWsAdmin) {
+                        $q->whereHas('members', fn($mq) => $mq->where('user_id', $user->id));
+                    }
+                    $q->with([
+                        'folders' => fn($fq) => $fq->with(['lists' => $listFilter])->orderBy('position'),
+                        'listsWithoutFolder' => fn($lq) => $listFilter($lq)->orderBy('position'),
+                        'statuses' => fn($sq) => $sq->orderBy('position'),
+                    ])->orderBy('position');
+                },
                 'members',
                 'labels',
             ]);
