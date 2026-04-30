@@ -147,7 +147,7 @@ class WorkspaceService
         ])->get();
 
         $totalLists = $spaces->sum('lists_count');
-        
+
         // Get task counts through relationships
         $taskCounts = DB::table('tasks')
             ->join('task_lists', 'tasks.task_list_id', '=', 'task_lists.id')
