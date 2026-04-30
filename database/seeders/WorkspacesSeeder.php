@@ -24,7 +24,7 @@ class WorkspacesSeeder extends Seeder
             'color' => '#6366F1',
         ]);
 
-        $workspace->addMember($sasya, 'admin');
+        $workspace->addMember($sasya, 'owner');
         $workspace->addMember($andi, 'admin');
         $workspace->addMember($dian, 'member');
         $workspace->addMember($budi, 'member');

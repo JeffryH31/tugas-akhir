@@ -184,10 +184,9 @@ test('member can view analytics', function () {
 });
 
 test('guest cannot view analytics', function () {
-    $guest = $this->createUser();
-    $this->hierarchy['workspace']->addMember($guest, 'guest');
+    $nonMember = $this->createUser();
 
-    expect($this->access->canViewAnalytics($guest, $this->hierarchy['workspace']))->toBeFalse();
+    expect($this->access->canViewAnalytics($nonMember, $this->hierarchy['workspace']))->toBeFalse();
 });
 
 // ── Comment ownership ───────────────────────────────────────────────

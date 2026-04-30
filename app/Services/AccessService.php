@@ -58,6 +58,7 @@ use App\Models\Workspace;
  */
 class AccessService
 {
+    public const WORKSPACE_OWNER = 'owner';
     public const WORKSPACE_ADMIN = 'admin';
     public const WORKSPACE_MEMBER = 'member';
 
@@ -127,7 +128,10 @@ class AccessService
      */
     public function canManageWorkspace(User $user, Workspace $workspace): bool
     {
-        return $this->getWorkspaceRole($user, $workspace) === self::WORKSPACE_ADMIN;
+        return in_array($this->getWorkspaceRole($user, $workspace), [
+            self::WORKSPACE_OWNER,
+            self::WORKSPACE_ADMIN,
+        ], true);
     }
 
     /**
@@ -135,7 +139,7 @@ class AccessService
      */
     public function canDeleteWorkspace(User $user, Workspace $workspace): bool
     {
-        return $this->getWorkspaceRole($user, $workspace) === self::WORKSPACE_ADMIN;
+        return $this->getWorkspaceRole($user, $workspace) === self::WORKSPACE_OWNER;
     }
 
     /**
@@ -144,6 +148,7 @@ class AccessService
     public function canViewAnalytics(User $user, Workspace $workspace): bool
     {
         return in_array($this->getWorkspaceRole($user, $workspace), [
+            self::WORKSPACE_OWNER,
             self::WORKSPACE_ADMIN,
             self::WORKSPACE_MEMBER,
         ], true);
@@ -163,7 +168,10 @@ class AccessService
             return false;
         }
 
-        if ($this->getWorkspaceRole($user, $space->workspace) === self::WORKSPACE_ADMIN) {
+        if (in_array($this->getWorkspaceRole($user, $space->workspace), [
+            self::WORKSPACE_OWNER,
+            self::WORKSPACE_ADMIN,
+        ], true)) {
             return true;
         }
 
@@ -181,7 +189,10 @@ class AccessService
      */
     public function canManageSpace(User $user, Space $space): bool
     {
-        if ($this->getWorkspaceRole($user, $space->workspace) === self::WORKSPACE_ADMIN) {
+        if (in_array($this->getWorkspaceRole($user, $space->workspace), [
+            self::WORKSPACE_OWNER,
+            self::WORKSPACE_ADMIN,
+        ], true)) {
             return true;
         }
 
@@ -205,24 +216,22 @@ class AccessService
      */
     public function canViewProduct(User $user, TaskList $list): bool
     {
-        if (!$this->canViewSpace($user, $list->space)) {
+        $workspaceRole = $this->getWorkspaceRole($user, $list->space->workspace);
+
+        if (is_null($workspaceRole)) {
             return false;
         }
 
-        if ($this->getWorkspaceRole($user, $list->space->workspace) === self::WORKSPACE_ADMIN) {
+        if (in_array($workspaceRole, [self::WORKSPACE_OWNER, self::WORKSPACE_ADMIN], true)) {
             return true;
         }
 
-        if (in_array($this->getProductRole($user, $list), [
-            self::PROJECT_OWNER,
-            self::PROJECT_MANAGER,
-            self::PROJECT_DEVELOPER,
-            self::PROJECT_GUEST,
-        ], true)) {
+        if (!is_null($this->getProductRole($user, $list))) {
             return true;
         }
 
-        return false;
+        // No product members configured → open by default for workspace members
+        return !$list->members()->exists();
     }
 
     /** Alias of canViewProduct for project terminology. */
@@ -238,7 +247,10 @@ class AccessService
      */
     public function canManageProduct(User $user, TaskList $list): bool
     {
-        if ($this->getWorkspaceRole($user, $list->space->workspace) === self::WORKSPACE_ADMIN) {
+        if (in_array($this->getWorkspaceRole($user, $list->space->workspace), [
+            self::WORKSPACE_OWNER,
+            self::WORKSPACE_ADMIN,
+        ], true)) {
             return true;
         }
 
@@ -258,7 +270,10 @@ class AccessService
      */
     public function canDeleteProduct(User $user, TaskList $list): bool
     {
-        if ($this->getWorkspaceRole($user, $list->space->workspace) === self::WORKSPACE_ADMIN) {
+        if (in_array($this->getWorkspaceRole($user, $list->space->workspace), [
+            self::WORKSPACE_OWNER,
+            self::WORKSPACE_ADMIN,
+        ], true)) {
             return true;
         }
 
@@ -279,7 +294,10 @@ class AccessService
      */
     public function canManageProductMembers(User $user, TaskList $list): bool
     {
-        if ($this->getWorkspaceRole($user, $list->space->workspace) === self::WORKSPACE_ADMIN) {
+        if (in_array($this->getWorkspaceRole($user, $list->space->workspace), [
+            self::WORKSPACE_OWNER,
+            self::WORKSPACE_ADMIN,
+        ], true)) {
             return true;
         }
 
@@ -315,7 +333,7 @@ class AccessService
      */
     public function canOperateTasks(User $user, TaskList $list): bool
     {
-        if ($this->getWorkspaceRole($user, $list->space->workspace) === self::WORKSPACE_ADMIN) {
+        if ($this->getWorkspaceRole($user, $list->space->workspace) === self::WORKSPACE_OWNER) {
             return true;
         }
 
@@ -335,7 +353,7 @@ class AccessService
      */
     public function canManageTaskStructure(User $user, TaskList $list): bool
     {
-        if ($this->getWorkspaceRole($user, $list->space->workspace) === self::WORKSPACE_ADMIN) {
+        if ($this->getWorkspaceRole($user, $list->space->workspace) === self::WORKSPACE_OWNER) {
             return true;
         }
 
@@ -366,7 +384,7 @@ class AccessService
      */
     public function canAssignTasks(User $user, TaskList $list): bool
     {
-        if ($this->getWorkspaceRole($user, $list->space->workspace) === self::WORKSPACE_ADMIN) {
+        if ($this->getWorkspaceRole($user, $list->space->workspace) === self::WORKSPACE_OWNER) {
             return true;
         }
 
@@ -381,7 +399,7 @@ class AccessService
      */
     public function canTrackTime(User $user, TaskList $list): bool
     {
-        if ($this->getWorkspaceRole($user, $list->space->workspace) === self::WORKSPACE_ADMIN) {
+        if ($this->getWorkspaceRole($user, $list->space->workspace) === self::WORKSPACE_OWNER) {
             return true;
         }
 
@@ -415,9 +433,12 @@ class AccessService
             return true;
         }
 
-        // Workspace admin can moderate any comment
+        // Workspace owner/admin can moderate any comment
         $workspace = $comment->task->taskList->space->workspace;
-        return $this->getWorkspaceRole($user, $workspace) === self::WORKSPACE_ADMIN;
+        return in_array($this->getWorkspaceRole($user, $workspace), [
+            self::WORKSPACE_OWNER,
+            self::WORKSPACE_ADMIN,
+        ], true);
     }
 
     /**
@@ -433,7 +454,10 @@ class AccessService
 
         $list = $comment->task->taskList;
 
-        if ($this->getWorkspaceRole($user, $list->space->workspace) === self::WORKSPACE_ADMIN) {
+        if (in_array($this->getWorkspaceRole($user, $list->space->workspace), [
+            self::WORKSPACE_OWNER,
+            self::WORKSPACE_ADMIN,
+        ], true)) {
             return true;
         }
 

@@ -31,7 +31,7 @@ trait CreatesWorkspaceHierarchy
             'name' => "Workspace {$suffix}",
             'color' => '#1D4ED8',
         ]);
-        $workspace->addMember($owner, 'admin');
+        $workspace->addMember($owner, 'owner');
 
         $space = Space::create([
             'workspace_id' => $workspace->id,
