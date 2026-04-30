@@ -6,17 +6,13 @@ use Illuminate\Foundation\Http\FormRequest;
 
 class UpdateTaskRequest extends FormRequest
 {
-    /**
-     * Determine if the user is authorized to make this request.
-     */
+
     public function authorize(): bool
     {
         return true;
     }
 
-    /**
-     * Get the validation rules that apply to the request.
-     */
+
     public function rules(): array
     {
         $task = $this->route('task');
@@ -31,7 +27,7 @@ class UpdateTaskRequest extends FormRequest
                 'date',
                 function ($attribute, $value, $fail) use ($task) {
                     if (!$value) return;
-                    $dueDate = $this->input('due_date', $task?->due_date);
+                    $dueDate = $this->input('due_date', $task?->due_date?->format('Y-m-d'));
                     if ($dueDate && $value > $dueDate) {
                         $fail('Start date must be before or equal to due date.');
                     }
@@ -42,7 +38,7 @@ class UpdateTaskRequest extends FormRequest
                 'date',
                 function ($attribute, $value, $fail) use ($task) {
                     if (!$value) return;
-                    $startDate = $this->input('start_date', $task?->start_date);
+                    $startDate = $this->input('start_date', $task?->start_date?->format('Y-m-d'));
                     if ($startDate && $value < $startDate) {
                         $fail('Due date must be after or equal to start date.');
                     }

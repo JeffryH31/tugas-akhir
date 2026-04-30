@@ -77,12 +77,15 @@ class TaskService
     {
         return DB::transaction(function () use ($data, $list, $user) {
             $task = Task::create([
-                'task_list_id' => $list->id,
-                'name' => $data['name'],
-                'description' => $data['description'] ?? null,
-                'status_id' => $data['status_id'] ?? null,
-                'priority_level' => $data['priority_level'] ?? null,
-                'created_by' => $user->id,
+                'task_list_id'         => $list->id,
+                'name'                 => $data['name'],
+                'description'          => $data['description'] ?? null,
+                'status_id'            => $data['status_id'] ?? null,
+                'priority_level'       => $data['priority_level'] ?? null,
+                'start_date'    => $data['start_date'] ?? null,
+                'due_date'      => $data['due_date'] ?? null,
+                'time_estimate' => $data['time_estimate'] ?? null,
+                'created_by'    => $user->id,
             ]);
 
 
@@ -120,10 +123,13 @@ class TaskService
             $oldValues = $task->only(['name', 'description']);
 
             $task->update([
-                'name'           => $data['name'] ?? $task->name,
-                'description'    => $data['description'] ?? $task->description,
-                'status_id'      => $data['status_id'] ?? $task->status_id,
-                'priority_level' => $data['priority_level'] ?? $task->priority_level,
+                'name'                 => $data['name'] ?? $task->name,
+                'description'          => $data['description'] ?? $task->description,
+                'status_id'            => $data['status_id'] ?? $task->status_id,
+                'priority_level'       => $data['priority_level'] ?? $task->priority_level,
+                'start_date'    => array_key_exists('start_date', $data) ? ($data['start_date'] ?: null) : $task->start_date,
+                'due_date'      => array_key_exists('due_date', $data) ? ($data['due_date'] ?: null) : $task->due_date,
+                'time_estimate' => array_key_exists('time_estimate', $data) ? ($data['time_estimate'] ?: null) : $task->time_estimate,
             ]);
 
             foreach ($oldValues as $key => $oldValue) {

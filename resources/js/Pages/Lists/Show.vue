@@ -755,6 +755,30 @@ watch(() => page.url, () => {
     }
 });
 
+const startSprint = (sprint) => {
+    router.post(route('sprints.start', [props.workspace.id, props.space.id, sprint.id]), {}, {
+        preserveScroll: true,
+        onSuccess: () => {
+            router.reload({ only: ['sprints'] });
+        },
+    });
+};
+
+const completeSprint = async (sprint) => {
+    const shouldComplete = await confirmDialog(
+        'Mark this sprint as complete? Incomplete tasks will remain in the sprint.',
+        'Complete Sprint'
+    );
+    if (!shouldComplete) return;
+
+    router.post(route('sprints.complete', [props.workspace.id, props.space.id, sprint.id]), {}, {
+        preserveScroll: true,
+        onSuccess: () => {
+            router.reload({ only: ['sprints'] });
+        },
+    });
+};
+
 const deleteSprint = async (sprint) => {
     const shouldDelete = await confirmDialog(
         'Delete this sprint? All attached subtasks will be moved back to backlog.',
@@ -1489,7 +1513,8 @@ onMounted(() => {
                             <v-btn v-bind="menuProps" variant="outlined" size="small" class="toolbar-filter-btn">
                                 <v-icon start size="16">mdi-filter-variant</v-icon>
                                 Filter
-                                <v-badge v-if="activeFilterCount" :content="activeFilterCount" color="primary" inline class="ml-1" />
+                                <v-badge v-if="activeFilterCount" :content="activeFilterCount" color="primary" inline
+                                    class="ml-1" />
                             </v-btn>
                         </template>
                         <v-card width="280" color="surface">
@@ -1501,9 +1526,9 @@ onMounted(() => {
                                 <v-autocomplete v-model="filterAssignee" :items="members" item-title="name"
                                     item-value="id" label="Assignee" variant="outlined" density="compact" multiple chips
                                     closable-chips hide-details class="mb-3" bg-color="#1e1e1e" />
-                                <v-autocomplete v-model="filterLabel" :items="labels" item-title="name"
-                                    item-value="id" label="Label" variant="outlined" density="compact" multiple chips
-                                    closable-chips hide-details class="mb-3" bg-color="#1e1e1e">
+                                <v-autocomplete v-model="filterLabel" :items="labels" item-title="name" item-value="id"
+                                    label="Label" variant="outlined" density="compact" multiple chips closable-chips
+                                    hide-details class="mb-3" bg-color="#1e1e1e">
                                     <template #chip="{ props: chipProps, item }">
                                         <v-chip v-bind="chipProps" :color="item.raw.color" size="small" label>
                                             {{ item.raw.name }}
@@ -1517,12 +1542,13 @@ onMounted(() => {
                                         </v-list-item>
                                     </template>
                                 </v-autocomplete>
-                                <v-autocomplete v-if="parentTask" v-model="filterSprint" :items="sprints" item-title="name"
-                                    item-value="id" label="Sprint" variant="outlined" density="compact"
-                                    clearable hide-details bg-color="#1e1e1e" />
+                                <v-autocomplete v-if="parentTask" v-model="filterSprint" :items="sprints"
+                                    item-title="name" item-value="id" label="Sprint" variant="outlined"
+                                    density="compact" clearable hide-details bg-color="#1e1e1e" />
                             </v-card-text>
                             <v-card-actions>
-                                <v-btn variant="text" size="small" @click="filterPriority = []; filterAssignee = []; filterLabel = []; filterSprint = null">
+                                <v-btn variant="text" size="small"
+                                    @click="filterPriority = []; filterAssignee = []; filterLabel = []; filterSprint = null">
                                     Clear All
                                 </v-btn>
                             </v-card-actions>
@@ -1566,16 +1592,16 @@ onMounted(() => {
                             <v-list density="compact">
                                 <v-list-item prepend-icon="mdi-account-lock-outline" title="Product Access"
                                     @click="router.visit(route('lists.settings', [workspace.id, space.id, list.id]))" />
-                                <v-list-item v-if="canManageProduct" prepend-icon="mdi-pencil-outline" title="Edit Product"
-                                    @click="openEditList" />
-                                <v-list-item v-if="canManageSpace" prepend-icon="mdi-folder-move-outline" title="Move to Folder"
-                                    @click="openMoveToFolder" />
-                                <v-list-item v-if="canManageProduct" prepend-icon="mdi-content-copy" title="Duplicate Product"
-                                    @click="duplicateList" />
+                                <v-list-item v-if="canManageProduct" prepend-icon="mdi-pencil-outline"
+                                    title="Edit Product" @click="openEditList" />
+                                <v-list-item v-if="canManageSpace" prepend-icon="mdi-folder-move-outline"
+                                    title="Move to Folder" @click="openMoveToFolder" />
+                                <v-list-item v-if="canManageProduct" prepend-icon="mdi-content-copy"
+                                    title="Duplicate Product" @click="duplicateList" />
                                 <template v-if="canDeleteProduct">
                                     <v-divider />
-                                    <v-list-item prepend-icon="mdi-delete-outline" title="Delete Product" class="text-error"
-                                        @click="showDeleteList = true" />
+                                    <v-list-item prepend-icon="mdi-delete-outline" title="Delete Product"
+                                        class="text-error" @click="showDeleteList = true" />
                                 </template>
                             </v-list>
                         </v-card>
@@ -1590,7 +1616,8 @@ onMounted(() => {
                     <!-- Status Columns -->
                     <StatusColumn v-for="status in statuses" :key="status.id" :status="status" :statuses="statuses"
                         :tasks="filteredTasksByStatus[status.id] || []" :workspace="workspace" :space="space"
-                        :list="list" :parent-task="parentTask" :can-add-task="canOperateTasks" :can-manage-space="canManageSpace" @task-moved="handleTaskMoved"
+                        :list="list" :parent-task="parentTask" :can-add-task="canOperateTasks"
+                        :can-manage-space="canManageSpace" @task-moved="handleTaskMoved"
                         @task-complete="handleTaskComplete" @task-open="handleTaskOpen" @add-task="handleAddTask" />
 
                     <!-- Add Status Column -->
@@ -1650,7 +1677,8 @@ onMounted(() => {
                                         </v-chip>
                                     </td>
                                     <td>
-                                        <v-chip v-if="task.priority_level" :color="getPriority(task.priority_level)?.color" size="small"
+                                        <v-chip v-if="task.priority_level"
+                                            :color="getPriority(task.priority_level)?.color" size="small"
                                             variant="tonal">
                                             {{ getPriority(task.priority_level)?.name }}
                                         </v-chip>
@@ -1864,7 +1892,8 @@ onMounted(() => {
                         label="Sort by" density="compact" variant="outlined" hide-details bg-color="#1e1e1e"
                         class="sprint-select" />
 
-                    <v-btn v-if="canManageTaskStructure" color="primary" prepend-icon="mdi-plus" @click="openCreateSprintDialog">
+                    <v-btn v-if="canManageTaskStructure" color="primary" prepend-icon="mdi-plus"
+                        @click="openCreateSprintDialog">
                         Create Sprint
                     </v-btn>
                 </div>
@@ -1900,6 +1929,12 @@ onMounted(() => {
                                     </template>
                                     <v-card color="surface">
                                         <v-list density="compact">
+                                            <v-list-item v-if="!isSprintActive(sprint) && !isSprintCompleted(sprint)"
+                                                prepend-icon="mdi-rocket-launch-outline" title="Start Sprint"
+                                                class="text-success" @click="startSprint(sprint)" />
+                                            <v-list-item v-if="isSprintActive(sprint)"
+                                                prepend-icon="mdi-check-circle-outline" title="Complete Sprint"
+                                                class="text-info" @click="completeSprint(sprint)" />
                                             <v-list-item prepend-icon="mdi-pencil" title="Edit Sprint"
                                                 @click="editSprint(sprint)" />
                                             <v-list-item prepend-icon="mdi-delete" title="Delete Sprint"
@@ -1977,8 +2012,7 @@ onMounted(() => {
         <TaskDetailPanel v-model="showTaskDetail" :task="selectedTask" :workspace="workspace" :space="space"
             :list="list" :parent-task="parentTask" :statuses="statuses" :members="members" :labels="labels"
             :sprints="sprints" :sibling-subtasks="siblingSubtasks" :can-operate-tasks="canOperateTasks"
-            :can-manage-task-structure="canManageTaskStructure" @view-subtasks="viewSubtasks"
-            @updated="refreshTasks" />
+            :can-manage-task-structure="canManageTaskStructure" @view-subtasks="viewSubtasks" @updated="refreshTasks" />
 
         <!-- Create/Edit Sprint Dialog -->
         <v-dialog v-model="showCreateSprint" max-width="620">

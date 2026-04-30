@@ -40,7 +40,7 @@ class StoreSubtaskRequest extends FormRequest
             'start_date' => ['nullable', 'date'],
             'due_date' => ['nullable', 'date', 'after_or_equal:start_date'],
             'time_estimate' => ['nullable', 'integer', 'min:0', 'max:525600'], // max 1 year in minutes
-            'assignee_ids' => ['nullable', 'array'],
+            'assignee_ids' => ['nullable', 'array', 'max:1'],
             'assignee_ids.*' => ['exists:users,id'],
             'label_ids' => ['nullable', 'array'],
             'label_ids.*' => ['exists:labels,id'],

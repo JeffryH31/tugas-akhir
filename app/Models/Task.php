@@ -23,18 +23,24 @@ class Task extends Model
         'priority_level',
         'name',
         'description',
+        'start_date',
+        'due_date',
+        'time_estimate',
         'position',
         'is_archived',
         'created_by',
     ];
 
     protected $casts = [
-        'is_archived' => 'boolean',
-        'priority_level' => PriorityLevel::class,
+        'is_archived'           => 'boolean',
+        'priority_level'        => PriorityLevel::class,
+        'start_date' => 'date:Y-m-d',
+        'due_date'   => 'date:Y-m-d',
     ];
 
     protected $appends = [
         'progress',
+        'time_spent',
     ];
 
     /**
@@ -191,6 +197,19 @@ class Task extends Model
 
     public function updateProgress(): void
     {
+    }
+
+    /**
+     * Get total time spent across all subtasks (in minutes).
+     * Computed from subtask time_spent fields (which aggregate time_entries.duration).
+     */
+    public function getTimeSpentAttribute(): int
+    {
+        if ($this->relationLoaded('subtasks')) {
+            return (int) $this->subtasks->sum('time_spent');
+        }
+
+        return (int) $this->subtasks()->sum('time_spent');
     }
 
     public function assign(User $user, ?User $assignedBy = null): void

@@ -40,7 +40,7 @@ class UpdateSubtaskRequest extends FormRequest
             'pessimistic_estimate' => ['nullable', 'integer', 'min:0', 'max:525600'],
             'progress' => ['sometimes', 'integer', 'min:0', 'max:100'],
             'sprint_id' => ['nullable', 'exists:sprints,id'],
-            'assignee_ids' => ['sometimes', 'array'],
+            'assignee_ids' => ['sometimes', 'array', 'max:1'],
             'assignee_ids.*' => ['exists:users,id'],
             'label_ids' => ['sometimes', 'array'],
             'label_ids.*' => ['exists:labels,id'],

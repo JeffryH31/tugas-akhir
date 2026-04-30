@@ -17,7 +17,7 @@ class Status extends Model
         'slug',
         'color',
         'type',
-        'applies_to', // NEW
+        'applies_to',
         'position',
         'is_default',
         'is_closed',

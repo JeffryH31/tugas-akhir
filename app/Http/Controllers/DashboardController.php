@@ -74,10 +74,18 @@ class DashboardController extends Controller
         $todayTimeSpent = $user->getTodayTimeSpent();
         $weekTimeSpent = $user->getWeekTimeSpent();
         $workdayStart = now()->copy()->setTime(8, 0);
-        $workdayEnd = now()->copy()->setTime(17, 0);
-        $todayCapacity = now()->lessThanOrEqualTo($workdayStart)
-            ? 0
-            : $workdayStart->diffInMinutes(now()->min($workdayEnd));
+        $workdayEnd   = now()->copy()->setTime(17, 0);
+        $breakStart   = now()->copy()->setTime(12, 0);
+        $breakEnd     = now()->copy()->setTime(13, 0);
+        if (now()->lessThanOrEqualTo($workdayStart)) {
+            $todayCapacity = 0;
+        } else {
+            $raw = $workdayStart->diffInMinutes(now()->min($workdayEnd));
+            $breakElapsed = now()->greaterThan($breakStart)
+                ? $breakStart->diffInMinutes(now()->min($breakEnd))
+                : 0;
+            $todayCapacity = max(0, $raw - $breakElapsed);
+        }
         $weekCapacity = now()->startOfWeek()->diffInWeekdays(now()->endOfDay()->min(now())) * 8 * 60;
         $todoCount = $mySubtasks->count();
 

@@ -7,12 +7,7 @@ use Illuminate\Http\Resources\Json\JsonResource;
 
 class TaskResource extends JsonResource
 {
-    /**
-     * Transform the resource into an array.
-     *
-     * @return array<string, mixed>
-     */
-    public function toArray(Request $request): array
+        public function toArray(Request $request): array
     {
         $earliestDueDate = null;
         $resolvedAssignees = collect();
@@ -39,14 +34,18 @@ class TaskResource extends JsonResource
             'description' => $this->description,
             'position' => $this->position,
             'progress' => $this->progress,
-            'due_date' => $earliestDueDate,
+            'start_date' => $this->start_date?->format('Y-m-d'),
+            'due_date' => $this->start_date || $this->due_date
+                ? $this->due_date?->format('Y-m-d')
+                : $earliestDueDate,
+            'time_estimate' => $this->time_estimate,
+            'time_spent' => $this->time_spent,
             'status_id' => $this->status_id,
             'priority_level' => $this->priority_level,
             'is_archived' => $this->is_archived,
             'created_at' => $this->created_at?->format('Y-m-d H:i:s'),
             'updated_at' => $this->updated_at?->format('Y-m-d H:i:s'),
 
-            // Relationships
             'status' => new StatusResource($this->whenLoaded('status')),
             'priority' => $this->priority,
             'task_list' => $this->whenLoaded('taskList', function () {
@@ -74,7 +73,6 @@ class TaskResource extends JsonResource
             'time_entries' => TimeEntryResource::collection($this->whenLoaded('timeEntries')),
             'attachments' => AttachmentResource::collection($this->whenLoaded('attachments')),
 
-            // Counts
             'comments_count' => $this->comments_count ?? $this->comments?->count() ?? 0,
             'subtasks_count' => $this->subtasks_count ?? $this->subtasks?->count() ?? 0,
             'attachments_count' => $this->attachments_count ?? $this->attachments?->count() ?? 0,

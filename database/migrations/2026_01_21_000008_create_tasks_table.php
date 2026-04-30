@@ -20,6 +20,9 @@ return new class extends Migration
 
             $table->string('name');
             $table->text('description')->nullable();
+            $table->date('start_date')->nullable();
+            $table->date('due_date')->nullable();
+            $table->unsignedInteger('time_estimate')->nullable()->comment('Estimated duration in minutes');
 
             $table->integer('position')->default(0);
 
@@ -33,6 +36,8 @@ return new class extends Migration
             $table->index(['task_list_id', 'status_id', 'position']);
             $table->index(['created_by']);
             $table->index('is_archived');
+            $table->index('start_date');
+            $table->index('due_date');
         });
 
         Schema::create('task_assignees', function (Blueprint $table) {

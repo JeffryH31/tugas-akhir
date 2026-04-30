@@ -431,8 +431,8 @@ const toggleAssignee = (userId) => {
     if (isAssigned) {
         props.task.assignees = props.task.assignees.filter(a => a.id !== userId);
     } else {
-        if (!props.task.assignees) props.task.assignees = [];
-        props.task.assignees.push(member);
+        // Replace: subtask allows max 1 assignee
+        props.task.assignees = [member];
     }
     const reloadAfterAssign = () => router.reload({ only: ['task', 'tasksByStatus'] });
 
@@ -585,7 +585,7 @@ const removeSuccessor = (suc) => depFetch('DELETE', { subtask_id: suc.id, depend
                         <span v-if="!displayedAssignees.length" class="text-caption text-grey">
                             No assignees yet
                         </span>
-                        <v-menu v-if="isSubtask && canOperateTasks">
+                        <v-menu v-if="isSubtask && canOperateTasks && !localTask.assignees?.length">
                             <template v-slot:activator="{ props: menuProps }">
                                 <v-btn v-bind="menuProps" icon variant="tonal" size="x-small" color="grey">
                                     <v-icon size="14">mdi-plus</v-icon>
@@ -676,7 +676,7 @@ const removeSuccessor = (suc) => depFetch('DELETE', { subtask_id: suc.id, depend
                 </div>
             </div>
 
-            <!-- Subtask-specific properties -->
+            <!-- Subtask-only: Sprint -->
             <template v-if="isSubtask">
                 <v-divider class="my-1" />
 
@@ -730,8 +730,10 @@ const removeSuccessor = (suc) => depFetch('DELETE', { subtask_id: suc.id, depend
                         </v-menu>
                     </div>
                 </div>
+            </template>
 
-                <v-divider class="my-1" />
+            <!-- Start Date (tasks & subtasks) -->
+            <v-divider class="my-1" />
 
                 <!-- Start Date -->
                 <div class="prop-row">
@@ -802,6 +804,8 @@ const removeSuccessor = (suc) => depFetch('DELETE', { subtask_id: suc.id, depend
                     </div>
                 </div>
 
+            <!-- Subtask-only: Automation -->
+            <template v-if="isSubtask">
                 <v-divider class="my-1" />
 
                 <!-- Completion Automation -->
@@ -852,8 +856,10 @@ const removeSuccessor = (suc) => depFetch('DELETE', { subtask_id: suc.id, depend
                         </v-menu>
                     </div>
                 </div>
+            </template>
 
-                <v-divider class="my-1" />
+            <!-- Time Estimate (tasks & subtasks) -->
+            <v-divider class="my-1" />
 
                 <!-- Time Estimate -->
                 <div class="prop-row">
@@ -889,6 +895,8 @@ const removeSuccessor = (suc) => depFetch('DELETE', { subtask_id: suc.id, depend
                     </div>
                 </div>
 
+            <!-- Subtask-only: PERT, Baseline, Tracker, Progress -->
+            <template v-if="isSubtask">
                 <v-divider class="my-1" />
 
                 <!-- PERT -->
@@ -974,7 +982,10 @@ const removeSuccessor = (suc) => depFetch('DELETE', { subtask_id: suc.id, depend
                     </div>
                 </div>
 
-                <v-divider class="my-1" />
+            </template>
+
+            <!-- Time Spent (tasks & subtasks) -->
+            <v-divider class="my-1" />
 
                 <!-- Time Spent -->
                 <div class="prop-row">
@@ -1001,6 +1012,8 @@ const removeSuccessor = (suc) => depFetch('DELETE', { subtask_id: suc.id, depend
                     </div>
                 </div>
 
+            <!-- Subtask-only: Progress -->
+            <template v-if="isSubtask">
                 <v-divider class="my-1" />
 
                 <!-- Progress (% Complete for EVM) -->
@@ -1017,6 +1030,10 @@ const removeSuccessor = (suc) => depFetch('DELETE', { subtask_id: suc.id, depend
                     </div>
                 </div>
 
+            </template>
+
+            <!-- Subtask-only: Dependencies -->
+            <template v-if="isSubtask">
                 <v-divider class="my-1" />
 
                 <!-- Waiting On -->

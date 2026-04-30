@@ -7,7 +7,7 @@ const dialogColor = ref('error');
 let resolvePromise = null;
 
 export function useConfirmDialog() {
-    const confirm = (message, title = 'Confirm', color = 'error') => {
+    const confirm = (message, title = 'Confirm', color = 'warning') => {
         dialogTitle.value = title;
         dialogMessage.value = message;
         dialogColor.value = color;
