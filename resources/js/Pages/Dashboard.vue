@@ -487,6 +487,12 @@ const fmtRelative = (ts) => {
     margin: 0 auto;
 }
 
+@media (max-width: 640px) {
+    .dashboard-page {
+        padding: 12px;
+    }
+}
+
 .welcome-section {
     margin-bottom: 24px;
 }

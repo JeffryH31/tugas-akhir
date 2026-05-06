@@ -255,6 +255,7 @@ const billablePct = computed(() => {
                         <v-card class="lg:col-span-2">
                             <v-card-title class="text-sm font-semibold">Recently Completed (last 30 days)</v-card-title>
                             <v-divider />
+                            <div class="overflow-x-auto">
                             <v-table density="compact">
                                 <thead>
                                     <tr>
@@ -276,6 +277,7 @@ const billablePct = computed(() => {
                                     </tr>
                                 </tbody>
                             </v-table>
+                            </div>
                         </v-card>
 
                     </div>
@@ -289,6 +291,7 @@ const billablePct = computed(() => {
                         <div v-if="activeSubtasks.length === 0" class="pa-6 text-center text-gray-400">
                             No active work assigned.
                         </div>
+                        <div class="overflow-x-auto">
                         <v-table v-else density="compact">
                             <thead>
                                 <tr>
@@ -346,6 +349,7 @@ const billablePct = computed(() => {
                                 </tr>
                             </tbody>
                         </v-table>
+                        </div>
                     </v-card>
                 </v-window-item>
 
@@ -357,6 +361,7 @@ const billablePct = computed(() => {
                         <div v-if="recentEntries.length === 0" class="pa-6 text-center text-gray-400">
                             No time entries yet.
                         </div>
+                        <div class="overflow-x-auto">
                         <v-table v-else density="compact">
                             <thead>
                                 <tr>
@@ -390,6 +395,7 @@ const billablePct = computed(() => {
                                 </tr>
                             </tbody>
                         </v-table>
+                        </div>
                     </v-card>
                 </v-window-item>
 

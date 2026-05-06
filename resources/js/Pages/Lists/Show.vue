@@ -1645,6 +1645,7 @@ onMounted(() => {
             <!-- List View -->
             <div v-else-if="viewMode === 'list'" class="list-view">
                 <v-card variant="outlined" rounded="lg">
+                    <div class="overflow-x-auto">
                     <v-table>
                         <thead>
                             <tr>
@@ -1712,6 +1713,7 @@ onMounted(() => {
                             </tr>
                         </tbody>
                     </v-table>
+                    </div>
                 </v-card>
             </div>
 

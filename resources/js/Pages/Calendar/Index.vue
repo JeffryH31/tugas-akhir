@@ -741,6 +741,7 @@ const formatScheduleRange = (startDate, dueDate) => {
 
                     <!-- Week View -->
                     <div v-else-if="viewMode === 'week'" class="week-view p-4">
+                        <div class="overflow-x-auto">
                         <div class="mini-calendar-grid week-grid">
                             <div v-for="day in ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat']" :key="`wk-${day}`"
                                 class="calendar-header">
@@ -757,7 +758,9 @@ const formatScheduleRange = (startDate, dueDate) => {
                                 </div>
                             </div>
                         </div>
+                        </div>
 
+                        <div class="overflow-x-auto">
                         <div class="week-bars-standalone"
                             :style="{ gridTemplateRows: `repeat(${getWeekLaneCount(weekDays, 3)}, 24px)` }">
                             <div v-for="bar in getWeekBarsLimited(weekDays, 3)" :key="`wkbar-${bar.subtask.id}-${bar.row}`"
@@ -780,6 +783,7 @@ const formatScheduleRange = (startDate, dueDate) => {
                             <div v-if="getWeekBarsOverflowCount(weekDays, 3) > 0" class="week-bar-overflow">
                                 +{{ getWeekBarsOverflowCount(weekDays, 3) }} more ongoing
                             </div>
+                        </div>
                         </div>
                     </div>
 

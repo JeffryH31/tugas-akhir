@@ -178,13 +178,13 @@ const onDropToBacklog = () => {
     <MainLayout :title="`${sprint.name} - ${list?.name || space.name}`">
         <div class="h-full flex flex-col bg-[#1e1e1e]">
             <!-- Header -->
-            <div class="border-b border-gray-800 p-6">
-                <div class="flex items-center justify-between mb-4">
+            <div class="border-b border-gray-800 p-4 sm:p-6">
+                <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-4">
                     <div class="flex items-center gap-4">
                         <v-btn icon="mdi-arrow-left" variant="text" @click="goToSprintIndex" />
                         <div>
-                            <div class="flex items-center gap-3">
-                                <h1 class="text-2xl font-bold text-white">{{ sprint.name }}</h1>
+                            <div class="flex flex-wrap items-center gap-2 sm:gap-3">
+                                <h1 class="text-xl sm:text-2xl font-bold text-white">{{ sprint.name }}</h1>
                                 <v-chip v-if="isSprintActive" color="success" size="small">Active</v-chip>
                                 <v-chip v-else-if="isSprintCompleted" color="default" size="small">Completed</v-chip>
                                 <v-chip v-else color="info" size="small">Planned</v-chip>
@@ -205,7 +205,7 @@ const onDropToBacklog = () => {
                 </div>
 
                 <!-- Sprint Statistics -->
-                <div class="grid grid-cols-5 gap-4 mt-6">
+                <div class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3 sm:gap-4 mt-4 sm:mt-6">
                     <div class="bg-[#2D2D2D] rounded-lg p-4">
                         <div class="text-sm text-gray-400">Total Tasks</div>
                         <div class="text-2xl font-bold text-white mt-1">{{ statistics.total_subtasks }}</div>
@@ -230,8 +230,8 @@ const onDropToBacklog = () => {
             </div>
 
             <!-- Sprint Board -->
-            <div class="flex-1 overflow-auto p-6">
-                <div class="grid grid-cols-2 gap-6 h-full">
+            <div class="flex-1 overflow-auto p-4 sm:p-6">
+                <div class="grid grid-cols-1 sm:grid-cols-2 gap-4 sm:gap-6">
                     <!-- Backlog Column -->
                     <div class="flex flex-col">
                         <div class="flex items-center justify-between mb-4">
@@ -291,7 +291,7 @@ const onDropToBacklog = () => {
 
                 <!-- Burndown Chart -->
                 <div v-if="burndown && burndown.actual && burndown.actual.length > 0"
-                    class="mt-8 bg-[#2D2D2D] rounded-lg p-6">
+                    class="mt-6 sm:mt-8 bg-[#2D2D2D] rounded-lg p-4 sm:p-6">
                     <h3 class="text-lg font-semibold text-white mb-4">Burndown Chart</h3>
                     <div class="h-64 flex items-end gap-2">
                         <div v-for="(point, index) in burndown.actual" :key="index"
