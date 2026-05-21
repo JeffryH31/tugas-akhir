@@ -4,6 +4,7 @@ import { Head, Link, router, usePage } from '@inertiajs/vue3';
 import { useDisplay } from 'vuetify';
 import { useSnackbar } from '@/composables/useSnackbar';
 import { useConfirmDialog } from '@/composables/useConfirmDialog';
+import { useIdleDetector } from '@/composables/useIdleDetector';
 import ColorPicker from '@/Components/ColorPicker.vue';
 
 const props = defineProps({
@@ -268,6 +269,30 @@ const logout = () => {
     router.post(route('logout'));
 };
 
+// Idle detection via Electron (OS-level)
+useIdleDetector({
+    onIdle: () => {
+        const timerRunning = !!runningTimer.value;
+        const message = timerRunning
+            ? 'Kamu idle tapi timer masih berjalan! Harap hentikan jika tidak bekerja.'
+            : 'Kamu sudah tidak aktif selama 5 menit.';
+        const color = timerRunning ? 'warning' : 'info';
+
+        // Browser notification (jika izin sudah diberikan)
+        if ('Notification' in window && Notification.permission === 'granted') {
+            new Notification(timerRunning ? '⚠️ Timer Masih Berjalan' : 'Kamu Idle', {
+                body: message,
+                icon: '/favicon.ico',
+            });
+        } else {
+            showSnackbar(message, color);
+        }
+    },
+    onActive: () => {
+        showSnackbar('Kamu kembali aktif.', 'success');
+    },
+});
+
 // Expose functions to window for global access
 onMounted(() => {
     if (typeof window !== 'undefined') {
@@ -277,6 +302,11 @@ onMounted(() => {
         };
     }
     startGlobalTimerInterval();
+
+    // Minta izin browser notification (untuk idle alert)
+    if ('Notification' in window && Notification.permission === 'default') {
+        Notification.requestPermission();
+    }
 
     // Ctrl+K / Cmd+K to open search
     window.addEventListener('keydown', handleSearchShortcut);
@@ -530,7 +560,7 @@ const formatDuration = (seconds) => {
                                             :style="{ backgroundColor: space.color || '#6366F1' }" />
                                     </template>
                                     <v-list-item-title v-if="!isSidebarMini" class="text-body-2">{{ space.name
-                                        }}</v-list-item-title>
+                                    }}</v-list-item-title>
                                 </v-list-item>
                             </template>
                         </v-tooltip>
@@ -658,7 +688,7 @@ const formatDuration = (seconds) => {
                             <button v-bind="tipProps" class="sidebar-collapse-btn" :class="{ 'is-mini': isSidebarMini }"
                                 @click="isSidebarMini = !isSidebarMini">
                                 <v-icon size="16">{{ isSidebarMini ? 'mdi-chevron-right' : 'mdi-chevron-left'
-                                    }}</v-icon>
+                                }}</v-icon>
                                 <span v-if="!isSidebarMini">Collapse</span>
                             </button>
                         </template>
@@ -703,7 +733,7 @@ const formatDuration = (seconds) => {
                         class="search-empty">
                         <v-icon size="40" color="grey-darken-1">mdi-text-search</v-icon>
                         <div class="text-body-2 text-medium-emphasis mt-2">No results for "<strong>{{ searchQuery
-                                }}</strong>"
+                        }}</strong>"
                         </div>
                     </div>
                     <div v-else>
@@ -748,7 +778,7 @@ const formatDuration = (seconds) => {
                                 </template>
                                 <v-list-item-title class="text-body-2">{{ space.name }}</v-list-item-title>
                                 <v-list-item-subtitle class="text-caption">{{ space.workspace?.name
-                                    }}</v-list-item-subtitle>
+                                }}</v-list-item-subtitle>
                             </v-list-item>
                         </v-list>
                     </div>
