@@ -1,6 +1,7 @@
 <?php
 
 use App\Http\Controllers\CalendarController;
+use App\Http\Controllers\ChecklistItemController;
 use App\Http\Controllers\CommentController;
 use App\Http\Controllers\CpmController;
 use App\Http\Controllers\DashboardController;
@@ -182,6 +183,18 @@ Route::middleware(['auth:sanctum', config('jetstream.auth_session'), 'verified']
                                             Route::prefix('labels')->group(function () {
                                                 Route::post('/', [SubtaskController::class, 'addLabel'])->name('tasks.subtasks.labels.add');
                                                 Route::delete('/', [SubtaskController::class, 'removeLabel'])->name('tasks.subtasks.labels.remove');
+                                            });
+
+                                            // Checklist items
+                                            Route::prefix('checklist-items')->group(function () {
+                                                Route::post('/', [ChecklistItemController::class, 'store'])->name('tasks.subtasks.checklist.store');
+                                                Route::post('/reorder', [ChecklistItemController::class, 'reorder'])->name('tasks.subtasks.checklist.reorder');
+
+                                                Route::prefix('{checklistItem}')->scopeBindings()->group(function () {
+                                                    Route::patch('/', [ChecklistItemController::class, 'update'])->name('tasks.subtasks.checklist.update');
+                                                    Route::delete('/', [ChecklistItemController::class, 'destroy'])->name('tasks.subtasks.checklist.destroy');
+                                                    Route::post('/toggle', [ChecklistItemController::class, 'toggle'])->name('tasks.subtasks.checklist.toggle');
+                                                });
                                             });
                                         });
                                     });

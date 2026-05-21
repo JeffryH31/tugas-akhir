@@ -1,6 +1,7 @@
 <script setup>
-import { ref, computed, watch } from 'vue';
+import { ref, computed, watch, nextTick } from 'vue';
 import { router } from '@inertiajs/vue3';
+import ChecklistItemRow from './ChecklistItemRow.vue';
 import { PRIORITIES, PRIORITY_MAP } from '@/constants/priorities';
 import { useConfirmDialog } from '@/composables/useConfirmDialog';
 import ColorPicker from '@/Components/ColorPicker.vue';
@@ -491,11 +492,98 @@ const availableForDependency = computed(() => {
 });
 
 // ===== Progress =====
-const updateProgress = (value) => {
-    router.patch(getUpdateRoute(), { progress: value }, {
-        preserveScroll: true, preserveState: true,
-        onSuccess: () => router.reload({ only: ['task', 'tasksByStatus'] }),
-    });
+// Progress is now auto-calculated from checklist items — no manual update needed.
+
+// ===== Checklist items (subtask only) =====
+const checklistRouteParams = computed(() => {
+    if (!props.isSubtask || !props.parentTask) return [];
+    return [props.workspace.id, props.space.id, props.list.id, props.parentTask.id, props.task.id];
+});
+
+// Build a nested tree from the flat checklist_items array using parent_id
+const checklistTree = computed(() => {
+    const items = props.localTask?.checklist_items || [];
+    if (!items.length) return [];
+    const map = new Map(items.map((i) => [i.id, { ...i, children: [] }]));
+    const roots = [];
+    for (const item of items) {
+        if (item.parent_id && map.has(item.parent_id)) {
+            map.get(item.parent_id).children.push(map.get(item.id));
+        } else {
+            roots.push(map.get(item.id));
+        }
+    }
+    const sort = (arr) => {
+        arr.sort((a, b) => (a.position ?? 0) - (b.position ?? 0));
+        arr.forEach((i) => sort(i.children));
+        return arr;
+    };
+    return sort(roots);
+});
+
+const newChecklistName    = ref('');
+const newChecklistInputRef = ref(null);
+const checklistAddLoading  = ref(false);
+
+const addChecklistItem = () => {
+    const name = newChecklistName.value.trim();
+    if (!name) return;
+    checklistAddLoading.value = true;
+    router.post(
+        route('tasks.subtasks.checklist.store', checklistRouteParams.value),
+        { name },
+        {
+            preserveScroll: true,
+            onSuccess: () => {
+                newChecklistName.value = '';
+                router.reload({ only: ['tasksByStatus'] });
+            },
+            onFinish: () => { checklistAddLoading.value = false; },
+        }
+    );
+};
+
+const onChecklistReloaded = () => {
+    router.reload({ only: ['tasksByStatus'] });
+};
+
+// ===== Sub-subtasks (when viewing a depth < MAX_DEPTH subtask) =====
+const newChildSubtaskName    = ref('');
+const addChildSubtaskLoading  = ref(false);
+
+const addChildSubtask = () => {
+    const name = newChildSubtaskName.value.trim();
+    if (!name || !props.parentTask) return;
+    addChildSubtaskLoading.value = true;
+    router.post(
+        route('tasks.subtasks.store', [props.workspace.id, props.space.id, props.list.id, props.parentTask.id]),
+        { name, parent_id: props.task.id, task_id: props.parentTask.id },
+        {
+            preserveScroll: true,
+            onSuccess: () => {
+                newChildSubtaskName.value = '';
+                router.reload({ only: ['tasksByStatus'] });
+            },
+            onFinish: () => { addChildSubtaskLoading.value = false; },
+        }
+    );
+};
+
+const toggleChildSubtask = (child) => {
+    if (!props.canOperateTasks || !props.parentTask) return;
+    const done = !!child.completed_at;
+    const targetStatusId = getStoredSubtaskCompletionTarget(props.space?.id, props.statuses);
+    const payload = !done && targetStatusId ? { target_status_id: targetStatusId } : {};
+    router.post(
+        route(done ? 'tasks.subtasks.reopen' : 'tasks.subtasks.complete',
+            [props.workspace.id, props.space.id, props.list.id, props.parentTask.id, child.id]),
+        payload,
+        {
+            preserveScroll: true,
+            onSuccess: () => { router.reload({ only: ['tasksByStatus'] }); },
+            onError: (errors) => { if (errors.dependency) window.showSnackbar?.(errors.dependency, 'error'); },
+        }
+    );
 };
 
 const depFetch = (method, body) => {
@@ -1012,21 +1100,34 @@ const removeSuccessor = (suc) => depFetch('DELETE', { subtask_id: suc.id, depend
                     </div>
                 </div>
 
-            <!-- Subtask-only: Progress -->
+            <!-- Subtask-only: Progress (auto-calculated from checklist) -->
             <template v-if="isSubtask">
                 <v-divider class="my-1" />
 
-                <!-- Progress (% Complete for EVM) -->
+                <!-- Progress -->
                 <div class="prop-row">
                     <div class="prop-label">
                         <v-icon size="16" class="prop-icon">mdi-percent</v-icon>
                         Progress
                     </div>
-                    <div class="prop-value d-flex align-center ga-3">
-                        <v-slider :model-value="localTask.progress ?? 0" min="0" max="100" step="1" density="compact"
-                            hide-details thumb-label class="progress-slider" :disabled="!canOperateTasks"
-                            :color="(localTask.progress ?? 0) >= 100 ? 'success' : 'primary'" @end="updateProgress" />
-                        <span class="text-body-2">{{ localTask.progress ?? 0 }}%</span>
+                    <div class="prop-value">
+                        <template v-if="(localTask.checklist_total ?? 0) > 0">
+                            <div class="d-flex align-center ga-3">
+                                <v-progress-linear
+                                    :model-value="localTask.progress ?? 0"
+                                    :color="(localTask.progress ?? 0) >= 100 ? 'success' : 'primary'"
+                                    height="5" rounded
+                                    class="progress-bar-inline"
+                                />
+                                <span class="text-body-2 text-no-wrap">
+                                    {{ localTask.checklist_checked ?? 0 }}/{{ localTask.checklist_total ?? 0 }}
+                                    ({{ localTask.progress ?? 0 }}%)
+                                </span>
+                            </div>
+                        </template>
+                        <span v-else class="text-caption text-grey">
+                            Auto-calculated — add checklist items below
+                        </span>
                     </div>
                 </div>
 
@@ -1161,6 +1262,18 @@ const removeSuccessor = (suc) => depFetch('DELETE', { subtask_id: suc.id, depend
                     <span class="subtask-check-name" :class="{ 'subtask-check-done': sub.completed_at }">
                         {{ sub.name }}
                     </span>
+                    <!-- Checklist progress per subtask -->
+                    <v-chip
+                        v-if="(sub.checklist_total ?? 0) > 0"
+                        size="x-small" variant="tonal"
+                        :color="(sub.progress ?? 0) >= 100 ? 'success' : 'grey'"
+                        class="flex-shrink-0"
+                        title="Checklist progress"
+                        @click.stop
+                    >
+                        <v-icon start size="10">mdi-format-list-checks</v-icon>
+                        {{ sub.checklist_checked ?? 0 }}/{{ sub.checklist_total ?? 0 }}
+                    </v-chip>
                     <v-chip size="x-small" variant="tonal" class="subtask-sprint-chip ml-auto" @click.stop
                         :color="resolveTaskSprint(sub) ? (isSprintActive(resolveTaskSprint(sub)) ? 'success' : 'primary') : 'grey'">
                         <v-icon start size="12">mdi-calendar-clock-outline</v-icon>
@@ -1171,6 +1284,144 @@ const removeSuccessor = (suc) => depFetch('DELETE', { subtask_id: suc.id, depend
                 </div>
             </div>
             <div v-else class="pa-4 text-center text-body-2 text-grey">No subtasks yet</div>
+        </div>
+
+        <!-- Checklist Section (subtasks only) -->
+        <div v-if="isSubtask" class="section-card mt-4">
+            <div class="d-flex align-center justify-space-between pa-3 pb-2">
+                <div class="d-flex align-center ga-2">
+                    <v-icon size="18" color="grey">mdi-format-list-checks</v-icon>
+                    <span class="text-body-2 font-weight-medium">Checklist</span>
+                    <v-chip
+                        v-if="(localTask.checklist_total ?? 0) > 0"
+                        size="x-small" variant="tonal"
+                        :color="(localTask.progress ?? 0) >= 100 ? 'success' : 'primary'"
+                    >
+                        {{ localTask.checklist_checked ?? 0 }}/{{ localTask.checklist_total ?? 0 }}
+                    </v-chip>
+                </div>
+            </div>
+
+            <!-- Progress bar (only when items exist) -->
+            <div v-if="(localTask.checklist_total ?? 0) > 0" class="px-3 pb-1">
+                <v-progress-linear
+                    :model-value="localTask.progress ?? 0"
+                    :color="(localTask.progress ?? 0) >= 100 ? 'success' : 'primary'"
+                    height="4" rounded
+                />
+            </div>
+
+            <v-divider />
+
+            <!-- Checklist items tree -->
+            <div v-if="checklistTree.length" class="py-1">
+                <ChecklistItemRow
+                    v-for="item in checklistTree"
+                    :key="item.id"
+                    :item="item"
+                    :route-params="checklistRouteParams"
+                    :can-edit="canOperateTasks"
+                    :indent-level="0"
+                    @reloaded="onChecklistReloaded"
+                />
+            </div>
+            <div v-else class="pa-3 text-center text-caption text-grey">
+                No checklist items yet — add one below
+            </div>
+
+            <!-- Add root-level item input -->
+            <div v-if="canOperateTasks" class="checklist-add-root pa-3 pt-2">
+                <div class="d-flex align-center ga-2">
+                    <v-icon size="16" color="grey">mdi-plus</v-icon>
+                    <input
+                        ref="newChecklistInputRef"
+                        v-model="newChecklistName"
+                        class="checklist-add-input"
+                        placeholder="Add checklist item…"
+                        @keydown.enter.prevent="addChecklistItem"
+                    />
+                    <v-btn
+                        v-if="newChecklistName.trim()"
+                        size="x-small" color="primary" variant="flat"
+                        :loading="checklistAddLoading"
+                        @click="addChecklistItem"
+                    >Add</v-btn>
+                </div>
+            </div>
+        </div>
+
+        <!-- Sub-subtasks Section (subtask only, when depth < MAX) -->
+        <div
+            v-if="isSubtask && (localTask.can_add_children || (localTask.children ?? []).length > 0)"
+            class="section-card mt-4"
+        >
+            <div class="d-flex align-center justify-space-between pa-3">
+                <div class="d-flex align-center ga-2">
+                    <v-icon size="18" color="grey">mdi-file-tree-outline</v-icon>
+                    <span class="text-body-2 font-weight-medium">Sub-subtasks</span>
+                    <v-chip
+                        v-if="(localTask.children ?? []).length"
+                        size="x-small" variant="tonal" color="primary"
+                    >
+                        {{ (localTask.children ?? []).filter(c => c.completed_at).length }}/{{ (localTask.children ?? []).length }}
+                    </v-chip>
+                </div>
+                <!-- Board button only for depth 0 (has_kanban_view) -->
+                <v-btn
+                    v-if="localTask.has_kanban_view && (localTask.children ?? []).length"
+                    variant="tonal" size="x-small" color="primary"
+                    @click="$emit('view-subtasks', localTask)"
+                >
+                    <v-icon start size="14">mdi-view-dashboard-outline</v-icon>
+                    Board
+                </v-btn>
+            </div>
+            <v-divider />
+
+            <!-- Children list -->
+            <div v-if="(localTask.children ?? []).length" class="subtask-checklist">
+                <div
+                    v-for="child in (localTask.children ?? [])"
+                    :key="child.id"
+                    class="subtask-check-item"
+                    @click="canOperateTasks && toggleChildSubtask(child)"
+                >
+                    <v-icon :color="child.completed_at ? 'success' : '#555'" size="18">
+                        {{ child.completed_at ? 'mdi-checkbox-marked-circle' : 'mdi-checkbox-blank-circle-outline' }}
+                    </v-icon>
+                    <span class="subtask-check-name" :class="{ 'subtask-check-done': child.completed_at }">
+                        {{ child.name }}
+                    </span>
+                    <v-chip
+                        v-if="child.status"
+                        size="x-small" :color="child.status.color" variant="flat"
+                        class="ml-auto flex-shrink-0"
+                        @click.stop
+                    >
+                        {{ child.status.name }}
+                    </v-chip>
+                </div>
+            </div>
+            <div v-else class="pa-3 text-center text-body-2 text-grey">No sub-subtasks yet</div>
+
+            <!-- Add child subtask input -->
+            <div v-if="canManageTaskStructure && localTask.can_add_children" class="pa-3 pt-2">
+                <div class="d-flex align-center ga-2">
+                    <v-text-field
+                        v-model="newChildSubtaskName"
+                        density="compact" variant="outlined" hide-details
+                        placeholder="Add sub-subtask…"
+                        class="flex-1"
+                        @keydown.enter.prevent="addChildSubtask"
+                    />
+                    <v-btn
+                        color="primary" size="small" variant="flat"
+                        :disabled="!newChildSubtaskName.trim()"
+                        :loading="addChildSubtaskLoading"
+                        @click="addChildSubtask"
+                    >Add</v-btn>
+                </div>
+            </div>
         </div>
 
         <!-- Description Section -->
@@ -1368,6 +1619,35 @@ const removeSuccessor = (suc) => depFetch('DELETE', { subtask_id: suc.id, depend
 
 .prop-label--top {
     padding-top: 2px;
+}
+
+.progress-bar-inline {
+    flex: 1;
+    min-width: 80px;
+    max-width: 160px;
+}
+
+.checklist-add-root {
+    border-top: 1px solid rgba(255, 255, 255, 0.06);
+}
+
+.checklist-add-input {
+    flex: 1;
+    min-width: 0;
+    background: rgba(255, 255, 255, 0.04);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    border-radius: 4px;
+    padding: 4px 8px;
+    font-size: 13px;
+    color: rgba(255, 255, 255, 0.85);
+    outline: none;
+}
+.checklist-add-input:focus {
+    border-color: rgba(99, 102, 241, 0.5);
+    background: rgba(255, 255, 255, 0.06);
+}
+.checklist-add-input::placeholder {
+    color: rgba(255, 255, 255, 0.3);
 }
 
 .progress-slider {

@@ -25,21 +25,33 @@ class SubtaskService
     public function create(array $data, Task $task, User $user): Subtask
     {
         return DB::transaction(function () use ($data, $task, $user) {
+            // Validate nesting depth before creating
+            if (!empty($data['parent_id'])) {
+                $parent = Subtask::where('task_id', $task->id)->findOrFail((int) $data['parent_id']);
+
+                if ($parent->depth >= Subtask::MAX_DEPTH) {
+                    throw ValidationException::withMessages([
+                        'parent_id' => ['Maximum nesting depth (' . (Subtask::MAX_DEPTH + 1) . ' levels) reached. Cannot create deeper subtasks.'],
+                    ]);
+                }
+            }
+
             $subtask = Subtask::create([
-                'task_id' => $task->id,
-                'name' => $data['name'],
-                'description' => $data['description'] ?? null,
-                'status_id' => $data['status_id'] ?? null,
-                'priority_level' => $data['priority_level'] ?? null,
-                'start_date' => $data['start_date'] ?? null,
-                'due_date' => $data['due_date'] ?? null,
-                'baseline_start_date' => $data['baseline_start_date'] ?? ($data['start_date'] ?? null),
-                'baseline_due_date' => $data['baseline_due_date'] ?? ($data['due_date'] ?? null),
-                'time_estimate' => $data['time_estimate'] ?? null,
-                'optimistic_estimate' => $data['optimistic_estimate'] ?? null,
+                'task_id'              => $task->id,
+                'parent_id'            => $data['parent_id'] ?? null,
+                'name'                 => $data['name'],
+                'description'          => $data['description'] ?? null,
+                'status_id'            => $data['status_id'] ?? null,
+                'priority_level'       => $data['priority_level'] ?? null,
+                'start_date'           => $data['start_date'] ?? null,
+                'due_date'             => $data['due_date'] ?? null,
+                'baseline_start_date'  => $data['baseline_start_date'] ?? ($data['start_date'] ?? null),
+                'baseline_due_date'    => $data['baseline_due_date'] ?? ($data['due_date'] ?? null),
+                'time_estimate'        => $data['time_estimate'] ?? null,
+                'optimistic_estimate'  => $data['optimistic_estimate'] ?? null,
                 'most_likely_estimate' => $data['most_likely_estimate'] ?? null,
                 'pessimistic_estimate' => $data['pessimistic_estimate'] ?? null,
-                'created_by' => $user->id,
+                'created_by'           => $user->id,
             ]);
 
             // Sync assignees
@@ -94,7 +106,7 @@ class SubtaskService
                 'optimistic_estimate',
                 'most_likely_estimate',
                 'pessimistic_estimate',
-                'progress',
+                // 'progress' is now auto-calculated from checklist items
             ];
 
             // Capture status/priority before update for readable activity descriptions
@@ -296,14 +308,15 @@ class SubtaskService
     }
 
     /**
-     * Reorder subtasks within a task
+     * Reorder subtasks within the same parent
      */
-    public function reorder(Task $task, array $subtaskIds): void
+    public function reorder(Task $task, array $subtaskIds, ?int $parentId = null): void
     {
-        DB::transaction(function () use ($task, $subtaskIds) {
+        DB::transaction(function () use ($task, $subtaskIds, $parentId) {
             foreach ($subtaskIds as $position => $subtaskId) {
                 Subtask::where('id', $subtaskId)
                     ->where('task_id', $task->id)
+                    ->where('parent_id', $parentId)
                     ->update(['position' => $position]);
             }
         });

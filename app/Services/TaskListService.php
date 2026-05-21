@@ -67,11 +67,14 @@ class TaskListService
                 'subtasks.timeEntries.user',
                 'subtasks.comments.user', // Include comments
                 'subtasks.activities' => fn($q) => $q->with('user')->latest()->limit(50),
+                'subtasks.checklistItems', // For checklist UI & auto-progress
+                'subtasks.children.status', // Direct children (depth+1 subtasks)
+                'subtasks.children.assignees',
             ])->find($taskId);
         }
 
         if ($parentTask) {
-            $items = $parentTask->subtasks;
+            $items = $parentTask->subtasks->whereNull('parent_id');
         } else {
             // Load tasks for the list
             $items = $list->tasks()

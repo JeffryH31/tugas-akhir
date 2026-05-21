@@ -15,6 +15,12 @@ return new class extends Migration
             $table->id();
             $table->string('subtask_id')->unique(); // Human-readable ID like "TASK-123-1"
             $table->foreignId('task_id')->constrained()->cascadeOnDelete();
+
+            // Self-referencing parent (null = direct child of task)
+            $table->foreignId('parent_id')->nullable()->constrained('subtasks')->cascadeOnDelete();
+            // Nesting depth: 0 = level 1 (direct child of task), max 6 = level 7
+            $table->tinyInteger('depth')->unsigned()->default(0);
+
             $table->foreignId('sprint_id')->nullable()->constrained()->nullOnDelete();
             $table->foreignId('status_id')->nullable()->constrained()->nullOnDelete();
             $table->tinyInteger('priority_level')->nullable();
@@ -33,7 +39,7 @@ return new class extends Migration
             $table->integer('most_likely_estimate')->nullable(); // in minutes
             $table->integer('pessimistic_estimate')->nullable(); // in minutes
             $table->integer('time_spent')->default(0); // in minutes (denormalized for performance)
-            $table->tinyInteger('progress')->default(0); // 0-100, manually set % complete for EVM
+            $table->tinyInteger('progress')->default(0); // 0-100, auto-calculated from checklist items
 
             $table->integer('position')->default(0);
 
@@ -43,7 +49,8 @@ return new class extends Migration
             $table->timestamps();
             $table->softDeletes();
 
-            $table->index(['task_id', 'status_id', 'position']);
+            $table->index(['task_id', 'parent_id', 'status_id', 'position']);
+            $table->index('depth');
             $table->index(['sprint_id']);
             $table->index(['due_date', 'completed_at']);
             $table->index('completed_at');

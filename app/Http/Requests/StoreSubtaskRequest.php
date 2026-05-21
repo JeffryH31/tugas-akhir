@@ -21,9 +21,10 @@ class StoreSubtaskRequest extends FormRequest
     public function rules(): array
     {
         return [
-            'name' => ['required', 'string', 'max:255'],
-            'description' => ['nullable', 'string', 'max:10000'],
-            'status_id' => [
+            'name'         => ['required', 'string', 'max:255'],
+            'description'  => ['nullable', 'string', 'max:10000'],
+            'parent_id'    => ['nullable', 'exists:subtasks,id'],
+            'status_id'    => [
                 'nullable',
                 'exists:statuses,id',
                 function ($attribute, $value, $fail) {
@@ -35,15 +36,15 @@ class StoreSubtaskRequest extends FormRequest
                     }
                 },
             ],
-            'priority_level' => ['nullable', 'integer', 'in:1,2,3,4'],
-            'task_id' => ['required', 'exists:tasks,id'],
-            'start_date' => ['nullable', 'date'],
-            'due_date' => ['nullable', 'date', 'after_or_equal:start_date'],
-            'time_estimate' => ['nullable', 'integer', 'min:0', 'max:525600'], // max 1 year in minutes
-            'assignee_ids' => ['nullable', 'array', 'max:1'],
-            'assignee_ids.*' => ['exists:users,id'],
-            'label_ids' => ['nullable', 'array'],
-            'label_ids.*' => ['exists:labels,id'],
+            'priority_level'  => ['nullable', 'integer', 'in:1,2,3,4'],
+            'task_id'         => ['required', 'exists:tasks,id'],
+            'start_date'      => ['nullable', 'date'],
+            'due_date'        => ['nullable', 'date', 'after_or_equal:start_date'],
+            'time_estimate'   => ['nullable', 'integer', 'min:0', 'max:525600'],
+            'assignee_ids'    => ['nullable', 'array', 'max:1'],
+            'assignee_ids.*'  => ['exists:users,id'],
+            'label_ids'       => ['nullable', 'array'],
+            'label_ids.*'     => ['exists:labels,id'],
         ];
     }
 
