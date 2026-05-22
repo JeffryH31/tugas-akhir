@@ -12,8 +12,10 @@ class CommentResource extends JsonResource
         return [
             'id' => $this->id,
             'task_id' => $this->task_id,
+            'subtask_id' => $this->subtask_id,
             'parent_id' => $this->parent_id,
             'content' => $this->content,
+            'mentions' => $this->mentions ?? [],
             'is_resolved' => $this->is_resolved ?? false,
             'edited_at' => $this->edited_at?->format('Y-m-d H:i:s'),
             'created_at' => $this->created_at?->format('Y-m-d H:i:s'),

@@ -65,7 +65,6 @@ class TaskService
             'dependents',
             'comments' => fn($q) => $q->whereNull('parent_id')->with(['user', 'replies.user'])->latest(),
             'activities' => fn($q) => $q->with('user')->latest()->limit(50),
-            'attachments',
             'creator',
         ]);
     }

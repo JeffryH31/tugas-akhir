@@ -7,7 +7,7 @@ use Illuminate\Http\Resources\Json\JsonResource;
 
 class TaskResource extends JsonResource
 {
-        public function toArray(Request $request): array
+    public function toArray(Request $request): array
     {
         $earliestDueDate = null;
         $resolvedAssignees = collect();
@@ -71,11 +71,8 @@ class TaskResource extends JsonResource
             'comments' => CommentResource::collection($this->whenLoaded('comments')),
             'activities' => ActivityResource::collection($this->whenLoaded('activities')),
             'time_entries' => TimeEntryResource::collection($this->whenLoaded('timeEntries')),
-            'attachments' => AttachmentResource::collection($this->whenLoaded('attachments')),
-
             'comments_count' => $this->comments_count ?? $this->comments?->count() ?? 0,
             'subtasks_count' => $this->subtasks_count ?? $this->subtasks?->count() ?? 0,
-            'attachments_count' => $this->attachments_count ?? $this->attachments?->count() ?? 0,
         ];
     }
 }

@@ -10,6 +10,7 @@ use App\Models\TaskList;
 use App\Models\Workspace;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\JsonResource;
+use App\Http\Resources\UserResource;
 
 class ActivityResource extends JsonResource
 {
@@ -30,12 +31,7 @@ class ActivityResource extends JsonResource
             'context' => $this->resolveContext(),
             'properties' => $this->properties ?? [],
             'changes' => $this->changes ?? [],
-            'user' => [
-                'id' => $this->user?->id,
-                'name' => $this->user?->name,
-                'initials' => $this->user?->initials,
-                'avatar_color' => $this->user?->avatar_color,
-            ],
+            'user' => new UserResource($this->whenLoaded('user')),
             'created_at' => $this->created_at?->toISOString(),
             'created_at_human' => $this->created_at?->diffForHumans(),
         ];

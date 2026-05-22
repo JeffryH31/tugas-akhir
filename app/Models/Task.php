@@ -166,12 +166,6 @@ class Task extends Model
         return $this->morphMany(Activity::class, 'subject');
     }
 
-    public function attachments(): HasMany
-    {
-        return $this->hasMany(Attachment::class);
-    }
-
-
     public function getProgressAttribute(): float
     {
         // Use loaded subtasks if available, otherwise use count queries to avoid N+1

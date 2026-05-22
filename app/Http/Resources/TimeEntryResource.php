@@ -23,7 +23,7 @@ class TimeEntryResource extends JsonResource
                 'id' => $this->subtask->id,
                 'name' => $this->subtask->name,
                 'task_id' => $this->subtask->task_id,
-                'task' => $this->whenLoaded('subtask', fn() => $this->subtask->relationLoaded('task') ? [
+                'task' => $this->subtask->relationLoaded('task') ? [
                     'id' => $this->subtask->task->id,
                     'name' => $this->subtask->task->name,
                     'task_id' => $this->subtask->task->task_id,
@@ -33,7 +33,7 @@ class TimeEntryResource extends JsonResource
                         'name' => $this->subtask->task->taskList->name,
                         'space_id' => $this->subtask->task->taskList->space_id,
                     ] : null,
-                ] : null),
+                ] : null,
             ]),
         ];
     }

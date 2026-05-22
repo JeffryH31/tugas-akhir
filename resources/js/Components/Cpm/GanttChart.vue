@@ -162,7 +162,7 @@ const handleSubtaskClick = (subtask) => {
     }
 };
 
-// ====== Dependency Linking Mode ======
+// Dependency Linking Mode
 const linkingMode = ref(false);
 const linkingSource = ref(null);
 
