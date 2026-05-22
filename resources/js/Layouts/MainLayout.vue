@@ -560,7 +560,7 @@ const formatDuration = (seconds) => {
                                             :style="{ backgroundColor: space.color || '#6366F1' }" />
                                     </template>
                                     <v-list-item-title v-if="!isSidebarMini" class="text-body-2">{{ space.name
-                                    }}</v-list-item-title>
+                                        }}</v-list-item-title>
                                 </v-list-item>
                             </template>
                         </v-tooltip>
@@ -688,7 +688,7 @@ const formatDuration = (seconds) => {
                             <button v-bind="tipProps" class="sidebar-collapse-btn" :class="{ 'is-mini': isSidebarMini }"
                                 @click="isSidebarMini = !isSidebarMini">
                                 <v-icon size="16">{{ isSidebarMini ? 'mdi-chevron-right' : 'mdi-chevron-left'
-                                }}</v-icon>
+                                    }}</v-icon>
                                 <span v-if="!isSidebarMini">Collapse</span>
                             </button>
                         </template>
@@ -733,7 +733,7 @@ const formatDuration = (seconds) => {
                         class="search-empty">
                         <v-icon size="40" color="grey-darken-1">mdi-text-search</v-icon>
                         <div class="text-body-2 text-medium-emphasis mt-2">No results for "<strong>{{ searchQuery
-                        }}</strong>"
+                                }}</strong>"
                         </div>
                     </div>
                     <div v-else>
@@ -778,7 +778,7 @@ const formatDuration = (seconds) => {
                                 </template>
                                 <v-list-item-title class="text-body-2">{{ space.name }}</v-list-item-title>
                                 <v-list-item-subtitle class="text-caption">{{ space.workspace?.name
-                                }}</v-list-item-subtitle>
+                                    }}</v-list-item-subtitle>
                             </v-list-item>
                         </v-list>
                     </div>

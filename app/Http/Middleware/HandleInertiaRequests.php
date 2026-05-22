@@ -87,7 +87,7 @@ class HandleInertiaRequests extends Middleware
                 $wsRole = $activeWorkspace->members()
                     ->where('user_id', $user->id)
                     ->first()?->pivot?->role;
-                $isWsAdmin = $wsRole === 'admin';
+                $isWsAdmin = in_array($wsRole, ['admin', 'owner'], true);
 
                 $listAccessFilter = function ($query) use ($user, $isWsAdmin) {
                     if ($isWsAdmin) {

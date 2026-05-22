@@ -95,7 +95,7 @@ class SpaceService
                 ? $space->workspace->members()->where('user_id', $user->id)->first()?->pivot?->role
                 : null;
 
-            if ($wsRole === 'admin') {
+            if (in_array($wsRole, ['admin', 'owner'], true)) {
                 return $query;
             }
 

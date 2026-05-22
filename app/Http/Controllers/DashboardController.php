@@ -40,7 +40,7 @@ class DashboardController extends Controller
         if ($activeWorkspace) {
             $wsRole = $activeWorkspace->members()
                 ->where('user_id', $user->id)->first()?->pivot?->role;
-            $isWsAdmin = $wsRole === 'admin';
+            $isWsAdmin = in_array($wsRole, ['admin', 'owner'], true);
             $listFilter = function ($q) use ($user, $isWsAdmin) {
                 return $isWsAdmin ? $q : $q->whereHas('members', fn($mq) => $mq->where('user_id', $user->id));
             };
