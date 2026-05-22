@@ -1,14 +1,4 @@
 <script setup>
-/**
- * Gantt Chart Component for CPM Visualization
- * 
- * Features:
- * - Visual timeline of subtasks
- * - Critical path highlighting (red)
- * - Dependency arrows
- * - Zoom controls
- * - Interactive tooltips
- */
 import { ref, computed, onMounted, watch } from 'vue';
 
 const props = defineProps({

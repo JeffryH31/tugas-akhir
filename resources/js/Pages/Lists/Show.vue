@@ -80,6 +80,7 @@ watch(() => props.parentTask, (newValue) => {
 // Selected task for detail panel
 const selectedTask = ref(null);
 const showTaskDetail = ref(false);
+const panelParentTask = ref(null);
 
 // View mode
 const allowedViewModes = ['board', 'list', 'calendar', 'sprint', 'gantt'];
@@ -362,6 +363,7 @@ const handleTaskComplete = (task) => {
 // Handle task open
 const handleTaskOpen = (task) => {
     selectedTask.value = task;
+    panelParentTask.value = null;
     showTaskDetail.value = true;
 };
 
@@ -410,6 +412,15 @@ watch(() => localTasksByStatus.value, () => {
 // Handle view subtasks
 const viewSubtasks = (task) => {
     router.visit(route('lists.show', [props.workspace.id, props.space.id, props.list.id]) + `?task_id=${task.id}`);
+};
+
+// Handle opening a subtask in the detail panel
+const openSubtaskInPanel = (subtask) => {
+    // Determine the parent: if we're already in subtask board mode, use the page-level parentTask.
+    // Otherwise, the current selectedTask is the parent task.
+    panelParentTask.value = props.parentTask || selectedTask.value;
+    selectedTask.value = subtask;
+    showTaskDetail.value = true;
 };
 
 const normalizeDateInput = (value) => {
@@ -2012,9 +2023,10 @@ onMounted(() => {
 
         <!-- Task Detail Panel -->
         <TaskDetailPanel v-model="showTaskDetail" :task="selectedTask" :workspace="workspace" :space="space"
-            :list="list" :parent-task="parentTask" :statuses="statuses" :members="members" :labels="labels"
+            :list="list" :parent-task="panelParentTask || parentTask" :statuses="statuses" :members="members" :labels="labels"
             :sprints="sprints" :sibling-subtasks="siblingSubtasks" :can-operate-tasks="canOperateTasks"
-            :can-manage-task-structure="canManageTaskStructure" @view-subtasks="viewSubtasks" @updated="refreshTasks" />
+            :can-manage-task-structure="canManageTaskStructure" @view-subtasks="viewSubtasks" @updated="refreshTasks"
+            @open-subtask="openSubtaskInPanel" />
 
         <!-- Create/Edit Sprint Dialog -->
         <v-dialog v-model="showCreateSprint" max-width="620">

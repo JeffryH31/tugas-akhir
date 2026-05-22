@@ -33,7 +33,7 @@ const props = defineProps({
     canManageTaskStructure: { type: Boolean, default: false },
 });
 
-const emit = defineEmits(['update:modelValue', 'updated', 'view-subtasks']);
+const emit = defineEmits(['update:modelValue', 'updated', 'view-subtasks', 'open-subtask']);
 
 // Local reactive copy of task to ensure proper reactivity
 const localTask = ref(null);
@@ -286,7 +286,7 @@ onUnmounted(() => stopTimerInterval());
                             :format-tracking-duration="formatTrackingDuration" :is-timer-loading="isTimerLoading"
                             :can-operate-tasks="canOperateTasks" :can-manage-task-structure="canManageTaskStructure"
                             @start-tracking="startTracking" @stop-tracking="stopTracking" @updated="emit('updated')"
-                            @view-subtasks="emit('view-subtasks', $event)" />
+                            @view-subtasks="emit('view-subtasks', $event)" @open-subtask="emit('open-subtask', $event)" />
                     </v-tabs-window-item>
 
                     <v-tabs-window-item value="comments">

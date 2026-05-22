@@ -201,8 +201,6 @@ Route::middleware(['auth:sanctum', config('jetstream.auth_session'), 'verified']
 
                                     Route::prefix('subtasks/{subtask}/time-entries')->group(function () {
                                         Route::post('/', [TimeEntryController::class, 'store'])->name('tasks.subtasks.time-entries.store');
-
-
                                     });
 
                                     Route::prefix('timer')->group(function () {

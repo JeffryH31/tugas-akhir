@@ -99,6 +99,12 @@ const openTask = (subtask) => {
     showDetail.value = true;
 };
 
+const openSubtaskFromPanel = (subtask) => {
+    detailParentTask.value = detailParentTask.value || detailTask.value;
+    detailTask.value = subtask;
+    showDetail.value = true;
+};
+
 const addTaskToSprint = (task) => {
     if (isMoving.value) return;
     isMoving.value = true;
@@ -332,6 +338,7 @@ const onDropToBacklog = () => {
             :labels="labels"
             :can-operate-tasks="canOperateTasks"
             :can-manage-task-structure="canManageTaskStructure"
+            @open-subtask="openSubtaskFromPanel"
         />
     </MainLayout>
 </template>
