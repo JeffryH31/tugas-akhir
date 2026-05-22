@@ -1,7 +1,4 @@
 <script setup>
-/**
- * My Tasks Page - All tasks assigned to current user
- */
 import { ref, computed, onMounted, onUnmounted } from 'vue';
 import { Head, router, usePage } from '@inertiajs/vue3';
 import MainLayout from '@/Layouts/MainLayout.vue';

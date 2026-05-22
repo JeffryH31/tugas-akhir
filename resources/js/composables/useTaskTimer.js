@@ -16,10 +16,6 @@ function safeFetch(url, options = {}) {
     });
 }
 
-/**
- * @param {object} props  - component props (task, parentTask, workspace, space, list)
- * @param {import('vue').Ref} localTask - reactive local task copy
- */
 export function useTaskTimer(props, localTask) {
     const page = usePage();
 

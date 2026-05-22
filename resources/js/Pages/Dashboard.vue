@@ -1,15 +1,6 @@
 <script setup>
-/**
- * Dashboard Page - ClickUp Style Home
- * 
- * Features:
- * - My Tasks overview
- * - Overdue tasks alert
- * - Time tracking summary
- * - Quick actions
- */
 import { ref, computed } from 'vue';
-import { Head, router, usePage } from '@inertiajs/vue3';
+import { router, usePage } from '@inertiajs/vue3';
 import MainLayout from '@/Layouts/MainLayout.vue';
 import TaskCard from '@/Components/Tasks/TaskCard.vue';
 import { useSnackbar } from '@/composables/useSnackbar';

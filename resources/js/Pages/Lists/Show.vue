@@ -1,14 +1,4 @@
 <script setup>
-/**
- * List View Page - Kanban Board Style
- * 
- * Features:
- * - Board view with status columns
- * - Drag and drop tasks
- * - Task detail panel
- * - Add/edit tasks
- * - Gantt chart with CPM analysis (for subtasks)
- */
 import { ref, computed, provide, watch, onMounted } from 'vue';
 import { Head, router, usePage } from '@inertiajs/vue3';
 import MainLayout from '@/Layouts/MainLayout.vue';
@@ -365,6 +355,38 @@ const handleTaskOpen = (task) => {
     selectedTask.value = task;
     panelParentTask.value = null;
     showTaskDetail.value = true;
+};
+
+const handleOpenSubtaskFromCard = (task, subtask) => {
+    // task is the card (Task or Subtask). panelParentTask must be a Task for the detail panel.
+    // In subtask mode, props.parentTask is the root Task, task is the card Subtask.
+    panelParentTask.value = props.parentTask ?? task;
+    selectedTask.value = subtask;
+    showTaskDetail.value = true;
+};
+
+const handleSubtaskToggleFromCard = (task, subtask) => {
+    const wasCompleted = !!subtask.completed_at;
+    const routeName = wasCompleted ? 'tasks.subtasks.reopen' : 'tasks.subtasks.complete';
+    const targetStatusId = getStoredSubtaskCompletionTarget(props.space?.id, props.statuses);
+    const payload = !wasCompleted && targetStatusId ? { target_status_id: targetStatusId } : {};
+    // In subtask mode, task is a Subtask card — use props.parentTask.id as the route task_id.
+    const taskRouteId = props.parentTask ? props.parentTask.id : task.id;
+
+    router.post(
+        route(routeName, [props.workspace.id, props.space.id, props.list.id, taskRouteId, subtask.id]),
+        payload,
+        {
+            preserveScroll: true,
+            onSuccess: () => router.reload({ only: ['tasksByStatus'] }),
+            onError: (errors) => {
+                if (errors.dependency && window.showSnackbar) {
+                    window.showSnackbar(errors.dependency, 'error');
+                }
+                router.reload({ only: ['tasksByStatus'] });
+            }
+        }
+    );
 };
 
 const findTaskInBoard = (id) => {
@@ -1629,7 +1651,9 @@ onMounted(() => {
                         :tasks="filteredTasksByStatus[status.id] || []" :workspace="workspace" :space="space"
                         :list="list" :parent-task="parentTask" :can-add-task="canOperateTasks"
                         :can-manage-space="canManageSpace" @task-moved="handleTaskMoved"
-                        @task-complete="handleTaskComplete" @task-open="handleTaskOpen" @add-task="handleAddTask" />
+                        @task-complete="handleTaskComplete" @task-open="handleTaskOpen" @add-task="handleAddTask"
+                        @task-open-subtask="handleOpenSubtaskFromCard"
+                        @task-subtask-toggle="handleSubtaskToggleFromCard" />
 
                     <!-- Add Status Column -->
                     <div v-if="canManageSpace" class="add-status-column">

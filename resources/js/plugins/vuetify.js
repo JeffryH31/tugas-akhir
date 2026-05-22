@@ -1,8 +1,3 @@
-/**
- * Vuetify Plugin Configuration
- * 
- * ClickUp-style dark theme with custom colors.
- */
 import 'vuetify/styles';
 import '@mdi/font/css/materialdesignicons.css';
 import { createVuetify } from 'vuetify';

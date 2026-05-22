@@ -240,63 +240,36 @@ const toggleChildSubtask = (child) => {
 <template>
   <div class="pa-5">
     <!-- Properties Section -->
-    <TaskPropertiesSection
-      :local-task="localTask"
-      :task="task"
-      :is-subtask="isSubtask"
-      :workspace="workspace"
-      :space="space"
-      :list="list"
-      :parent-task="parentTask"
-      :statuses="statuses"
-      :members="members"
-      :labels="labels"
-      :sprints="sprints"
-      :sibling-subtasks="siblingSubtasks"
-      :is-tracking="isTracking"
-      :format-tracking-duration="formatTrackingDuration"
-      :is-timer-loading="isTimerLoading"
-      :can-operate-tasks="canOperateTasks"
-      :can-manage-task-structure="canManageTaskStructure"
-      @start-tracking="$emit('start-tracking')"
-      @stop-tracking="$emit('stop-tracking')"
-      @updated="$emit('updated')"
-    />
+    <TaskPropertiesSection :local-task="localTask" :task="task" :is-subtask="isSubtask" :workspace="workspace"
+      :space="space" :list="list" :parent-task="parentTask" :statuses="statuses" :members="members" :labels="labels"
+      :sprints="sprints" :sibling-subtasks="siblingSubtasks" :is-tracking="isTracking"
+      :format-tracking-duration="formatTrackingDuration" :is-timer-loading="isTimerLoading"
+      :can-operate-tasks="canOperateTasks" :can-manage-task-structure="canManageTaskStructure"
+      @start-tracking="$emit('start-tracking')" @stop-tracking="$emit('stop-tracking')" @updated="$emit('updated')" />
 
     <!-- Subtasks Section (Tasks only) -->
     <div v-if="!isSubtask" class="section-card mt-4">
-      <div class="cu-subtask-header">
+      <div class="subtask-header">
         <div class="d-flex align-center ga-2">
           <v-icon size="18">mdi-file-tree-outline</v-icon>
-          <span class="cu-subtask-title">SUBTASKS</span>
-          <span v-if="topLevelSubtasks.length" class="cu-subtask-count">
-            {{ topLevelSubtasks.filter((s) => s.completed_at).length }}/{{
+          <span class="subtask-title">SUBTASKS</span>
+          <span v-if="topLevelSubtasks.length" class="subtask-count">
+            {{topLevelSubtasks.filter((s) => s.completed_at).length}}/{{
               topLevelSubtasks.length
             }}
           </span>
         </div>
-        <v-btn
-          variant="text"
-          size="small"
-          class="cu-board-btn"
-          @click="$emit('view-subtasks', localTask)"
-        >
+        <v-btn variant="text" size="small" class="board-btn" @click="$emit('view-subtasks', localTask)">
           <v-icon start size="16">mdi-view-dashboard-outline</v-icon>
           BOARD
         </v-btn>
       </div>
 
-      <div v-if="topLevelSubtasks.length" class="cu-subtask-list">
-        <SubtaskRow
-          v-for="sub in topLevelSubtasks"
-          :key="sub.id"
-          :item="sub"
-          :can-operate="canOperateTasks"
-          @toggle="toggleSubtask(sub)"
-          @open="$emit('open-subtask', sub)"
-        />
+      <div v-if="topLevelSubtasks.length" class="subtask-list">
+        <SubtaskRow v-for="sub in topLevelSubtasks" :key="sub.id" :item="sub" :can-operate="canOperateTasks"
+          @toggle="toggleSubtask(sub)" @open="$emit('open-subtask', sub)" />
       </div>
-      <div v-else class="cu-subtask-empty">No subtasks yet</div>
+      <div v-else class="subtask-empty">No subtasks yet</div>
     </div>
 
     <!-- Checklist Section (subtasks only) -->
@@ -305,12 +278,8 @@ const toggleChildSubtask = (child) => {
         <div class="d-flex align-center ga-2">
           <v-icon size="18" color="grey">mdi-format-list-checks</v-icon>
           <span class="text-body-2 font-weight-medium">Checklist</span>
-          <v-chip
-            v-if="(localTask.checklist_total ?? 0) > 0"
-            size="x-small"
-            variant="tonal"
-            :color="(localTask.progress ?? 0) >= 100 ? 'success' : 'primary'"
-          >
+          <v-chip v-if="(localTask.checklist_total ?? 0) > 0" size="x-small" variant="tonal"
+            :color="(localTask.progress ?? 0) >= 100 ? 'success' : 'primary'">
             {{ localTask.checklist_checked ?? 0 }}/{{
               localTask.checklist_total ?? 0
             }}
@@ -320,27 +289,16 @@ const toggleChildSubtask = (child) => {
 
       <!-- Progress bar (only when items exist) -->
       <div v-if="(localTask.checklist_total ?? 0) > 0" class="px-3 pb-1">
-        <v-progress-linear
-          :model-value="localTask.progress ?? 0"
-          :color="(localTask.progress ?? 0) >= 100 ? 'success' : 'primary'"
-          height="4"
-          rounded
-        />
+        <v-progress-linear :model-value="localTask.progress ?? 0"
+          :color="(localTask.progress ?? 0) >= 100 ? 'success' : 'primary'" height="4" rounded />
       </div>
 
       <v-divider />
 
       <!-- Checklist items tree -->
       <div v-if="checklistTree.length" class="py-1">
-        <ChecklistItemRow
-          v-for="item in checklistTree"
-          :key="item.id"
-          :item="item"
-          :route-params="checklistRouteParams"
-          :can-edit="canOperateTasks"
-          :indent-level="0"
-          @reloaded="onChecklistReloaded"
-        />
+        <ChecklistItemRow v-for="item in checklistTree" :key="item.id" :item="item" :route-params="checklistRouteParams"
+          :can-edit="canOperateTasks" :indent-level="0" @reloaded="onChecklistReloaded" />
       </div>
       <div v-else class="pa-3 text-center text-caption text-grey">
         No checklist items yet — add one below
@@ -350,103 +308,52 @@ const toggleChildSubtask = (child) => {
       <div v-if="canOperateTasks" class="checklist-add-root pa-3 pt-2">
         <div class="d-flex align-center ga-2">
           <v-icon size="16" color="grey">mdi-plus</v-icon>
-          <input
-            v-model="newChecklistName"
-            class="checklist-add-input"
-            placeholder="Add checklist item…"
-            @keydown.enter.prevent="addChecklistItem"
-          />
-          <v-btn
-            v-if="newChecklistName.trim()"
-            size="x-small"
-            color="primary"
-            variant="flat"
-            :loading="checklistAddLoading"
-            @click="addChecklistItem"
-            >Add</v-btn
-          >
+          <input v-model="newChecklistName" class="checklist-add-input" placeholder="Add checklist item…"
+            @keydown.enter.prevent="addChecklistItem" />
+          <v-btn v-if="newChecklistName.trim()" size="x-small" color="primary" variant="flat"
+            :loading="checklistAddLoading" @click="addChecklistItem">Add</v-btn>
         </div>
       </div>
     </div>
 
     <!-- Subtasks Section (subtask only, when depth < MAX) -->
-    <div
-      v-if="
-        isSubtask &&
-        (localTask.can_add_children || (localTask.children ?? []).length > 0)
-      "
-      class="section-card mt-4"
-    >
-      <div class="cu-subtask-header">
+    <div v-if="
+      isSubtask &&
+      (localTask.can_add_children || (localTask.children ?? []).length > 0)
+    " class="section-card mt-4">
+      <div class="subtask-header">
         <div class="d-flex align-center ga-2">
           <v-icon size="18">mdi-file-tree-outline</v-icon>
-          <span class="cu-subtask-title">SUBTASKS</span>
-          <span
-            v-if="(localTask.children ?? []).length"
-            class="cu-subtask-count"
-          >
+          <span class="subtask-title">SUBTASKS</span>
+          <span v-if="(localTask.children ?? []).length" class="subtask-count">
             {{
               (localTask.children ?? []).filter((c) => c.completed_at).length
             }}/{{ (localTask.children ?? []).length }}
           </span>
         </div>
-        <v-btn
-          v-if="localTask.has_kanban_view && (localTask.children ?? []).length"
-          variant="text"
-          size="small"
-          class="cu-board-btn"
-          @click="$emit('view-subtasks', localTask)"
-        >
-          <v-icon start size="16">mdi-view-dashboard-outline</v-icon>
-          BOARD
-        </v-btn>
       </div>
 
-      <div v-if="(localTask.children ?? []).length" class="cu-subtask-list">
-        <SubtaskRow
-          v-for="child in localTask.children ?? []"
-          :key="child.id"
-          :item="child"
-          :can-operate="canOperateTasks"
-          @toggle="toggleChildSubtask(child)"
-          @open="$emit('open-subtask', child)"
-        />
+      <div v-if="(localTask.children ?? []).length" class="subtask-list">
+        <SubtaskRow v-for="child in localTask.children ?? []" :key="child.id" :item="child"
+          :can-operate="canOperateTasks" @toggle="toggleChildSubtask(child)" @open="$emit('open-subtask', child)" />
       </div>
-      <div v-else class="cu-subtask-empty">No subtasks yet</div>
+      <div v-else class="subtask-empty">No subtasks yet</div>
 
       <!-- Add child subtask input -->
-      <div
-        v-if="canManageTaskStructure && localTask.can_add_children"
-        class="cu-subtask-add"
-      >
-        <div class="cu-subtask-add-inner">
+      <div v-if="canManageTaskStructure && localTask.can_add_children" class="subtask-add">
+        <div class="subtask-add-inner">
           <v-icon size="18" color="grey-lighten-1">mdi-plus</v-icon>
-          <input
-            v-model="newChildSubtaskName"
-            class="cu-subtask-add-input"
-            placeholder="Add subtask…"
-            @keydown.enter.prevent="addChildSubtask"
-          />
-          <v-btn
-            v-if="newChildSubtaskName.trim()"
-            size="x-small"
-            color="primary"
-            variant="flat"
-            :loading="addChildSubtaskLoading"
-            @click="addChildSubtask"
-            >Add</v-btn
-          >
+          <input v-model="newChildSubtaskName" class="subtask-add-input" placeholder="Add subtask…"
+            @keydown.enter.prevent="addChildSubtask" />
+          <v-btn v-if="newChildSubtaskName.trim()" size="x-small" color="primary" variant="flat"
+            :loading="addChildSubtaskLoading" @click="addChildSubtask">Add</v-btn>
         </div>
       </div>
     </div>
 
     <!-- Description Section -->
-    <TaskDescriptionSection
-      v-model="editedDescription"
-      :can-edit="canOperateTasks"
-      class="mt-4"
-      @save="saveDescription"
-    />
+    <TaskDescriptionSection v-model="editedDescription" :can-edit="canOperateTasks" class="mt-4"
+      @save="saveDescription" />
   </div>
 </template>
 
@@ -459,21 +366,21 @@ const toggleChildSubtask = (child) => {
 }
 
 /* ClickUp-style Subtask List */
-.cu-subtask-header {
+.subtask-header {
   display: flex;
   align-items: center;
   justify-content: space-between;
   padding: 12px 16px 8px;
 }
 
-.cu-subtask-title {
+.subtask-title {
   font-size: 12px;
   font-weight: 700;
   color: rgba(255, 255, 255, 0.55);
   letter-spacing: 0.5px;
 }
 
-.cu-subtask-count {
+.subtask-count {
   font-size: 11px;
   font-weight: 600;
   color: rgba(255, 255, 255, 0.45);
@@ -483,41 +390,41 @@ const toggleChildSubtask = (child) => {
   margin-left: 2px;
 }
 
-.cu-board-btn {
+.board-btn {
   font-size: 11px;
   font-weight: 700;
   letter-spacing: 0.4px;
   color: rgba(255, 255, 255, 0.45) !important;
 }
 
-.cu-board-btn:hover {
+.board-btn:hover {
   color: rgba(255, 255, 255, 0.8) !important;
 }
 
-.cu-subtask-list {
+.subtask-list {
   display: flex;
   flex-direction: column;
 }
 
-.cu-subtask-empty {
+.subtask-empty {
   padding: 24px 16px;
   text-align: center;
   color: rgba(255, 255, 255, 0.3);
   font-size: 13px;
 }
 
-.cu-subtask-add {
+.subtask-add {
   border-top: 1px solid rgba(255, 255, 255, 0.04);
   padding: 9px 16px;
 }
 
-.cu-subtask-add-inner {
+.subtask-add-inner {
   display: flex;
   align-items: center;
   gap: 10px;
 }
 
-.cu-subtask-add-input {
+.subtask-add-input {
   flex: 1;
   min-width: 0;
   background: transparent;
@@ -528,7 +435,7 @@ const toggleChildSubtask = (child) => {
   outline: none;
 }
 
-.cu-subtask-add-input::placeholder {
+.subtask-add-input::placeholder {
   color: rgba(255, 255, 255, 0.3);
 }
 
@@ -547,10 +454,12 @@ const toggleChildSubtask = (child) => {
   color: rgba(255, 255, 255, 0.85);
   outline: none;
 }
+
 .checklist-add-input:focus {
   border-color: rgba(99, 102, 241, 0.5);
   background: rgba(255, 255, 255, 0.06);
 }
+
 .checklist-add-input::placeholder {
   color: rgba(255, 255, 255, 0.3);
 }

@@ -28,56 +28,32 @@ const priorityColor = computed(() => {
 </script>
 
 <template>
-    <div class="cu-subtask-row" @click="emit('open', item)">
-        <div
-            class="cu-subtask-checkbox"
-            @click.stop="canOperate && emit('toggle', item)"
-        >
-            <span
-                class="cu-checkbox-box"
-                :class="{ 'cu-checkbox-box--done': item.completed_at }"
-                :style="{ '--status-color': item.status?.color || '#6b7280' }"
-            >
+    <div class="subtask-row" @click="emit('open', item)">
+        <div class="subtask-checkbox" @click.stop="canOperate && emit('toggle', item)">
+            <span class="checkbox-box" :class="{ 'checkbox-box--done': item.completed_at }"
+                :style="{ '--status-color': item.status?.color || '#6b7280' }">
                 <v-icon v-if="item.completed_at" size="14" color="white">mdi-check</v-icon>
             </span>
         </div>
 
-        <span
-            class="cu-subtask-name"
-            :class="{ 'cu-subtask-name--done': item.completed_at }"
-        >
+        <span class="subtask-name" :class="{ 'subtask-name--done': item.completed_at }">
             {{ item.name }}
         </span>
 
-        <div class="cu-subtask-meta">
-            <span
-                v-if="formattedDate"
-                class="cu-meta-date"
-                :class="{ 'cu-meta-date--overdue': isOverdue }"
-            >
+        <div class="subtask-meta">
+            <span v-if="formattedDate" class="meta-date" :class="{ 'meta-date--overdue': isOverdue }">
                 <v-icon size="13">mdi-calendar-blank-outline</v-icon>
                 {{ formattedDate }}
             </span>
 
-            <v-icon
-                v-if="priorityColor"
-                size="16"
-                :color="priorityColor"
-            >mdi-flag</v-icon>
+            <v-icon v-if="priorityColor" size="16" :color="priorityColor">mdi-flag</v-icon>
 
-            <v-avatar
-                v-if="item.assignees?.length"
-                :color="item.assignees[0].avatar_color || 'primary'"
-                size="24"
-                class="cu-meta-avatar"
-            >
-                <span class="cu-avatar-text">{{ item.assignees[0].initials }}</span>
+            <v-avatar v-if="item.assignees?.length" :color="item.assignees[0].avatar_color || 'primary'" size="24"
+                class="meta-avatar">
+                <span class="avatar-text">{{ item.assignees[0].initials }}</span>
             </v-avatar>
 
-            <span
-                class="cu-meta-status"
-                :style="{ color: item.status?.color || '#6b7280' }"
-            >
+            <span class="meta-status" :style="{ color: item.status?.color || '#6b7280' }">
                 {{ item.status?.name || "Open" }}
             </span>
         </div>
@@ -85,7 +61,7 @@ const priorityColor = computed(() => {
 </template>
 
 <style scoped>
-.cu-subtask-row {
+.subtask-row {
     display: flex;
     align-items: center;
     gap: 12px;
@@ -95,11 +71,11 @@ const priorityColor = computed(() => {
     border-top: 1px solid rgba(255, 255, 255, 0.04);
 }
 
-.cu-subtask-row:hover {
+.subtask-row:hover {
     background-color: rgba(255, 255, 255, 0.03);
 }
 
-.cu-subtask-checkbox {
+.subtask-checkbox {
     flex-shrink: 0;
     cursor: pointer;
     display: flex;
@@ -107,7 +83,7 @@ const priorityColor = computed(() => {
     justify-content: center;
 }
 
-.cu-checkbox-box {
+.checkbox-box {
     width: 18px;
     height: 18px;
     border-radius: 4px;
@@ -119,17 +95,17 @@ const priorityColor = computed(() => {
     background: transparent;
 }
 
-.cu-checkbox-box:hover {
+.checkbox-box:hover {
     opacity: 0.8;
     transform: scale(1.08);
 }
 
-.cu-checkbox-box--done {
+.checkbox-box--done {
     background-color: var(--status-color);
     border-color: var(--status-color);
 }
 
-.cu-subtask-name {
+.subtask-name {
     flex: 1;
     min-width: 0;
     font-size: 14px;
@@ -141,19 +117,19 @@ const priorityColor = computed(() => {
     line-height: 1.4;
 }
 
-.cu-subtask-name--done {
+.subtask-name--done {
     text-decoration: line-through;
     color: rgba(255, 255, 255, 0.35);
 }
 
-.cu-subtask-meta {
+.subtask-meta {
     display: flex;
     align-items: center;
     gap: 10px;
     flex-shrink: 0;
 }
 
-.cu-meta-date {
+.meta-date {
     display: inline-flex;
     align-items: center;
     gap: 4px;
@@ -163,21 +139,21 @@ const priorityColor = computed(() => {
     white-space: nowrap;
 }
 
-.cu-meta-date--overdue {
+.meta-date--overdue {
     color: #ef5350;
 }
 
-.cu-meta-avatar {
+.meta-avatar {
     flex-shrink: 0;
 }
 
-.cu-avatar-text {
+.avatar-text {
     font-size: 10px;
     font-weight: 700;
     line-height: 1;
 }
 
-.cu-meta-status {
+.meta-status {
     font-size: 12px;
     font-weight: 600;
     white-space: nowrap;

@@ -1,8 +1,5 @@
 <script setup>
-/**
- * Task Card Component - ClickUp Style
- */
-import { computed, inject } from 'vue';
+import { computed, inject, ref } from 'vue';
 import { router } from '@inertiajs/vue3';
 import { PRIORITY_MAP } from '@/constants/priorities';
 
@@ -33,7 +30,7 @@ const props = defineProps({
     },
 });
 
-const emit = defineEmits(['click', 'complete', 'open-detail']);
+const emit = defineEmits(['click', 'complete', 'open-detail', 'toggle-subtask', 'open-subtask']);
 
 // Inject CPM critical path checker (provided by parent)
 const isSubtaskCritical = inject('isSubtaskCritical', () => false);
@@ -128,6 +125,20 @@ const aggregatedTimeSpent = computed(() => {
     return hours > 0 ? `${hours}h ${minutes}m` : `${minutes}m`;
 });
 
+const showSubtasks = ref(false);
+
+const topLevelSubtasks = computed(() => {
+    // Task mode: task.subtasks (Task -> Subtask, needs parent_id filter)
+    if (props.task.subtasks?.length) {
+        return props.task.subtasks.filter(s => !s.parent_id);
+    }
+    // Subtask mode: task.children (Subtask -> Subtask, already scoped by parent_id)
+    if (props.task.children?.length) {
+        return props.task.children;
+    }
+    return [];
+});
+
 // Handle complete toggle
 const toggleComplete = (e) => {
     e.stopPropagation();
@@ -141,20 +152,20 @@ const openDetail = () => {
 </script>
 
 <template>
-    <div class="cu-card" :class="{
-        'cu-card--completed': isCompleted,
-        'cu-card--critical': isCritical && !isCompleted,
-        'cu-card--no-checkbox': !showCheckbox,
+    <div class="task-card" :class="{
+        'task-card--completed': isCompleted,
+        'task-card--critical': isCritical && !isCompleted,
+        'task-card--no-checkbox': !showCheckbox,
     }" @click="openDetail">
         <!-- Left status color strip -->
-        <div class="cu-card__status-bar" :style="{ backgroundColor: statusColor }"></div>
+        <div class="task-card__status-bar" :style="{ backgroundColor: statusColor }"></div>
 
-        <div class="cu-card__content">
+        <div class="task-card__content">
             <!-- Top: Critical indicator -->
-            <div v-if="isCritical && !isCompleted" class="cu-card__id-row">
+            <div v-if="isCritical && !isCompleted" class="task-card__id-row">
                 <v-tooltip location="top">
                     <template #activator="{ props: tp }">
-                        <v-icon v-bind="tp" size="12" color="error" class="cu-card__critical-badge">
+                        <v-icon v-bind="tp" size="12" color="error" class="task-card__critical-badge">
                             mdi-alert-circle
                         </v-icon>
                     </template>
@@ -163,47 +174,47 @@ const openDetail = () => {
             </div>
 
             <!-- Parent task context -->
-            <div v-if="parentTaskName" class="cu-card__subtask-hint">
-                <span class="cu-card__subtask-hint-text">{{ parentTaskName }}</span>
+            <div v-if="parentTaskName" class="task-card__subtask-hint">
+                <span class="task-card__subtask-hint-text">{{ parentTaskName }}</span>
             </div>
 
             <!-- Task name row -->
-            <div class="cu-card__name-row">
-                <button v-if="showCheckbox" class="cu-card__checkbox"
-                    :class="{ 'cu-card__checkbox--done': isCompleted }"
+            <div class="task-card__name-row">
+                <button v-if="showCheckbox" class="task-card__checkbox"
+                    :class="{ 'task-card__checkbox--done': isCompleted }"
                     :style="!isCompleted ? { borderColor: statusColor } : {}" @click="toggleComplete">
                     <v-icon v-if="isCompleted" size="12" color="white">mdi-check</v-icon>
                 </button>
                 <v-icon v-if="parentTaskName" size="11" color="grey-lighten-1" class="flex-shrink-0">mdi-subdirectory-arrow-right</v-icon>
-                <span class="cu-card__name" :class="{ 'cu-card__name--done': isCompleted }">
+                <span class="task-card__name" :class="{ 'task-card__name--done': isCompleted }">
                     {{ task.name }}
                 </span>
             </div>
 
             <!-- Highlighted subtask -->
-            <div v-if="!parentTaskName && highlightedSubtask" class="cu-card__subtask-hint">
+            <div v-if="!parentTaskName && highlightedSubtask" class="task-card__subtask-hint">
                 <v-icon size="11" color="grey-lighten-1">mdi-subdirectory-arrow-right</v-icon>
-                <span class="cu-card__subtask-hint-text">{{ highlightedSubtask.name }}</span>
+                <span class="task-card__subtask-hint-text">{{ highlightedSubtask.name }}</span>
             </div>
 
             <!-- Labels -->
-            <div v-if="task.labels?.length" class="cu-card__labels">
-                <span v-for="label in task.labels.slice(0, 4)" :key="label.id" class="cu-card__label"
+            <div v-if="task.labels?.length" class="task-card__labels">
+                <span v-for="label in task.labels.slice(0, 4)" :key="label.id" class="task-card__label"
                     :style="{ backgroundColor: label.color + '22', color: label.color, borderColor: label.color + '44' }">
                     {{ label.name }}
                 </span>
-                <span v-if="task.labels.length > 4" class="cu-card__label cu-card__label--more">
+                <span v-if="task.labels.length > 4" class="task-card__label task-card__label--more">
                     +{{ task.labels.length - 4 }}
                 </span>
             </div>
 
             <!-- Bottom meta row -->
-            <div v-if="!compact" class="cu-card__footer">
-                <div class="cu-card__meta">
+            <div v-if="!compact" class="task-card__footer">
+                <div class="task-card__meta">
                     <!-- Priority -->
                     <v-tooltip v-if="priority" location="top">
                         <template #activator="{ props: tp }">
-                            <div v-bind="tp" class="cu-card__meta-item">
+                            <div v-bind="tp" class="task-card__meta-item">
                                 <v-icon size="14" :style="{ color: priority.color }">mdi-flag</v-icon>
                             </div>
                         </template>
@@ -211,46 +222,83 @@ const openDetail = () => {
                     </v-tooltip>
 
                     <!-- Due Date -->
-                    <div v-if="dueDate" class="cu-card__meta-item" :style="{ color: dueDate.color }">
+                    <div v-if="dueDate" class="task-card__meta-item" :style="{ color: dueDate.color }">
                         <v-icon size="13" :style="{ color: dueDate.color }">mdi-calendar-blank-outline</v-icon>
                         <span>{{ dueDate.text }}</span>
                     </div>
 
                     <!-- Subtask Progress -->
-                    <div v-if="subtaskProgress" class="cu-card__meta-item cu-card__meta-item--subtle">
+                    <div v-if="subtaskProgress" class="task-card__meta-item task-card__meta-item--subtle">
                         <v-icon size="13">mdi-file-tree-outline</v-icon>
                         <span>{{ subtaskProgress.completed }}/{{ subtaskProgress.total }}</span>
                     </div>
 
                     <!-- Time -->
-                    <div v-if="aggregatedTimeSpent" class="cu-card__meta-item cu-card__meta-item--subtle">
+                    <div v-if="aggregatedTimeSpent" class="task-card__meta-item task-card__meta-item--subtle">
                         <v-icon size="13">mdi-clock-outline</v-icon>
                         <span>{{ aggregatedTimeSpent }}</span>
                     </div>
 
                     <!-- Comments -->
-                    <div v-if="task.comments_count" class="cu-card__meta-item cu-card__meta-item--subtle">
+                    <div v-if="task.comments_count" class="task-card__meta-item task-card__meta-item--subtle">
                         <v-icon size="13">mdi-chat-outline</v-icon>
                         <span>{{ task.comments_count }}</span>
                     </div>
                 </div>
 
                 <!-- Assignees -->
-                <div v-if="displayAssignees.length" class="cu-card__assignees">
+                <div v-if="displayAssignees.length" class="task-card__assignees">
                     <v-tooltip v-for="assignee in displayAssignees.slice(0, 3)" :key="assignee.id" location="top">
                         <template #activator="{ props: tp }">
                             <v-avatar v-bind="tp" :color="assignee.avatar_color || '#4f46e5'" size="24"
-                                class="cu-card__avatar">
+                                class="task-card__avatar">
                                 <img v-if="assignee.profile_photo_url" :src="assignee.profile_photo_url"
                                     :alt="assignee.name" />
-                                <span v-else class="cu-card__avatar-text">{{ assignee.name?.charAt(0) }}</span>
+                                <span v-else class="task-card__avatar-text">{{ assignee.name?.charAt(0) }}</span>
                             </v-avatar>
                         </template>
                         <span>{{ assignee.name }}</span>
                     </v-tooltip>
-                    <v-avatar v-if="displayAssignees.length > 3" color="#374151" size="24" class="cu-card__avatar">
-                        <span class="cu-card__avatar-text">+{{ displayAssignees.length - 3 }}</span>
+                    <v-avatar v-if="displayAssignees.length > 3" color="#374151" size="24" class="task-card__avatar">
+                        <span class="task-card__avatar-text">+{{ displayAssignees.length - 3 }}</span>
                     </v-avatar>
+                </div>
+            </div>
+
+            <!-- Inline subtask rows (ClickUp-style) -->
+            <div v-if="topLevelSubtasks.length" class="task-card__subtask-section" @click.stop>
+                <button class="task-card__subtask-toggle" @click.stop="showSubtasks = !showSubtasks">
+                    <v-icon size="11" class="task-card__subtask-toggle-icon">
+                        {{ showSubtasks ? 'mdi-chevron-down' : 'mdi-chevron-right' }}
+                    </v-icon>
+                    <span>{{ topLevelSubtasks.filter(s => s.completed_at).length }}/{{ topLevelSubtasks.length }} subtask</span>
+                </button>
+                <div v-if="showSubtasks" class="task-card__subtask-rows">
+                    <div v-for="subtask in topLevelSubtasks" :key="subtask.id"
+                        class="task-card__subtask-row"
+                        @click.stop="emit('open-subtask', subtask)">
+                        <button
+                            class="task-card__subtask-check"
+                            :class="{ 'task-card__subtask-check--done': subtask.completed_at }"
+                            :style="!subtask.completed_at ? { borderColor: subtask.status?.color || '#6b7280' } : {}"
+                            @click.stop="emit('toggle-subtask', subtask)">
+                            <v-icon v-if="subtask.completed_at" size="9" color="white">mdi-check</v-icon>
+                        </button>
+                        <span class="task-card__subtask-row-name"
+                            :class="{ 'task-card__subtask-row-name--done': subtask.completed_at }">
+                            {{ subtask.name }}
+                        </span>
+                        <v-avatar v-if="subtask.assignees?.length"
+                            :color="subtask.assignees[0].avatar_color || '#4f46e5'"
+                            size="14" class="task-card__subtask-row-avatar flex-shrink-0">
+                            <img v-if="subtask.assignees[0].profile_photo_url"
+                                :src="subtask.assignees[0].profile_photo_url"
+                                :alt="subtask.assignees[0].name" />
+                            <span v-else style="font-size: 8px; font-weight: 600;">
+                                {{ subtask.assignees[0].name?.charAt(0) }}
+                            </span>
+                        </v-avatar>
+                    </div>
                 </div>
             </div>
         </div>
@@ -259,7 +307,7 @@ const openDetail = () => {
 
 <style scoped>
 /* ClickUp-style card */
-.cu-card {
+.task-card {
     display: flex;
     background: #1e1e2e;
     border: 1px solid #2e2e3e;
@@ -270,62 +318,62 @@ const openDetail = () => {
     position: relative;
 }
 
-.cu-card:hover {
+.task-card:hover {
     background: #242438;
     border-color: #3e3e52;
     box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
 }
 
-.cu-card--completed {
+.task-card--completed {
     opacity: 1;
     background: linear-gradient(135deg, rgba(34, 197, 94, 0.08) 0%, #1e2430 55%);
     border-color: #35506a;
 }
 
-.cu-card--completed:hover {
+.task-card--completed:hover {
     background: linear-gradient(135deg, rgba(34, 197, 94, 0.12) 0%, #222a38 55%);
     border-color: #3f6282;
 }
 
-.cu-card--completed .cu-card__status-bar {
+.task-card--completed .task-card__status-bar {
     opacity: 0.7;
 }
 
-.cu-card--completed .cu-card__name {
+.task-card--completed .task-card__name {
     color: #d1d9e5;
 }
 
-.cu-card--completed .cu-card__name--done {
+.task-card--completed .task-card__name--done {
     color: #9fb0c4;
 }
 
-.cu-card--completed .cu-card__meta-item {
+.task-card--completed .task-card__meta-item {
     color: #9fb0c4;
 }
 
-.cu-card--completed .cu-card__meta-item--subtle {
+.task-card--completed .task-card__meta-item--subtle {
     color: #89a0b8;
 }
 
-.cu-card--critical {
+.task-card--critical {
     border-color: rgba(239, 68, 68, 0.5);
     background: linear-gradient(135deg, rgba(239, 68, 68, 0.06) 0%, #1e1e2e 40%);
 }
 
-.cu-card--critical:hover {
+.task-card--critical:hover {
     border-color: rgba(239, 68, 68, 0.7);
     box-shadow: 0 2px 12px rgba(239, 68, 68, 0.15);
 }
 
 /* Left colored strip */
-.cu-card__status-bar {
+.task-card__status-bar {
     width: 4px;
     flex-shrink: 0;
     border-radius: 8px 0 0 8px;
 }
 
 /* Content area */
-.cu-card__content {
+.task-card__content {
     flex: 1;
     min-width: 0;
     padding: 10px 12px;
@@ -335,13 +383,13 @@ const openDetail = () => {
 }
 
 /* Task ID */
-.cu-card__id-row {
+.task-card__id-row {
     display: flex;
     align-items: center;
     gap: 6px;
 }
 
-.cu-card__id {
+.task-card__id {
     font-size: 10px;
     color: #6b7280;
     font-weight: 500;
@@ -349,7 +397,7 @@ const openDetail = () => {
     text-transform: uppercase;
 }
 
-.cu-card__critical-badge {
+.task-card__critical-badge {
     animation: critical-pulse 2s infinite;
 }
 
@@ -366,13 +414,13 @@ const openDetail = () => {
 }
 
 /* Name row */
-.cu-card__name-row {
+.task-card__name-row {
     display: flex;
     align-items: flex-start;
     gap: 8px;
 }
 
-.cu-card__checkbox {
+.task-card__checkbox {
     width: 16px;
     height: 16px;
     min-width: 16px;
@@ -387,17 +435,17 @@ const openDetail = () => {
     margin-top: 2px;
 }
 
-.cu-card__checkbox:hover {
+.task-card__checkbox:hover {
     background: rgba(255, 255, 255, 0.08);
     transform: scale(1.1);
 }
 
-.cu-card__checkbox--done {
+.task-card__checkbox--done {
     background: #22c55e !important;
     border-color: #22c55e !important;
 }
 
-.cu-card__name {
+.task-card__name {
     font-size: 13px;
     font-weight: 500;
     color: #e5e7eb;
@@ -407,20 +455,20 @@ const openDetail = () => {
     min-width: 0;
 }
 
-.cu-card__name--done {
+.task-card__name--done {
     text-decoration: line-through;
     color: #6b7280;
 }
 
 /* Labels */
-.cu-card__labels {
+.task-card__labels {
     display: flex;
     flex-wrap: wrap;
     gap: 4px;
     padding-left: 24px;
 }
 
-.cu-card__label {
+.task-card__label {
     font-size: 10px;
     font-weight: 600;
     padding: 1px 8px;
@@ -430,14 +478,14 @@ const openDetail = () => {
     line-height: 1.6;
 }
 
-.cu-card__label--more {
+.task-card__label--more {
     background: rgba(107, 114, 128, 0.15);
     color: #9ca3af;
     border-color: rgba(107, 114, 128, 0.3);
 }
 
 /* Footer meta row */
-.cu-card__footer {
+.task-card__footer {
     display: flex;
     align-items: center;
     justify-content: space-between;
@@ -446,14 +494,14 @@ const openDetail = () => {
     margin-top: 2px;
 }
 
-.cu-card__meta {
+.task-card__meta {
     display: flex;
     align-items: center;
     gap: 10px;
     flex-wrap: wrap;
 }
 
-.cu-card__meta-item {
+.task-card__meta-item {
     display: flex;
     align-items: center;
     gap: 3px;
@@ -463,35 +511,130 @@ const openDetail = () => {
     white-space: nowrap;
 }
 
-.cu-card__meta-item--subtle {
+.task-card__meta-item--subtle {
     color: #6b7280;
 }
 
 /* Assignees */
-.cu-card__assignees {
+.task-card__assignees {
     display: flex;
     flex-shrink: 0;
 }
 
-.cu-card__avatar {
+.task-card__avatar {
     border: 2px solid #1e1e2e;
     margin-left: -6px;
     cursor: default;
     font-size: 11px;
 }
 
-.cu-card__avatar:first-child {
+.task-card__avatar:first-child {
     margin-left: 0;
 }
 
-.cu-card__avatar-text {
+.task-card__avatar-text {
     font-size: 10px;
     font-weight: 600;
     text-transform: uppercase;
 }
 
-.cu-card--no-checkbox .cu-card__labels,
-.cu-card--no-checkbox .cu-card__footer {
+.task-card--no-checkbox .task-card__labels,
+.task-card--no-checkbox .task-card__footer {
     padding-left: 0;
+}
+
+/* ── Inline subtask rows ─────────────────────────────────── */
+.task-card__subtask-section {
+    margin-top: 2px;
+    border-top: 1px solid rgba(255, 255, 255, 0.04);
+    padding-top: 4px;
+}
+
+.task-card__subtask-toggle {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    font-size: 11px;
+    color: #6b7280;
+    background: none;
+    border: none;
+    padding: 2px 0;
+    cursor: pointer;
+    width: 100%;
+    transition: color 0.15s ease;
+    text-align: left;
+}
+
+.task-card__subtask-toggle:hover {
+    color: #9ca3af;
+}
+
+.task-card__subtask-toggle-icon {
+    opacity: 0.7;
+}
+
+.task-card__subtask-rows {
+    display: flex;
+    flex-direction: column;
+    gap: 1px;
+    margin-top: 2px;
+}
+
+.task-card__subtask-row {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    padding: 3px 4px;
+    border-radius: 4px;
+    cursor: pointer;
+    transition: background 0.1s ease;
+    min-height: 24px;
+}
+
+.task-card__subtask-row:hover {
+    background: rgba(255, 255, 255, 0.04);
+}
+
+.task-card__subtask-check {
+    width: 12px;
+    height: 12px;
+    min-width: 12px;
+    border-radius: 3px;
+    border: 1.5px solid #6b7280;
+    background: transparent;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    transition: all 0.15s ease;
+    flex-shrink: 0;
+}
+
+.task-card__subtask-check:hover {
+    background: rgba(255, 255, 255, 0.08);
+}
+
+.task-card__subtask-check--done {
+    background: #22c55e !important;
+    border-color: #22c55e !important;
+}
+
+.task-card__subtask-row-name {
+    font-size: 11px;
+    color: #d1d5db;
+    flex: 1;
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.task-card__subtask-row-name--done {
+    text-decoration: line-through;
+    color: #6b7280;
+}
+
+.task-card__subtask-row-avatar {
+    border: 1.5px solid #1e1e2e;
 }
 </style>

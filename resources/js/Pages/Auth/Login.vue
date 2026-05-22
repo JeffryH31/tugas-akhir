@@ -1,10 +1,4 @@
 <script setup>
-/**
- * Login Page Component
- *
- * Handles user authentication via email/password.
- * Uses Vuetify components for consistent Material Design UI.
- */
 import { Head, useForm } from '@inertiajs/vue3';
 import { ref, computed } from 'vue';
 

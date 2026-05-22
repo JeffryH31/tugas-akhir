@@ -1,9 +1,6 @@
 <script setup>
-/**
- * Space View Page - Shows all products and folders in a space
- */
 import { ref, computed, watch } from 'vue';
-import { Head, router } from '@inertiajs/vue3';
+import { router } from '@inertiajs/vue3';
 import MainLayout from '@/Layouts/MainLayout.vue';
 import ColorPicker from '@/Components/ColorPicker.vue';
 

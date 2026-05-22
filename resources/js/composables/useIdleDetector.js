@@ -1,13 +1,5 @@
 import { ref, onMounted, onUnmounted } from 'vue';
 
-/**
- * OS-level idle detection.
- * Only activated when app is running in Electron wrapper.
- *
- * @param {Object} options
- * @param {Function} options.onIdle  
- * @param {Function} options.onActive
- */
 export function useIdleDetector({ onIdle, onActive } = {}) {
     const isIdle = ref(false);
     let cleanup = null;

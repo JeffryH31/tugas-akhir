@@ -1,7 +1,4 @@
 <script setup>
-/**
- * Status Column Component - Kanban Board Column
- */
 import { ref, computed } from 'vue';
 import { router } from '@inertiajs/vue3';
 import draggable from 'vuedraggable';
@@ -47,7 +44,7 @@ const props = defineProps({
     },
 });
 
-const emit = defineEmits(['task-moved', 'task-complete', 'task-open', 'add-task']);
+const emit = defineEmits(['task-moved', 'task-complete', 'task-open', 'add-task', 'task-open-subtask', 'task-subtask-toggle']);
 
 // Drag state
 const isDragging = ref(false);
@@ -191,6 +188,16 @@ const handleTaskComplete = (task) => {
 const handleTaskOpen = (task) => {
     emit('task-open', task);
 };
+
+// Relay subtask open from card
+const handleOpenSubtask = (task, subtask) => {
+    emit('task-open-subtask', task, subtask);
+};
+
+// Relay subtask toggle from card
+const handleSubtaskToggle = (task, subtask) => {
+    emit('task-subtask-toggle', task, subtask);
+};
 </script>
 
 <template>
@@ -234,7 +241,9 @@ const handleTaskOpen = (task) => {
                 @change="onDragChange" @start="isDragging = true" @end="isDragging = false">
                 <template #item="{ element }">
                     <div class="task-wrapper">
-                        <TaskCard :task="element" @complete="handleTaskComplete" @open-detail="handleTaskOpen" />
+                        <TaskCard :task="element" @complete="handleTaskComplete" @open-detail="handleTaskOpen"
+                            @open-subtask="(subtask) => handleOpenSubtask(element, subtask)"
+                            @toggle-subtask="(subtask) => handleSubtaskToggle(element, subtask)" />
                     </div>
                 </template>
             </draggable>

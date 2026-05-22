@@ -1,7 +1,3 @@
-/**
- * Hardcoded priority levels — matches App\Enums\PriorityLevel on the backend.
- * These are fixed and not user-configurable.
- */
 export const PRIORITIES = [
     { level: 1, name: "Urgent", color: "#EF4444" },
     { level: 2, name: "High", color: "#F59E0B" },

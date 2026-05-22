@@ -1,12 +1,4 @@
 <script setup>
-/**
- * CPM Summary Component
- * 
- * Displays summary information about the Critical Path Method analysis:
- * - Project duration
- * - Critical path details
- * - Statistics
- */
 import { computed } from 'vue';
 
 const props = defineProps({

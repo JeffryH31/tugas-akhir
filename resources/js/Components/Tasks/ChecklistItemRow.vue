@@ -25,11 +25,11 @@ const childInputRef = ref(null);
 
 const loading = ref(false);
 
-// ── Helpers ──────────────────────────────────────────────────────────────
+// Helpers 
 const itemRoute = (name) => route(name, [...props.routeParams, props.item.id]);
 const parentRoute = (name) => route(name, props.routeParams);
 
-// ── Toggle ────────────────────────────────────────────────────────────────
+// Toggle 
 const toggle = () => {
     if (!props.canEdit || loading.value) return;
     loading.value = true;
@@ -40,7 +40,7 @@ const toggle = () => {
     });
 };
 
-// ── Edit name ─────────────────────────────────────────────────────────────
+// Edit name 
 const startEdit = () => {
     if (!props.canEdit) return;
     editName.value = props.item.name;
@@ -61,7 +61,7 @@ const saveEdit = () => {
     });
 };
 
-// ── Delete ────────────────────────────────────────────────────────────────
+// Delete 
 const deleteItem = () => {
     loading.value = true;
     router.delete(itemRoute('tasks.subtasks.checklist.destroy'), {
@@ -71,7 +71,7 @@ const deleteItem = () => {
     });
 };
 
-// ── Add child ─────────────────────────────────────────────────────────────
+// Add child 
 const openAddChild = () => {
     showAddChild.value = true;
     nextTick(() => childInputRef.value?.focus());
@@ -91,7 +91,7 @@ const addChild = () => {
 
 <template>
     <div>
-        <!-- ── Main row ───────────────────────────────────────────────── -->
+        <!-- Main row  -->
         <div class="checklist-row" :style="{ paddingLeft: (12 + indentLevel * 20) + 'px' }">
             <!-- Checkbox -->
             <button type="button" class="checklist-checkbox"
@@ -124,7 +124,7 @@ const addChild = () => {
             </div>
         </div>
 
-        <!-- ── Add-child input ────────────────────────────────────────── -->
+        <!-- Add-child input  -->
         <div v-if="showAddChild" class="checklist-add-child"
             :style="{ paddingLeft: (12 + (indentLevel + 1) * 20) + 'px' }">
             <v-icon size="16" color="grey">mdi-checkbox-blank-outline</v-icon>
@@ -134,7 +134,7 @@ const addChild = () => {
                 @click="addChild">Add</v-btn>
         </div>
 
-        <!-- ── Children (recursive) ───────────────────────────────────── -->
+        <!-- Children (recursive) -->
         <ChecklistItemRow v-for="child in item.children" :key="child.id" :item="child" :route-params="routeParams"
             :can-edit="canEdit" :indent-level="indentLevel + 1" @reloaded="emit('reloaded')" />
     </div>
