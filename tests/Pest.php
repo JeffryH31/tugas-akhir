@@ -5,3 +5,4 @@ use Tests\TestCase;
 
 uses(TestCase::class)->in('Feature', 'Unit');
 uses(RefreshDatabase::class)->in('Feature');
+uses(RefreshDatabase::class)->in('Unit/Services');

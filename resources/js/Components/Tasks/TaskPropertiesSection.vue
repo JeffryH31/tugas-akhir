@@ -288,36 +288,70 @@ const updateDueDate = () => {
 
 // Time estimate
 const showTimeEstimatePicker = ref(false);
-const tempTimeEstimate = ref(0);
-watch(showTimeEstimatePicker, (isOpen) => {
-  if (isOpen) tempTimeEstimate.value = (props.task.time_estimate || 0) / 60;
+const tempEstimateStr = ref('');
+
+const parseEstimateInput = (input) => {
+  if (!input?.trim()) return 0;
+  const str = input.trim().toLowerCase();
+  let minutes = 0;
+  const hMatch = str.match(/(\d+(?:\.\d+)?)\s*h/);
+  const mMatch = str.match(/(\d+(?:\.\d+)?)\s*m(?!i|o)/);
+  if (hMatch) minutes += Math.round(parseFloat(hMatch[1]) * 60);
+  if (mMatch) minutes += Math.round(parseFloat(mMatch[1]));
+  if (!hMatch && !mMatch) {
+    const plain = str.match(/^(\d+(?:\.\d+)?)$/);
+    if (plain) minutes = Math.round(parseFloat(plain[1]) * 60);
+  }
+  return minutes;
+};
+
+const formatEstimateDisplay = (minutes) => {
+  if (!minutes) return null;
+  const h = Math.floor(minutes / 60);
+  const m = minutes % 60;
+  if (h > 0 && m > 0) return `${h}h ${m}m`;
+  if (h > 0) return `${h}h`;
+  return `${m}m`;
+};
+
+const totalEstimateWithSubtasks = computed(() => {
+  const own = parseEstimateInput(tempEstimateStr.value);
+  const subs = [...(props.localTask?.subtasks || []), ...(props.localTask?.children || [])];
+  return own + subs.reduce((s, c) => s + (c.time_estimate || 0), 0);
 });
-const updateTimeEstimate = () => {
-  const raw = parseFloat(tempTimeEstimate.value) || 0;
-  if (raw < 0) {
-    window.showSnackbar?.("Time estimate cannot be negative.", "error");
-    return;
-  }
-  if (raw > 8760) {
-    window.showSnackbar?.("Time estimate cannot exceed 1 year.", "error");
-    return;
-  }
-  if (!/^\d+(\.\d)?$/.test(String(tempTimeEstimate.value).trim())) {
-    window.showSnackbar?.("Maximum 1 decimal place allowed.", "error");
-    return;
-  }
-  const total = Math.round(raw * 60);
-  showTimeEstimatePicker.value = false;
+
+watch(showTimeEstimatePicker, (isOpen) => {
+  if (isOpen) tempEstimateStr.value = formatEstimateDisplay(props.task.time_estimate) || '';
+});
+
+let estimateSaveTimer = null;
+const scheduleEstimateSave = () => {
+  clearTimeout(estimateSaveTimer);
+  estimateSaveTimer = setTimeout(() => {
+    const minutes = parseEstimateInput(tempEstimateStr.value);
+    if (minutes === (props.task.time_estimate || 0)) return;
+    router.patch(
+      getUpdateRoute(),
+      { time_estimate: minutes || null },
+      {
+        preserveScroll: true,
+        preserveState: true,
+        onSuccess: () => router.reload({ only: ['task', 'tasksByStatus'] }),
+        onError: () => window.showSnackbar?.('Failed to update time estimate', 'error'),
+      }
+    );
+  }, 800);
+};
+
+const clearTimeEstimate = () => {
+  tempEstimateStr.value = '';
   router.patch(
     getUpdateRoute(),
-    { time_estimate: total },
+    { time_estimate: null },
     {
       preserveScroll: true,
       preserveState: true,
-      onSuccess: () => router.reload({ only: ["task", "tasksByStatus"] }),
-      onError: () => {
-        window.showSnackbar?.("Failed to update time estimate", "error");
-      },
+      onSuccess: () => router.reload({ only: ['task', 'tasksByStatus'] }),
     }
   );
 };
@@ -743,11 +777,11 @@ const removeSuccessor = (suc) =>
                   ">
                 <span class="text-xs font-weight-medium">{{
                   assignee.initials
-                }}</span>
+                  }}</span>
               </v-avatar>
             </template>
             <span>{{ assignee.name
-            }}{{
+              }}{{
                 isSubtask && canOperateTasks ? " (click to remove)" : ""
               }}</span>
           </v-tooltip>
@@ -774,7 +808,7 @@ const removeSuccessor = (suc) =>
                   </template>
                   <v-list-item-title class="text-body-2">{{
                     member.name
-                  }}</v-list-item-title>
+                    }}</v-list-item-title>
                   <template v-slot:append>
                     <v-icon v-if="
                       localTask.assignees?.some((a) => a.id === member.id)
@@ -818,7 +852,7 @@ const removeSuccessor = (suc) =>
                   </template>
                   <v-list-item-title class="text-body-2">{{
                     label.name
-                  }}</v-list-item-title>
+                    }}</v-list-item-title>
                   <template #append>
                     <div class="d-flex align-center ga-1">
                       <v-icon v-if="isLabelSelected(label.id)" size="16" color="primary">
@@ -865,10 +899,10 @@ const removeSuccessor = (suc) =>
           <v-menu :disabled="!canManageTaskStructure">
             <template v-slot:activator="{ props: menuProps }">
               <v-btn v-bind="menuProps" variant="text" size="small" class="text-none" :color="currentTaskSprint
-                  ? isSprintActive(currentTaskSprint)
-                    ? 'success'
-                    : 'primary'
-                  : 'grey'
+                ? isSprintActive(currentTaskSprint)
+                  ? 'success'
+                  : 'primary'
+                : 'grey'
                 ">
                 <v-icon start size="14">
                   {{
@@ -1053,25 +1087,40 @@ const removeSuccessor = (suc) =>
       <div class="prop-value">
         <v-menu v-model="showTimeEstimatePicker" :close-on-content-click="false" :disabled="!canOperateTasks">
           <template v-slot:activator="{ props: menuProps }">
-            <v-btn v-bind="menuProps" variant="text" size="small" class="text-none"
-              :color="localTask.time_estimate ? 'primary' : 'grey'">
-              {{ formatTimeEstimate(localTask.time_estimate) }}
+            <div v-if="localTask.time_estimate" class="estimate-chip-wrap">
+              <div class="estimate-chip" v-bind="menuProps">
+                <span>{{ formatEstimateDisplay(localTask.time_estimate) }}</span>
+                <v-icon v-if="canOperateTasks" size="12" class="estimate-chip-close"
+                  @click.stop="clearTimeEstimate">mdi-close</v-icon>
+              </div>
+            </div>
+            <v-btn v-else v-bind="menuProps" variant="text" size="small" class="text-none text-grey">
+              Empty
             </v-btn>
           </template>
-          <v-card color="surface" min-width="280">
-            <v-card-text class="pb-0">
-              <v-text-field v-model="tempTimeEstimate" type="number" label="Estimate (hours)" variant="outlined"
-                density="compact" hide-details step="0.1" min="0" />
+          <v-card color="surface" min-width="260">
+            <v-card-text class="pa-3">
+              <div class="d-flex align-center justify-space-between mb-3">
+                <span class="text-body-2 font-weight-medium">Time Estimate</span>
+                <v-icon size="16" color="grey">mdi-help-circle-outline</v-icon>
+              </div>
+              <v-text-field v-model="tempEstimateStr" variant="outlined" density="compact"
+                placeholder="e.g. 2h, 1h 30m, 90m" hide-details autofocus @input="scheduleEstimateSave">
+                <template #append-inner>
+                  <v-icon v-if="tempEstimateStr" size="14" style="cursor:pointer"
+                    @click="tempEstimateStr = ''; clearTimeEstimate()">mdi-close</v-icon>
+                </template>
+              </v-text-field>
+              <div class="d-flex justify-space-between align-center mt-3 px-1">
+                <span class="text-caption font-weight-medium estimate-subtask-label">TOTAL WITH SUBTASKS</span>
+                <span class="text-body-2 font-weight-medium">{{ formatEstimateDisplay(totalEstimateWithSubtasks) || '-'
+                  }}</span>
+              </div>
             </v-card-text>
-            <v-card-actions>
-              <v-btn v-if="localTask.time_estimate" size="small" variant="text" color="error" @click="
-                tempTimeEstimate = 0;
-              updateTimeEstimate();
-              ">Clear</v-btn>
-              <v-spacer />
-              <v-btn size="small" variant="text" @click="showTimeEstimatePicker = false">Cancel</v-btn>
-              <v-btn size="small" color="primary" variant="flat" @click="updateTimeEstimate">Save</v-btn>
-            </v-card-actions>
+            <v-divider />
+            <div class="px-3 py-2">
+              <span class="text-caption text-grey">Changes are automatically saved</span>
+            </div>
           </v-card>
         </v-menu>
       </div>
@@ -1135,7 +1184,7 @@ const removeSuccessor = (suc) =>
             localTask.schedule_variance_minutes !== null &&
             localTask.schedule_variance_minutes !== 0
           " size="x-small" :color="localTask.schedule_variance_minutes > 0 ? 'warning' : 'success'
-              " variant="tonal">
+            " variant="tonal">
             {{ formatVariance(localTask.schedule_variance_minutes) }}
             variance
           </v-chip>
@@ -1197,8 +1246,8 @@ const removeSuccessor = (suc) =>
           </div>
           <v-progress-linear v-if="localTask.time_estimate" :model-value="(localTask.time_spent / localTask.time_estimate) * 100
             " :color="localTask.time_spent > localTask.time_estimate
-                ? 'error'
-                : 'primary'
+              ? 'error'
+              : 'primary'
               " height="4" rounded class="spent-progress-bar mt-1" />
         </div>
       </div>
@@ -1267,7 +1316,7 @@ const removeSuccessor = (suc) =>
                     </template>
                     <v-list-item-title class="text-body-2">{{
                       s.name
-                    }}</v-list-item-title>
+                      }}</v-list-item-title>
                     <v-list-item-subtitle v-if="s.time_estimate" class="text-caption">
                       Est:
                       {{ formatSubtaskEstimate(s.time_estimate) }}
@@ -1319,7 +1368,7 @@ const removeSuccessor = (suc) =>
                     </template>
                     <v-list-item-title class="text-body-2">{{
                       s.name
-                    }}</v-list-item-title>
+                      }}</v-list-item-title>
                     <v-list-item-subtitle v-if="s.time_estimate" class="text-caption">
                       Est:
                       {{ formatSubtaskEstimate(s.time_estimate) }}
@@ -1483,5 +1532,42 @@ const removeSuccessor = (suc) =>
   flex: 1;
   min-width: 80px;
   max-width: 160px;
+}
+
+.estimate-chip-wrap {
+  display: inline-flex;
+}
+
+.estimate-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  background: rgba(123, 104, 238, 0.12);
+  border: 1px solid rgba(123, 104, 238, 0.22);
+  border-radius: 6px;
+  padding: 3px 8px 3px 10px;
+  font-size: 13px;
+  color: #a78bfa;
+  cursor: pointer;
+  user-select: none;
+  transition: background 0.15s;
+}
+
+.estimate-chip:hover {
+  background: rgba(123, 104, 238, 0.22);
+}
+
+.estimate-chip-close {
+  color: rgba(255, 255, 255, 0.35) !important;
+  transition: color 0.1s;
+}
+
+.estimate-chip-close:hover {
+  color: rgba(255, 255, 255, 0.75) !important;
+}
+
+.estimate-subtask-label {
+  color: rgba(255, 255, 255, 0.45);
+  letter-spacing: 0.4px;
 }
 </style>

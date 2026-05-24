@@ -36,6 +36,7 @@ const emit = defineEmits([
 
 // Local reactive copy of task to ensure proper reactivity
 const localTask = ref(null);
+const panelBodyRef = ref(null);
 
 const deepClone = (obj) => (!obj ? null : JSON.parse(JSON.stringify(obj)));
 
@@ -59,6 +60,7 @@ watch(
     if (oldTask?.id !== newTask?.id) {
       resetTimer();
       if (newTask) nextTick(() => initRunningTimer());
+      nextTick(() => { if (panelBodyRef.value) panelBodyRef.value.scrollTop = 0; });
     }
   },
   { immediate: true, deep: true }
@@ -359,7 +361,7 @@ onUnmounted(() => stopTimerInterval());
       <v-divider />
 
       <!-- Tab Content -->
-      <div class="flex-1 overflow-y-auto">
+      <div ref="panelBodyRef" class="flex-1 overflow-y-auto">
         <v-tabs-window v-model="activeTab">
           <v-tabs-window-item value="details">
             <DetailsTab :local-task="localTask" :task="task" :is-subtask="isSubtask" :workspace="workspace"
