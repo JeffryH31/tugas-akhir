@@ -8,7 +8,6 @@ use function Pest\Laravel\actingAs;
 uses(CreatesWorkspaceHierarchy::class);
 
 // Shared setup
-
 beforeEach(function () {
     $this->owner   = $this->createUser();
     $this->h       = $this->createFullHierarchy($this->owner);
@@ -16,7 +15,6 @@ beforeEach(function () {
 });
 
 // store
-
 test('owner can create a sprint', function () {
     actingAs($this->owner)
         ->from(route('spaces.show', [$this->h['workspace'], $this->h['space']]))
@@ -68,7 +66,6 @@ test('creating a sprint with end_date before start_date returns a validation err
 });
 
 // update
-
 test('owner can update a sprint', function () {
     $sprint = Sprint::create([
         'space_id'      => $this->h['space']->id,
@@ -94,7 +91,6 @@ test('owner can update a sprint', function () {
 });
 
 // start
-
 test('owner can start a sprint', function () {
     $sprint = Sprint::create([
         'space_id'     => $this->h['space']->id,
@@ -145,7 +141,6 @@ test('starting a new sprint deactivates the previously active sprint', function 
 });
 
 // complete
-
 test('owner can complete an active sprint', function () {
     $sprint = Sprint::create([
         'space_id'     => $this->h['space']->id,
@@ -168,7 +163,6 @@ test('owner can complete an active sprint', function () {
 });
 
 // addTask / removeTask
-
 test('owner can add a subtask to a sprint', function () {
     $sprint = Sprint::create([
         'space_id'     => $this->h['space']->id,
@@ -216,7 +210,6 @@ test('owner can remove a subtask from a sprint', function () {
 });
 
 // destroy
-
 test('owner can delete a sprint', function () {
     $sprint = Sprint::create([
         'space_id'     => $this->h['space']->id,

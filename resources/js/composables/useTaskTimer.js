@@ -1,20 +1,6 @@
 import { ref, computed, watch } from 'vue';
 import { router, usePage } from '@inertiajs/vue3';
-
-function safeFetch(url, options = {}) {
-    const token = document.querySelector('meta[name="csrf-token"]')?.content;
-    return fetch(url, {
-        ...options,
-        headers: {
-            'Content-Type': 'application/json',
-            'Accept': 'application/json',
-            'X-CSRF-TOKEN': token,
-            'X-Requested-With': 'XMLHttpRequest',
-            ...options.headers,
-        },
-        credentials: 'same-origin',
-    });
-}
+import { safeFetch } from '@/utils/safeFetch';
 
 export function useTaskTimer(props, localTask) {
     const page = usePage();

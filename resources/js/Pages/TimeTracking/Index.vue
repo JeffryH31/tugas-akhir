@@ -2,6 +2,7 @@
 import { ref, computed, watch, onMounted, onUnmounted } from 'vue';
 import { Head, router } from '@inertiajs/vue3';
 import MainLayout from '@/Layouts/MainLayout.vue';
+import { safeFetch } from '@/utils/safeFetch';
 
 const props = defineProps({
     activeWorkspace: Object,
@@ -114,21 +115,6 @@ const goToTask = (entry) => {
 };
 
 // Timer (uses fetch to avoid Inertia redirect issues)
-const safeFetch = async (url, options = {}) => {
-    const token = document.querySelector('meta[name="csrf-token"]')?.content;
-    return fetch(url, {
-        ...options,
-        headers: {
-            'Content-Type': 'application/json',
-            'Accept': 'application/json',
-            'X-CSRF-TOKEN': token,
-            'X-Requested-With': 'XMLHttpRequest',
-            ...options.headers,
-        },
-        credentials: 'same-origin',
-    });
-};
-
 const stopTimer = async (entry) => {
     const task = entry?.subtask?.task;
     if (!task) return;

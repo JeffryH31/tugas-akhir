@@ -3,6 +3,7 @@ import { ref, computed, watch } from "vue";
 import { router } from "@inertiajs/vue3";
 import { PRIORITIES, PRIORITY_MAP } from "@/constants/priorities";
 import { useConfirmDialog } from "@/composables/useConfirmDialog";
+import { useSnackbar } from "@/composables/useSnackbar";
 import ColorPicker from "@/Components/ColorPicker.vue";
 import {
   getFallbackCompletionTarget,
@@ -12,6 +13,7 @@ import {
 } from "@/utils/subtaskCompletionAutomation";
 
 const { confirm: confirmDialog } = useConfirmDialog();
+const { showSnackbar } = useSnackbar();
 
 const props = defineProps({
   localTask: Object,
@@ -660,63 +662,63 @@ const availableForDependency = computed(() => {
   });
 });
 
-const depFetch = (method, body) => {
+const depRequest = (method, body) => {
   const routeName =
     method === "DELETE"
       ? "tasks.cpm.dependencies.remove"
       : "tasks.cpm.dependencies.add";
+
+  const url = route(routeName, [
+    props.workspace.id,
+    props.space.id,
+    props.list.id,
+    props.parentTask.id,
+  ]);
+
   dependencyLoading.value = true;
-  fetch(
-    route(routeName, [
-      props.workspace.id,
-      props.space.id,
-      props.list.id,
-      props.parentTask.id,
-    ]),
-    {
-      method,
-      headers: {
-        "Content-Type": "application/json",
-        Accept: "application/json",
-        "X-Requested-With": "XMLHttpRequest",
-        "X-CSRF-TOKEN": document.querySelector('meta[name="csrf-token"]')
-          ?.content,
-      },
-      body: JSON.stringify(body),
-    }
-  )
-    .then((r) => r.json())
-    .then((result) => {
-      if (result.success) {
-        emit("updated");
-        window.showSnackbar?.(
-          method === "DELETE" ? "Dependency removed!" : "Dependency added!",
-          "success"
-        );
-      } else window.showSnackbar?.(result.message || "Failed", "error");
-    })
-    .catch(() => window.showSnackbar?.("Request failed", "error"))
-    .finally(() => {
+
+  const successMessage =
+    method === "DELETE" ? "Dependency removed!" : "Dependency added!";
+
+  const options = {
+    preserveScroll: true,
+    preserveState: true,
+    onSuccess: () => {
+      emit("updated");
+      showSnackbar(successMessage, "success");
+    },
+    onError: (errors) => {
+      const message = errors?.error || errors?.message || "Request failed";
+      showSnackbar(message, "error");
+    },
+    onFinish: () => {
       dependencyLoading.value = false;
-    });
+    },
+  };
+
+  if (method === "DELETE") {
+    router.delete(url, { ...options, data: body });
+  } else {
+    router.post(url, body, options);
+  }
 };
 
 const addDependency = (dep) =>
-  depFetch("POST", {
+  depRequest("POST", {
     subtask_id: props.task.id,
     depends_on_id: dep.id,
     type: "blocks",
   });
 const addSuccessor = (suc) =>
-  depFetch("POST", {
+  depRequest("POST", {
     subtask_id: suc.id,
     depends_on_id: props.task.id,
     type: "blocks",
   });
 const removeDependency = (dep) =>
-  depFetch("DELETE", { subtask_id: props.task.id, depends_on_id: dep.id });
+  depRequest("DELETE", { subtask_id: props.task.id, depends_on_id: dep.id });
 const removeSuccessor = (suc) =>
-  depFetch("DELETE", { subtask_id: suc.id, depends_on_id: props.task.id });
+  depRequest("DELETE", { subtask_id: suc.id, depends_on_id: props.task.id });
 
 </script>
 

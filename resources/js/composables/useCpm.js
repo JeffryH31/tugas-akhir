@@ -1,21 +1,21 @@
 import { ref } from 'vue';
+import { router } from '@inertiajs/vue3';
 import { useSnackbar } from '@/composables/useSnackbar';
+import { safeFetch } from '@/utils/safeFetch';
 
-export function useCpm(refs) {
+export function useCpm(context) {
     const { showSnackbar } = useSnackbar();
     const cpmData = ref(null);
     const loading = ref(false);
 
     const resolveIds = () => {
-        const workspace = refs.workspace?.value ?? refs.workspace;
-        const space = refs.space?.value ?? refs.space;
-        const list = refs.list?.value ?? refs.list;
-        const parentTask = refs.parentTask?.value ?? refs.parentTask;
+        const workspace = context.workspace?.value ?? context.workspace;
+        const space = context.space?.value ?? context.space;
+        const list = context.list?.value ?? context.list;
+        const parentTask = context.parentTask?.value ?? context.parentTask;
         if (!workspace || !space || !list || !parentTask) return null;
         return [workspace.id, space.id, list.id, parentTask.id];
     };
-
-    const csrfToken = () => document.querySelector('meta[name="csrf-token"]')?.content;
 
     const fetchCpmData = async () => {
         const ids = resolveIds();
@@ -23,13 +23,7 @@ export function useCpm(refs) {
 
         loading.value = true;
         try {
-            const response = await fetch(route('tasks.cpm.analyze', ids), {
-                method: 'GET',
-                headers: {
-                    Accept: 'application/json',
-                    'X-Requested-With': 'XMLHttpRequest',
-                },
-            });
+            const response = await safeFetch(route('tasks.cpm.analyze', ids), { method: 'GET' });
 
             if (response.ok) {
                 cpmData.value = await response.json();
@@ -44,7 +38,7 @@ export function useCpm(refs) {
         }
     };
 
-    const mutateDependency = async ({ subtaskId, dependsOnId, mode }) => {
+    const mutateDependency = ({ subtaskId, dependsOnId, mode }) => {
         const ids = resolveIds();
         if (!ids) return;
 
@@ -52,34 +46,32 @@ export function useCpm(refs) {
             ? 'tasks.cpm.dependencies.add'
             : 'tasks.cpm.dependencies.remove';
 
-        const body = mode === 'add'
+        const payload = mode === 'add'
             ? { subtask_id: subtaskId, depends_on_id: dependsOnId, type: 'blocks' }
             : { subtask_id: subtaskId, depends_on_id: dependsOnId };
 
-        try {
-            const response = await fetch(route(routeName, ids), {
-                method: mode === 'add' ? 'POST' : 'DELETE',
-                headers: {
-                    'Content-Type': 'application/json',
-                    Accept: 'application/json',
-                    'X-Requested-With': 'XMLHttpRequest',
-                    'X-CSRF-TOKEN': csrfToken(),
-                },
-                body: JSON.stringify(body),
-            });
+        const successMessage = mode === 'add' ? 'Dependency added!' : 'Dependency removed!';
+        const errorMessage = mode === 'add'
+            ? 'Failed to add dependency'
+            : 'Failed to remove dependency';
 
-            const result = await response.json();
-            if (result.success) {
-                await fetchCpmData();
-                showSnackbar(mode === 'add' ? 'Dependency added!' : 'Dependency removed!', 'success');
-            } else {
-                showSnackbar(result.message || 'Failed', 'error');
-            }
-        } catch {
-            showSnackbar(
-                mode === 'add' ? 'Failed to add dependency' : 'Failed to remove dependency',
-                'error'
-            );
+        const options = {
+            preserveScroll: true,
+            preserveState: true,
+            onSuccess: () => {
+                showSnackbar(successMessage, 'success');
+                fetchCpmData();
+            },
+            onError: (errors) => {
+                const message = errors?.error || errors?.message || errorMessage;
+                showSnackbar(message, 'error');
+            },
+        };
+
+        if (mode === 'add') {
+            router.post(route(routeName, ids), payload, options);
+        } else {
+            router.delete(route(routeName, ids), { ...options, data: payload });
         }
     };
 
