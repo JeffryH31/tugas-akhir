@@ -1,4 +1,4 @@
-<?php
+﻿<?php
 
 use App\Models\Activity;
 use App\Models\Comment;
@@ -14,7 +14,7 @@ beforeEach(function () {
     $this->hierarchy = $this->createFullHierarchy($this->owner);
 });
 
-// ── create ────────────────────────────────────────────────────────────────────
+// create
 
 test('create comment on task', function () {
     $task = $this->hierarchy['task'];
@@ -58,7 +58,7 @@ test('create comment with mentions and attachments', function () {
     expect($comment->attachments)->toBe(['file.pdf']);
 });
 
-// ── update ────────────────────────────────────────────────────────────────────
+// update
 
 test('update comment changes content', function () {
     $task = $this->hierarchy['task'];
@@ -69,7 +69,7 @@ test('update comment changes content', function () {
     expect($updated->content)->toBe('Edited');
 });
 
-// ── delete ────────────────────────────────────────────────────────────────────
+// delete
 
 test('delete comment removes it and logs activity', function () {
     $task = $this->hierarchy['task'];
@@ -85,7 +85,7 @@ test('delete comment removes it and logs activity', function () {
     expect($activity)->not->toBeNull();
 });
 
-// ── reply ─────────────────────────────────────────────────────────────────────
+// reply
 
 test('reply creates comment with parent_id', function () {
     $task = $this->hierarchy['task'];
@@ -98,7 +98,7 @@ test('reply creates comment with parent_id', function () {
     expect($reply->task_id)->toBe($task->id);
 });
 
-// ── resolve / unresolve ───────────────────────────────────────────────────────
+// resolve / unresolve
 
 test('resolve comment marks it as resolved', function () {
     $task = $this->hierarchy['task'];
@@ -119,7 +119,7 @@ test('unresolve comment clears resolved state', function () {
     expect($unresolved->is_resolved)->toBeFalse();
 });
 
-// ── extractMentions regex (pure logic, no DB) ─────────────────────────────────
+// extractMentions regex (pure logic, no DB)
 
 test('extractMentions regex extracts single username', function () {
     preg_match_all('/@(\w+)/', 'Hello @john please review', $matches);

@@ -1,4 +1,4 @@
-<?php
+﻿<?php
 
 use App\Models\Activity;
 use App\Models\Workspace;
@@ -12,7 +12,7 @@ beforeEach(function () {
     $this->owner = $this->createUser();
 });
 
-// ── create ────────────────────────────────────────────────────────────────────
+// create
 
 test('create workspace with name', function () {
     $workspace = $this->service->create(['name' => 'My Workspace'], $this->owner);
@@ -46,7 +46,7 @@ test('create workspace logs activity', function () {
     expect($activity)->not->toBeNull();
 });
 
-// ── update ────────────────────────────────────────────────────────────────────
+// update
 
 test('update workspace name', function () {
     $workspace = $this->service->create(['name' => 'Old Name'], $this->owner);
@@ -79,7 +79,7 @@ test('update workspace does not log when name unchanged', function () {
     expect($activity)->toBeNull();
 });
 
-// ── delete ────────────────────────────────────────────────────────────────────
+// delete
 
 test('delete workspace removes it', function () {
     $workspace = $this->service->create(['name' => 'To Delete'], $this->owner);
@@ -89,7 +89,7 @@ test('delete workspace removes it', function () {
     expect(Workspace::find($workspace->id))->toBeNull();
 });
 
-// ── addMember / removeMember / updateMemberRole ───────────────────────────────
+// addMember / removeMember / updateMemberRole
 
 test('addMember adds user to workspace', function () {
     $workspace = $this->service->create(['name' => 'WS'], $this->owner);
@@ -121,7 +121,7 @@ test('updateMemberRole changes role', function () {
     expect($role)->toBe('admin');
 });
 
-// ── getWorkspacesForUser ──────────────────────────────────────────────────────
+// getWorkspacesForUser
 
 test('getWorkspacesForUser returns user workspaces', function () {
     $this->service->create(['name' => 'WS1'], $this->owner);

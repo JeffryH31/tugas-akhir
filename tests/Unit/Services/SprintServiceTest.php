@@ -1,4 +1,4 @@
-<?php
+﻿<?php
 
 use App\Models\Sprint;
 use App\Models\Subtask;
@@ -14,7 +14,7 @@ beforeEach(function () {
     $this->hierarchy = $this->createFullHierarchy($this->owner);
 });
 
-// ── createSprint ──────────────────────────────────────────────────────────────
+// createSprint
 
 test('createSprint creates sprint for list', function () {
     $sprint = $this->service->createSprint($this->hierarchy['list'], [
@@ -42,7 +42,7 @@ test('createSprint with goal and active state', function () {
     expect($sprint->is_active)->toBeTrue();
 });
 
-// ── updateSprint ──────────────────────────────────────────────────────────────
+// updateSprint
 
 test('updateSprint changes sprint name', function () {
     $sprint = $this->createSprint($this->hierarchy['list']);
@@ -52,7 +52,7 @@ test('updateSprint changes sprint name', function () {
     expect($updated->name)->toBe('Renamed Sprint');
 });
 
-// ── deleteSprint ──────────────────────────────────────────────────────────────
+// deleteSprint
 
 test('deleteSprint removes sprint and unlinks subtasks', function () {
     $sprint = $this->createSprint($this->hierarchy['list']);
@@ -64,7 +64,7 @@ test('deleteSprint removes sprint and unlinks subtasks', function () {
     expect($subtask->fresh()->sprint_id)->toBeNull();
 });
 
-// ── startSprint / completeSprint ──────────────────────────────────────────────
+// startSprint / completeSprint
 
 test('startSprint activates sprint and deactivates others', function () {
     $sprint1 = $this->createSprint($this->hierarchy['list'], ['is_active' => true]);
@@ -84,7 +84,7 @@ test('completeSprint deactivates sprint', function () {
     expect($completed->is_active)->toBeFalse();
 });
 
-// ── addSubtaskToSprint / removeSubtaskFromSprint ──────────────────────────────
+// addSubtaskToSprint / removeSubtaskFromSprint
 
 test('addSubtaskToSprint links subtask to sprint', function () {
     $sprint = $this->createSprint($this->hierarchy['list']);
@@ -115,7 +115,7 @@ test('removeSubtaskFromSprint unlinks subtask', function () {
     expect($subtask->fresh()->sprint_id)->toBeNull();
 });
 
-// ── getSprintStatistics ───────────────────────────────────────────────────────
+// getSprintStatistics
 
 test('getSprintStatistics returns correct counts', function () {
     $sprint = $this->createSprint($this->hierarchy['list']);
@@ -129,7 +129,7 @@ test('getSprintStatistics returns correct counts', function () {
     expect($stats['completion_rate'])->toEqual(50);
 });
 
-// ── getBacklogSubtasks ────────────────────────────────────────────────────────
+// getBacklogSubtasks
 
 test('getBacklogSubtasks returns subtasks without sprint', function () {
     $sprint = $this->createSprint($this->hierarchy['list']);
@@ -142,7 +142,7 @@ test('getBacklogSubtasks returns subtasks without sprint', function () {
     expect($result->pluck('id'))->not->toContain($inSprint->id);
 });
 
-// ── Pure logic: burndown & velocity calculation ───────────────────────────────
+// Pure logic: burndown & velocity calculation
 
 test('ideal burndown decreases linearly from total to 0', function () {
     $total = 10;

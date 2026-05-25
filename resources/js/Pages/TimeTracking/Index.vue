@@ -1,4 +1,4 @@
-<script setup>
+﻿<script setup>
 import { ref, computed, watch, onMounted, onUnmounted } from 'vue';
 import { Head, router } from '@inertiajs/vue3';
 import MainLayout from '@/Layouts/MainLayout.vue';
@@ -10,16 +10,16 @@ const props = defineProps({
     subtasks: Array,
 });
 
-// ── Date filter ──────────────────────────────────────────────────────
+// Date filter
 const dateRange = ref('today');
 const customStart = ref(new Date().toISOString().split('T')[0]);
 const customEnd = ref(new Date().toISOString().split('T')[0]);
 
-// ── Running timer ────────────────────────────────────────────────────
+// Running timer
 const elapsedSeconds = ref(0);
 const timerInterval = ref(null);
 
-// ── Table state ──────────────────────────────────────────────────────
+// Table state
 const search = ref('');
 const sortBy = ref([{ key: 'started_at', order: 'desc' }]);
 
@@ -33,14 +33,14 @@ const tableHeaders = [
     { title: '', key: 'actions', sortable: false, align: 'end', width: 80 },
 ];
 
-// ── Dialog state ─────────────────────────────────────────────────────
+// Dialog state
 const showAddEntry = ref(false);
 const editingEntry = ref(null);
 const selectedSubtask = ref(null);
 const subtaskSearch = ref('');
 const entryForm = ref({ started_at: '', ended_at: '', is_billable: false });
 
-// ── Computed ──────────────────────────────────────────────────────────
+// Computed
 const formatRunningTime = computed(() => {
     const h = Math.floor(elapsedSeconds.value / 3600);
     const m = Math.floor((elapsedSeconds.value % 3600) / 60);
@@ -84,7 +84,7 @@ const canSave = computed(() => {
     return editingEntry.value ? hasTime : (selectedSubtask.value && hasTime);
 });
 
-// ── Formatters ────────────────────────────────────────────────────────
+// Formatters
 const formatDuration = (minutes) => {
     if (!minutes) return '0h 0m';
     const h = Math.floor(minutes / 60);
@@ -99,7 +99,7 @@ const formatDateTime = (dateString) => {
     });
 };
 
-// ── Navigation ────────────────────────────────────────────────────────
+// Navigation
 const goToTask = (entry) => {
     const subtask = entry?.subtask;
     const task = subtask?.task;
@@ -113,7 +113,7 @@ const goToTask = (entry) => {
     router.visit(url);
 };
 
-// ── Timer (uses fetch to avoid Inertia redirect issues) ───────────────
+// Timer (uses fetch to avoid Inertia redirect issues)
 const safeFetch = async (url, options = {}) => {
     const token = document.querySelector('meta[name="csrf-token"]')?.content;
     return fetch(url, {
@@ -162,7 +162,7 @@ const stopTimerInterval = () => {
     if (timerInterval.value) { clearInterval(timerInterval.value); timerInterval.value = null; }
 };
 
-// ── Entry CRUD ────────────────────────────────────────────────────────
+// Entry CRUD
 const openAddDialog = () => {
     editingEntry.value = null;
     selectedSubtask.value = null;
@@ -221,7 +221,7 @@ const resetForm = () => {
     subtaskSearch.value = '';
 };
 
-// ── Lifecycle ──────────────────────────────────────────────────────────
+// Lifecycle
 onMounted(() => {
     if (props.runningTimer) {
         elapsedSeconds.value = Math.floor(

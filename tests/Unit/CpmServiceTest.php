@@ -1,4 +1,4 @@
-<?php
+﻿<?php
 
 use App\Services\CpmService;
 
@@ -37,7 +37,7 @@ function makeCpmSubtask(int $id, int $timeEstimateMinutes = 60, array $deps = []
     return $obj;
 }
 
-// ── isSchedulingDependency ────────────────────────────────────────────────────
+// isSchedulingDependency
 
 test('isSchedulingDependency returns true for blocks type', function () {
     $service = new CpmService();
@@ -55,7 +55,7 @@ test('isSchedulingDependency returns false for non-blocks types', function () {
     expect($method->invoke($service, ''))->toBeFalse();
 });
 
-// ── buildDependencyGraph ──────────────────────────────────────────────────────
+// buildDependencyGraph
 
 test('buildDependencyGraph creates empty adjacency lists for isolated nodes', function () {
     $subtasks = collect([makeCpmSubtask(1), makeCpmSubtask(2)]);
@@ -81,7 +81,7 @@ test('buildDependencyGraph maps a single dependency edge', function () {
     expect($graph['reverse'][2])->toContain(1);
 });
 
-// ── hasCycle ──────────────────────────────────────────────────────────────────
+// hasCycle
 
 test('hasCycle returns false for acyclic linear chain', function () {
     $subtasks = collect([makeCpmSubtask(1), makeCpmSubtask(2, 60, [1]), makeCpmSubtask(3, 60, [2])]);
@@ -103,7 +103,7 @@ test('hasCycle returns true for direct cycle', function () {
     expect($method->invoke($service, $graph, $subtasks))->toBeTrue();
 });
 
-// ── topologicalSort ───────────────────────────────────────────────────────────
+// topologicalSort
 
 test('topologicalSort returns all nodes', function () {
     $subtasks = collect([makeCpmSubtask(1), makeCpmSubtask(2), makeCpmSubtask(3)]);
@@ -132,7 +132,7 @@ test('topologicalSort respects dependency order', function () {
     expect(array_search(2, $sorted))->toBeLessThan(array_search(3, $sorted));
 });
 
-// ── forwardPass ───────────────────────────────────────────────────────────────
+// forwardPass
 
 test('forwardPass sets ES=0 EF=duration for isolated node', function () {
     $subtasks = collect([makeCpmSubtask(1, 120)]); // 2h
@@ -183,7 +183,7 @@ test('forwardPass takes max EF of predecessors for merge node', function () {
     expect($cpmData[3]['earlyFinish'])->toEqual(5.0);
 });
 
-// ── calculateSlackAndCriticalPath ─────────────────────────────────────────────
+// calculateSlackAndCriticalPath
 
 test('calculateSlackAndCriticalPath identifies critical and non-critical nodes', function () {
     // 1(2h)→3, 2(4h)→3, 3(1h) — node 1 has slack=2h
@@ -208,7 +208,7 @@ test('calculateSlackAndCriticalPath identifies critical and non-critical nodes',
     expect($cpmData[3]['isCritical'])->toBeTrue();
 });
 
-// ── getCriticalPathSubtasks ───────────────────────────────────────────────────
+// getCriticalPathSubtasks
 
 test('getCriticalPathSubtasks returns only critical nodes sorted by earlyStart', function () {
     $cpmData = [

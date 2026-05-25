@@ -1,4 +1,4 @@
-<?php
+﻿<?php
 
 use App\Models\Activity;
 use App\Models\Space;
@@ -14,7 +14,7 @@ beforeEach(function () {
     $this->hierarchy = $this->createFullHierarchy($this->owner);
 });
 
-// ── create ────────────────────────────────────────────────────────────────────
+// create
 
 test('create space with name', function () {
     $space = $this->service->create(
@@ -47,7 +47,7 @@ test('create space logs activity', function () {
     expect($activity)->not->toBeNull();
 });
 
-// ── update ────────────────────────────────────────────────────────────────────
+// update
 
 test('update space name', function () {
     $space = $this->hierarchy['space'];
@@ -57,7 +57,7 @@ test('update space name', function () {
     expect($updated->name)->toBe('Renamed');
 });
 
-// ── delete ────────────────────────────────────────────────────────────────────
+// delete
 
 test('delete space removes it', function () {
     $space = $this->service->create(['name' => 'To Delete'], $this->hierarchy['workspace'], $this->owner);
@@ -67,7 +67,7 @@ test('delete space removes it', function () {
     expect(Space::find($space->id))->toBeNull();
 });
 
-// ── membership ────────────────────────────────────────────────────────────────
+// membership
 
 test('addMember adds user to space with role', function () {
     $user = $this->createUser();
@@ -96,7 +96,7 @@ test('updateMemberRole changes space member role', function () {
     expect($role)->toBe('admin');
 });
 
-// ── addStatus ─────────────────────────────────────────────────────────────────
+// addStatus
 
 test('addStatus creates custom status', function () {
     $status = $this->service->addStatus($this->hierarchy['space'], [
@@ -108,7 +108,7 @@ test('addStatus creates custom status', function () {
     expect($status->type)->toBe('custom');
 });
 
-// ── reorder ───────────────────────────────────────────────────────────────────
+// reorder
 
 test('reorder updates space positions', function () {
     $s1 = $this->service->create(['name' => 'First'], $this->hierarchy['workspace'], $this->owner);

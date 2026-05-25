@@ -1,4 +1,4 @@
-<?php
+﻿<?php
 
 use App\Models\Label;
 use App\Models\Space;
@@ -15,7 +15,7 @@ use function Pest\Laravel\post;
 
 uses(CreatesWorkspaceHierarchy::class);
 
-// ── Shared setup ─────────────────────────────────────────────────────────────
+// Shared setup
 
 beforeEach(function () {
     $this->owner = $this->createUser();
@@ -26,7 +26,7 @@ beforeEach(function () {
         ?? $this->h['statuses']->first();
 });
 
-// ── store ─────────────────────────────────────────────────────────────────────
+// store
 
 test('owner can create a task', function () {
     actingAs($this->owner)
@@ -94,7 +94,7 @@ test('creating a task with equal start and due date passes validation', function
     $this->assertDatabaseHas('tasks', ['name' => 'Same Dates']);
 });
 
-// ── update ────────────────────────────────────────────────────────────────────
+// update
 
 test('owner can update a task', function () {
     actingAs($this->owner)
@@ -129,7 +129,7 @@ test('updating a task with a task from another list returns 404', function () {
         ->assertNotFound();
 });
 
-// ── destroy ───────────────────────────────────────────────────────────────────
+// destroy
 
 test('owner can delete a task', function () {
     actingAs($this->owner)
@@ -149,7 +149,7 @@ test('non-member gets 403 when deleting a task', function () {
         ->assertForbidden();
 });
 
-// ── changeStatus ──────────────────────────────────────────────────────────────
+// changeStatus
 
 test('owner can change task status', function () {
     actingAs($this->owner)
@@ -174,7 +174,7 @@ test('changing task status with invalid status_id returns validation error', fun
         ->assertSessionHasErrors(['status_id']);
 });
 
-// ── changePriority ────────────────────────────────────────────────────────────
+// changePriority
 
 test('owner can change task priority', function () {
     actingAs($this->owner)
@@ -199,7 +199,7 @@ test('invalid priority level returns validation error', function () {
         ->assertSessionHasErrors(['priority_level']);
 });
 
-// ── addLabel / removeLabel ────────────────────────────────────────────────────
+// addLabel / removeLabel
 
 test('owner can add a label to a task', function () {
     $label = $this->createLabel($this->h['workspace']);
@@ -246,7 +246,7 @@ test('owner can remove a label from a task', function () {
     ]);
 });
 
-// ── duplicate ─────────────────────────────────────────────────────────────────
+// duplicate
 
 test('owner can duplicate a task', function () {
     actingAs($this->owner)

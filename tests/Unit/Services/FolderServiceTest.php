@@ -1,4 +1,4 @@
-<?php
+﻿<?php
 
 use App\Models\Activity;
 use App\Models\Folder;
@@ -13,7 +13,7 @@ beforeEach(function () {
     $this->hierarchy = $this->createFullHierarchy($this->owner);
 });
 
-// ── create ────────────────────────────────────────────────────────────────────
+// create
 
 test('create folder with name', function () {
     $folder = $this->service->create(
@@ -44,7 +44,7 @@ test('create folder logs activity', function () {
     expect($activity)->not->toBeNull();
 });
 
-// ── update ────────────────────────────────────────────────────────────────────
+// update
 
 test('update folder name', function () {
     $folder = $this->service->create(['name' => 'Old'], $this->hierarchy['space'], $this->owner);
@@ -66,7 +66,7 @@ test('update folder logs activity when name changes', function () {
     expect($activity)->not->toBeNull();
 });
 
-// ── delete ────────────────────────────────────────────────────────────────────
+// delete
 
 test('delete folder removes it', function () {
     $folder = $this->service->create(['name' => 'Delete Me'], $this->hierarchy['space'], $this->owner);
@@ -76,7 +76,7 @@ test('delete folder removes it', function () {
     expect(Folder::find($folder->id))->toBeNull();
 });
 
-// ── move ──────────────────────────────────────────────────────────────────────
+// move
 
 test('move folder to new parent', function () {
     $folder = $this->service->create(['name' => 'Movable'], $this->hierarchy['space'], $this->owner);
@@ -87,7 +87,7 @@ test('move folder to new parent', function () {
     expect($moved->parent_id)->toBe($target->id);
 });
 
-// ── reorder ───────────────────────────────────────────────────────────────────
+// reorder
 
 test('reorder updates folder positions', function () {
     $f1 = $this->service->create(['name' => 'F1'], $this->hierarchy['space'], $this->owner);

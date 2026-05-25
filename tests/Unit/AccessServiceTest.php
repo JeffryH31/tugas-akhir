@@ -1,8 +1,8 @@
-<?php
+﻿<?php
 
 use App\Services\AccessService;
 
-// ── Constants ────────────────────────────────────────────────────────────────
+// Constants
 
 test('workspace role constants are defined correctly', function () {
     expect(AccessService::WORKSPACE_OWNER)->toBe('owner');
@@ -23,7 +23,7 @@ test('project role constants are defined correctly', function () {
     expect(AccessService::PROJECT_GUEST)->toBe('guest');
 });
 
-// ── Authorization decision logic (pure in_array checks) ──────────────────────
+// Authorization decision logic (pure in_array checks)
 // These tests verify the decision logic without needing actual DB lookups.
 // We test the logic by directly calling the role-check pattern used in the service.
 

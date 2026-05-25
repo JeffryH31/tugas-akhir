@@ -1,4 +1,4 @@
-<?php
+﻿<?php
 
 use App\Http\Requests\StoreTaskRequest;
 use App\Http\Requests\UpdateTaskRequest;
@@ -11,7 +11,7 @@ use App\Http\Requests\StoreSpaceRequest;
 use App\Http\Requests\StoreFolderRequest;
 use App\Http\Requests\StoreTaskListRequest;
 
-// ── StoreTaskRequest ──────────────────────────────────────────────────────────
+// StoreTaskRequest
 
 test('StoreTaskRequest requires name field', function () {
     $request = new StoreTaskRequest();
@@ -86,7 +86,7 @@ test('StoreTaskRequest has custom error messages', function () {
     expect($messages)->toHaveKey('due_date.after_or_equal');
 });
 
-// ── UpdateTaskRequest ─────────────────────────────────────────────────────────
+// UpdateTaskRequest
 
 test('UpdateTaskRequest name uses sometimes rule', function () {
     $request = new UpdateTaskRequest();

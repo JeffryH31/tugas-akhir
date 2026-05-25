@@ -1,4 +1,4 @@
-<?php
+﻿<?php
 
 use App\Models\Comment;
 use Tests\Traits\CreatesWorkspaceHierarchy;
@@ -6,7 +6,7 @@ use function Pest\Laravel\actingAs;
 
 uses(CreatesWorkspaceHierarchy::class);
 
-// ── Shared setup ─────────────────────────────────────────────────────────────
+// Shared setup
 
 beforeEach(function () {
     $this->owner = $this->createUser();
@@ -23,7 +23,7 @@ function commentRoute(array $h, string $name, ?Comment $comment = null): string
     return route($name, $params);
 }
 
-// ── store ─────────────────────────────────────────────────────────────────────
+// store
 
 test('owner can create a comment on a task', function () {
     actingAs($this->owner)
@@ -95,7 +95,7 @@ test('developer (product member) can comment', function () {
     ]);
 });
 
-// ── update ────────────────────────────────────────────────────────────────────
+// update
 
 test('comment author can update their own comment', function () {
     $comment = Comment::create([
@@ -137,7 +137,7 @@ test('another user cannot update someone else comment', function () {
     $this->assertDatabaseHas('comments', ['id' => $comment->id, 'content' => 'Owner comment']);
 });
 
-// ── destroy ───────────────────────────────────────────────────────────────────
+// destroy
 
 test('comment author can delete their own comment', function () {
     $comment = Comment::create([
@@ -189,7 +189,7 @@ test('workspace admin (owner) can delete any comment', function () {
     $this->assertDatabaseMissing('comments', ['id' => $comment->id]);
 });
 
-// ── resolve / unresolve ───────────────────────────────────────────────────────
+// resolve / unresolve
 
 test('comment author can resolve their own comment', function () {
     $comment = Comment::create([

@@ -1,4 +1,4 @@
-<?php
+﻿<?php
 
 use App\Models\ChecklistItem;
 use App\Models\Subtask;
@@ -15,7 +15,7 @@ beforeEach(function () {
     $this->subtask = $this->createSubtask($this->hierarchy['task']);
 });
 
-// ── create ────────────────────────────────────────────────────────────────────
+// create
 
 test('create checklist item', function () {
     $item = $this->service->create(['name' => 'Buy milk'], $this->subtask, $this->owner);
@@ -56,7 +56,7 @@ test('create checklist item throws at max depth', function () {
     ))->toThrow(ValidationException::class);
 });
 
-// ── update ────────────────────────────────────────────────────────────────────
+// update
 
 test('update checklist item name', function () {
     $item = $this->service->create(['name' => 'Old'], $this->subtask, $this->owner);
@@ -66,7 +66,7 @@ test('update checklist item name', function () {
     expect($updated->name)->toBe('New');
 });
 
-// ── toggle ────────────────────────────────────────────────────────────────────
+// toggle
 
 test('toggle flips checked state', function () {
     $item = $this->service->create(['name' => 'Toggle Me'], $this->subtask, $this->owner);
@@ -87,7 +87,7 @@ test('toggle with cascade updates children', function () {
     expect($child->fresh()->is_checked)->toBeTrue();
 });
 
-// ── delete ────────────────────────────────────────────────────────────────────
+// delete
 
 test('delete checklist item', function () {
     $item = $this->service->create(['name' => 'Delete Me'], $this->subtask, $this->owner);
@@ -97,7 +97,7 @@ test('delete checklist item', function () {
     expect(ChecklistItem::find($item->id))->toBeNull();
 });
 
-// ── reorder ───────────────────────────────────────────────────────────────────
+// reorder
 
 test('reorder updates positions', function () {
     $i1 = $this->service->create(['name' => 'First'], $this->subtask, $this->owner);

@@ -1,8 +1,8 @@
-<?php
+﻿<?php
 
 use App\Enums\PriorityLevel;
 
-// ── label() ──────────────────────────────────────────────────────────────────
+// label()
 
 test('Urgent has label Urgent', function () {
     expect(PriorityLevel::Urgent->label())->toBe('Urgent');
@@ -20,7 +20,7 @@ test('Low has label Low', function () {
     expect(PriorityLevel::Low->label())->toBe('Low');
 });
 
-// ── color() ──────────────────────────────────────────────────────────────────
+// color()
 
 test('Urgent color is red', function () {
     expect(PriorityLevel::Urgent->color())->toBe('#EF4444');
@@ -38,7 +38,7 @@ test('Low color is gray', function () {
     expect(PriorityLevel::Low->color())->toBe('#6B7280');
 });
 
-// ── value (int backing) ───────────────────────────────────────────────────────
+// value (int backing)
 
 test('Urgent value is 1', function () {
     expect(PriorityLevel::Urgent->value)->toBe(1);
@@ -56,7 +56,7 @@ test('Low value is 4', function () {
     expect(PriorityLevel::Low->value)->toBe(4);
 });
 
-// ── from() / tryFrom() ───────────────────────────────────────────────────────
+// from() / tryFrom()
 
 test('can create PriorityLevel from integer value', function () {
     expect(PriorityLevel::from(1))->toBe(PriorityLevel::Urgent);
@@ -70,7 +70,7 @@ test('tryFrom returns null for invalid value', function () {
     expect(PriorityLevel::tryFrom(0))->toBeNull();
 });
 
-// ── toArray() ─────────────────────────────────────────────────────────────────
+// toArray()
 
 test('toArray returns level, name, and color keys', function () {
     $arr = PriorityLevel::High->toArray();
@@ -81,7 +81,7 @@ test('toArray returns level, name, and color keys', function () {
     expect($arr['color'])->toBe('#F59E0B');
 });
 
-// ── allToArray() ──────────────────────────────────────────────────────────────
+// allToArray()
 
 test('allToArray returns all 4 priorities', function () {
     $all = PriorityLevel::allToArray();

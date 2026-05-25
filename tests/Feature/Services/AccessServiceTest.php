@@ -1,4 +1,4 @@
-<?php
+﻿<?php
 
 use App\Models\Comment;
 use App\Models\Space;
@@ -16,7 +16,7 @@ beforeEach(function () {
     $this->hierarchy = $this->createFullHierarchy($this->owner);
 });
 
-// ── Workspace-level ─────────────────────────────────────────────────
+// Workspace-level
 
 test('owner can view workspace', function () {
     expect($this->access->canViewWorkspace($this->owner, $this->hierarchy['workspace']))->toBeTrue();
@@ -61,7 +61,7 @@ test('only owner can delete workspace', function () {
     expect($this->access->canDeleteWorkspace($admin, $this->hierarchy['workspace']))->toBeFalse();
 });
 
-// ── Space-level ─────────────────────────────────────────────────────
+// Space-level
 
 test('workspace member without space membership cannot view space', function () {
     $member = $this->createUser();
@@ -118,7 +118,7 @@ test('space member cannot manage space', function () {
     expect($this->access->canManageSpace($member, $this->hierarchy['space']))->toBeFalse();
 });
 
-// ── Product/Project-level ───────────────────────────────────────────
+// Product/Project-level
 
 test('product member can view product', function () {
     $dev = $this->createUser();
@@ -152,7 +152,7 @@ test('developer cannot manage product', function () {
     expect($this->access->canManageProduct($dev, $this->hierarchy['list']))->toBeFalse();
 });
 
-// ── Task operations ─────────────────────────────────────────────────
+// Task operations
 
 test('developer can edit tasks', function () {
     $dev = $this->createUser();
@@ -170,7 +170,7 @@ test('guest cannot edit tasks', function () {
     expect($this->access->canEditTasks($guest, $this->hierarchy['list']))->toBeFalse();
 });
 
-// ── Analytics ───────────────────────────────────────────────────────
+// Analytics
 
 test('owner can view analytics', function () {
     expect($this->access->canViewAnalytics($this->owner, $this->hierarchy['workspace']))->toBeTrue();
@@ -189,7 +189,7 @@ test('guest cannot view analytics', function () {
     expect($this->access->canViewAnalytics($nonMember, $this->hierarchy['workspace']))->toBeFalse();
 });
 
-// ── Comment ownership ───────────────────────────────────────────────
+// Comment ownership
 
 test('comment author can manage own comment', function () {
     $other = $this->createUser();
@@ -204,7 +204,7 @@ test('comment author can manage own comment', function () {
     expect($this->access->canManageComment($other, $comment))->toBeFalse();
 });
 
-// ── canAccessWebsite ────────────────────────────────────────────────
+// canAccessWebsite
 
 test('user with workspace can access website', function () {
     expect($this->access->canAccessWebsite($this->owner))->toBeTrue();
@@ -216,7 +216,7 @@ test('user without workspace cannot access website', function () {
     expect($this->access->canAccessWebsite($user))->toBeFalse();
 });
 
-// ── Role getters ────────────────────────────────────────────────────
+// Role getters
 
 test('getWorkspaceRole returns correct role', function () {
     $member = $this->createUser();
@@ -246,7 +246,7 @@ test('getProjectRole returns correct role', function () {
     expect($this->access->getProductRole($dev, $this->hierarchy['list']))->toBe('development_team');
 });
 
-// ── canDeleteProduct ────────────────────────────────────────────────
+// canDeleteProduct
 
 test('project_owner can delete product', function () {
     $pm = $this->createUser();
@@ -260,7 +260,7 @@ test('project_owner can delete product', function () {
     expect($this->access->canDeleteProduct($dev, $this->hierarchy['list']))->toBeFalse();
 });
 
-// ── canManageProductMembers ─────────────────────────────────────────
+// canManageProductMembers
 
 test('project_owner can manage product members', function () {
     $pm = $this->createUser();
@@ -274,7 +274,7 @@ test('project_owner can manage product members', function () {
     expect($this->access->canManageProductMembers($dev, $this->hierarchy['list']))->toBeFalse();
 });
 
-// ── canOperateTasks ─────────────────────────────────────────────────
+// canOperateTasks
 
 test('developer can operate tasks', function () {
     $dev = $this->createUser();
@@ -288,7 +288,7 @@ test('developer can operate tasks', function () {
     expect($this->access->canOperateTasks($guest, $this->hierarchy['list']))->toBeFalse();
 });
 
-// ── canManageTaskStructure / canManageLabels / canManageDependencies ─
+// canManageTaskStructure / canManageLabels / canManageDependencies
 
 test('project_manager can manage task structure', function () {
     $pm = $this->createUser();
@@ -304,7 +304,7 @@ test('project_manager can manage task structure', function () {
     expect($this->access->canManageDependencies($pm, $this->hierarchy['list']))->toBeTrue();
 });
 
-// ── canAssignTasks ──────────────────────────────────────────────────
+// canAssignTasks
 
 test('project_manager can assign tasks', function () {
     $pm = $this->createUser();
@@ -318,7 +318,7 @@ test('project_manager can assign tasks', function () {
     expect($this->access->canAssignTasks($dev, $this->hierarchy['list']))->toBeFalse();
 });
 
-// ── canTrackTime ────────────────────────────────────────────────────
+// canTrackTime
 
 test('developer can track time', function () {
     $dev = $this->createUser();
@@ -332,7 +332,7 @@ test('developer can track time', function () {
     expect($this->access->canTrackTime($guest, $this->hierarchy['list']))->toBeFalse();
 });
 
-// ── canComment ──────────────────────────────────────────────────────
+// canComment
 
 test('anyone with view access can comment', function () {
     $dev = $this->createUser();
@@ -342,7 +342,7 @@ test('anyone with view access can comment', function () {
     expect($this->access->canComment($dev, $this->hierarchy['list']))->toBeTrue();
 });
 
-// ── canManageTimeEntry ──────────────────────────────────────────────
+// canManageTimeEntry
 
 test('user can manage own time entry', function () {
     $dev = $this->createUser();
@@ -360,7 +360,7 @@ test('user can manage own time entry', function () {
     expect($this->access->canManageTimeEntry($dev, $entry))->toBeTrue();
 });
 
-// ── canViewActivity ─────────────────────────────────────────────────
+// canViewActivity
 
 test('project member can view activity', function () {
     $dev = $this->createUser();
@@ -371,7 +371,7 @@ test('project member can view activity', function () {
 });
 
 // ─────────────────────────────────────────────────────────────────────
-// ── CRITICAL: Workspace admin vs workspace owner on task operations ──
+// CRITICAL: Workspace admin vs workspace owner on task operations
 // ─────────────────────────────────────────────────────────────────────
 
 test('workspace admin CANNOT edit tasks on products without a product role', function () {
@@ -430,7 +430,7 @@ test('workspace admin CAN still manage products and members (oversight)', functi
     expect($this->access->canManageProductMembers($admin, $this->hierarchy['list']))->toBeTrue();
 });
 
-// ── canResolveComment ───────────────────────────────────────────────
+// canResolveComment
 
 test('comment author can resolve own comment', function () {
     $comment = \App\Models\Comment::create([
@@ -476,7 +476,7 @@ test('developer cannot resolve others comments', function () {
     expect($this->access->canResolveComment($dev, $comment))->toBeFalse();
 });
 
-// ── canManageComment (workspace owner moderation) ───────────────────
+// canManageComment (workspace owner moderation)
 
 test('workspace owner can moderate any comment', function () {
     $author = $this->createUser();

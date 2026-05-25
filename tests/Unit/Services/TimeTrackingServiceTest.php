@@ -1,4 +1,4 @@
-<?php
+﻿<?php
 
 use App\Models\Activity;
 use App\Models\TimeEntry;
@@ -14,7 +14,7 @@ beforeEach(function () {
     $this->subtask = $this->createSubtask($this->hierarchy['task']);
 });
 
-// ── logTime ───────────────────────────────────────────────────────────────────
+// logTime
 
 test('logTime creates time entry with duration', function () {
     $entry = $this->service->logTime($this->subtask, $this->owner, [
@@ -44,7 +44,7 @@ test('logTime calculates duration from start and end times', function () {
     expect($entry->duration)->toBe(90);
 });
 
-// ── startTimer / stopTimer ────────────────────────────────────────────────────
+// startTimer / stopTimer
 
 test('startTimer creates running time entry', function () {
     $entry = $this->service->startTimer($this->subtask, $this->owner);
@@ -71,7 +71,7 @@ test('startTimer stops previous running timer', function () {
     expect($entry2->is_running)->toBeTrue();
 });
 
-// ── getRunningTimer ───────────────────────────────────────────────────────────
+// getRunningTimer
 
 test('getRunningTimer returns active timer', function () {
     $this->service->startTimer($this->subtask, $this->owner);
@@ -88,7 +88,7 @@ test('getRunningTimer returns null when no timer running', function () {
     expect($timer)->toBeNull();
 });
 
-// ── updateEntry ───────────────────────────────────────────────────────────────
+// updateEntry
 
 test('updateEntry changes duration and logs activity', function () {
     $entry = $this->service->logTime($this->subtask, $this->owner, ['duration' => 30]);
@@ -101,7 +101,7 @@ test('updateEntry changes duration and logs activity', function () {
     expect($activity)->not->toBeNull();
 });
 
-// ── deleteEntry ───────────────────────────────────────────────────────────────
+// deleteEntry
 
 test('deleteEntry removes entry and logs activity', function () {
     $entry = $this->service->logTime($this->subtask, $this->owner, ['duration' => 45]);
@@ -114,7 +114,7 @@ test('deleteEntry removes entry and logs activity', function () {
     expect($activity)->not->toBeNull();
 });
 
-// ── formatMinutes (pure logic, no DB) ────────────────────────────────────────
+// formatMinutes (pure logic, no DB)
 
 test('formatMinutes returns only minutes when less than 60', function () {
     $service = new \App\Services\TimeTrackingService();

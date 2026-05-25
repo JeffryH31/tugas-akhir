@@ -1,4 +1,4 @@
-<?php
+﻿<?php
 
 use App\Models\Activity;
 use App\Models\Folder;
@@ -14,7 +14,7 @@ beforeEach(function () {
     $this->hierarchy = $this->createFullHierarchy($this->owner);
 });
 
-// ── create ────────────────────────────────────────────────────────────────────
+// create
 
 test('create list in space', function () {
     $list = $this->service->create(
@@ -67,7 +67,7 @@ test('create list logs activity', function () {
     expect($activity)->not->toBeNull();
 });
 
-// ── update ────────────────────────────────────────────────────────────────────
+// update
 
 test('update list name', function () {
     $list = $this->hierarchy['list'];
@@ -89,7 +89,7 @@ test('update list logs activity when changed', function () {
     expect($activity)->not->toBeNull();
 });
 
-// ── delete ────────────────────────────────────────────────────────────────────
+// delete
 
 test('delete list soft deletes it', function () {
     $list = $this->service->create(['name' => 'Delete Me'], $this->hierarchy['space'], $this->owner);
@@ -100,7 +100,7 @@ test('delete list soft deletes it', function () {
     expect(TaskList::withTrashed()->find($list->id))->not->toBeNull();
 });
 
-// ── membership ────────────────────────────────────────────────────────────────
+// membership
 
 test('addMember adds user to list', function () {
     $user = $this->createUser();
@@ -129,7 +129,7 @@ test('updateMemberRole changes role', function () {
     expect($role)->toBe('project_manager');
 });
 
-// ── reorder ───────────────────────────────────────────────────────────────────
+// reorder
 
 test('reorder updates list positions', function () {
     $l1 = $this->service->create(['name' => 'L1'], $this->hierarchy['space'], $this->owner);
@@ -141,7 +141,7 @@ test('reorder updates list positions', function () {
     expect($l1->fresh()->position)->toBe(1);
 });
 
-// ── moveToFolder ──────────────────────────────────────────────────────────────
+// moveToFolder
 
 test('moveToFolder updates folder_id', function () {
     $list = $this->service->create(['name' => 'Movable'], $this->hierarchy['space'], $this->owner);

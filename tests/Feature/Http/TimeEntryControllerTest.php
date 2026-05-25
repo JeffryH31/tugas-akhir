@@ -1,4 +1,4 @@
-<?php
+﻿<?php
 
 use App\Models\TimeEntry;
 use Tests\Traits\CreatesWorkspaceHierarchy;
@@ -6,7 +6,7 @@ use function Pest\Laravel\actingAs;
 
 uses(CreatesWorkspaceHierarchy::class);
 
-// ── Shared setup ─────────────────────────────────────────────────────────────
+// Shared setup
 
 beforeEach(function () {
     $this->owner   = $this->createUser();
@@ -14,7 +14,7 @@ beforeEach(function () {
     $this->subtask = $this->createSubtask($this->h['task']);
 });
 
-// ── store (log time) ──────────────────────────────────────────────────────────
+// store (log time)
 
 test('owner can log time to a subtask', function () {
     actingAs($this->owner)
@@ -103,7 +103,7 @@ test('non-member gets 403 when logging time', function () {
         ->assertForbidden();
 });
 
-// ── startTimer ────────────────────────────────────────────────────────────────
+// startTimer
 
 test('owner can start a timer', function () {
     actingAs($this->owner)
@@ -160,7 +160,7 @@ test('starting a second timer stops the first', function () {
     ]);
 });
 
-// ── stopTimer ─────────────────────────────────────────────────────────────────
+// stopTimer
 
 test('owner can stop their own running timer', function () {
     $entry = TimeEntry::create([

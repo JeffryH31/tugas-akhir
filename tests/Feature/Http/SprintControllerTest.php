@@ -1,4 +1,4 @@
-<?php
+﻿<?php
 
 use App\Models\Sprint;
 use App\Models\Subtask;
@@ -7,7 +7,7 @@ use function Pest\Laravel\actingAs;
 
 uses(CreatesWorkspaceHierarchy::class);
 
-// ── Shared setup ─────────────────────────────────────────────────────────────
+// Shared setup
 
 beforeEach(function () {
     $this->owner   = $this->createUser();
@@ -15,7 +15,7 @@ beforeEach(function () {
     $this->subtask = $this->createSubtask($this->h['task']);
 });
 
-// ── store ─────────────────────────────────────────────────────────────────────
+// store
 
 test('owner can create a sprint', function () {
     actingAs($this->owner)
@@ -67,7 +67,7 @@ test('creating a sprint with end_date before start_date returns a validation err
         ->assertSessionHasErrors(['end_date']);
 });
 
-// ── update ────────────────────────────────────────────────────────────────────
+// update
 
 test('owner can update a sprint', function () {
     $sprint = Sprint::create([
@@ -93,7 +93,7 @@ test('owner can update a sprint', function () {
     ]);
 });
 
-// ── start ─────────────────────────────────────────────────────────────────────
+// start
 
 test('owner can start a sprint', function () {
     $sprint = Sprint::create([
@@ -144,7 +144,7 @@ test('starting a new sprint deactivates the previously active sprint', function 
     $this->assertDatabaseHas('sprints', ['id' => $sprint2->id, 'is_active' => true]);
 });
 
-// ── complete ──────────────────────────────────────────────────────────────────
+// complete
 
 test('owner can complete an active sprint', function () {
     $sprint = Sprint::create([
@@ -167,7 +167,7 @@ test('owner can complete an active sprint', function () {
     ]);
 });
 
-// ── addTask / removeTask ──────────────────────────────────────────────────────
+// addTask / removeTask
 
 test('owner can add a subtask to a sprint', function () {
     $sprint = Sprint::create([
@@ -215,7 +215,7 @@ test('owner can remove a subtask from a sprint', function () {
     ]);
 });
 
-// ── destroy ───────────────────────────────────────────────────────────────────
+// destroy
 
 test('owner can delete a sprint', function () {
     $sprint = Sprint::create([

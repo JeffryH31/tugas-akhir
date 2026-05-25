@@ -1,4 +1,4 @@
-<?php
+﻿<?php
 
 use App\Models\Activity;
 use App\Models\Subtask;
@@ -15,7 +15,7 @@ beforeEach(function () {
     $this->hierarchy = $this->createFullHierarchy($this->owner);
 });
 
-// ── create ────────────────────────────────────────────────────────────────────
+// create
 
 test('create subtask with name only', function () {
     $subtask = $this->service->create(
@@ -125,7 +125,7 @@ test('create subtask with parent_id validates max depth', function () {
     }
 });
 
-// ── update ────────────────────────────────────────────────────────────────────
+// update
 
 test('update subtask name', function () {
     $subtask = $this->createSubtask($this->hierarchy['task'], ['name' => 'Old Name']);
@@ -195,7 +195,7 @@ test('update subtask assignees logs assigned and unassigned activities', functio
     expect($unassigned->properties['assignee_name'])->toBe($user1->name);
 });
 
-// ── delete ────────────────────────────────────────────────────────────────────
+// delete
 
 test('delete subtask soft deletes it', function () {
     $subtask = $this->createSubtask($this->hierarchy['task'], ['name' => 'To Delete']);
@@ -220,7 +220,7 @@ test('delete subtask logs activity on parent task', function () {
     expect($activity->properties['name'])->toBe('Deleted One');
 });
 
-// ── reorder ───────────────────────────────────────────────────────────────────
+// reorder
 
 test('reorder updates subtask positions', function () {
     $task = $this->hierarchy['task'];
@@ -233,7 +233,7 @@ test('reorder updates subtask positions', function () {
     expect($s1->fresh()->position)->toBe(1);
 });
 
-// ── duplicate ─────────────────────────────────────────────────────────────────
+// duplicate
 
 test('duplicate subtask creates copy with "(Copy)" suffix', function () {
     $subtask = $this->createSubtask($this->hierarchy['task'], ['name' => 'Original']);
@@ -276,7 +276,7 @@ test('duplicate subtask does not copy completed_at or time_spent', function () {
     expect($copy->time_spent)->toBeNull();
 });
 
-// ── normalizeDateForComparison (pure logic, no DB) ────────────────────────────
+// normalizeDateForComparison (pure logic, no DB)
 
 test('normalizeDateForComparison returns null for null input', function () {
     $service = new SubtaskService();

@@ -1,4 +1,4 @@
-<?php
+﻿<?php
 
 namespace App\Services;
 
@@ -71,7 +71,7 @@ class AccessService
     public const PROJECT_DEVELOPER = 'development_team';
     public const PROJECT_GUEST = 'guest';
 
-    // ── Role getters ────────────────────────────────────────────────
+    // Role getters
 
     /**
      * Determine whether the user can access the application.
@@ -113,7 +113,7 @@ class AccessService
         return $this->getProjectRole($user, $list);
     }
 
-    // ── Workspace-level ─────────────────────────────────────────────
+    // Workspace-level
 
     /**
      * Determine whether a user can view a workspace.
@@ -154,7 +154,7 @@ class AccessService
         ], true);
     }
 
-    // ── Space-level ─────────────────────────────────────────────────
+    // Space-level
 
     /**
      * Determine whether a user can view a space.
@@ -205,7 +205,7 @@ class AccessService
         ], true);
     }
 
-    // ── Product-level: viewing & management ─────────────────────────
+    // Product-level: viewing & management
 
     /**
      * Determine whether a user can view a product.
@@ -310,7 +310,7 @@ class AccessService
         return $this->canManageProductMembers($user, $list);
     }
 
-    // ── Product-level: task operations ──────────────────────────────
+    // Product-level: task operations
     //
     // These methods check PRODUCT-LEVEL roles.
     // Only the workspace OWNER gets automatic bypass.
@@ -410,7 +410,7 @@ class AccessService
         ], true);
     }
 
-    // ── Comment & time-entry ownership ──────────────────────────────
+    // Comment & time-entry ownership
 
     /**
      * Determine whether a user can comment on a product.
@@ -479,7 +479,7 @@ class AccessService
         return $this->canAssignTasks($user, $entry->subtask->task->taskList);
     }
 
-    // ── Activity & analytics ────────────────────────────────────────
+    // Activity & analytics
 
     /**
      * Determine whether a user can view project activity logs.

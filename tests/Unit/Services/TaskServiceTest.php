@@ -1,4 +1,4 @@
-<?php
+﻿<?php
 
 use App\Enums\PriorityLevel;
 use App\Models\Activity;
@@ -15,7 +15,7 @@ beforeEach(function () {
     $this->hierarchy = $this->createFullHierarchy($this->owner);
 });
 
-// ── create ────────────────────────────────────────────────────────────────────
+// create
 
 test('create task with name', function () {
     $task = $this->service->create(
@@ -83,7 +83,7 @@ test('create task logs created activity', function () {
     expect($activity->properties['name'])->toBe('Activity Test');
 });
 
-// ── update ────────────────────────────────────────────────────────────────────
+// update
 
 test('update task name and description', function () {
     $task = $this->service->create(['name' => 'Old'], $this->hierarchy['list'], $this->owner);
@@ -135,7 +135,7 @@ test('update task priority logs priority_changed', function () {
     expect($activity)->not->toBeNull();
 });
 
-// ── delete ────────────────────────────────────────────────────────────────────
+// delete
 
 test('delete task soft deletes and logs activity', function () {
     $task = $this->service->create(['name' => 'To Delete'], $this->hierarchy['list'], $this->owner);
@@ -152,7 +152,7 @@ test('delete task soft deletes and logs activity', function () {
     expect($activity)->not->toBeNull();
 });
 
-// ── changeStatus ──────────────────────────────────────────────────────────────
+// changeStatus
 
 test('changeStatus updates status and logs activity', function () {
     $task = $this->service->create(['name' => 'Status'], $this->hierarchy['list'], $this->owner);
@@ -163,7 +163,7 @@ test('changeStatus updates status and logs activity', function () {
     expect($updated->status_id)->toBe($inProgress->id);
 });
 
-// ── changePriority ────────────────────────────────────────────────────────────
+// changePriority
 
 test('changePriority updates priority and logs activity', function () {
     $task = $this->service->create(['name' => 'Priority'], $this->hierarchy['list'], $this->owner);
@@ -173,7 +173,7 @@ test('changePriority updates priority and logs activity', function () {
     expect($updated->priority_level)->toBe(PriorityLevel::High);
 });
 
-// ── assign / unassign ─────────────────────────────────────────────────────────
+// assign / unassign
 
 test('assign and unassign user', function () {
     $task = $this->service->create(['name' => 'Assign Test'], $this->hierarchy['list'], $this->owner);
@@ -186,7 +186,7 @@ test('assign and unassign user', function () {
     expect($unassigned->assignees->pluck('id'))->not->toContain($assignee->id);
 });
 
-// ── move ──────────────────────────────────────────────────────────────────────
+// move
 
 test('move task to different list', function () {
     $task = $this->service->create(['name' => 'Movable'], $this->hierarchy['list'], $this->owner);
@@ -202,7 +202,7 @@ test('move task to different list', function () {
     expect($moved->task_list_id)->toBe($newList->id);
 });
 
-// ── reorder ───────────────────────────────────────────────────────────────────
+// reorder
 
 test('reorder tasks updates positions', function () {
     $t1 = $this->service->create(['name' => 'Task 1'], $this->hierarchy['list'], $this->owner);
@@ -214,7 +214,7 @@ test('reorder tasks updates positions', function () {
     expect($t1->fresh()->position)->toBe(1);
 });
 
-// ── addLabel / removeLabel ────────────────────────────────────────────────────
+// addLabel / removeLabel
 
 test('addLabel and removeLabel work correctly', function () {
     $task = $this->service->create(['name' => 'Label Test'], $this->hierarchy['list'], $this->owner);
@@ -227,7 +227,7 @@ test('addLabel and removeLabel work correctly', function () {
     expect($unlabeled->labels->pluck('id'))->not->toContain($label->id);
 });
 
-// ── duplicate ─────────────────────────────────────────────────────────────────
+// duplicate
 
 test('duplicate task creates copy with "(Copy)" suffix', function () {
     $task = $this->service->create(['name' => 'Original'], $this->hierarchy['list'], $this->owner);
@@ -239,7 +239,7 @@ test('duplicate task creates copy with "(Copy)" suffix', function () {
     expect($copy->task_list_id)->toBe($task->task_list_id);
 });
 
-// ── getMyTasks ────────────────────────────────────────────────────────────────
+// getMyTasks
 
 test('getMyTasks returns tasks assigned to user', function () {
     $task = $this->service->create(['name' => 'My Task'], $this->hierarchy['list'], $this->owner);
@@ -250,7 +250,7 @@ test('getMyTasks returns tasks assigned to user', function () {
     expect($myTasks->pluck('id'))->toContain($task->id);
 });
 
-// ── getMySubtasks ─────────────────────────────────────────────────────────────
+// getMySubtasks
 
 test('getMySubtasks returns only subtasks assigned to user', function () {
     $task = $this->service->create(['name' => 'Parent'], $this->hierarchy['list'], $this->owner);
@@ -263,7 +263,7 @@ test('getMySubtasks returns only subtasks assigned to user', function () {
     expect($mySubtasks->pluck('id'))->toContain($subtask->id);
 });
 
-// ── applyFilters (pure query building, no DB result) ─────────────────────────
+// applyFilters (pure query building, no DB result)
 
 test('applyFilters adds whereIn for status_ids', function () {
     $query = Mockery::mock(\Illuminate\Database\Eloquent\Builder::class);

@@ -1,4 +1,4 @@
-<?php
+﻿<?php
 
 use App\Models\Subtask;
 use App\Models\User;
@@ -7,7 +7,7 @@ use function Pest\Laravel\actingAs;
 
 uses(CreatesWorkspaceHierarchy::class);
 
-// ── Shared setup ─────────────────────────────────────────────────────────────
+// Shared setup
 
 beforeEach(function () {
     $this->owner    = $this->createUser();
@@ -21,7 +21,7 @@ beforeEach(function () {
         ?? $this->h['statuses']->last();
 });
 
-// ── store ─────────────────────────────────────────────────────────────────────
+// store
 
 test('owner can create a subtask', function () {
     actingAs($this->owner)
@@ -95,7 +95,7 @@ test('creating subtask with due date before start date fails validation', functi
         ->assertSessionHasErrors();
 });
 
-// ── update ────────────────────────────────────────────────────────────────────
+// update
 
 test('owner can update a subtask name and description', function () {
     actingAs($this->owner)
@@ -140,7 +140,7 @@ test('non-member gets 403 when updating a subtask', function () {
         ->assertForbidden();
 });
 
-// ── complete ──────────────────────────────────────────────────────────────────
+// complete
 
 test('owner can complete a subtask', function () {
     actingAs($this->owner)
@@ -168,7 +168,7 @@ test('completing a subtask sets its status to the provided closed status', funct
     ]);
 });
 
-// ── reopen ────────────────────────────────────────────────────────────────────
+// reopen
 
 test('owner can reopen a completed subtask', function () {
     $this->subtask->update(['completed_at' => now()]);
@@ -184,7 +184,7 @@ test('owner can reopen a completed subtask', function () {
     ]);
 });
 
-// ── destroy ───────────────────────────────────────────────────────────────────
+// destroy
 
 test('owner can delete a subtask', function () {
     actingAs($this->owner)
@@ -204,7 +204,7 @@ test('developer cannot delete a subtask (requires canManageTaskStructure)', func
         ->assertForbidden();
 });
 
-// ── duplicate ─────────────────────────────────────────────────────────────────
+// duplicate
 
 test('owner can duplicate a subtask', function () {
     actingAs($this->owner)
