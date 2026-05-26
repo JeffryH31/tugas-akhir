@@ -65,7 +65,7 @@ class TimeEntryController extends Controller
             ? \App\Models\Subtask::query()
             ->whereNull('completed_at')
             ->whereNull('deleted_at')
-            ->whereHas('task.taskList', fn($q) => $q
+            ->whereHas('task.project', fn($q) => $q
                 ->whereHas('space', fn($sq) => $sq->where('workspace_id', $activeWorkspace->id))
                 ->accessibleBy($user)
             )
@@ -78,8 +78,8 @@ class TimeEntryController extends Controller
                 'name'       => $s->name,
                 'task_id'    => $s->task->id,
                 'task_name'  => $s->task->name,
-                'list_id'    => $s->task->project->id,
-                'list_name'  => $s->task->project->name,
+                'project_id'   => $s->task->project->id,
+                'project_name' => $s->task->project->name,
                 'space_id'   => $s->task->project->space->id,
                 'space_name' => $s->task->project->space->name,
             ])

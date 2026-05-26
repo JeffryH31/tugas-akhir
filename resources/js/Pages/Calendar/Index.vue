@@ -1,9 +1,12 @@
 <script setup>
-import { ref, computed, watch } from "vue";
+import { ref, computed } from "vue";
 import { Head, router } from "@inertiajs/vue3";
 import MainLayout from "@/Layouts/MainLayout.vue";
 import TaskDetailPanel from "@/Components/Tasks/TaskDetailPanel.vue";
 import { PRIORITY_MAP } from "@/constants/priorities";
+import { useSnackbar } from "@/composables/useSnackbar";
+
+const { showSnackbar } = useSnackbar();
 
 const props = defineProps({
     workspace: { type: Object, default: null },
@@ -478,6 +481,7 @@ const handleDrop = (date, event) => {
         {
             preserveScroll: true,
             onSuccess: () => loadCalendarData(),
+            onError: () => showSnackbar('Failed to update due date', 'error'),
         },
     );
 };
@@ -1214,7 +1218,7 @@ const formatScheduleRange = (startDate, dueDate) => {
                         </div>
                         <div v-else class="space-y-2 max-w-4xl">
                             <div
-                                v-for="subtask in filteredSubtasks.sort(
+                                v-for="subtask in filteredSubtasks.slice().sort(
                                     (a, b) => {
                                         const aDate = a.due_date
                                             ? new Date(a.due_date)

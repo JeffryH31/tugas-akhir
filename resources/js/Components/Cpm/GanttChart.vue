@@ -1,5 +1,5 @@
 <script setup>
-import { ref, computed, onMounted, watch } from 'vue';
+import { ref, computed } from 'vue';
 import { formatHours as formatDuration } from '@/utils/duration';
 
 const props = defineProps({
@@ -7,10 +7,10 @@ const props = defineProps({
         type: Object,
         required: true,
     },
-    workspace: Object,
-    space: Object,
-    list: Object,
-    task: Object,
+    workspace: { type: Object, default: null },
+    space: { type: Object, default: null },
+    list: { type: Object, default: null },
+    task: { type: Object, default: null },
 });
 
 const emit = defineEmits(['subtask-click', 'dependency-add', 'dependency-remove']);

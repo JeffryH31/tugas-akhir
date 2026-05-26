@@ -75,6 +75,7 @@ const startSprint = async () => {
         onSuccess: () => {
             router.reload({ only: ['sprint', 'statistics', 'burndown'] });
         },
+        onError: () => showSnackbar('Failed to start sprint', 'error'),
     });
 };
 
@@ -87,6 +88,7 @@ const completeSprint = async () => {
         onSuccess: () => {
             router.reload({ only: ['sprint', 'statistics', 'burndown'] });
         },
+        onError: () => showSnackbar('Failed to complete sprint', 'error'),
     });
 };
 
@@ -121,6 +123,7 @@ const addTaskToSprint = (task) => {
                 isMoving.value = false;
                 router.reload({ only: ['sprint', 'backlogSubtasks', 'statistics', 'burndown'] });
             },
+            onError: () => showSnackbar('Failed to add task to sprint', 'error'),
         }
     );
 };
@@ -138,6 +141,7 @@ const removeTaskFromSprint = (task) => {
                 isMoving.value = false;
                 router.reload({ only: ['sprint', 'backlogSubtasks', 'statistics', 'burndown'] });
             },
+            onError: () => showSnackbar('Failed to remove task from sprint', 'error'),
         }
     );
 };

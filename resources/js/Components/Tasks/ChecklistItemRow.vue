@@ -1,6 +1,9 @@
 <script setup>
 import { ref, nextTick } from 'vue';
 import { router } from '@inertiajs/vue3';
+import { useSnackbar } from '@/composables/useSnackbar';
+
+const { showSnackbar } = useSnackbar();
 
 // Allows recursive self-reference in template
 defineOptions({ name: 'ChecklistItemRow' });
@@ -36,6 +39,7 @@ const toggle = () => {
     router.post(itemRoute('tasks.subtasks.checklist.toggle'), {}, {
         preserveScroll: true,
         onSuccess: () => emit('reloaded'),
+        onError: () => showSnackbar('Failed to update checklist item', 'error'),
         onFinish: () => { loading.value = false; },
     });
 };
@@ -57,6 +61,7 @@ const saveEdit = () => {
     router.patch(itemRoute('tasks.subtasks.checklist.update'), { name: trimmed }, {
         preserveScroll: true,
         onSuccess: () => { isEditing.value = false; emit('reloaded'); },
+        onError: () => showSnackbar('Failed to rename checklist item', 'error'),
         onFinish: () => { loading.value = false; },
     });
 };
@@ -67,6 +72,7 @@ const deleteItem = () => {
     router.delete(itemRoute('tasks.subtasks.checklist.destroy'), {
         preserveScroll: true,
         onSuccess: () => emit('reloaded'),
+        onError: () => showSnackbar('Failed to delete checklist item', 'error'),
         onFinish: () => { loading.value = false; },
     });
 };
@@ -84,6 +90,7 @@ const addChild = () => {
     router.post(parentRoute('tasks.subtasks.checklist.store'), { name: trimmed, parent_id: props.item.id }, {
         preserveScroll: true,
         onSuccess: () => { newChildName.value = ''; showAddChild.value = false; emit('reloaded'); },
+        onError: () => showSnackbar('Failed to add checklist item', 'error'),
         onFinish: () => { loading.value = false; },
     });
 };

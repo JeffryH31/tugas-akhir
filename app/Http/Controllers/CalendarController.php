@@ -37,7 +37,7 @@ class CalendarController extends Controller
         $workspaceRole = $this->accessService->getWorkspaceRole($user, $workspace);
 
         $subtasks = Subtask::query()
-            ->whereHas('task.taskList', function ($query) use ($workspace, $user, $workspaceRole) {
+            ->whereHas('task.project', function ($query) use ($workspace, $user, $workspaceRole) {
                 $query->whereHas('space', function ($sq) use ($workspace, $user, $workspaceRole) {
                     $sq->where('workspace_id', $workspace->id);
 

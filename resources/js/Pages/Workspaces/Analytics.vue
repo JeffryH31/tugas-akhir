@@ -4,9 +4,9 @@ import { router } from '@inertiajs/vue3';
 import MainLayout from '@/Layouts/MainLayout.vue';
 
 const props = defineProps({
-    workspace: Object,
-    analytics: Object,
-    filters: Object,
+    workspace: { type: Object, default: null },
+    analytics: { type: Object, default: null },
+    filters: { type: Object, default: null },
     members: { type: Array, default: () => [] },
     spaces: { type: Array, default: () => [] },
     canManage: { type: Boolean, default: false },
@@ -70,12 +70,12 @@ const applyFilter = () => {
     });
 };
 
-const exportCsv = () => {
+const exportCsvUrl = computed(() => {
     const params = new URLSearchParams();
     if (startDate.value) params.set('start_date', startDate.value);
     if (endDate.value) params.set('end_date', endDate.value);
-    window.location.href = `${route('workspaces.analytics.export', props.workspace.id)}?${params.toString()}`;
-};
+    return `${route('workspaces.analytics.export', props.workspace.id)}?${params.toString()}`;
+});
 </script>
 
 <template>
@@ -92,7 +92,7 @@ const exportCsv = () => {
                     <v-text-field v-model="endDate" type="date" label="End" density="compact" hide-details
                         variant="outlined" />
                     <v-btn color="primary" @click="applyFilter">Apply</v-btn>
-                    <v-btn variant="outlined" @click="exportCsv">Export CSV</v-btn>
+                    <v-btn variant="outlined" :href="exportCsvUrl" download>Export CSV</v-btn>
                 </div>
             </div>
 

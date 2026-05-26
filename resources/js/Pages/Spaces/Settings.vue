@@ -3,8 +3,10 @@ import { ref } from 'vue';
 import { Head, router } from '@inertiajs/vue3';
 import MainLayout from '@/Layouts/MainLayout.vue';
 import { useConfirmDialog } from '@/composables/useConfirmDialog';
+import { useSnackbar } from '@/composables/useSnackbar';
 
 const { confirm: confirmDialog } = useConfirmDialog();
+const { showSnackbar } = useSnackbar();
 
 const props = defineProps({
     workspace: { type: Object, default: null },
@@ -58,6 +60,7 @@ const addMember = () => {
                 selectedUserId.value = null;
                 selectedRole.value = 'member';
             },
+            onError: () => showSnackbar('Failed to add member', 'error'),
         }
     );
 };
@@ -73,6 +76,7 @@ const changeMemberRole = (member, role) => {
             preserveScroll: true,
             onSuccess: () => {
             },
+            onError: () => showSnackbar('Failed to update member role', 'error'),
         }
     );
 };
@@ -91,6 +95,7 @@ const removeMember = async (member) => {
             preserveScroll: true,
             onSuccess: () => {
             },
+            onError: () => showSnackbar('Failed to remove member', 'error'),
         }
     );
 };

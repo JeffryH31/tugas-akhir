@@ -102,7 +102,7 @@ class SprintService
         if ($sprint->project_id) {
             $query->whereHas('task', fn($q) => $q->where('project_id', $sprint->project_id));
         } else {
-            $query->whereHas('task.taskList', fn($q) => $q->where('space_id', $sprint->space_id));
+            $query->whereHas('task.project', fn($q) => $q->where('space_id', $sprint->space_id));
         }
 
         $updated = $query->update(['sprint_id' => $sprint->id]);

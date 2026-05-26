@@ -59,8 +59,8 @@ const quickTaskName = ref('');
 const quickProject = ref(null);
 const isProcessing = ref(false);
 
-// Get all lists from active workspace
-const availableLists = computed(() => {
+// Get all projects from active workspace
+const availableProjects = computed(() => {
     if (!props.activeWorkspace?.spaces) return [];
 
     const lists = [];
@@ -122,6 +122,7 @@ const createQuickTask = () => {
                 quickProject.value = null;
                 showQuickCreate.value = false;
             },
+            onError: () => showSnackbar('Failed to create task', 'error'),
             onFinish: () => { isProcessing.value = false; }
         }
     );
@@ -281,11 +282,11 @@ const fmtRelative = (ts) => {
                                 <v-text-field v-model="quickTaskName" placeholder="What needs to be done?"
                                     variant="outlined" density="compact" hide-details autofocus
                                     @keydown.enter="createQuickTask" @keydown.escape="showQuickCreate = false" />
-                                <v-alert v-if="!availableLists.length" type="info" variant="tonal" density="compact"
+                                <v-alert v-if="!availableProjects.length" type="info" variant="tonal" density="compact"
                                     class="text-sm">
                                     <div class="flex items-center justify-between">
                                         <span v-if="!hasSpaces">No spaces available. Create a space first.</span>
-                                        <span v-else>No products available. Go to a space to create a product.</span>
+                                        <span v-else>No projects available. Go to a space to create a project.</span>
                                         <v-btn v-if="!hasSpaces" size="small" variant="text" color="primary"
                                             @click="openCreateSpace">
                                             Create a Space
@@ -297,10 +298,10 @@ const fmtRelative = (ts) => {
                                     </div>
                                 </v-alert>
 
-                                <v-select v-model="quickProject" :items="availableLists" item-title="display"
-                                    item-value="id" return-object label="Select Product" variant="outlined"
-                                    density="compact" hide-details :disabled="!availableLists.length"
-                                    placeholder="Choose a product..." bg-color="#1e1e1e" base-color="white"
+                                <v-select v-model="quickProject" :items="availableProjects" item-title="display"
+                                    item-value="id" return-object label="Select Project" variant="outlined"
+                                    density="compact" hide-details :disabled="!availableProjects.length"
+                                    placeholder="Choose a project..." bg-color="#1e1e1e" base-color="white"
                                     color="primary" />
                                 <div class="flex gap-2">
                                     <v-btn color="primary" size="small" @click="createQuickTask" :loading="isProcessing"

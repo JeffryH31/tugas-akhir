@@ -81,7 +81,7 @@ const tableItems = computed(() => {
         ...e,
         subtask_name: e.subtask?.name ?? '?',
         task_name: e.subtask?.task?.name ?? '?',
-        list_name: e.subtask?.task?.project?.name ?? '',
+        project_name: e.subtask?.task?.project?.name ?? '',
     }));
 });
 
@@ -169,6 +169,7 @@ const saveEntry = () => {
             {
                 preserveScroll: true,
                 onSuccess: () => { showAddEntry.value = false; editingEntry.value = null; resetForm(); },
+                onError: () => showSnackbar('Failed to update time entry', 'error'),
             },
         );
     } else {
@@ -177,7 +178,7 @@ const saveEntry = () => {
             route('tasks.subtasks.time-entries.store', [
                 props.activeWorkspace.id,
                 s.space_id,
-                s.list_id,
+                s.project_id,
                 s.task_id,
                 s.id,
             ]),
@@ -189,6 +190,7 @@ const saveEntry = () => {
             {
                 preserveScroll: true,
                 onSuccess: () => { showAddEntry.value = false; resetForm(); },
+                onError: () => showSnackbar('Failed to log time entry', 'error'),
             },
         );
     }
@@ -393,8 +395,8 @@ watch(() => props.runningTimer, (newTimer) => {
                         <template #item.task_name="{ item }">
                             <div class="text-sm truncate max-w-[200px]">
                                 {{ item.task_name }}
-                                <span v-if="item.list_name" class="text-gray-500">
-                                    &middot; {{ item.list_name }}
+                                <span v-if="item.project_name" class="text-gray-500">
+                                    &middot; {{ item.project_name }}
                                 </span>
                             </div>
                         </template>
@@ -457,7 +459,7 @@ watch(() => props.runningTimer, (newTimer) => {
                             clearable no-data-text="No active subtasks found" prepend-inner-icon="mdi-magnify">
                             <template #item="{ item, props: iProps }">
                                 <v-list-item v-bind="iProps"
-                                    :subtitle="`${item.raw.task_name} ? ${item.raw.list_name}`" />
+                                    :subtitle="`${item.raw.task_name} · ${item.raw.project_name}`" />
                             </template>
                         </v-autocomplete>
 

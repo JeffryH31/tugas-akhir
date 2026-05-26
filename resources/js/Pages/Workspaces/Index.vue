@@ -4,6 +4,9 @@ import { Head, router } from '@inertiajs/vue3';
 import MainLayout from '@/Layouts/MainLayout.vue';
 import ColorPicker from '@/Components/ColorPicker.vue';
 import { normalizeHexColor } from '@/utils/color';
+import { useSnackbar } from '@/composables/useSnackbar';
+
+const { showSnackbar } = useSnackbar();
 
 const props = defineProps({
     workspaces: { type: Array, default: () => [] },
@@ -35,6 +38,7 @@ const createWorkspace = () => {
                 showCreateDialog.value = false;
                 router.visit(route('dashboard'));
             },
+            onError: () => showSnackbar('Failed to create workspace', 'error'),
             onFinish: () => {
                 isCreating.value = false;
             },

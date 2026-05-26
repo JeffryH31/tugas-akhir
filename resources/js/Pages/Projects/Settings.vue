@@ -3,8 +3,10 @@ import { ref } from 'vue';
 import { Head, router } from '@inertiajs/vue3';
 import MainLayout from '@/Layouts/MainLayout.vue';
 import { useConfirmDialog } from '@/composables/useConfirmDialog';
+import { useSnackbar } from '@/composables/useSnackbar';
 
 const { confirm: confirmDialog } = useConfirmDialog();
+const { showSnackbar } = useSnackbar();
 
 const props = defineProps({
     workspace: { type: Object, default: null },
@@ -65,6 +67,7 @@ const addMember = () => {
                 selectedUserId.value = null;
                 selectedRole.value = 'development_team';
             },
+            onError: () => showSnackbar('Failed to add member', 'error'),
         }
     );
 };
@@ -80,6 +83,7 @@ const changeMemberRole = (member, role) => {
             preserveScroll: true,
             onSuccess: () => {
             },
+            onError: () => showSnackbar('Failed to update member role', 'error'),
         }
     );
 };
@@ -98,13 +102,14 @@ const removeMember = async (member) => {
             preserveScroll: true,
             onSuccess: () => {
             },
+            onError: () => showSnackbar('Failed to remove member', 'error'),
         }
     );
 };
 </script>
 
 <template>
-    <Head :title="`${list?.name} Product Access`" />
+    <Head :title="`${list?.name} Project Access`" />
 
     <MainLayout :title="`${list?.name} Access Settings`">
         <div class="settings-page">
@@ -112,7 +117,7 @@ const removeMember = async (member) => {
                 <div class="d-flex align-center ga-2 mb-2">
                     <v-btn variant="text" size="small" @click="router.visit(route('projects.show', [workspace.id, space.id, list.id]))">
                         <v-icon start size="16">mdi-arrow-left</v-icon>
-                        Back to Product
+                        Back to Project
                     </v-btn>
                     <v-btn variant="text" size="small" @click="router.visit(route('spaces.settings', [workspace.id, space.id]))">
                         <v-icon start size="16">mdi-shield-home-outline</v-icon>

@@ -9,7 +9,7 @@ const { confirm: confirmDialog } = useConfirmDialog();
 const { showSnackbar } = useSnackbar();
 
 const props = defineProps({
-    task: Object,       // localTask (time_entries, time_estimate, time_spent)
+    task: { type: Object, default: null },       // localTask (time_entries, time_estimate, time_spent)
     workspace: { type: Object, default: null },
     space: { type: Object, default: null },
     list: { type: Object, default: null },
@@ -171,6 +171,7 @@ const addEntry = () => {
                 };
                 router.reload({ only: ['task', 'tasksByStatus'] });
             },
+            onError: () => showSnackbar('Failed to log time entry', 'error'),
         }
     );
 };
@@ -184,6 +185,7 @@ const deleteEntry = async (entryId) => {
             onSuccess: () => {
                 router.reload({ only: ['task', 'tasksByStatus'] });
             },
+            onError: () => showSnackbar('Failed to delete time entry', 'error'),
         }
     );
 };

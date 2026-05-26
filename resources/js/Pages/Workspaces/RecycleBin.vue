@@ -3,6 +3,9 @@ import { computed, ref } from 'vue';
 import { router } from '@inertiajs/vue3';
 import MainLayout from '@/Layouts/MainLayout.vue';
 import { formatDateLong as formatDate } from '@/utils/date';
+import { useSnackbar } from '@/composables/useSnackbar';
+
+const { showSnackbar } = useSnackbar();
 
 const props = defineProps({
     workspace: { type: Object, default: null },
@@ -23,7 +26,7 @@ const sortOptions = [
 ];
 
 const totals = computed(() => ({
-    lists: props.trash?.projects?.length || 0,
+    projects: props.trash?.projects?.length || 0,
     tasks: props.trash?.tasks?.length || 0,
     subtasks: props.trash?.subtasks?.length || 0,
     timeEntries: props.trash?.time_entries?.length || 0,
@@ -35,6 +38,7 @@ const restoreItem = (type, id) => {
 
     router.post(route('workspaces.recycle-bin.restore', props.workspace.id), { type, id }, {
         preserveScroll: true,
+        onError: () => showSnackbar('Failed to restore item', 'error'),
         onFinish: () => { restoringIds.value.delete(`${type}-${id}`); },
     });
 };
@@ -56,7 +60,7 @@ const getItemContext = (item, type) => {
     if (type === 'subtasks') {
         return item.task?.name || '';
     }
-    if (type === 'lists') {
+    if (type === 'projects') {
         return item.space?.name || '';
     }
     if (type === 'time_entries') {
@@ -115,7 +119,7 @@ const sortedFilteredItems = computed(() => {
 
             <div class="grid grid-cols-2 md:grid-cols-4 gap-3 mb-5">
                 <v-card class="pa-3">
-                    <div class="text-xs text-gray-400">Lists</div>
+                    <div class="text-xs text-gray-400">Projects</div>
                     <div class="text-xl font-semibold">{{ totals.projects }}</div>
                 </v-card>
                 <v-card class="pa-3">
@@ -135,7 +139,7 @@ const sortedFilteredItems = computed(() => {
             <v-tabs v-model="activeTab" class="mb-3">
                 <v-tab value="tasks">Tasks</v-tab>
                 <v-tab value="subtasks">Subtasks</v-tab>
-                <v-tab value="lists">Lists</v-tab>
+                <v-tab value="projects">Projects</v-tab>
                 <v-tab value="time_entries">Time Entries</v-tab>
             </v-tabs>
 
@@ -206,12 +210,12 @@ const sortedFilteredItems = computed(() => {
                     </v-card>
                 </v-window-item>
 
-                <v-window-item value="lists">
+                <v-window-item value="projects">
                     <v-card>
                         <v-table>
                             <thead>
                                 <tr>
-                                    <th>List</th>
+                                    <th>Project</th>
                                     <th>Space</th>
                                     <th>Deleted At</th>
                                     <th></th>
@@ -226,7 +230,7 @@ const sortedFilteredItems = computed(() => {
                                             @click="restoreItem('list', list.id)">Restore</v-btn></td>
                                 </tr>
                                 <tr v-if="sortedFilteredItems.length === 0">
-                                    <td colspan="4" class="text-center text-gray-500 py-6">No deleted lists match your
+                                        <td colspan="4" class="text-center text-gray-500 py-6">No deleted projects match your
                                         filter.</td>
                                 </tr>
                             </tbody>

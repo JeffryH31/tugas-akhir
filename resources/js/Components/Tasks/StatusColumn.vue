@@ -145,6 +145,7 @@ const saveStatus = () => {
                 showEditStatus.value = false;
                 showSnackbar('Status updated successfully!', 'success');
             },
+            onError: () => showSnackbar('Failed to update status', 'error'),
         }
     );
 };
@@ -172,6 +173,7 @@ const deleteStatus = async () => {
                 showDeleteStatus.value = false;
                 showSnackbar('Status deleted successfully!', 'success');
             },
+            onError: () => showSnackbar('Failed to delete status', 'error'),
         }
     );
 };

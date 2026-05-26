@@ -6,6 +6,8 @@ import { useConfirmDialog } from "@/composables/useConfirmDialog";
 import { useSnackbar } from "@/composables/useSnackbar";
 import ColorPicker from "@/Components/ColorPicker.vue";
 import { formatSeconds as formatDuration } from "@/utils/duration";
+import { formatDate as formatDateUtil } from "@/utils/date";
+import { normalizeHexColor } from "@/utils/color";
 import {
   getFallbackCompletionTarget,
   getStoredSubtaskCompletionTarget,
@@ -62,14 +64,7 @@ const formatTimeEstimate = (minutes) => {
   const h = minutes / 60;
   return h % 1 === 0 ? `${h}h` : `${h.toFixed(1)}h`;
 };
-const formatDate = (d) =>
-  d
-    ? new Date(d).toLocaleDateString("en-US", {
-      month: "short",
-      day: "numeric",
-      year: "numeric",
-    })
-    : "Not set";
+const formatDate = (d) => d ? formatDateUtil(d) : 'Not set';
 const formatVariance = (minutes) => {
   if (!minutes) return null;
   const abs = Math.abs(minutes);
@@ -428,11 +423,7 @@ const isLabelSelected = (labelId) => {
   return (props.localTask?.labels || []).some((label) => label.id === labelId);
 };
 
-const normalizeLabelColor = (color) => {
-  const raw = (color || "").trim();
-  if (!raw) return "#61BD4F";
-  return raw.startsWith("#") ? raw.toUpperCase() : `#${raw.toUpperCase()}`;
-};
+const normalizeLabelColor = (color) => normalizeHexColor(color, '#61BD4F');
 
 const openCreateLabelEditor = () => {
   editingLabel.value = null;

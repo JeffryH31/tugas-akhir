@@ -31,13 +31,13 @@ class RecycleBinController extends Controller
 
         $tasks = Task::onlyTrashed()
             ->whereHas('project.space', fn($q) => $q->where('workspace_id', $workspace->id))
-            ->with(['taskList:id,name,space_id', 'project.space:id,name'])
+            ->with(['project:id,name,space_id', 'project.space:id,name'])
             ->latest('deleted_at')
             ->get(['id', 'project_id', 'name', 'task_id', 'deleted_at']);
 
         $subtasks = Subtask::onlyTrashed()
             ->whereHas('task.project.space', fn($q) => $q->where('workspace_id', $workspace->id))
-            ->with(['task:id,name,project_id', 'task.taskList:id,name'])
+            ->with(['task:id,name,project_id', 'task.project:id,name'])
             ->latest('deleted_at')
             ->get(['id', 'task_id', 'name', 'subtask_id', 'deleted_at']);
 

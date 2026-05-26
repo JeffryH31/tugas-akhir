@@ -1,13 +1,15 @@
 <script setup>
 import { ref } from 'vue';
-import { Head, router } from '@inertiajs/vue3';
+import { router } from '@inertiajs/vue3';
 import MainLayout from '@/Layouts/MainLayout.vue';
 import ColorPicker from '@/Components/ColorPicker.vue';
 import { normalizeHexColor } from '@/utils/color';
+import { useSnackbar } from '@/composables/useSnackbar';
+
+const { showSnackbar } = useSnackbar();
 
 const props = defineProps({
     workspace: { type: Object, default: null },
-    statistics: { type: Object, default: null },
     canManageWorkspace: { type: Boolean, default: false },
 });
 
@@ -32,6 +34,7 @@ const createSpace = () => {
                 newSpaceColor.value = '#6366F1';
                 showCreateSpace.value = false;
             },
+            onError: () => showSnackbar('Failed to create space', 'error'),
         }
     );
 };

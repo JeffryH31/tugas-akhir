@@ -1,6 +1,5 @@
 <script setup>
 import { computed, inject, ref } from 'vue';
-import { router } from '@inertiajs/vue3';
 import { PRIORITY_MAP } from '@/constants/priorities';
 
 const props = defineProps({

@@ -1,6 +1,6 @@
 <script setup>
 import { ref, computed, onMounted, onUnmounted, provide, watch } from 'vue';
-import { Head, Link, router, usePage } from '@inertiajs/vue3';
+import { Head, router, usePage } from '@inertiajs/vue3';
 import { useDisplay } from 'vuetify';
 import { useSnackbar } from '@/composables/useSnackbar';
 import { useConfirmDialog } from '@/composables/useConfirmDialog';
@@ -50,14 +50,14 @@ const isUnread = (notification) => {
 // Search
 const searchQuery = ref('');
 const searchDialog = ref(false);
-const searchResults = ref({ tasks: [], lists: [], spaces: [] });
+const searchResults = ref({ tasks: [], projects: [], spaces: [] });
 const isSearching = ref(false);
 const searchType = ref('all');
 const searchWorkspaceId = ref(null);
 const searchTypeOptions = [
     { title: 'All', value: 'all' },
     { title: 'Tasks', value: 'tasks' },
-    { title: 'Products', value: 'lists' },
+    { title: 'Projects', value: 'projects' },
     { title: 'Spaces', value: 'spaces' },
 ];
 const searchWorkspaceOptions = computed(() => [
@@ -71,7 +71,7 @@ let searchAbortController = null;
 
 const performSearch = async () => {
     if (searchQuery.value.length < 2) {
-        searchResults.value = { tasks: [], lists: [], spaces: [] };
+        searchResults.value = { tasks: [], projects: [], spaces: [] };
         return;
     }
 
@@ -547,7 +547,7 @@ watch(searchDialog, (open) => {
                                             :style="{ backgroundColor: space.color || '#6366F1' }" />
                                     </template>
                                     <v-list-item-title v-if="!isSidebarMini" class="text-body-2">{{ space.name
-                                        }}</v-list-item-title>
+                                    }}</v-list-item-title>
                                 </v-list-item>
                             </template>
                         </v-tooltip>
@@ -655,8 +655,8 @@ watch(searchDialog, (open) => {
 
                                 <!-- Lists without folder -->
                                 <v-list-item v-for="list in space.projects_without_folder || []" :key="list.id"
-                                    :href="route('projects.show', [activeWorkspace?.id, space.id, list.id])" rounded="lg"
-                                    class="list-tree-item">
+                                    :href="route('projects.show', [activeWorkspace?.id, space.id, list.id])"
+                                    rounded="lg" class="list-tree-item">
                                     <template #prepend>
                                         <v-icon size="12" class="list-icon">mdi-view-list-outline</v-icon>
                                     </template>
@@ -675,7 +675,7 @@ watch(searchDialog, (open) => {
                             <button v-bind="tipProps" class="sidebar-collapse-btn" :class="{ 'is-mini': isSidebarMini }"
                                 @click="isSidebarMini = !isSidebarMini">
                                 <v-icon size="16">{{ isSidebarMini ? 'mdi-chevron-right' : 'mdi-chevron-left'
-                                    }}</v-icon>
+                                }}</v-icon>
                                 <span v-if="!isSidebarMini">Collapse</span>
                             </button>
                         </template>
@@ -720,7 +720,7 @@ watch(searchDialog, (open) => {
                         class="search-empty">
                         <v-icon size="40" color="grey-darken-1">mdi-text-search</v-icon>
                         <div class="text-body-2 text-medium-emphasis mt-2">No results for "<strong>{{ searchQuery
-                                }}</strong>"
+                        }}</strong>"
                         </div>
                     </div>
                     <div v-else>
@@ -739,9 +739,9 @@ watch(searchDialog, (open) => {
                             </v-list-item>
                         </v-list>
 
-                        <!-- Products -->
+                        <!-- Projects -->
                         <v-list v-if="searchResults.projects.length" density="compact" nav>
-                            <div class="search-result-label">PRODUCTS — {{ searchResults.projects.length }}</div>
+                            <div class="search-result-label">PROJECTS — {{ searchResults.projects.length }}</div>
                             <v-list-item v-for="list in searchResults.projects" :key="list.id" rounded="lg"
                                 class="search-result-item" @click="goToList(list)">
                                 <template #prepend>
@@ -765,7 +765,7 @@ watch(searchDialog, (open) => {
                                 </template>
                                 <v-list-item-title class="text-body-2">{{ space.name }}</v-list-item-title>
                                 <v-list-item-subtitle class="text-caption">{{ space.workspace?.name
-                                    }}</v-list-item-subtitle>
+                                }}</v-list-item-subtitle>
                             </v-list-item>
                         </v-list>
                     </div>

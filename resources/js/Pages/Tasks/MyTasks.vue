@@ -1,6 +1,6 @@
 <script setup>
 import { ref, computed, onMounted, onUnmounted } from 'vue';
-import { Head, router, usePage } from '@inertiajs/vue3';
+import { router, usePage } from '@inertiajs/vue3';
 import MainLayout from '@/Layouts/MainLayout.vue';
 import TaskCard from '@/Components/Tasks/TaskCard.vue';
 import { useSnackbar } from '@/composables/useSnackbar';
@@ -88,9 +88,9 @@ const groupedTasks = computed(() => {
             }
             groups[key].tasks.push(task);
         });
-    } else if (groupBy.value === 'list') {
+    } else if (groupBy.value === 'project') {
         tasks.forEach(task => {
-            const key = task.project?.name || 'No List';
+            const key = task.project?.name || 'No Project';
             if (!groups[key]) {
                 groups[key] = { name: key, color: '#6b7280', tasks: [] };
             }
@@ -212,7 +212,7 @@ const handleTaskOpen = (task) => {
                     <!-- Group By -->
                     <v-select v-model="groupBy" :items="[
                         { title: 'Status', value: 'status' },
-                        { title: 'Product', value: 'list' },
+                        { title: 'Project', value: 'project' },
                         { title: 'Due Date', value: 'due_date' },
                     ]" label="Group by" variant="outlined" density="compact" hide-details style="width: 140px;"
                         bg-color="#1e1e1e" />
