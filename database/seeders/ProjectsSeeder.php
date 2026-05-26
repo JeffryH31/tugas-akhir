@@ -2,11 +2,11 @@
 
 namespace Database\Seeders;
 
-use App\Models\TaskList;
+use App\Models\Project;
 use Database\Seeders\Concerns\InteractsWithMisDepartmentDemo;
 use Illuminate\Database\Seeder;
 
-class TaskListsSeeder extends Seeder
+class ProjectsSeeder extends Seeder
 {
     use InteractsWithMisDepartmentDemo;
 
@@ -34,7 +34,7 @@ class TaskListsSeeder extends Seeder
         ];
 
         foreach ($lists as $definition) {
-            $list = TaskList::create([
+            $list = Project::create([
                 'name' => $definition['name'],
                 'space_id' => $this->demoSpace($definition['space'])->id,
                 'folder_id' => $definition['folder'] ? $this->demoFolder($definition['folder'])->id : null,

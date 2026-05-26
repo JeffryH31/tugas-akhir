@@ -100,19 +100,19 @@ class Space extends Model
         return $this->hasMany(Folder::class)->orderBy('position');
     }
 
-    public function lists(): HasMany
+    public function projects(): HasMany
     {
-        return $this->hasMany(TaskList::class)->orderBy('position');
+        return $this->hasMany(Project::class)->orderBy('position');
     }
 
-    public function listsWithoutFolder(): HasMany
+    public function projectsWithoutFolder(): HasMany
     {
-        return $this->hasMany(TaskList::class)->whereNull('folder_id')->orderBy('position');
+        return $this->hasMany(Project::class)->whereNull('folder_id')->orderBy('position');
     }
 
     public function tasks(): \Illuminate\Database\Eloquent\Relations\HasManyThrough
     {
-        return $this->hasManyThrough(Task::class, TaskList::class);
+        return $this->hasManyThrough(Task::class, Project::class);
     }
 
     public function sprints(): HasMany

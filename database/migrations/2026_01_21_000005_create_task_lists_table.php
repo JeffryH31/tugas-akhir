@@ -11,7 +11,7 @@ return new class extends Migration
      */
     public function up(): void
     {
-        Schema::create('task_lists', function (Blueprint $table) {
+        Schema::create('projects', function (Blueprint $table) {
             $table->id();
             $table->foreignId('space_id')->constrained()->cascadeOnDelete();
             $table->foreignId('folder_id')->nullable()->constrained()->cascadeOnDelete();
@@ -33,14 +33,14 @@ return new class extends Migration
             $table->index('is_archived');
         });
 
-        Schema::create('task_list_members', function (Blueprint $table) {
+        Schema::create('project_members', function (Blueprint $table) {
             $table->id();
-            $table->foreignId('task_list_id')->constrained()->cascadeOnDelete();
+            $table->foreignId('project_id')->constrained()->cascadeOnDelete();
             $table->foreignId('user_id')->constrained()->cascadeOnDelete();
             $table->enum('role', ['project_owner', 'project_manager', 'development_team', 'guest'])->default('development_team');
             $table->timestamps();
 
-            $table->unique(['task_list_id', 'user_id']);
+            $table->unique(['project_id', 'user_id']);
             $table->index(['user_id', 'role']);
         });
     }
@@ -50,7 +50,7 @@ return new class extends Migration
      */
     public function down(): void
     {
-        Schema::dropIfExists('task_list_members');
-        Schema::dropIfExists('task_lists');
+        Schema::dropIfExists('project_members');
+        Schema::dropIfExists('projects');
     }
 };

@@ -10,7 +10,7 @@ use App\Models\Label;
 use App\Models\Space;
 use App\Models\Status;
 use App\Models\Task;
-use App\Models\TaskList;
+use App\Models\Project;
 use App\Models\Workspace;
 use App\Services\AccessService;
 use App\Services\TaskService;
@@ -31,7 +31,7 @@ class TaskController extends Controller
     /**
      * Store a newly created task.
      */
-    public function store(StoreTaskRequest $request, Workspace $workspace, Space $space, TaskList $list): RedirectResponse
+    public function store(StoreTaskRequest $request, Workspace $workspace, Space $space, Project $list): RedirectResponse
     {
         abort_unless((int) $space->workspace_id === (int) $workspace->id, 404);
         abort_unless((int) $list->space_id === (int) $space->id, 404);
@@ -55,11 +55,11 @@ class TaskController extends Controller
     /**
      * Update the specified task.
      */
-    public function update(UpdateTaskRequest $request, Workspace $workspace, Space $space, TaskList $list, Task $task): RedirectResponse
+    public function update(UpdateTaskRequest $request, Workspace $workspace, Space $space, Project $list, Task $task): RedirectResponse
     {
         abort_unless((int) $space->workspace_id === (int) $workspace->id, 404);
         abort_unless((int) $list->space_id === (int) $space->id, 404);
-        abort_unless((int) $task->task_list_id === (int) $list->id, 404);
+        abort_unless((int) $task->project_id === (int) $list->id, 404);
         abort_unless($this->accessService->canManageTaskStructure($request->user(), $list), 403);
         try {
             $updatedTask = $this->taskService->update($task, $request->validated(), $request->user());
@@ -76,16 +76,16 @@ class TaskController extends Controller
     /**
      * Remove the specified task.
      */
-    public function destroy(Request $request, Workspace $workspace, Space $space, TaskList $list, Task $task): RedirectResponse
+    public function destroy(Request $request, Workspace $workspace, Space $space, Project $list, Task $task): RedirectResponse
     {
         abort_unless((int) $space->workspace_id === (int) $workspace->id, 404);
         abort_unless((int) $list->space_id === (int) $space->id, 404);
-        abort_unless((int) $task->task_list_id === (int) $list->id, 404);
+        abort_unless((int) $task->project_id === (int) $list->id, 404);
         abort_unless($this->accessService->canManageTaskStructure($request->user(), $list), 403);
         try {
             $this->taskService->delete($task, $request->user());
 
-            return redirect()->route('lists.show', [$workspace->id, $space->id, $list->id])
+            return redirect()->route('projects.show', [$workspace->id, $space->id, $list->id])
                 ->with('success', 'Task deleted successfully.');
         } catch (\Exception $e) {
             return redirect()->back()->withErrors(['error' => 'Failed to delete task: ' . $e->getMessage()]);
@@ -97,11 +97,11 @@ class TaskController extends Controller
     /**
      * Change task status.
      */
-    public function changeStatus(Request $request, Workspace $workspace, Space $space, TaskList $list, Task $task): RedirectResponse
+    public function changeStatus(Request $request, Workspace $workspace, Space $space, Project $list, Task $task): RedirectResponse
     {
         abort_unless((int) $space->workspace_id === (int) $workspace->id, 404);
         abort_unless((int) $list->space_id === (int) $space->id, 404);
-        abort_unless((int) $task->task_list_id === (int) $list->id, 404);
+        abort_unless((int) $task->project_id === (int) $list->id, 404);
         abort_unless($this->accessService->canOperateTasks($request->user(), $list), 403);
         $validated = $request->validate([
             'status_id' => [
@@ -129,11 +129,11 @@ class TaskController extends Controller
     /**
      * Change task priority.
      */
-    public function changePriority(Request $request, Workspace $workspace, Space $space, TaskList $list, Task $task): RedirectResponse
+    public function changePriority(Request $request, Workspace $workspace, Space $space, Project $list, Task $task): RedirectResponse
     {
         abort_unless((int) $space->workspace_id === (int) $workspace->id, 404);
         abort_unless((int) $list->space_id === (int) $space->id, 404);
-        abort_unless((int) $task->task_list_id === (int) $list->id, 404);
+        abort_unless((int) $task->project_id === (int) $list->id, 404);
         abort_unless($this->accessService->canOperateTasks($request->user(), $list), 403);
         $validated = $request->validate([
             'priority_level' => 'nullable|integer|in:1,2,3,4',
@@ -154,11 +154,11 @@ class TaskController extends Controller
     /**
      * Assign user to task.
      */
-    public function assign(Request $request, Workspace $workspace, Space $space, TaskList $list, Task $task): RedirectResponse
+    public function assign(Request $request, Workspace $workspace, Space $space, Project $list, Task $task): RedirectResponse
     {
         abort_unless((int) $space->workspace_id === (int) $workspace->id, 404);
         abort_unless((int) $list->space_id === (int) $space->id, 404);
-        abort_unless((int) $task->task_list_id === (int) $list->id, 404);
+        abort_unless((int) $task->project_id === (int) $list->id, 404);
         abort_unless($this->accessService->canAssignTasks($request->user(), $list), 403);
 
         return redirect()->back()->withErrors([
@@ -169,11 +169,11 @@ class TaskController extends Controller
     /**
      * Unassign user from task.
      */
-    public function unassign(Request $request, Workspace $workspace, Space $space, TaskList $list, Task $task): RedirectResponse
+    public function unassign(Request $request, Workspace $workspace, Space $space, Project $list, Task $task): RedirectResponse
     {
         abort_unless((int) $space->workspace_id === (int) $workspace->id, 404);
         abort_unless((int) $list->space_id === (int) $space->id, 404);
-        abort_unless((int) $task->task_list_id === (int) $list->id, 404);
+        abort_unless((int) $task->project_id === (int) $list->id, 404);
         abort_unless($this->accessService->canAssignTasks($request->user(), $list), 403);
 
         return redirect()->back()->withErrors([
@@ -184,22 +184,22 @@ class TaskController extends Controller
     /**
      * Move task to different list.
      */
-    public function move(Request $request, Workspace $workspace, Space $space, TaskList $list, Task $task): RedirectResponse
+    public function move(Request $request, Workspace $workspace, Space $space, Project $list, Task $task): RedirectResponse
     {
         abort_unless((int) $space->workspace_id === (int) $workspace->id, 404);
         abort_unless((int) $list->space_id === (int) $space->id, 404);
-        abort_unless((int) $task->task_list_id === (int) $list->id, 404);
+        abort_unless((int) $task->project_id === (int) $list->id, 404);
         abort_unless($this->accessService->canManageTaskStructure($request->user(), $list), 403);
         $validated = $request->validate([
             'list_id' => [
                 'required',
-                Rule::exists('task_lists', 'id')->where(fn($query) => $query->where('space_id', $space->id)),
+                Rule::exists('projects', 'id')->where(fn($query) => $query->where('space_id', $space->id)),
             ],
             'position' => 'nullable|integer|min:0',
         ]);
 
         try {
-            $newList = TaskList::where('space_id', $space->id)->findOrFail($validated['list_id']);
+            $newList = Project::where('space_id', $space->id)->findOrFail($validated['list_id']);
             abort_unless($this->accessService->canManageTaskStructure($request->user(), $newList), 403);
             $updatedTask = $this->taskService->move($task, $newList, $request->user(), $validated['position'] ?? null);
 
@@ -215,7 +215,7 @@ class TaskController extends Controller
     /**
      * Reorder tasks.
      */
-    public function reorder(ReorderRequest $request, Workspace $workspace, Space $space, TaskList $list): RedirectResponse
+    public function reorder(ReorderRequest $request, Workspace $workspace, Space $space, Project $list): RedirectResponse
     {
         abort_unless((int) $space->workspace_id === (int) $workspace->id, 404);
         abort_unless((int) $list->space_id === (int) $space->id, 404);
@@ -232,11 +232,11 @@ class TaskController extends Controller
     /**
      * Add label to task.
      */
-    public function addLabel(Request $request, Workspace $workspace, Space $space, TaskList $list, Task $task): RedirectResponse
+    public function addLabel(Request $request, Workspace $workspace, Space $space, Project $list, Task $task): RedirectResponse
     {
         abort_unless((int) $space->workspace_id === (int) $workspace->id, 404);
         abort_unless((int) $list->space_id === (int) $space->id, 404);
-        abort_unless((int) $task->task_list_id === (int) $list->id, 404);
+        abort_unless((int) $task->project_id === (int) $list->id, 404);
         abort_unless($this->accessService->canManageLabels($request->user(), $list), 403);
         $validated = $request->validate([
             'label_id' => [
@@ -261,11 +261,11 @@ class TaskController extends Controller
     /**
      * Remove label from task.
      */
-    public function removeLabel(Request $request, Workspace $workspace, Space $space, TaskList $list, Task $task): RedirectResponse
+    public function removeLabel(Request $request, Workspace $workspace, Space $space, Project $list, Task $task): RedirectResponse
     {
         abort_unless((int) $space->workspace_id === (int) $workspace->id, 404);
         abort_unless((int) $list->space_id === (int) $space->id, 404);
-        abort_unless((int) $task->task_list_id === (int) $list->id, 404);
+        abort_unless((int) $task->project_id === (int) $list->id, 404);
         abort_unless($this->accessService->canManageLabels($request->user(), $list), 403);
         $validated = $request->validate([
             'label_id' => [
@@ -290,11 +290,11 @@ class TaskController extends Controller
     /**
      * Duplicate the task.
      */
-    public function duplicate(Request $request, Workspace $workspace, Space $space, TaskList $list, Task $task): RedirectResponse
+    public function duplicate(Request $request, Workspace $workspace, Space $space, Project $list, Task $task): RedirectResponse
     {
         abort_unless((int) $space->workspace_id === (int) $workspace->id, 404);
         abort_unless((int) $list->space_id === (int) $space->id, 404);
-        abort_unless((int) $task->task_list_id === (int) $list->id, 404);
+        abort_unless((int) $task->project_id === (int) $list->id, 404);
         abort_unless($this->accessService->canManageTaskStructure($request->user(), $list), 403);
         try {
             $newTask = $this->taskService->duplicate($task, $request->user());
@@ -341,7 +341,7 @@ class TaskController extends Controller
             'workspace_id' => ['nullable', 'integer', 'exists:workspaces,id'],
             'status_id' => ['nullable', 'integer', 'exists:statuses,id'],
             'assignee_id' => ['nullable', 'integer', 'exists:users,id'],
-            'type' => ['nullable', 'in:all,tasks,lists,spaces'],
+            'type' => ['nullable', 'in:all,tasks,projects,spaces'],
             'limit' => ['nullable', 'integer', 'min:1', 'max:50'],
         ]);
 
@@ -351,34 +351,34 @@ class TaskController extends Controller
         $workspaceId = $validated['workspace_id'] ?? null;
 
         if (strlen($query) < 2) {
-            return response()->json(['tasks' => [], 'lists' => [], 'spaces' => []]);
+            return response()->json(['tasks' => [], 'projects' => [], 'spaces' => []]);
         }
 
         $query = str_replace(['%', '_'], ['\%', '\_'], $query);
 
         $user = $request->user();
 
-        $tasksQuery = Task::whereHas('taskList.space.workspace', function ($q) use ($user, $workspaceId) {
+        $tasksQuery = Task::whereHas('project.space.workspace', function ($q) use ($user, $workspaceId) {
             $q->where('created_by', $user->id)
                 ->orWhereHas('members', function ($q2) use ($user) {
                     $q2->where('users.id', $user->id);
                 });
         })
-            ->when($workspaceId, fn($q) => $q->whereHas('taskList.space', fn($q2) => $q2->where('workspace_id', $workspaceId)))
+            ->when($workspaceId, fn($q) => $q->whereHas('project.space', fn($q2) => $q2->where('workspace_id', $workspaceId)))
             ->where(function ($q) use ($query) {
                 $q->where('name', 'like', "%{$query}%")
                     ->orWhere('description', 'like', "%{$query}%");
             })
             ->when(!empty($validated['status_id']), fn($q) => $q->where('status_id', $validated['status_id']))
             ->when(!empty($validated['assignee_id']), fn($q) => $q->whereHas('assignees', fn($q2) => $q2->where('users.id', $validated['assignee_id'])))
-            ->with(['taskList.space', 'status', 'assignees'])
+            ->with(['project.space', 'status', 'assignees'])
             ->limit($limit);
 
         // Search tasks
         $tasks = $type === 'all' || $type === 'tasks' ? $tasksQuery->get() : collect();
 
         // Search lists
-        $listsQuery = TaskList::whereHas('space.workspace', function ($q) use ($user) {
+        $projectsQuery = Project::whereHas('space.workspace', function ($q) use ($user) {
             $q->where('created_by', $user->id)
                 ->orWhereHas('members', function ($q2) use ($user) {
                     $q2->where('users.id', $user->id);
@@ -389,7 +389,7 @@ class TaskController extends Controller
             ->with('space')
             ->limit(min($limit, 15));
 
-        $lists = $type === 'all' || $type === 'lists' ? $listsQuery->get() : collect();
+        $lists = $type === 'all' || $type === 'projects' ? $projectsQuery->get() : collect();
 
         // Search spaces
         $spacesQuery = Space::whereHas('workspace', function ($q) use ($user, $workspaceId) {
@@ -407,7 +407,7 @@ class TaskController extends Controller
 
         return response()->json([
             'tasks' => TaskResource::collection($tasks),
-            'lists' => $lists,
+            'projects' => $lists,
             'spaces' => $spaces,
             'meta' => [
                 'query' => $query,
@@ -415,7 +415,7 @@ class TaskController extends Controller
                 'workspace_id' => $workspaceId,
                 'count' => [
                     'tasks' => $tasks->count(),
-                    'lists' => $lists->count(),
+                    'projects' => $projects->count(),
                     'spaces' => $spaces->count(),
                 ],
             ],

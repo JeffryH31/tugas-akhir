@@ -69,7 +69,7 @@ test('creating a sprint with end_date before start_date returns a validation err
 test('owner can update a sprint', function () {
     $sprint = Sprint::create([
         'space_id'      => $this->h['space']->id,
-        'task_list_id'  => $this->h['list']->id,
+        'project_id'  => $this->h['list']->id,
         'name'          => 'Old Name',
         'start_date'    => '2026-05-01',
         'end_date'      => '2026-05-14',
@@ -94,7 +94,7 @@ test('owner can update a sprint', function () {
 test('owner can start a sprint', function () {
     $sprint = Sprint::create([
         'space_id'     => $this->h['space']->id,
-        'task_list_id' => $this->h['list']->id,
+        'project_id' => $this->h['list']->id,
         'name'         => 'Sprint A',
         'start_date'   => '2026-05-01',
         'end_date'     => '2026-05-14',
@@ -115,7 +115,7 @@ test('owner can start a sprint', function () {
 test('starting a new sprint deactivates the previously active sprint', function () {
     $sprint1 = Sprint::create([
         'space_id'     => $this->h['space']->id,
-        'task_list_id' => $this->h['list']->id,
+        'project_id' => $this->h['list']->id,
         'name'         => 'Sprint A',
         'start_date'   => '2026-05-01',
         'end_date'     => '2026-05-14',
@@ -124,7 +124,7 @@ test('starting a new sprint deactivates the previously active sprint', function 
 
     $sprint2 = Sprint::create([
         'space_id'     => $this->h['space']->id,
-        'task_list_id' => $this->h['list']->id,
+        'project_id' => $this->h['list']->id,
         'name'         => 'Sprint B',
         'start_date'   => '2026-05-15',
         'end_date'     => '2026-05-28',
@@ -144,7 +144,7 @@ test('starting a new sprint deactivates the previously active sprint', function 
 test('owner can complete an active sprint', function () {
     $sprint = Sprint::create([
         'space_id'     => $this->h['space']->id,
-        'task_list_id' => $this->h['list']->id,
+        'project_id' => $this->h['list']->id,
         'name'         => 'Sprint X',
         'start_date'   => '2026-05-01',
         'end_date'     => '2026-05-14',
@@ -166,7 +166,7 @@ test('owner can complete an active sprint', function () {
 test('owner can add a subtask to a sprint', function () {
     $sprint = Sprint::create([
         'space_id'     => $this->h['space']->id,
-        'task_list_id' => $this->h['list']->id,
+        'project_id' => $this->h['list']->id,
         'name'         => 'Sprint With Tasks',
         'start_date'   => '2026-05-01',
         'end_date'     => '2026-05-14',
@@ -188,7 +188,7 @@ test('owner can add a subtask to a sprint', function () {
 test('owner can remove a subtask from a sprint', function () {
     $sprint = Sprint::create([
         'space_id'     => $this->h['space']->id,
-        'task_list_id' => $this->h['list']->id,
+        'project_id' => $this->h['list']->id,
         'name'         => 'Sprint With Tasks',
         'start_date'   => '2026-05-01',
         'end_date'     => '2026-05-14',
@@ -213,7 +213,7 @@ test('owner can remove a subtask from a sprint', function () {
 test('owner can delete a sprint', function () {
     $sprint = Sprint::create([
         'space_id'     => $this->h['space']->id,
-        'task_list_id' => $this->h['list']->id,
+        'project_id' => $this->h['list']->id,
         'name'         => 'Sprint to Delete',
         'start_date'   => '2026-05-01',
         'end_date'     => '2026-05-14',
@@ -229,7 +229,7 @@ test('owner can delete a sprint', function () {
 test('deleting a sprint clears the sprint_id on its subtasks', function () {
     $sprint = Sprint::create([
         'space_id'     => $this->h['space']->id,
-        'task_list_id' => $this->h['list']->id,
+        'project_id' => $this->h['list']->id,
         'name'         => 'Sprint to Delete',
         'start_date'   => '2026-05-01',
         'end_date'     => '2026-05-14',

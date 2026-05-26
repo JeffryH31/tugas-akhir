@@ -61,7 +61,7 @@ class CalendarController extends Controller
                 'assignees',
                 'labels',
                 'activities' => fn($q) => $q->with('user')->latest()->limit(50),
-                'task.taskList.space',
+                'task.project.space',
             ])
             ->orderBy('due_date')
             ->get();

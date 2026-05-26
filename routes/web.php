@@ -11,7 +11,7 @@ use App\Http\Controllers\SpaceController;
 use App\Http\Controllers\SprintController;
 use App\Http\Controllers\SubtaskController;
 use App\Http\Controllers\TaskController;
-use App\Http\Controllers\TaskListController;
+use App\Http\Controllers\ProjectController;
 use App\Http\Controllers\TimeEntryController;
 use App\Http\Controllers\RecycleBinController;
 use App\Http\Controllers\WorkspaceAnalyticsController;
@@ -133,22 +133,22 @@ Route::middleware(['auth:sanctum', config('jetstream.auth_session'), 'verified']
                         });
                     });
 
-                    Route::prefix('lists')->group(function () {
-                        Route::post('/', [TaskListController::class, 'store'])->name('lists.store');
-                        Route::post('/reorder', [TaskListController::class, 'reorder'])->name('lists.reorder');
+                    Route::prefix('projects')->group(function () {
+                        Route::post('/', [ProjectController::class, 'store'])->name('projects.store');
+                        Route::post('/reorder', [ProjectController::class, 'reorder'])->name('projects.reorder');
 
-                        Route::prefix('{list}')->scopeBindings()->group(function () {
-                            Route::get('/', [TaskListController::class, 'show'])->name('lists.show');
-                            Route::get('/settings', [TaskListController::class, 'settings'])->name('lists.settings');
-                            Route::patch('/', [TaskListController::class, 'update'])->name('lists.update');
-                            Route::delete('/', [TaskListController::class, 'destroy'])->name('lists.destroy');
+                        Route::prefix('{project}')->scopeBindings()->group(function () {
+                            Route::get('/', [ProjectController::class, 'show'])->name('projects.show');
+                            Route::get('/settings', [ProjectController::class, 'settings'])->name('projects.settings');
+                            Route::patch('/', [ProjectController::class, 'update'])->name('projects.update');
+                            Route::delete('/', [ProjectController::class, 'destroy'])->name('projects.destroy');
 
-                            Route::post('/move-to-folder', [TaskListController::class, 'moveToFolder'])->name('lists.move-to-folder');
-                            Route::post('/duplicate', [TaskListController::class, 'duplicate'])->name('lists.duplicate');
-                            Route::patch('/change-status', [TaskListController::class, 'changeStatus'])->name('lists.change-status');
-                            Route::post('/members', [TaskListController::class, 'addMember'])->name('lists.members.add');
-                            Route::patch('/members/role', [TaskListController::class, 'updateMemberRole'])->name('lists.members.role');
-                            Route::delete('/members', [TaskListController::class, 'removeMember'])->name('lists.members.remove');
+                            Route::post('/move-to-folder', [ProjectController::class, 'moveToFolder'])->name('projects.move-to-folder');
+                            Route::post('/duplicate', [ProjectController::class, 'duplicate'])->name('projects.duplicate');
+                            Route::patch('/change-status', [ProjectController::class, 'changeStatus'])->name('projects.change-status');
+                            Route::post('/members', [ProjectController::class, 'addMember'])->name('projects.members.add');
+                            Route::patch('/members/role', [ProjectController::class, 'updateMemberRole'])->name('projects.members.role');
+                            Route::delete('/members', [ProjectController::class, 'removeMember'])->name('projects.members.remove');
 
                             Route::prefix('tasks')->group(function () {
                                 Route::post('/', [TaskController::class, 'store'])->name('tasks.store');

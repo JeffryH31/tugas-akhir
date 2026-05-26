@@ -51,8 +51,8 @@ class DashboardController extends Controller
                         $q->whereHas('members', fn($mq) => $mq->where('user_id', $user->id));
                     }
                     $q->with([
-                        'folders' => fn($fq) => $fq->with(['lists' => $listFilter])->orderBy('position'),
-                        'listsWithoutFolder' => fn($lq) => $listFilter($lq)->orderBy('position'),
+                        'folders' => fn($fq) => $fq->with(['projects' => $listFilter])->orderBy('position'),
+                        'projectsWithoutFolder' => fn($lq) => $listFilter($lq)->orderBy('position'),
                         'statuses' => fn($sq) => $sq->orderBy('position'),
                     ])->orderBy('position');
                 },
@@ -67,7 +67,7 @@ class DashboardController extends Controller
         // Get running timer if any
         $runningTimer = TimeEntry::where('user_id', $user->id)
             ->where('is_running', true)
-            ->with('subtask.task.taskList.space')
+            ->with('subtask.task.project.space')
             ->first();
 
         // Time stats

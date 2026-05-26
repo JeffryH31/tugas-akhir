@@ -64,7 +64,7 @@ class SpaceController extends Controller
         // Annotate is_starred for the current user.
         $space->is_starred = $space->starredBy()->where('user_id', $request->user()->id)->exists();
 
-        // Products (TaskLists) grouped by status for kanban
+        // Products (Projects) grouped by status for kanban
         $productsByStatus = $this->spaceService->getProductsByStatus($space, $request->user());
 
         $user = $request->user();
@@ -79,8 +79,8 @@ class SpaceController extends Controller
                     $q->whereHas('members', fn($mq) => $mq->where('user_id', $user->id));
                 }
                 $q->with([
-                    'folders.lists' => $listFilter,
-                    'listsWithoutFolder' => $listFilter,
+                    'folders.projects' => $listFilter,
+                    'projectsWithoutFolder' => $listFilter,
                 ])->orderBy('position');
             },
             'members',
@@ -106,7 +106,7 @@ class SpaceController extends Controller
         abort_unless($this->accessService->canViewSpace($request->user(), $space), 403);
 
         $workspace->load('members');
-        $space->load(['members', 'lists']);
+        $space->load(['members', 'projects']);
 
         $spaceMemberIds = $space->members->pluck('id');
 

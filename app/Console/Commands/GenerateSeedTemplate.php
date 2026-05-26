@@ -39,7 +39,7 @@ class GenerateSeedTemplate extends Command
         $this->addStatusesSheet($spreadsheet);
         $this->addLabelsSheet($spreadsheet);
         $this->addFoldersSheet($spreadsheet);
-        $this->addTaskListsSheet($spreadsheet);
+        $this->addProjectsSheet($spreadsheet);
         $this->addSprintsSheet($spreadsheet);
         $this->addTasksSheet($spreadsheet);
         $this->addSubtasksSheet($spreadsheet);
@@ -79,9 +79,9 @@ class GenerateSeedTemplate extends Command
             ['Statuses', 'Status kustom per Space (To Do, In Progress, dll.)'],
             ['Labels', 'Label global untuk workspace'],
             ['Folders', 'Folder di dalam Space'],
-            ['TaskLists', 'Daftar proyek / task list di dalam Space/Folder'],
-            ['Sprints', 'Sprint yang terhubung ke TaskList'],
-            ['Tasks', 'Task utama di dalam TaskList'],
+            ['Projects', 'Daftar proyek / task list di dalam Space/Folder'],
+            ['Sprints', 'Sprint yang terhubung ke Project'],
+            ['Tasks', 'Task utama di dalam Project'],
             ['Subtasks', 'Subtask dari Task, berikut assignee & dependensi'],
             ['TimeEntries', 'Catatan waktu kerja per Subtask'],
             ['', ''],
@@ -97,7 +97,7 @@ class GenerateSeedTemplate extends Command
             ['  Contoh assignees: kevin@example.com,marvel@example.com', ''],
             ['  Contoh labels: Feature,Security', ''],
             ['  Contoh depends_on (subtask): Desain database inventory,API master barang', ''],
-            ['• members di TaskLists diisi format email:role dipisah koma.', ''],
+            ['• members di Projects diisi format email:role dipisah koma.', ''],
             ['  Contoh: kevin@example.com:project_owner,admin@example.com:project_manager', ''],
         ];
 
@@ -278,10 +278,10 @@ class GenerateSeedTemplate extends Command
         $this->addNote($sheet, 'E1', 'space: nama Space. created_by: email user. Kosongkan created_by untuk menggunakan admin default.');
     }
 
-    private function addTaskListsSheet(Spreadsheet $s): void
+    private function addProjectsSheet(Spreadsheet $s): void
     {
         $sheet = $s->createSheet();
-        $sheet->setTitle('TaskLists');
+        $sheet->setTitle('Projects');
 
         $headers = ['name *', 'space *', 'folder', 'position', 'created_by', 'status_space *', 'status_name *', 'members'];
         $examples = [

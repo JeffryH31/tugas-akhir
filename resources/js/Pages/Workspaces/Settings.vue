@@ -367,7 +367,7 @@ const addProjectMember = () => {
     }
 
     router.post(
-        route('lists.members.add', [props.workspace.id, selectedProject.value.space.id, selectedProject.value.id]),
+        route('projects.members.add', [props.workspace.id, selectedProject.value.space.id, selectedProject.value.id]),
         {
             user_id: selectedProjectUser.value,
             role: selectedProjectRole.value,
@@ -386,7 +386,7 @@ const addProjectMember = () => {
 
 const changeProjectMemberRole = (project, member, role) => {
     router.patch(
-        route('lists.members.role', [props.workspace.id, project.space.id, project.id]),
+        route('projects.members.role', [props.workspace.id, project.space.id, project.id]),
         {
             user_id: member.id,
             role,
@@ -406,7 +406,7 @@ const removeProjectMember = async (project, member) => {
     }
 
     router.delete(
-        route('lists.members.remove', [props.workspace.id, project.space.id, project.id]),
+        route('projects.members.remove', [props.workspace.id, project.space.id, project.id]),
         {
             data: { user_id: member.id },
             preserveScroll: true,
@@ -607,7 +607,7 @@ const deleteWorkspace = () => {
                         <div class="scope-links">
                             <v-btn v-for="project in projectLists" :key="`project-${project.id}`" size="small"
                                 variant="tonal" color="success" rounded="lg" class="scope-link-btn"
-                                @click="router.visit(route('lists.settings', [workspace.id, project.space.id, project.id]))">
+                                @click="router.visit(route('projects.settings', [workspace.id, project.space.id, project.id]))">
                                 <v-icon start size="13">mdi-view-list</v-icon>
                                 {{ project.name }}
                             </v-btn>

@@ -11,7 +11,7 @@ class View extends Model
     use HasFactory;
 
     protected $fillable = [
-        'task_list_id',
+        'project_id',
         'space_id',
         'user_id',
         'name',
@@ -35,9 +35,9 @@ class View extends Model
     ];
 
 
-    public function taskList(): BelongsTo
+    public function project(): BelongsTo
     {
-        return $this->belongsTo(TaskList::class);
+        return $this->belongsTo(Project::class);
     }
 
     public function space(): BelongsTo

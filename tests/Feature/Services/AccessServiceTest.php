@@ -2,7 +2,7 @@
 
 use App\Models\Comment;
 use App\Models\Space;
-use App\Models\TaskList;
+use App\Models\Project;
 use App\Models\User;
 use App\Models\Workspace;
 use App\Services\AccessService;

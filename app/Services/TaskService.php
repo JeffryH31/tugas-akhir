@@ -7,7 +7,7 @@ use App\Models\Activity;
 use App\Models\Label;
 use App\Models\Status;
 use App\Models\Task;
-use App\Models\TaskList;
+use App\Models\Project;
 use App\Models\User;
 use Illuminate\Pagination\LengthAwarePaginator;
 use Illuminate\Support\Collection;
@@ -22,7 +22,7 @@ class TaskService
      * Get tasks for a list with filtering and pagination
      */
     public function getTasksForList(
-        TaskList $list,
+        Project $list,
         array $filters = [],
         ?string $sortBy = 'position',
         string $sortDirection = 'asc',
@@ -56,7 +56,7 @@ class TaskService
     public function getTaskWithRelations(Task $task): Task
     {
         return $task->load([
-            'taskList.space.workspace',
+            'project.space.workspace',
             'status',
             'assignees',
             'labels',
@@ -72,11 +72,11 @@ class TaskService
     /**
      * Create a new task
      */
-    public function create(array $data, TaskList $list, User $user): Task
+    public function create(array $data, Project $list, User $user): Task
     {
         return DB::transaction(function () use ($data, $list, $user) {
             $task = Task::create([
-                'task_list_id'         => $list->id,
+                'project_id'         => $list->id,
                 'name'                 => $data['name'],
                 'description'          => $data['description'] ?? null,
                 'status_id'            => $data['status_id'] ?? null,
@@ -150,7 +150,7 @@ class TaskService
                 foreach ($addedIds as $id) {
                     $assignee = User::find($id);
                     if ($assignee) {
-                        Activity::log($task->taskList->space->workspace, $user, $task, 'assigned', [
+                        Activity::log($task->project->space->workspace, $user, $task, 'assigned', [
                             'name'          => $task->name,
                             'assignee_name' => $assignee->name,
                             'assignee_id'   => $assignee->id,
@@ -161,7 +161,7 @@ class TaskService
                 foreach ($removedIds as $id) {
                     $assignee = User::find($id);
                     if ($assignee) {
-                        Activity::log($task->taskList->space->workspace, $user, $task, 'unassigned', [
+                        Activity::log($task->project->space->workspace, $user, $task, 'unassigned', [
                             'name'          => $task->name,
                             'assignee_name' => $assignee->name,
                             'assignee_id'   => $assignee->id,
@@ -177,7 +177,7 @@ class TaskService
             }
 
             if (!empty($changes)) {
-                Activity::log($task->taskList->space->workspace, $user, $task, 'updated', [
+                Activity::log($task->project->space->workspace, $user, $task, 'updated', [
                     'name' => $task->name,
                 ], $changes);
             }
@@ -185,7 +185,7 @@ class TaskService
             // Log status change with readable names
             if (isset($data['status_id']) && (int) $data['status_id'] !== (int) $oldStatusId) {
                 $newStatus = Status::find($data['status_id']);
-                Activity::log($task->taskList->space->workspace, $user, $task, 'status_changed', [
+                Activity::log($task->project->space->workspace, $user, $task, 'status_changed', [
                     'name' => $task->name,
                 ], [
                     'status' => ['old' => $oldStatusName, 'new' => $newStatus?->name],
@@ -196,7 +196,7 @@ class TaskService
             if (array_key_exists('priority_level', $data) && $data['priority_level'] !== $oldPriorityEnum?->value) {
                 $oldLabel = $oldPriorityEnum?->label();
                 $newLabel = $data['priority_level'] !== null ? PriorityLevel::from((int) $data['priority_level'])->label() : null;
-                Activity::log($task->taskList->space->workspace, $user, $task, 'priority_changed', [
+                Activity::log($task->project->space->workspace, $user, $task, 'priority_changed', [
                     'name' => $task->name,
                 ], [
                     'priority' => ['old' => $oldLabel, 'new' => $newLabel],
@@ -213,7 +213,7 @@ class TaskService
     public function delete(Task $task, User $user): void
     {
         DB::transaction(function () use ($task, $user) {
-            Activity::log($task->taskList->space->workspace, $user, $task, 'deleted', [
+            Activity::log($task->project->space->workspace, $user, $task, 'deleted', [
                 'name' => $task->name,
             ]);
 
@@ -231,7 +231,7 @@ class TaskService
         $oldStatus = $task->status;
         $task->changeStatus($status);
 
-        Activity::log($task->taskList->space->workspace, $user, $task, 'status_changed', [
+        Activity::log($task->project->space->workspace, $user, $task, 'status_changed', [
             'name' => $task->name,
         ], [
             'status' => [
@@ -251,7 +251,7 @@ class TaskService
         $oldPriority = $task->priority_level;
         $task->update(['priority_level' => $priorityLevel]);
 
-        Activity::log($task->taskList->space->workspace, $user, $task, 'priority_changed', [
+        Activity::log($task->project->space->workspace, $user, $task, 'priority_changed', [
             'name' => $task->name,
         ], [
             'priority' => [
@@ -270,7 +270,7 @@ class TaskService
     {
         $task->assign($assignee, $assignedBy);
 
-        Activity::log($task->taskList->space->workspace, $assignedBy, $task, 'assigned', [
+        Activity::log($task->project->space->workspace, $assignedBy, $task, 'assigned', [
             'name' => $task->name,
             'assignee_name' => $assignee->name,
             'assignee_id' => $assignee->id,
@@ -286,7 +286,7 @@ class TaskService
     {
         $task->unassign($assignee);
 
-        Activity::log($task->taskList->space->workspace, $unassignedBy, $task, 'unassigned', [
+        Activity::log($task->project->space->workspace, $unassignedBy, $task, 'unassigned', [
             'name' => $task->name,
             'assignee_name' => $assignee->name,
         ]);
@@ -297,9 +297,9 @@ class TaskService
     /**
      * Move task to different list
      */
-    public function move(Task $task, TaskList $newList, User $user, ?int $position = null): Task
+    public function move(Task $task, Project $newList, User $user, ?int $position = null): Task
     {
-        $oldList = $task->taskList;
+        $oldList = $task->project;
         $task->move($newList, $position);
 
         Activity::log($newList->space->workspace, $user, $task, 'moved', [
@@ -317,12 +317,12 @@ class TaskService
     /**
      * Reorder tasks within a list
      */
-    public function reorder(TaskList $list, array $order): void
+    public function reorder(Project $list, array $order): void
     {
         DB::transaction(function () use ($list, $order) {
             foreach ($order as $position => $taskId) {
                 Task::where('id', $taskId)
-                    ->where('task_list_id', $list->id)
+                    ->where('project_id', $list->id)
                     ->update(['position' => $position]);
             }
         });
@@ -335,7 +335,7 @@ class TaskService
     {
         $task->addLabel($label);
 
-        Activity::log($task->taskList->space->workspace, $user, $task, 'label_added', [
+        Activity::log($task->project->space->workspace, $user, $task, 'label_added', [
             'name' => $task->name,
             'label_name' => $label->name,
         ]);
@@ -350,7 +350,7 @@ class TaskService
     {
         $task->removeLabel($label);
 
-        Activity::log($task->taskList->space->workspace, $user, $task, 'label_removed', [
+        Activity::log($task->project->space->workspace, $user, $task, 'label_removed', [
             'name' => $task->name,
             'label_name' => $label->name,
         ]);
@@ -369,7 +369,7 @@ class TaskService
             // Reset operational fields — assignees and dates are not part of the template
             $newTask->start_date = null;
             $newTask->due_date = null;
-            $newTask->position = Task::where('task_list_id', $task->task_list_id)
+            $newTask->position = Task::where('project_id', $task->project_id)
                 ->max('position') + 1;
             $newTask->save();
 
@@ -397,7 +397,7 @@ class TaskService
                 $newSubtask->labels()->sync($subtask->labels->pluck('id'));
             }
 
-            Activity::log($task->taskList->space->workspace, $user, $newTask, 'duplicated', [
+            Activity::log($task->project->space->workspace, $user, $newTask, 'duplicated', [
                 'name' => $newTask->name,
                 'original_name' => $task->name,
             ]);
@@ -485,7 +485,7 @@ class TaskService
     {
         $query = Task::query()
             ->whereHas('assignees', fn($assignees) => $assignees->where('users.id', $user->id))
-            ->with(['taskList.space.workspace', 'status', 'labels', 'assignees', 'subtasks.assignees'])
+            ->with(['project.space.workspace', 'status', 'labels', 'assignees', 'subtasks.assignees'])
             ->orderBy('position');
 
         return $this->applyFilters($query, $filters)->distinct()->get();
@@ -503,7 +503,7 @@ class TaskService
             ->whereHas('assignees', fn($q) => $q->where('users.id', $user->id))
             ->whereNull('completed_at')
             ->with([
-                'task.taskList.space.workspace',
+                'task.project.space.workspace',
                 'status',
                 'labels',
                 'assignees',

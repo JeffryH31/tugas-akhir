@@ -9,7 +9,7 @@ use App\Models\ChecklistItem;
 use App\Models\Space;
 use App\Models\Subtask;
 use App\Models\Task;
-use App\Models\TaskList;
+use App\Models\Project;
 use App\Models\Workspace;
 use App\Services\AccessService;
 use App\Services\ChecklistItemService;
@@ -30,7 +30,7 @@ class ChecklistItemController extends Controller
         StoreChecklistItemRequest $request,
         Workspace $workspace,
         Space $space,
-        TaskList $list,
+        Project $list,
         Task $task,
         Subtask $subtask,
     ): RedirectResponse {
@@ -60,7 +60,7 @@ class ChecklistItemController extends Controller
         UpdateChecklistItemRequest $request,
         Workspace $workspace,
         Space $space,
-        TaskList $list,
+        Project $list,
         Task $task,
         Subtask $subtask,
         ChecklistItem $checklistItem,
@@ -85,7 +85,7 @@ class ChecklistItemController extends Controller
         Request $request,
         Workspace $workspace,
         Space $space,
-        TaskList $list,
+        Project $list,
         Task $task,
         Subtask $subtask,
         ChecklistItem $checklistItem,
@@ -110,7 +110,7 @@ class ChecklistItemController extends Controller
         Request $request,
         Workspace $workspace,
         Space $space,
-        TaskList $list,
+        Project $list,
         Task $task,
         Subtask $subtask,
         ChecklistItem $checklistItem,
@@ -137,7 +137,7 @@ class ChecklistItemController extends Controller
         Request $request,
         Workspace $workspace,
         Space $space,
-        TaskList $list,
+        Project $list,
         Task $task,
         Subtask $subtask,
     ): RedirectResponse {
@@ -168,13 +168,13 @@ class ChecklistItemController extends Controller
     private function authorizeScope(
         Workspace $workspace,
         Space $space,
-        TaskList $list,
+        Project $list,
         Task $task,
         Subtask $subtask,
     ): void {
         abort_unless((int) $space->workspace_id === (int) $workspace->id, 404);
         abort_unless((int) $list->space_id === (int) $space->id, 404);
-        abort_unless((int) $task->task_list_id === (int) $list->id, 404);
+        abort_unless((int) $task->project_id === (int) $list->id, 404);
         abort_unless((int) $subtask->task_id === (int) $task->id, 404);
     }
 }

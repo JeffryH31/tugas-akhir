@@ -202,7 +202,7 @@ const removeMember = async (member) => {
                 <v-list>
                     <v-list-item v-for="product in products" :key="product.id" :title="product.name"
                         subtitle="Active product" prepend-icon="mdi-view-grid-outline"
-                        @click="router.visit(route('lists.settings', [workspace.id, space.id, product.id]))">
+                        @click="router.visit(route('projects.settings', [workspace.id, space.id, product.id]))">
                         <template #append>
                             <v-icon>mdi-chevron-right</v-icon>
                         </template>

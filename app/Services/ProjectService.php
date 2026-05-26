@@ -7,7 +7,7 @@ use App\Models\Folder;
 use App\Models\Space;
 use App\Models\Status;
 use App\Models\Task;
-use App\Models\TaskList;
+use App\Models\Project;
 use App\Models\User;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
@@ -16,18 +16,18 @@ use Illuminate\Support\Str;
 /**
  * Manage product/list lifecycle, membership, board grouping, and cloning.
  */
-class TaskListService
+class ProjectService
 {
     /**
      * Get lists for a space, optionally scoped to a specific folder.
      *
      * @param Space $space The parent space that owns the lists.
      * @param Folder|null $folder Optional folder filter.
-     * @return Collection<int, TaskList>
+     * @return Collection<int, Project>
      */
     public function getListsForSpace(Space $space, ?Folder $folder = null): Collection
     {
-        $query = $space->lists()
+        $query = $space->projects()
             ->with(['tasks' => fn($q) => $q->with(['status', 'assignees'])])
             ->withCount('tasks');
 
@@ -44,20 +44,20 @@ class TaskListService
      * When taskId is provided, returns subtasks for the parent task grouped by status.
      * Otherwise returns task-level board items grouped by status.
      *
-     * @param TaskList $list The list being viewed.
+     * @param Project $list The list being viewed.
      * @param int|string|null $taskId Optional parent task id for subtask mode.
      * @return array<int, array<int, array<string, mixed>>>
      */
-    public function getWithTasksByStatus(TaskList $list, $taskId = null): array
+    public function getWithTasksByStatus(Project $project, $taskId = null): array
     {
         // Load space with statuses first
-        $list->load('space.statuses');
+        $project->load('space.statuses');
 
         $parentTask = null;
 
         // If viewing subtasks, load from parent task
         if ($taskId) {
-            $parentTask = Task::where('task_list_id', $list->id)->with([
+            $parentTask = Task::where('project_id', $project->id)->with([
                 'subtasks.status',
                 'subtasks.assignees',
                 'subtasks.labels',
@@ -77,7 +77,7 @@ class TaskListService
             $items = $parentTask->subtasks->whereNull('parent_id');
         } else {
             // Load tasks for the list
-            $items = $list->tasks()
+            $items = $project->tasks()
                 ->with([
                     'status',
                     'assignees',
@@ -100,7 +100,7 @@ class TaskListService
             });
         }
 
-        $statuses = $list->space->statuses;
+        $statuses = $project->space->statuses;
 
         $grouped = [];
         foreach ($statuses as $status) {
@@ -131,15 +131,15 @@ class TaskListService
      * @param Space $space Parent space.
      * @param User $user Current actor.
      * @param Folder|null $folder Optional folder destination.
-     * @return TaskList
+     * @return Project
      */
-    public function create(array $data, Space $space, User $user, ?Folder $folder = null): TaskList
+    public function create(array $data, Space $space, User $user, ?Folder $folder = null): Project
     {
         return DB::transaction(function () use ($data, $space, $user, $folder) {
             // Backward-compat: older spaces may miss one of the default task statuses.
             $this->ensureDefaultTaskStatuses($space);
 
-            $list = TaskList::create([
+            $project = Project::create([
                 'space_id' => $space->id,
                 'folder_id' => $folder?->id,
                 'name' => $data['name'],
@@ -150,15 +150,15 @@ class TaskListService
                 'created_by' => $user->id,
             ]);
 
-            $list->addMember($user, 'project_owner');
+            $project->addMember($user, 'project_owner');
 
-            Activity::log($space->workspace, $user, $list, 'created', [
-                'name' => $list->name,
+            Activity::log($space->workspace, $user, $project, 'created', [
+                'name' => $project->name,
                 'space_name' => $space->name,
                 'folder_name' => $folder?->name,
             ]);
 
-            return $list;
+            return $project;
         });
     }
 
@@ -263,18 +263,18 @@ class TaskListService
     /**
      * Add a member to a list with a role.
      *
-     * @param TaskList $list Target list.
+     * @param Project $list Target list.
      * @param User $user Member to add.
      * @param string $role Membership role.
      * @param User $addedBy Actor performing the operation.
      * @return void
      */
-    public function addMember(TaskList $list, User $user, string $role, User $addedBy): void
+    public function addMember(Project $project, User $user, string $role, User $addedBy): void
     {
-        $list->addMember($user, $role);
+        $project->addMember($user, $role);
 
-        Activity::log($list->space->workspace, $addedBy, $list, 'member_added', [
-            'name' => $list->name,
+        Activity::log($project->space->workspace, $addedBy, $project, 'member_added', [
+            'name' => $project->name,
             'member_name' => $user->name,
             'role' => $role,
         ]);
@@ -283,18 +283,18 @@ class TaskListService
     /**
      * Update an existing list member role.
      *
-     * @param TaskList $list Target list.
+     * @param Project $list Target list.
      * @param User $user Member whose role is being updated.
      * @param string $role New role value.
      * @param User $updatedBy Actor performing the operation.
      * @return void
      */
-    public function updateMemberRole(TaskList $list, User $user, string $role, User $updatedBy): void
+    public function updateMemberRole(Project $project, User $user, string $role, User $updatedBy): void
     {
-        $list->members()->updateExistingPivot($user->id, ['role' => $role]);
+        $project->members()->updateExistingPivot($user->id, ['role' => $role]);
 
-        Activity::log($list->space->workspace, $updatedBy, $list, 'member_role_updated', [
-            'name' => $list->name,
+        Activity::log($project->space->workspace, $updatedBy, $project, 'member_role_updated', [
+            'name' => $project->name,
             'member_name' => $user->name,
             'role' => $role,
         ]);
@@ -303,17 +303,17 @@ class TaskListService
     /**
      * Remove a member from a list.
      *
-     * @param TaskList $list Target list.
+     * @param Project $list Target list.
      * @param User $user Member to remove.
      * @param User $removedBy Actor performing the operation.
      * @return void
      */
-    public function removeMember(TaskList $list, User $user, User $removedBy): void
+    public function removeMember(Project $project, User $user, User $removedBy): void
     {
-        $list->members()->detach($user->id);
+        $project->members()->detach($user->id);
 
-        Activity::log($list->space->workspace, $removedBy, $list, 'member_removed', [
-            'name' => $list->name,
+        Activity::log($project->space->workspace, $removedBy, $project, 'member_removed', [
+            'name' => $project->name,
             'member_name' => $user->name,
         ]);
     }
@@ -321,21 +321,21 @@ class TaskListService
     /**
      * Update list metadata.
      *
-     * @param TaskList $list Target list.
+     * @param Project $list Target list.
      * @param array<string, mixed> $data Validated update payload.
      * @param User $user Current actor.
-     * @return TaskList
+     * @return Project
      */
-    public function update(TaskList $list, array $data, User $user): TaskList
+    public function update(Project $project, array $data, User $user): Project
     {
         $changes = [];
-        $oldValues = $list->only(['name', 'description', 'color']);
+        $oldValues = $project->only(['name', 'description', 'color']);
 
-        $list->update([
-            'name' => $data['name'] ?? $list->name,
-            'description' => $data['description'] ?? $list->description,
-            'color' => $data['color'] ?? $list->color,
-            'icon' => $data['icon'] ?? $list->icon,
+        $project->update([
+            'name' => $data['name'] ?? $project->name,
+            'description' => $data['description'] ?? $project->description,
+            'color' => $data['color'] ?? $project->color,
+            'icon' => $data['icon'] ?? $project->icon,
         ]);
 
         foreach ($oldValues as $key => $oldValue) {
@@ -345,29 +345,29 @@ class TaskListService
         }
 
         if (!empty($changes)) {
-            Activity::log($list->space->workspace, $user, $list, 'updated', [
-                'name' => $list->name,
+            Activity::log($project->space->workspace, $user, $project, 'updated', [
+                'name' => $project->name,
             ], $changes);
         }
 
-        return $list->fresh();
+        return $project->fresh();
     }
 
     /**
      * Soft-delete a list.
      *
-     * @param TaskList $list Target list.
+     * @param Project $list Target list.
      * @param User $user Current actor.
      * @return void
      */
-    public function delete(TaskList $list, User $user): void
+    public function delete(Project $project, User $user): void
     {
-        DB::transaction(function () use ($list, $user) {
-            Activity::log($list->space->workspace, $user, $list, 'deleted', [
-                'name' => $list->name,
+        DB::transaction(function () use ($project, $user) {
+            Activity::log($project->space->workspace, $user, $project, 'deleted', [
+                'name' => $project->name,
             ]);
 
-            $list->delete();
+            $project->delete();
         });
     }
 
@@ -376,30 +376,30 @@ class TaskListService
     /**
      * Move a list to another folder (or root when null).
      *
-     * @param TaskList $list Target list.
+     * @param Project $list Target list.
      * @param Folder|null $folder Destination folder, null for root.
      * @param User $user Current actor.
-     * @return TaskList
+     * @return Project
      */
-    public function moveToFolder(TaskList $list, ?Folder $folder, User $user): TaskList
+    public function moveToFolder(Project $project, ?Folder $folder, User $user): Project
     {
-        $oldFolderName = $list->folder?->name ?? 'No Folder';
+        $oldFolderName = $project->folder?->name ?? 'No Folder';
         $newFolderName = $folder?->name ?? 'No Folder';
 
-        $list->update([
+        $project->update([
             'folder_id' => $folder?->id,
-            'position' => TaskList::where('space_id', $list->space_id)
+            'position' => Project::where('space_id', $project->space_id)
                 ->where('folder_id', $folder?->id)
                 ->max('position') + 1,
         ]);
 
-        Activity::log($list->space->workspace, $user, $list, 'moved', [
-            'name' => $list->name,
+        Activity::log($project->space->workspace, $user, $project, 'moved', [
+            'name' => $project->name,
         ], [
             'folder' => ['old' => $oldFolderName, 'new' => $newFolderName],
         ]);
 
-        return $list->fresh();
+        return $project->fresh();
     }
 
     /**
@@ -412,8 +412,8 @@ class TaskListService
     public function reorder(Space $space, array $order): void
     {
         DB::transaction(function () use ($space, $order) {
-            foreach ($order as $position => $listId) {
-                TaskList::where('id', $listId)
+            foreach ($order as $position => $projectId) {
+                Project::where('id', $projectId)
                     ->where('space_id', $space->id)
                     ->update(['position' => $position]);
             }
@@ -423,27 +423,27 @@ class TaskListService
     /**
      * Duplicate a list and clone all tasks/subtasks and their assignments/labels.
      *
-     * @param TaskList $list Source list.
+     * @param Project $list Source list.
      * @param User $user Current actor.
-     * @return TaskList
+     * @return Project
      */
-    public function duplicate(TaskList $list, User $user): TaskList
+    public function duplicate(Project $project, User $user): Project
     {
-        return DB::transaction(function () use ($list, $user) {
-            $newList = $list->replicate();
-            $newList->name = $list->name . ' (Copy)';
-            $newList->slug = Str::slug($newList->name);
-            $newList->position = TaskList::where('space_id', $list->space_id)
-                ->where('folder_id', $list->folder_id)
+        return DB::transaction(function () use ($project, $user) {
+            $newProject = $project->replicate();
+            $newProject->name = $project->name . ' (Copy)';
+            $newProject->slug = Str::slug($newProject->name);
+            $newProject->position = Project::where('space_id', $project->space_id)
+                ->where('folder_id', $project->folder_id)
                 ->max('position') + 1;
-            $newList->save();
+            $newProject->save();
 
             // Only copy the creator as project_owner, not all members
-            $newList->addMember($user, 'project_owner');
+            $newProject->addMember($user, 'project_owner');
 
-            foreach ($list->tasks()->with(['labels', 'subtasks.labels'])->get() as $task) {
+            foreach ($project->tasks()->with(['labels', 'subtasks.labels'])->get() as $task) {
                 $newTask = $task->replicate(['task_id']);
-                $newTask->task_list_id = $newList->id;
+                $newTask->project_id = $newProject->id;
                 // Reset operational fields — this is a template copy, not a continuation
                 $newTask->start_date = null;
                 $newTask->due_date = null;
@@ -474,12 +474,12 @@ class TaskListService
                 }
             }
 
-            Activity::log($list->space->workspace, $user, $newList, 'duplicated', [
-                'name' => $newList->name,
-                'original_name' => $list->name,
+            Activity::log($project->space->workspace, $user, $newProject, 'duplicated', [
+                'name' => $newProject->name,
+                'original_name' => $project->name,
             ]);
 
-            return $newList;
+            return $newProject;
         });
     }
 }

@@ -8,7 +8,7 @@ use App\Models\Folder;
 use App\Models\Space;
 use App\Models\Subtask;
 use App\Models\Task;
-use App\Models\TaskList;
+use App\Models\Project;
 use App\Models\TimeEntry;
 use App\Models\Workspace;
 use Illuminate\Database\Eloquent\Relations\MorphTo;
@@ -103,8 +103,8 @@ class HandleInertiaRequests extends Middleware
                             $query->whereHas('members', fn($mq) => $mq->where('user_id', $user->id));
                         }
                         $query->with([
-                            'folders.lists' => $listAccessFilter,
-                            'listsWithoutFolder' => $listAccessFilter,
+                            'folders.projects' => $listAccessFilter,
+                            'projectsWithoutFolder' => $listAccessFilter,
                         ])->orderBy('position');
                     },
                     'labels' => fn($q) => $q->orderBy('name'),
@@ -138,9 +138,9 @@ class HandleInertiaRequests extends Middleware
             ->whereNotIn('action', $notificationIgnoredActions)
             ->with(['user', 'subject' => function (MorphTo $morphTo) {
                 $morphTo->morphWith([
-                    Task::class    => ['taskList.space'],
-                    Subtask::class => ['task.taskList.space'],
-                    TaskList::class => ['space'],
+                    Task::class    => ['project.space'],
+                    Subtask::class => ['task.project.space'],
+                    Project::class => ['space'],
                     Folder::class  => ['space'],
                     Space::class   => [],
                     Workspace::class => [],
@@ -179,7 +179,7 @@ class HandleInertiaRequests extends Middleware
             'notificationsLastReadAt' => $request->user()?->last_notifications_read_at?->toISOString(),
             'runningTimer' => fn() => $request->user() ? TimeEntry::where('user_id', $request->user()->id)
                 ->where('is_running', true)
-                ->with('subtask.task.taskList.space')
+                ->with('subtask.task.project.space')
                 ->first() : null,
         ];
     }

@@ -62,7 +62,7 @@ class Subtask extends Model
     protected $with = ['status'];
 
     /**
-     * Appended so these fields appear in toArray() (used by TaskListService).
+     * Appended so these fields appear in toArray() (used by ProjectService).
      * Without $appends, they are only present in SubtaskResource responses.
      */
     protected $appends = ['can_add_children', 'has_kanban_view', 'checklist_total', 'checklist_checked'];
@@ -396,7 +396,7 @@ class Subtask extends Model
 
     protected function resolveCustomCompletionStatusId(int $targetStatusId): ?int
     {
-        $spaceId = $this->task?->taskList?->space_id;
+        $spaceId = $this->task?->project?->space_id;
         if (!$spaceId) {
             return null;
         }
@@ -410,7 +410,7 @@ class Subtask extends Model
 
     protected function resolveDefaultOpenStatusId(): ?int
     {
-        $spaceId = $this->task?->taskList?->space_id;
+        $spaceId = $this->task?->project?->space_id;
         if (!$spaceId) {
             return null;
         }

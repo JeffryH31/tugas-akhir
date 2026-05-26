@@ -167,7 +167,7 @@ class TasksSeeder extends Seeder
         $task = Task::create([
             'name' => $definition['name'],
             'description' => $definition['description'],
-            'task_list_id' => $this->demoTaskList($definition['list'])->id,
+            'project_id' => $this->demoProject($definition['list'])->id,
             'status_id' => $this->demoStatus($definition['status'][0], $definition['status'][1])->id,
             'priority_level' => $definition['priority_level'],
             'created_by' => $definition['created_by'],

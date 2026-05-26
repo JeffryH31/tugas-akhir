@@ -27,7 +27,7 @@ function commentRoute(array $h, string $name, ?Comment $comment = null): string
 
 test('owner can create a comment on a task', function () {
     actingAs($this->owner)
-        ->from(commentRoute($this->h, 'lists.show'))
+        ->from(commentRoute($this->h, 'projects.show'))
         ->post(commentRoute($this->h, 'tasks.comments.store'), [
             'content' => 'Great progress!',
         ])
@@ -62,14 +62,14 @@ test('non-member (no product view access) gets 403 when commenting', function ()
 
 test('comment with empty content returns a validation error', function () {
     actingAs($this->owner)
-        ->from(commentRoute($this->h, 'lists.show'))
+        ->from(commentRoute($this->h, 'projects.show'))
         ->post(commentRoute($this->h, 'tasks.comments.store'), ['content' => ''])
         ->assertSessionHasErrors(['content']);
 });
 
 test('comment content cannot exceed 10000 characters', function () {
     actingAs($this->owner)
-        ->from(commentRoute($this->h, 'lists.show'))
+        ->from(commentRoute($this->h, 'projects.show'))
         ->post(commentRoute($this->h, 'tasks.comments.store'), [
             'content' => str_repeat('x', 10001),
         ])
@@ -82,7 +82,7 @@ test('developer (product member) can comment', function () {
     $this->h['list']->addMember($dev, 'development_team');
 
     actingAs($dev)
-        ->from(commentRoute($this->h, 'lists.show'))
+        ->from(commentRoute($this->h, 'projects.show'))
         ->post(commentRoute($this->h, 'tasks.comments.store'), [
             'content' => 'Dev comment',
         ])
@@ -105,7 +105,7 @@ test('comment author can update their own comment', function () {
     ]);
 
     actingAs($this->owner)
-        ->from(commentRoute($this->h, 'lists.show'))
+        ->from(commentRoute($this->h, 'projects.show'))
         ->patch(route('comments.update', $comment), [
             'content' => 'Edited content',
         ])
@@ -199,7 +199,7 @@ test('comment author can resolve their own comment', function () {
     ]);
 
     actingAs($this->owner)
-        ->from(commentRoute($this->h, 'lists.show'))
+        ->from(commentRoute($this->h, 'projects.show'))
         ->post(route('comments.resolve', $comment))
         ->assertRedirect();
 
@@ -218,7 +218,7 @@ test('comment author can unresolve their own comment', function () {
     ]);
 
     actingAs($this->owner)
-        ->from(commentRoute($this->h, 'lists.show'))
+        ->from(commentRoute($this->h, 'projects.show'))
         ->post(route('comments.unresolve', $comment))
         ->assertRedirect();
 
@@ -256,7 +256,7 @@ test('project manager can resolve any comment in their product', function () {
     ]);
 
     actingAs($pm)
-        ->from(commentRoute($this->h, 'lists.show'))
+        ->from(commentRoute($this->h, 'projects.show'))
         ->post(route('comments.resolve', $comment))
         ->assertRedirect();
 

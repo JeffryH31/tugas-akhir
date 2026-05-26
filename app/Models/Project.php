@@ -10,7 +10,7 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\SoftDeletes;
 use Illuminate\Support\Str;
 
-class TaskList extends Model
+class Project extends Model
 {
     use HasFactory, SoftDeletes;
 
@@ -83,7 +83,7 @@ class TaskList extends Model
 
     public function members(): BelongsToMany
     {
-        return $this->belongsToMany(User::class, 'task_list_members')
+        return $this->belongsToMany(User::class, 'project_members')
             ->withPivot('role')
             ->withTimestamps();
     }

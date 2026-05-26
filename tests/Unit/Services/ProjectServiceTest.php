@@ -2,14 +2,14 @@
 
 use App\Models\Activity;
 use App\Models\Folder;
-use App\Models\TaskList;
-use App\Services\TaskListService;
+use App\Models\Project;
+use App\Services\ProjectService;
 use Tests\Traits\CreatesWorkspaceHierarchy;
 
 uses(CreatesWorkspaceHierarchy::class);
 
 beforeEach(function () {
-    $this->service = new TaskListService();
+    $this->service = new ProjectService();
     $this->owner = $this->createUser();
     $this->hierarchy = $this->createFullHierarchy($this->owner);
 });
@@ -23,7 +23,7 @@ test('create list in space', function () {
         $this->owner
     );
 
-    expect($list)->toBeInstanceOf(TaskList::class);
+    expect($list)->toBeInstanceOf(Project::class);
     expect($list->name)->toBe('Product Backlog');
     expect($list->space_id)->toBe($this->hierarchy['space']->id);
 });
@@ -62,7 +62,7 @@ test('create list logs activity', function () {
     $this->service->create(['name' => 'Logged'], $this->hierarchy['space'], $this->owner);
 
     $activity = Activity::where('action', 'created')
-        ->where('subject_type', TaskList::class)
+        ->where('subject_type', Project::class)
         ->latest('id')->first();
     expect($activity)->not->toBeNull();
 });
@@ -84,7 +84,7 @@ test('update list logs activity when changed', function () {
     $this->service->update($list, ['name' => 'Different Name'], $this->owner);
 
     $activity = Activity::where('action', 'updated')
-        ->where('subject_type', TaskList::class)
+        ->where('subject_type', Project::class)
         ->first();
     expect($activity)->not->toBeNull();
 });
@@ -96,8 +96,8 @@ test('delete list soft deletes it', function () {
 
     $this->service->delete($list, $this->owner);
 
-    expect(TaskList::find($list->id))->toBeNull();
-    expect(TaskList::withTrashed()->find($list->id))->not->toBeNull();
+    expect(Project::find($list->id))->toBeNull();
+    expect(Project::withTrashed()->find($list->id))->not->toBeNull();
 });
 
 // membership

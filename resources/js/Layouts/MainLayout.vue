@@ -127,11 +127,11 @@ watch(
 );
 
 const goToTask = (task) => {
-    if (!task.task_list?.space) return;
-    router.visit(route('lists.show', [
-        task.task_list.space.workspace_id,
-        task.task_list.space_id,
-        task.task_list_id,
+    if (!task.project?.space) return;
+    router.visit(route('projects.show', [
+        task.project.space.workspace_id,
+        task.project.space_id,
+        task.project_id,
     ]));
     searchDialog.value = false;
     searchQuery.value = '';
@@ -141,7 +141,7 @@ const goToTask = (task) => {
 
 const goToList = (list) => {
     if (!list.space) return;
-    router.visit(route('lists.show', [
+    router.visit(route('projects.show', [
         list.space.workspace_id,
         list.space_id,
         list.id
@@ -642,8 +642,8 @@ watch(searchDialog, (open) => {
                                                 <v-list-item-title>{{ folder.name }}</v-list-item-title>
                                             </v-list-item>
                                         </template>
-                                        <v-list-item v-for="list in folder.lists || []" :key="list.id"
-                                            :href="route('lists.show', [activeWorkspace?.id, space.id, list.id])"
+                                        <v-list-item v-for="list in folder.projects || []" :key="list.id"
+                                            :href="route('projects.show', [activeWorkspace?.id, space.id, list.id])"
                                             rounded="lg" class="list-tree-item">
                                             <template #prepend>
                                                 <v-icon size="12" class="list-icon">mdi-view-list-outline</v-icon>
@@ -654,8 +654,8 @@ watch(searchDialog, (open) => {
                                 </template>
 
                                 <!-- Lists without folder -->
-                                <v-list-item v-for="list in space.lists_without_folder || []" :key="list.id"
-                                    :href="route('lists.show', [activeWorkspace?.id, space.id, list.id])" rounded="lg"
+                                <v-list-item v-for="list in space.projects_without_folder || []" :key="list.id"
+                                    :href="route('projects.show', [activeWorkspace?.id, space.id, list.id])" rounded="lg"
                                     class="list-tree-item">
                                     <template #prepend>
                                         <v-icon size="12" class="list-icon">mdi-view-list-outline</v-icon>
@@ -716,7 +716,7 @@ watch(searchDialog, (open) => {
                     <div v-else-if="isSearching" class="search-empty">
                         <v-progress-circular indeterminate color="primary" size="36" />
                     </div>
-                    <div v-else-if="!searchResults.tasks.length && !searchResults.lists.length && !searchResults.spaces.length"
+                    <div v-else-if="!searchResults.tasks.length && !searchResults.projects.length && !searchResults.spaces.length"
                         class="search-empty">
                         <v-icon size="40" color="grey-darken-1">mdi-text-search</v-icon>
                         <div class="text-body-2 text-medium-emphasis mt-2">No results for "<strong>{{ searchQuery
@@ -734,15 +734,15 @@ watch(searchDialog, (open) => {
                                 </template>
                                 <v-list-item-title class="text-body-2">{{ task.name }}</v-list-item-title>
                                 <v-list-item-subtitle class="text-caption">
-                                    {{ task.task_list?.space?.name }} · {{ task.task_list?.name }}
+                                    {{ task.project?.space?.name }} · {{ task.project?.name }}
                                 </v-list-item-subtitle>
                             </v-list-item>
                         </v-list>
 
                         <!-- Products -->
-                        <v-list v-if="searchResults.lists.length" density="compact" nav>
-                            <div class="search-result-label">PRODUCTS — {{ searchResults.lists.length }}</div>
-                            <v-list-item v-for="list in searchResults.lists" :key="list.id" rounded="lg"
+                        <v-list v-if="searchResults.projects.length" density="compact" nav>
+                            <div class="search-result-label">PRODUCTS — {{ searchResults.projects.length }}</div>
+                            <v-list-item v-for="list in searchResults.projects" :key="list.id" rounded="lg"
                                 class="search-result-item" @click="goToList(list)">
                                 <template #prepend>
                                     <v-icon size="16" color="warning">mdi-view-list-outline</v-icon>

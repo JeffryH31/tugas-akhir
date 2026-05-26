@@ -29,7 +29,7 @@ class TaskResource extends JsonResource
         return [
             'id' => $this->id,
             'task_id' => $this->task_id,
-            'task_list_id' => $this->task_list_id,
+            'project_id' => $this->project_id,
             'name' => $this->name,
             'description' => $this->description,
             'position' => $this->position,
@@ -48,15 +48,15 @@ class TaskResource extends JsonResource
 
             'status' => new StatusResource($this->whenLoaded('status')),
             'priority' => $this->priority,
-            'task_list' => $this->whenLoaded('taskList', function () {
+            'project' => $this->whenLoaded('project', function () {
                 return [
-                    'id' => $this->taskList->id,
-                    'name' => $this->taskList->name,
-                    'space_id' => $this->taskList->space_id,
-                    'space' => $this->taskList->relationLoaded('space') && $this->taskList->space
+                    'id' => $this->project->id,
+                    'name' => $this->project->name,
+                    'space_id' => $this->project->space_id,
+                    'space' => $this->project->relationLoaded('space') && $this->project->space
                         ? [
-                            'id' => $this->taskList->space->id,
-                            'workspace_id' => $this->taskList->space->workspace_id,
+                            'id' => $this->project->space->id,
+                            'workspace_id' => $this->project->space->workspace_id,
                         ]
                         : null,
                 ];

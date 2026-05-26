@@ -23,7 +23,7 @@ const sortOptions = [
 ];
 
 const totals = computed(() => ({
-    lists: props.trash?.lists?.length || 0,
+    lists: props.trash?.projects?.length || 0,
     tasks: props.trash?.tasks?.length || 0,
     subtasks: props.trash?.subtasks?.length || 0,
     timeEntries: props.trash?.time_entries?.length || 0,
@@ -51,7 +51,7 @@ const getItemName = (item, type) => {
 
 const getItemContext = (item, type) => {
     if (type === 'tasks') {
-        return `${item.task_list?.name || ''} ${item.task_list?.space?.name || ''}`.trim();
+        return `${item.project?.name || ''} ${item.project?.space?.name || ''}`.trim();
     }
     if (type === 'subtasks') {
         return item.task?.name || '';
@@ -116,7 +116,7 @@ const sortedFilteredItems = computed(() => {
             <div class="grid grid-cols-2 md:grid-cols-4 gap-3 mb-5">
                 <v-card class="pa-3">
                     <div class="text-xs text-gray-400">Lists</div>
-                    <div class="text-xl font-semibold">{{ totals.lists }}</div>
+                    <div class="text-xl font-semibold">{{ totals.projects }}</div>
                 </v-card>
                 <v-card class="pa-3">
                     <div class="text-xs text-gray-400">Tasks</div>
@@ -164,7 +164,7 @@ const sortedFilteredItems = computed(() => {
                             <tbody>
                                 <tr v-for="task in sortedFilteredItems" :key="task.id">
                                     <td>{{ task.name }}</td>
-                                    <td>{{ task.task_list?.name }} / {{ task.task_list?.space?.name }}</td>
+                                    <td>{{ task.project?.name }} / {{ task.project?.space?.name }}</td>
                                     <td>{{ formatDate(task.deleted_at) }}</td>
                                     <td><v-btn v-if="canRestore" size="small" color="primary" :loading="isRestoring('task', task.id)"
                                             @click="restoreItem('task', task.id)">Restore</v-btn></td>

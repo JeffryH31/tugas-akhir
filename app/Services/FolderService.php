@@ -20,7 +20,7 @@ class FolderService
     public function getFoldersForSpace(Space $space)
     {
         return $space->folders()
-            ->with(['children', 'lists'])
+            ->with(['children', 'projects'])
             ->orderBy('position')
             ->get();
     }

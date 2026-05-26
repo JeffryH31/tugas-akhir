@@ -2,7 +2,7 @@
 
 use App\Models\Comment;
 use App\Models\Subtask;
-use App\Models\TaskList;
+use App\Models\Project;
 use App\Models\TimeEntry;
 use App\Models\Workspace;
 use Tests\Traits\CreatesWorkspaceHierarchy;
@@ -169,7 +169,7 @@ test('cannot move task to a list in another space', function () {
         'name' => 'Other Space',
         'created_by' => $this->userA->id,
     ]);
-    $otherList = TaskList::create([
+    $otherList = Project::create([
         'space_id' => $otherSpace->id,
         'name' => 'Other List',
         'created_by' => $this->userA->id,
@@ -195,7 +195,7 @@ test('cannot update subtask using wrong parent task ID in URL', function () {
 
     // Create another task in same list
     $otherTask = \App\Models\Task::create([
-        'task_list_id' => $hierarchy['list']->id,
+        'project_id' => $hierarchy['list']->id,
         'name' => 'Other Task',
         'created_by' => $this->userA->id,
     ]);

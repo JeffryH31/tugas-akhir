@@ -1,7 +1,7 @@
 <?php
 
 use App\Models\Space;
-use App\Models\TaskList;
+use App\Models\Project;
 use App\Models\Workspace;
 use Tests\Traits\CreatesWorkspaceHierarchy;
 use function Pest\Laravel\actingAs;
@@ -34,7 +34,7 @@ beforeEach(function () {
         $this->space->members()->attach($user->id, ['role' => 'member']);
     }
 
-    $this->list = TaskList::create([
+    $this->list = Project::create([
         'space_id' => $this->space->id,
         'name' => 'Product',
         'created_by' => $this->wsOwner->id,
@@ -47,7 +47,7 @@ beforeEach(function () {
     $this->list->addMember($this->guest, 'guest');
 
     $this->task = \App\Models\Task::create([
-        'task_list_id' => $this->list->id,
+        'project_id' => $this->list->id,
         'name' => 'Test Task',
         'created_by' => $this->wsOwner->id,
     ]);

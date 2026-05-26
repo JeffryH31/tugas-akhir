@@ -2,14 +2,14 @@
 
 use App\Models\Activity;
 use App\Models\Folder;
-use App\Models\TaskList;
-use App\Services\TaskListService;
+use App\Models\Project;
+use App\Services\ProjectService;
 use Tests\Traits\CreatesWorkspaceHierarchy;
 
 uses(Tests\Traits\CreatesWorkspaceHierarchy::class);
 
 beforeEach(function () {
-    $this->service = new TaskListService();
+    $this->service = new ProjectService();
     $this->owner = $this->createUser();
     $this->hierarchy = $this->createFullHierarchy($this->owner);
 });
@@ -19,7 +19,7 @@ test('create list in space', function () {
         'name' => 'Product Backlog',
     ], $this->hierarchy['space'], $this->owner);
 
-    expect($list)->toBeInstanceOf(TaskList::class);
+    expect($list)->toBeInstanceOf(Project::class);
     expect($list->name)->toBe('Product Backlog');
     expect($list->space_id)->toBe($this->hierarchy['space']->id);
     expect($list->created_by)->toBe($this->owner->id);
@@ -41,7 +41,7 @@ test('create list logs created activity', function () {
     ], $this->hierarchy['space'], $this->owner);
 
     $activity = Activity::where('action', 'created')
-        ->where('subject_type', TaskList::class)
+        ->where('subject_type', Project::class)
         ->first();
 
     expect($activity)->not->toBeNull();
@@ -69,7 +69,7 @@ test('update list changes name and logs activity', function () {
     expect($updated->name)->toBe('Renamed List');
 
     $activity = Activity::where('action', 'updated')
-        ->where('subject_type', TaskList::class)
+        ->where('subject_type', Project::class)
         ->first();
     expect($activity)->not->toBeNull();
 });
@@ -79,8 +79,8 @@ test('delete list soft deletes and logs activity', function () {
 
     $this->service->delete($list, $this->owner);
 
-    expect(TaskList::find($list->id))->toBeNull();
-    expect(TaskList::withTrashed()->find($list->id))->not->toBeNull();
+    expect(Project::find($list->id))->toBeNull();
+    expect(Project::withTrashed()->find($list->id))->not->toBeNull();
 });
 
 test('addMember adds user with role', function () {
@@ -124,7 +124,7 @@ test('moveToFolder changes folder_id', function () {
     expect($moved->folder_id)->toBe($folder->id);
 
     $activity = Activity::where('action', 'moved')
-        ->where('subject_type', TaskList::class)
+        ->where('subject_type', Project::class)
         ->first();
     expect($activity)->not->toBeNull();
 });
@@ -148,7 +148,7 @@ test('duplicate list clones tasks and subtasks', function () {
     expect($duplicate->tasks)->toHaveCount($this->hierarchy['list']->tasks()->count());
 
     $activity = Activity::where('action', 'duplicated')
-        ->where('subject_type', TaskList::class)
+        ->where('subject_type', Project::class)
         ->first();
     expect($activity)->not->toBeNull();
 });

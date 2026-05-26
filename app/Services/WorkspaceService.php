@@ -143,15 +143,15 @@ class WorkspaceService
     public function getStatistics(Workspace $workspace): array
     {
         $spaces = $workspace->spaces()->withCount([
-            'lists',
+            'projects',
         ])->get();
 
-        $totalLists = $spaces->sum('lists_count');
+        $totalLists = $spaces->sum('projects_count');
 
         // Get task counts through relationships
         $taskCounts = DB::table('tasks')
-            ->join('task_lists', 'tasks.task_list_id', '=', 'task_lists.id')
-            ->join('spaces', 'task_lists.space_id', '=', 'spaces.id')
+            ->join('projects', 'tasks.project_id', '=', 'projects.id')
+            ->join('spaces', 'projects.space_id', '=', 'spaces.id')
             ->where('spaces.workspace_id', $workspace->id)
             ->whereNull('tasks.deleted_at')
             ->selectRaw('COUNT(*) as total')
@@ -160,8 +160,8 @@ class WorkspaceService
         // Get subtask counts for completion and overdue metrics
         $subtaskCounts = DB::table('subtasks')
             ->join('tasks', 'subtasks.task_id', '=', 'tasks.id')
-            ->join('task_lists', 'tasks.task_list_id', '=', 'task_lists.id')
-            ->join('spaces', 'task_lists.space_id', '=', 'spaces.id')
+            ->join('projects', 'tasks.project_id', '=', 'projects.id')
+            ->join('spaces', 'projects.space_id', '=', 'spaces.id')
             ->where('spaces.workspace_id', $workspace->id)
             ->whereNull('subtasks.deleted_at')
             ->selectRaw('
@@ -172,7 +172,7 @@ class WorkspaceService
 
         return [
             'spaces_count' => $spaces->count(),
-            'lists_count' => $totalLists,
+            'projects_count' => $totalLists,
             'tasks_count' => $taskCounts->total ?? 0,
             'completed_subtasks_count' => $subtaskCounts->completed ?? 0,
             'overdue_subtasks_count' => $subtaskCounts->overdue ?? 0,

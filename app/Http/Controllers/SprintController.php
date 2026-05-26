@@ -6,7 +6,7 @@ use App\Http\Requests\StoreSprintRequest;
 use App\Http\Requests\UpdateSprintRequest;
 use App\Models\Space;
 use App\Models\Sprint;
-use App\Models\TaskList;
+use App\Models\Project;
 use App\Models\Workspace;
 use App\Services\AccessService;
 use App\Services\SprintService;
@@ -29,7 +29,7 @@ class SprintController extends Controller
     {
         abort_unless($this->accessService->canViewSpace($request->user(), $space), 403);
 
-        $products = $space->lists()
+        $products = $space->projects()
             ->select('id', 'name', 'space_id')
             ->orderBy('position')
             ->get();
@@ -48,7 +48,7 @@ class SprintController extends Controller
                 ->with('error', 'No product available for sprint view.');
         }
 
-        return redirect()->route('lists.show', [
+        return redirect()->route('projects.show', [
             'workspace' => $workspace,
             'space' => $space,
             'list' => $selectedList,
@@ -64,9 +64,9 @@ class SprintController extends Controller
         abort_unless($this->accessService->canViewSpace($request->user(), $space), 403);
         $this->ensureSprintBelongsToSpace($sprint, $space);
 
-        $list = $sprint->taskList;
+        $list = $sprint->project;
         if (!$list) {
-            $list = TaskList::where('space_id', $space->id)->orderBy('position')->first();
+            $list = Project::where('space_id', $space->id)->orderBy('position')->first();
         }
 
         $sprint->load([
@@ -104,7 +104,7 @@ class SprintController extends Controller
     public function store(StoreSprintRequest $request, Workspace $workspace, Space $space)
     {
         $validated = $request->validated();
-        $list = TaskList::where('space_id', $space->id)->findOrFail((int) $validated['list_id']);
+        $list = Project::where('space_id', $space->id)->findOrFail((int) $validated['list_id']);
         abort_unless($this->accessService->canManageTaskStructure($request->user(), $list), 403);
 
         $this->sprintService->createSprint($list, $validated);
@@ -118,11 +118,11 @@ class SprintController extends Controller
     public function update(UpdateSprintRequest $request, Workspace $workspace, Space $space, Sprint $sprint)
     {
         $this->ensureSprintBelongsToSpace($sprint, $space);
-        abort_unless($this->accessService->canManageTaskStructure($request->user(), $sprint->taskList), 403);
+        abort_unless($this->accessService->canManageTaskStructure($request->user(), $sprint->project), 403);
 
         $validated = $request->validated();
         if (isset($validated['list_id'])) {
-            TaskList::where('space_id', $space->id)->findOrFail((int) $validated['list_id']);
+            Project::where('space_id', $space->id)->findOrFail((int) $validated['list_id']);
         }
 
         $this->sprintService->updateSprint($sprint, $validated);
@@ -136,7 +136,7 @@ class SprintController extends Controller
     public function start(Request $request, Workspace $workspace, Space $space, Sprint $sprint)
     {
         $this->ensureSprintBelongsToSpace($sprint, $space);
-        abort_unless($this->accessService->canManageTaskStructure($request->user(), $sprint->taskList), 403);
+        abort_unless($this->accessService->canManageTaskStructure($request->user(), $sprint->project), 403);
 
         $this->sprintService->startSprint($sprint);
 
@@ -149,7 +149,7 @@ class SprintController extends Controller
     public function complete(Request $request, Workspace $workspace, Space $space, Sprint $sprint)
     {
         $this->ensureSprintBelongsToSpace($sprint, $space);
-        abort_unless($this->accessService->canManageTaskStructure($request->user(), $sprint->taskList), 403);
+        abort_unless($this->accessService->canManageTaskStructure($request->user(), $sprint->project), 403);
 
         $this->sprintService->completeSprint($sprint);
 
@@ -162,7 +162,7 @@ class SprintController extends Controller
     public function addTask(Request $request, Workspace $workspace, Space $space, Sprint $sprint)
     {
         $this->ensureSprintBelongsToSpace($sprint, $space);
-        abort_unless($this->accessService->canManageTaskStructure($request->user(), $sprint->taskList), 403);
+        abort_unless($this->accessService->canManageTaskStructure($request->user(), $sprint->project), 403);
 
         $validated = $request->validate([
             'subtask_id' => 'required|exists:subtasks,id',
@@ -179,7 +179,7 @@ class SprintController extends Controller
     public function removeTask(Request $request, Workspace $workspace, Space $space, Sprint $sprint)
     {
         $this->ensureSprintBelongsToSpace($sprint, $space);
-        abort_unless($this->accessService->canManageTaskStructure($request->user(), $sprint->taskList), 403);
+        abort_unless($this->accessService->canManageTaskStructure($request->user(), $sprint->project), 403);
 
         $validated = $request->validate([
             'subtask_id' => 'required|exists:subtasks,id',
@@ -196,7 +196,7 @@ class SprintController extends Controller
     public function destroy(Request $request, Workspace $workspace, Space $space, Sprint $sprint)
     {
         $this->ensureSprintBelongsToSpace($sprint, $space);
-        abort_unless($this->accessService->canManageTaskStructure($request->user(), $sprint->taskList), 403);
+        abort_unless($this->accessService->canManageTaskStructure($request->user(), $sprint->project), 403);
 
         $this->sprintService->deleteSprint($sprint);
 
@@ -205,8 +205,8 @@ class SprintController extends Controller
 
     private function ensureSprintBelongsToSpace(Sprint $sprint, Space $space): void
     {
-        if ($sprint->task_list_id) {
-            $belongs = TaskList::where('id', $sprint->task_list_id)
+        if ($sprint->project_id) {
+            $belongs = Project::where('id', $sprint->project_id)
                 ->where('space_id', $space->id)
                 ->exists();
             abort_unless($belongs, 404);

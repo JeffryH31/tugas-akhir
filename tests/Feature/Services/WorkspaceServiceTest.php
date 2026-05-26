@@ -148,7 +148,7 @@ test('getStatistics returns workspace metrics', function () {
 
     expect($stats)->toHaveKeys([
         'spaces_count',
-        'lists_count',
+        'projects_count',
         'tasks_count',
         'completed_subtasks_count',
         'overdue_subtasks_count',

@@ -8,7 +8,7 @@ use App\Http\Resources\CommentResource;
 use App\Models\Comment;
 use App\Models\Space;
 use App\Models\Task;
-use App\Models\TaskList;
+use App\Models\Project;
 use App\Models\Workspace;
 use App\Services\AccessService;
 use App\Services\CommentService;
@@ -28,7 +28,7 @@ class CommentController extends Controller
     /**
      * Store a new comment.
      */
-    public function store(StoreCommentRequest $request, Workspace $workspace, Space $space, TaskList $list, Task $task): RedirectResponse
+    public function store(StoreCommentRequest $request, Workspace $workspace, Space $space, Project $list, Task $task): RedirectResponse
     {
         abort_unless($this->accessService->canComment($request->user(), $list), 403);
         try {

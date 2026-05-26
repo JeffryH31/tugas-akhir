@@ -10,7 +10,7 @@ use App\Models\Label;
 use App\Models\Space;
 use App\Models\Subtask;
 use App\Models\Task;
-use App\Models\TaskList;
+use App\Models\Project;
 use App\Models\Workspace;
 use App\Services\AccessService;
 use App\Services\SubtaskService;
@@ -28,11 +28,11 @@ class SubtaskController extends Controller
     /**
      * Store a newly created subtask.
      */
-    public function store(StoreSubtaskRequest $request, Workspace $workspace, Space $space, TaskList $list, Task $task): RedirectResponse
+    public function store(StoreSubtaskRequest $request, Workspace $workspace, Space $space, Project $list, Task $task): RedirectResponse
     {
         abort_unless((int) $space->workspace_id === (int) $workspace->id, 404);
         abort_unless((int) $list->space_id === (int) $space->id, 404);
-        abort_unless((int) $task->task_list_id === (int) $list->id, 404);
+        abort_unless((int) $task->project_id === (int) $list->id, 404);
         abort_unless($this->accessService->canManageTaskStructure($request->user(), $list), 403);
         try {
             $subtask = $this->subtaskService->create(
@@ -53,11 +53,11 @@ class SubtaskController extends Controller
     /**
      * Update the specified subtask.
      */
-    public function update(UpdateSubtaskRequest $request, Workspace $workspace, Space $space, TaskList $list, Task $task, Subtask $subtask): RedirectResponse
+    public function update(UpdateSubtaskRequest $request, Workspace $workspace, Space $space, Project $list, Task $task, Subtask $subtask): RedirectResponse
     {
         abort_unless((int) $space->workspace_id === (int) $workspace->id, 404);
         abort_unless((int) $list->space_id === (int) $space->id, 404);
-        abort_unless((int) $task->task_list_id === (int) $list->id, 404);
+        abort_unless((int) $task->project_id === (int) $list->id, 404);
         abort_unless((int) $subtask->task_id === (int) $task->id, 404);
         abort_unless($this->accessService->canEditTasks($request->user(), $list), 403);
         try {
@@ -72,11 +72,11 @@ class SubtaskController extends Controller
     /**
      * Remove the specified subtask.
      */
-    public function destroy(Request $request, Workspace $workspace, Space $space, TaskList $list, Task $task, Subtask $subtask): RedirectResponse
+    public function destroy(Request $request, Workspace $workspace, Space $space, Project $list, Task $task, Subtask $subtask): RedirectResponse
     {
         abort_unless((int) $space->workspace_id === (int) $workspace->id, 404);
         abort_unless((int) $list->space_id === (int) $space->id, 404);
-        abort_unless((int) $task->task_list_id === (int) $list->id, 404);
+        abort_unless((int) $task->project_id === (int) $list->id, 404);
         abort_unless((int) $subtask->task_id === (int) $task->id, 404);
         abort_unless($this->accessService->canManageTaskStructure($request->user(), $list), 403);
         try {
@@ -89,11 +89,11 @@ class SubtaskController extends Controller
     /**
      * Duplicate the specified subtask.
      */
-    public function duplicate(Request $request, Workspace $workspace, Space $space, TaskList $list, Task $task, Subtask $subtask): RedirectResponse
+    public function duplicate(Request $request, Workspace $workspace, Space $space, Project $list, Task $task, Subtask $subtask): RedirectResponse
     {
         abort_unless((int) $space->workspace_id === (int) $workspace->id, 404);
         abort_unless((int) $list->space_id === (int) $space->id, 404);
-        abort_unless((int) $task->task_list_id === (int) $list->id, 404);
+        abort_unless((int) $task->project_id === (int) $list->id, 404);
         abort_unless((int) $subtask->task_id === (int) $task->id, 404);
         abort_unless($this->accessService->canManageTaskStructure($request->user(), $list), 403);
         try {
@@ -106,11 +106,11 @@ class SubtaskController extends Controller
     /**
      * Mark subtask as completed.
      */
-    public function complete(Request $request, Workspace $workspace, Space $space, TaskList $list, Task $task, Subtask $subtask): RedirectResponse
+    public function complete(Request $request, Workspace $workspace, Space $space, Project $list, Task $task, Subtask $subtask): RedirectResponse
     {
         abort_unless((int) $space->workspace_id === (int) $workspace->id, 404);
         abort_unless((int) $list->space_id === (int) $space->id, 404);
-        abort_unless((int) $task->task_list_id === (int) $list->id, 404);
+        abort_unless((int) $task->project_id === (int) $list->id, 404);
         abort_unless((int) $subtask->task_id === (int) $task->id, 404);
         abort_unless($this->accessService->canEditTasks($request->user(), $list), 403);
         $validated = $request->validate([
@@ -143,11 +143,11 @@ class SubtaskController extends Controller
     /**
      * Reopen a completed subtask.
      */
-    public function reopen(Request $request, Workspace $workspace, Space $space, TaskList $list, Task $task, Subtask $subtask): RedirectResponse
+    public function reopen(Request $request, Workspace $workspace, Space $space, Project $list, Task $task, Subtask $subtask): RedirectResponse
     {
         abort_unless((int) $space->workspace_id === (int) $workspace->id, 404);
         abort_unless((int) $list->space_id === (int) $space->id, 404);
-        abort_unless((int) $task->task_list_id === (int) $list->id, 404);
+        abort_unless((int) $task->project_id === (int) $list->id, 404);
         abort_unless((int) $subtask->task_id === (int) $task->id, 404);
         abort_unless($this->accessService->canEditTasks($request->user(), $list), 403);
         $subtask->markAsIncomplete();
@@ -162,11 +162,11 @@ class SubtaskController extends Controller
     /**
      * Reorder subtasks.
      */
-    public function reorder(Request $request, Workspace $workspace, Space $space, TaskList $list, Task $task): RedirectResponse
+    public function reorder(Request $request, Workspace $workspace, Space $space, Project $list, Task $task): RedirectResponse
     {
         abort_unless((int) $space->workspace_id === (int) $workspace->id, 404);
         abort_unless((int) $list->space_id === (int) $space->id, 404);
-        abort_unless((int) $task->task_list_id === (int) $list->id, 404);
+        abort_unless((int) $task->project_id === (int) $list->id, 404);
         abort_unless($this->accessService->canManageTaskStructure($request->user(), $list), 403);
         $request->validate([
             'subtask_ids' => ['required', 'array'],
@@ -187,11 +187,11 @@ class SubtaskController extends Controller
     /**
      * Add label to subtask.
      */
-    public function addLabel(Request $request, Workspace $workspace, Space $space, TaskList $list, Task $task, Subtask $subtask): RedirectResponse
+    public function addLabel(Request $request, Workspace $workspace, Space $space, Project $list, Task $task, Subtask $subtask): RedirectResponse
     {
         abort_unless((int) $space->workspace_id === (int) $workspace->id, 404);
         abort_unless((int) $list->space_id === (int) $space->id, 404);
-        abort_unless((int) $task->task_list_id === (int) $list->id, 404);
+        abort_unless((int) $task->project_id === (int) $list->id, 404);
         abort_unless((int) $subtask->task_id === (int) $task->id, 404);
         abort_unless($this->accessService->canManageLabels($request->user(), $list), 403);
         $validated = $request->validate([
@@ -209,7 +209,7 @@ class SubtaskController extends Controller
                 $subtask->labels()->syncWithoutDetaching([$label->id]);
 
                 Activity::log(
-                    $subtask->task->taskList->space->workspace,
+                    $subtask->task->project->space->workspace,
                     $request->user(),
                     $subtask,
                     'label_added',
@@ -229,11 +229,11 @@ class SubtaskController extends Controller
     /**
      * Remove label from subtask.
      */
-    public function removeLabel(Request $request, Workspace $workspace, Space $space, TaskList $list, Task $task, Subtask $subtask): RedirectResponse
+    public function removeLabel(Request $request, Workspace $workspace, Space $space, Project $list, Task $task, Subtask $subtask): RedirectResponse
     {
         abort_unless((int) $space->workspace_id === (int) $workspace->id, 404);
         abort_unless((int) $list->space_id === (int) $space->id, 404);
-        abort_unless((int) $task->task_list_id === (int) $list->id, 404);
+        abort_unless((int) $task->project_id === (int) $list->id, 404);
         abort_unless((int) $subtask->task_id === (int) $task->id, 404);
         abort_unless($this->accessService->canManageLabels($request->user(), $list), 403);
         $validated = $request->validate([
@@ -249,7 +249,7 @@ class SubtaskController extends Controller
             $detached = $subtask->labels()->detach($label->id);
             if ($detached > 0) {
                 Activity::log(
-                    $subtask->task->taskList->space->workspace,
+                    $subtask->task->project->space->workspace,
                     $request->user(),
                     $subtask,
                     'label_removed',

@@ -42,7 +42,7 @@ class TimeTrackingService
                 'is_billable' => $data['is_billable'] ?? false,
             ]);
 
-            $workspace = $subtask->task->taskList->space->workspace;
+            $workspace = $subtask->task->project->space->workspace;
 
             Activity::log($workspace, $user, $subtask->task, 'time_logged', [
                 'name' => $subtask->name,
@@ -61,7 +61,7 @@ class TimeTrackingService
     {
         $entry = TimeEntry::startTimer($subtask, $user);
 
-        $workspace = $subtask->task->taskList->space->workspace;
+        $workspace = $subtask->task->project->space->workspace;
 
         Activity::log($workspace, $user, $subtask->task, 'timer_started', [
             'name' => $subtask->name,
@@ -77,7 +77,7 @@ class TimeTrackingService
     {
         $entry->stop();
 
-        $workspace = $entry->subtask->task->taskList->space->workspace;
+        $workspace = $entry->subtask->task->project->space->workspace;
 
         Activity::log($workspace, $user, $entry->subtask->task, 'timer_stopped', [
             'name' => $entry->subtask->name,
@@ -95,7 +95,7 @@ class TimeTrackingService
     {
         return TimeEntry::where('user_id', $user->id)
             ->where('is_running', true)
-            ->with('subtask.task.taskList.space')
+            ->with('subtask.task.project.space')
             ->first();
     }
 
@@ -121,7 +121,7 @@ class TimeTrackingService
         $entry->update($updateData);
 
         if ($oldDuration !== $entry->duration) {
-            $workspace = $entry->subtask->task->taskList->space->workspace;
+            $workspace = $entry->subtask->task->project->space->workspace;
 
             Activity::log($workspace, $user, $entry->subtask->task, 'time_updated', [
                 'name' => $entry->subtask->name,
@@ -138,7 +138,7 @@ class TimeTrackingService
      */
     public function deleteEntry(TimeEntry $entry, User $user): void
     {
-        $workspace = $entry->subtask->task->taskList->space->workspace;
+        $workspace = $entry->subtask->task->project->space->workspace;
 
         Activity::log($workspace, $user, $entry->subtask->task, 'time_deleted', [
             'name' => $entry->subtask->name,
@@ -165,7 +165,7 @@ class TimeTrackingService
     public function getEntriesForUser(User $user, ?string $startDate = null, ?string $endDate = null): Collection
     {
         $query = $user->timeEntries()
-            ->with(['subtask.task.taskList.space'])
+            ->with(['subtask.task.project.space'])
             ->orderBy('started_at', 'desc');
 
         if ($startDate) {
@@ -251,8 +251,8 @@ class TimeTrackingService
         $query = TimeEntry::query()
             ->join('subtasks', 'time_entries.subtask_id', '=', 'subtasks.id')
             ->join('tasks', 'subtasks.task_id', '=', 'tasks.id')
-            ->join('task_lists', 'tasks.task_list_id', '=', 'task_lists.id')
-            ->join('spaces', 'task_lists.space_id', '=', 'spaces.id')
+            ->join('projects', 'tasks.project_id', '=', 'projects.id')
+            ->join('spaces', 'projects.space_id', '=', 'spaces.id')
             ->where('spaces.workspace_id', $workspace->id);
 
         if ($startDate) {
@@ -266,8 +266,8 @@ class TimeTrackingService
         $byUser = DB::table('time_entries')
             ->join('subtasks', 'time_entries.subtask_id', '=', 'subtasks.id')
             ->join('tasks', 'subtasks.task_id', '=', 'tasks.id')
-            ->join('task_lists', 'tasks.task_list_id', '=', 'task_lists.id')
-            ->join('spaces', 'task_lists.space_id', '=', 'spaces.id')
+            ->join('projects', 'tasks.project_id', '=', 'projects.id')
+            ->join('spaces', 'projects.space_id', '=', 'spaces.id')
             ->join('users', 'time_entries.user_id', '=', 'users.id')
             ->where('spaces.workspace_id', $workspace->id)
             ->when($startDate, fn($q) => $q->where('time_entries.started_at', '>=', $startDate))
@@ -280,8 +280,8 @@ class TimeTrackingService
         $bySpace = DB::table('time_entries')
             ->join('subtasks', 'time_entries.subtask_id', '=', 'subtasks.id')
             ->join('tasks', 'subtasks.task_id', '=', 'tasks.id')
-            ->join('task_lists', 'tasks.task_list_id', '=', 'task_lists.id')
-            ->join('spaces', 'task_lists.space_id', '=', 'spaces.id')
+            ->join('projects', 'tasks.project_id', '=', 'projects.id')
+            ->join('spaces', 'projects.space_id', '=', 'spaces.id')
             ->where('spaces.workspace_id', $workspace->id)
             ->when($startDate, fn($q) => $q->where('time_entries.started_at', '>=', $startDate))
             ->when($endDate, fn($q) => $q->where('time_entries.started_at', '<=', $endDate))

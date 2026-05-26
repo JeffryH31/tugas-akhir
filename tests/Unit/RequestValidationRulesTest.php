@@ -9,7 +9,7 @@ use App\Http\Requests\StoreTimeEntryRequest;
 use App\Http\Requests\StoreWorkspaceRequest;
 use App\Http\Requests\StoreSpaceRequest;
 use App\Http\Requests\StoreFolderRequest;
-use App\Http\Requests\StoreTaskListRequest;
+use App\Http\Requests\StoreProjectRequest;
 
 // StoreTaskRequest
 

@@ -25,7 +25,7 @@ class SprintsSeeder extends Seeder
         ) {
             Sprint::create([
                 'space_id' => $this->demoSpace($sprint['space'])->id,
-                'task_list_id' => $this->demoTaskList($sprint['list'])->id,
+                'project_id' => $this->demoProject($sprint['list'])->id,
                 'name' => $sprint['name'],
                 'goal' => $sprint['goal'],
                 'start_date' => $sprint['start_date'],

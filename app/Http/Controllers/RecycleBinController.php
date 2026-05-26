@@ -4,7 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Models\Subtask;
 use App\Models\Task;
-use App\Models\TaskList;
+use App\Models\Project;
 use App\Models\TimeEntry;
 use App\Models\Workspace;
 use App\Services\AccessService;
@@ -23,26 +23,26 @@ class RecycleBinController extends Controller
     {
         abort_unless($this->accessService->canViewWorkspace($request->user(), $workspace), 403);
 
-        $taskLists = TaskList::onlyTrashed()
+        $taskLists = Project::onlyTrashed()
             ->whereHas('space', fn($q) => $q->where('workspace_id', $workspace->id))
             ->with('space:id,name')
             ->latest('deleted_at')
             ->get(['id', 'space_id', 'name', 'deleted_at']);
 
         $tasks = Task::onlyTrashed()
-            ->whereHas('taskList.space', fn($q) => $q->where('workspace_id', $workspace->id))
-            ->with(['taskList:id,name,space_id', 'taskList.space:id,name'])
+            ->whereHas('project.space', fn($q) => $q->where('workspace_id', $workspace->id))
+            ->with(['taskList:id,name,space_id', 'project.space:id,name'])
             ->latest('deleted_at')
-            ->get(['id', 'task_list_id', 'name', 'task_id', 'deleted_at']);
+            ->get(['id', 'project_id', 'name', 'task_id', 'deleted_at']);
 
         $subtasks = Subtask::onlyTrashed()
-            ->whereHas('task.taskList.space', fn($q) => $q->where('workspace_id', $workspace->id))
-            ->with(['task:id,name,task_list_id', 'task.taskList:id,name'])
+            ->whereHas('task.project.space', fn($q) => $q->where('workspace_id', $workspace->id))
+            ->with(['task:id,name,project_id', 'task.taskList:id,name'])
             ->latest('deleted_at')
             ->get(['id', 'task_id', 'name', 'subtask_id', 'deleted_at']);
 
         $timeEntries = TimeEntry::onlyTrashed()
-            ->whereHas('subtask.task.taskList.space', fn($q) => $q->where('workspace_id', $workspace->id))
+            ->whereHas('subtask.task.project.space', fn($q) => $q->where('workspace_id', $workspace->id))
             ->with(['user:id,name', 'subtask:id,name'])
             ->latest('deleted_at')
             ->get(['id', 'subtask_id', 'user_id', 'duration', 'deleted_at']);
@@ -50,7 +50,7 @@ class RecycleBinController extends Controller
         return Inertia::render('Workspaces/RecycleBin', [
             'workspace' => $workspace,
             'trash' => [
-                'lists' => $taskLists,
+                'projects' => $taskLists,
                 'tasks' => $tasks,
                 'subtasks' => $subtasks,
                 'time_entries' => $timeEntries,
@@ -70,24 +70,24 @@ class RecycleBinController extends Controller
 
         try {
             match ($validated['type']) {
-                'list' => TaskList::onlyTrashed()
+                'list' => Project::onlyTrashed()
                     ->where('id', $validated['id'])
                     ->whereHas('space', fn($q) => $q->where('workspace_id', $workspace->id))
                     ->firstOrFail()
                     ->restore(),
                 'task' => Task::onlyTrashed()
                     ->where('id', $validated['id'])
-                    ->whereHas('taskList.space', fn($q) => $q->where('workspace_id', $workspace->id))
+                    ->whereHas('project.space', fn($q) => $q->where('workspace_id', $workspace->id))
                     ->firstOrFail()
                     ->restore(),
                 'subtask' => Subtask::onlyTrashed()
                     ->where('id', $validated['id'])
-                    ->whereHas('task.taskList.space', fn($q) => $q->where('workspace_id', $workspace->id))
+                    ->whereHas('task.project.space', fn($q) => $q->where('workspace_id', $workspace->id))
                     ->firstOrFail()
                     ->restore(),
                 'time_entry' => TimeEntry::onlyTrashed()
                     ->where('id', $validated['id'])
-                    ->whereHas('subtask.task.taskList.space', fn($q) => $q->where('workspace_id', $workspace->id))
+                    ->whereHas('subtask.task.project.space', fn($q) => $q->where('workspace_id', $workspace->id))
                     ->firstOrFail()
                     ->restore(),
             };

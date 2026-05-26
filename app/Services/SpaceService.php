@@ -23,11 +23,11 @@ class SpaceService
     {
         return $workspace->spaces()
             ->with([
-                'folders.lists',
-                'listsWithoutFolder',
+                'folders.projects',
+                'projectsWithoutFolder',
                 'statuses',
             ])
-            ->withCount(['allFolders', 'lists'])
+            ->withCount(['allFolders', 'projects'])
             ->orderBy('position')
             ->get();
     }
@@ -43,20 +43,20 @@ class SpaceService
             'workspace',
             'folders' => fn($q) => $q->with([
                 'children',
-                'lists' => fn($lq) => $listFilter($lq)->with('status')->withCount('tasks')->orderBy('position'),
+                'projects' => fn($lq) => $listFilter($lq)->with('status')->withCount('tasks')->orderBy('position'),
             ])->orderBy('position'),
-            'listsWithoutFolder' => fn($q) => $listFilter($q)->with('status')->withCount('tasks')->orderBy('position'),
+            'projectsWithoutFolder' => fn($q) => $listFilter($q)->with('status')->withCount('tasks')->orderBy('position'),
             'statuses' => fn($q) => $q->orderBy('position'),
             'labels',
         ]);
     }
 
     /**
-     * Get products (TaskLists) grouped by status for kanban board, filtered by user access.
+     * Get products (Projects) grouped by status for kanban board, filtered by user access.
      */
     public function getProductsByStatus(Space $space, ?User $user = null): array
     {
-        $query = $space->lists();
+        $query = $space->projects();
 
         if ($user) {
             $query->accessibleBy($user);
@@ -82,7 +82,7 @@ class SpaceService
     }
 
     /**
-     * Build a closure that filters a TaskList query by user access.
+     * Build a closure that filters a Project query by user access.
      */
     private function buildListAccessFilter(?User $user, Space $space): \Closure
     {
@@ -265,9 +265,9 @@ class SpaceService
     {
         $subtaskCounts = DB::table('subtasks')
             ->join('tasks', 'subtasks.task_id', '=', 'tasks.id')
-            ->join('task_lists', 'tasks.task_list_id', '=', 'task_lists.id')
+            ->join('projects', 'tasks.project_id', '=', 'projects.id')
             ->join('statuses', 'subtasks.status_id', '=', 'statuses.id')
-            ->where('task_lists.space_id', $space->id)
+            ->where('projects.space_id', $space->id)
             ->whereNull('subtasks.deleted_at')
             ->selectRaw('
                 COUNT(*) as total,
@@ -283,7 +283,7 @@ class SpaceService
             'in_progress_tasks' => $subtaskCounts->in_progress ?? 0,
             'overdue_tasks' => $subtaskCounts->overdue ?? 0,
             'folders_count' => $space->allFolders()->count(),
-            'lists_count' => $space->lists()->count(),
+            'projects_count' => $space->projects()->count(),
             'progress' => $subtaskCounts->total > 0
                 ? round(($subtaskCounts->completed / $subtaskCounts->total) * 100, 1)
                 : 0,

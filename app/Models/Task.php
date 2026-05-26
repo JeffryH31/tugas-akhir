@@ -18,7 +18,7 @@ class Task extends Model
 
     protected $fillable = [
         'task_id',
-        'task_list_id',
+        'project_id',
         'status_id',
         'priority_level',
         'name',
@@ -54,9 +54,9 @@ class Task extends Model
 
         static::creating(function ($task) {
             if (empty($task->task_id)) {
-                $list = TaskList::with('space.workspace')->find($task->task_list_id);
+                $list = Project::with('space.workspace')->find($task->project_id);
                 $prefix = strtoupper(substr($list->space->workspace->name, 0, 3));
-                $count = Task::withTrashed()->whereHas('taskList.space', function ($q) use ($list) {
+                $count = Task::withTrashed()->whereHas('project.space', function ($q) use ($list) {
                     $q->where('workspace_id', $list->space->workspace_id);
                 })->count() + 1;
                 $task->task_id = $prefix . '-' . $count;
@@ -69,12 +69,12 @@ class Task extends Model
             }
 
             if (empty($task->position)) {
-                $task->position = static::where('task_list_id', $task->task_list_id)
+                $task->position = static::where('project_id', $task->project_id)
                     ->max('position') + 1;
             }
 
             if (empty($task->status_id)) {
-                $list = TaskList::with('space')->find($task->task_list_id);
+                $list = Project::with('space')->find($task->project_id);
                 $defaultStatus = $list->space->getDefaultStatus();
                 $task->status_id = $defaultStatus?->id;
             }
@@ -94,9 +94,9 @@ class Task extends Model
     }
 
 
-    public function taskList(): BelongsTo
+    public function project(): BelongsTo
     {
-        return $this->belongsTo(TaskList::class);
+        return $this->belongsTo(Project::class);
     }
 
     public function subtasks(): HasMany
@@ -230,11 +230,11 @@ class Task extends Model
         $this->labels()->detach($label->id);
     }
 
-    public function move(TaskList $newList, ?int $position = null): void
+    public function move(Project $newList, ?int $position = null): void
     {
         $this->update([
-            'task_list_id' => $newList->id,
-            'position' => $position ?? Task::where('task_list_id', $newList->id)
+            'project_id' => $newList->id,
+            'position' => $position ?? Task::where('project_id', $newList->id)
                 ->max('position') + 1,
         ]);
     }

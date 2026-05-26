@@ -19,7 +19,7 @@ class MemberReportService
 
         // Base query factory scoped to this workspace member
         $base = fn() => TimeEntry::where('user_id', $member->id)
-            ->whereHas('subtask.task.taskList.space', fn($q) => $q->where('workspace_id', $workspace->id));
+            ->whereHas('subtask.task.project.space', fn($q) => $q->where('workspace_id', $workspace->id));
 
         // --- Summary stats ---
         $stats = [
@@ -33,7 +33,7 @@ class MemberReportService
         // --- Running timer ---
         $runningEntry = TimeEntry::where('user_id', $member->id)
             ->where('is_running', true)
-            ->with(['subtask.task.taskList.space'])
+            ->with(['subtask.task.project.space'])
             ->first();
 
         $runningTimer = null;
@@ -44,8 +44,8 @@ class MemberReportService
                 'elapsed_minutes' => (int) $runningEntry->started_at->diffInMinutes(now()),
                 'subtask'    => $runningEntry->subtask->name,
                 'task'       => $runningEntry->subtask->task->name,
-                'list'       => $runningEntry->subtask->task->taskList->name,
-                'space'      => $runningEntry->subtask->task->taskList->space->name,
+                'list'       => $runningEntry->subtask->task->project->name,
+                'space'      => $runningEntry->subtask->task->project->space->name,
             ];
         }
 
@@ -89,9 +89,9 @@ class MemberReportService
         // --- Active subtasks (assigned, not yet completed) ---
         $activeSubtasks = Subtask::whereNull('completed_at')
             ->whereNull('deleted_at')
-            ->whereHas('task.taskList.space', fn($q) => $q->where('workspace_id', $workspace->id))
+            ->whereHas('task.project.space', fn($q) => $q->where('workspace_id', $workspace->id))
             ->whereHas('assignees', fn($q) => $q->where('users.id', $member->id))
-            ->with(['status', 'task.taskList.space', 'sprint'])
+            ->with(['status', 'task.project.space', 'sprint'])
             ->orderByDesc('updated_at')
             ->limit(30)
             ->get()
@@ -107,8 +107,8 @@ class MemberReportService
                 'time_estimate' => $s->time_estimate,
                 'time_spent'    => $s->time_spent,
                 'task'          => ['name' => $s->task->name, 'id' => $s->task->id],
-                'list'          => ['name' => $s->task->taskList->name, 'id' => $s->task->taskList->id],
-                'space'         => ['name' => $s->task->taskList->space->name, 'id' => $s->task->taskList->space->id],
+                'list'          => ['name' => $s->task->project->name, 'id' => $s->task->project->id],
+                'space'         => ['name' => $s->task->project->space->name, 'id' => $s->task->project->space->id],
                 'sprint'        => $s->sprint ? ['name' => $s->sprint->name] : null,
             ])->values()->toArray();
 
@@ -116,9 +116,9 @@ class MemberReportService
         $recentlyCompleted = Subtask::whereNotNull('completed_at')
             ->whereNull('deleted_at')
             ->where('completed_at', '>=', $now->copy()->subDays(30))
-            ->whereHas('task.taskList.space', fn($q) => $q->where('workspace_id', $workspace->id))
+            ->whereHas('task.project.space', fn($q) => $q->where('workspace_id', $workspace->id))
             ->whereHas('assignees', fn($q) => $q->where('users.id', $member->id))
-            ->with(['task.taskList.space'])
+            ->with(['task.project.space'])
             ->orderByDesc('completed_at')
             ->limit(15)
             ->get()
@@ -128,13 +128,13 @@ class MemberReportService
                 'name'         => $s->name,
                 'completed_at' => $s->completed_at->toDateTimeString(),
                 'task'         => $s->task->name,
-                'list'         => $s->task->taskList->name,
-                'space'        => $s->task->taskList->space->name,
+                'list'         => $s->task->project->name,
+                'space'        => $s->task->project->space->name,
             ])->values()->toArray();
 
         // --- Recent time entries (last 30 entries) ---
         $recentEntries = (clone $base())
-            ->with(['subtask.task.taskList.space'])
+            ->with(['subtask.task.project.space'])
             ->orderByDesc('started_at')
             ->limit(30)
             ->get()
@@ -151,8 +151,8 @@ class MemberReportService
                     'subtask_id' => $e->subtask->subtask_id,
                 ],
                 'task'  => $e->subtask->task->name,
-                'list'  => $e->subtask->task->taskList->name,
-                'space' => $e->subtask->task->taskList->space->name,
+                'list'  => $e->subtask->task->project->name,
+                'space' => $e->subtask->task->project->space->name,
             ])->values()->toArray();
 
         // --- Recent activity log (last 30 entries) ---

@@ -53,7 +53,7 @@ const addMember = () => {
     }
 
     router.post(
-        route('lists.members.add', [props.workspace.id, props.space.id, props.list.id]),
+        route('projects.members.add', [props.workspace.id, props.space.id, props.list.id]),
         {
             user_id: selectedUserId.value,
             role: selectedRole.value,
@@ -71,7 +71,7 @@ const addMember = () => {
 
 const changeMemberRole = (member, role) => {
     router.patch(
-        route('lists.members.role', [props.workspace.id, props.space.id, props.list.id]),
+        route('projects.members.role', [props.workspace.id, props.space.id, props.list.id]),
         {
             user_id: member.id,
             role,
@@ -92,7 +92,7 @@ const removeMember = async (member) => {
     if (!ok) return;
 
     router.delete(
-        route('lists.members.remove', [props.workspace.id, props.space.id, props.list.id]),
+        route('projects.members.remove', [props.workspace.id, props.space.id, props.list.id]),
         {
             data: { user_id: member.id },
             preserveScroll: true,
@@ -110,7 +110,7 @@ const removeMember = async (member) => {
         <div class="settings-page">
             <div class="settings-header">
                 <div class="d-flex align-center ga-2 mb-2">
-                    <v-btn variant="text" size="small" @click="router.visit(route('lists.show', [workspace.id, space.id, list.id]))">
+                    <v-btn variant="text" size="small" @click="router.visit(route('projects.show', [workspace.id, space.id, list.id]))">
                         <v-icon start size="16">mdi-arrow-left</v-icon>
                         Back to Product
                     </v-btn>

@@ -70,9 +70,9 @@ class Folder extends Model
         return $this->hasMany(Folder::class, 'parent_id')->orderBy('position');
     }
 
-    public function lists(): HasMany
+    public function projects(): HasMany
     {
-        return $this->hasMany(TaskList::class)->orderBy('position');
+        return $this->hasMany(Project::class)->orderBy('position');
     }
 
     public function creator(): BelongsTo
@@ -86,9 +86,9 @@ class Folder extends Model
         return $this->children()->with('allChildren');
     }
 
-    public function allLists(): HasMany
+    public function allProjects(): HasMany
     {
-        return $this->lists()->with('tasks');
+        return $this->projects()->with('tasks');
     }
 
 

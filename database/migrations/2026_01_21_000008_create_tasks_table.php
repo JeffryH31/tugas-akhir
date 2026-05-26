@@ -14,7 +14,7 @@ return new class extends Migration
         Schema::create('tasks', function (Blueprint $table) {
             $table->id();
             $table->string('task_id')->unique(); // Human-readable ID like "PROJ-123"
-            $table->foreignId('task_list_id')->constrained()->cascadeOnDelete();
+            $table->foreignId('project_id')->constrained()->cascadeOnDelete();
             $table->foreignId('status_id')->nullable()->constrained()->nullOnDelete();
             $table->tinyInteger('priority_level')->nullable();
 
@@ -33,7 +33,7 @@ return new class extends Migration
             $table->timestamps();
             $table->softDeletes();
 
-            $table->index(['task_list_id', 'status_id', 'position']);
+            $table->index(['project_id', 'status_id', 'position']);
             $table->index(['created_by']);
             $table->index('is_archived');
             $table->index('start_date');

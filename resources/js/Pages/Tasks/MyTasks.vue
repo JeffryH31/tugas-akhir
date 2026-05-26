@@ -90,7 +90,7 @@ const groupedTasks = computed(() => {
         });
     } else if (groupBy.value === 'list') {
         tasks.forEach(task => {
-            const key = task.task_list?.name || 'No List';
+            const key = task.project?.name || 'No List';
             if (!groups[key]) {
                 groups[key] = { name: key, color: '#6b7280', tasks: [] };
             }
@@ -160,10 +160,10 @@ onUnmounted(() => {
 
 // Handle task open
 const handleTaskOpen = (task) => {
-    const baseUrl = route('lists.show', [
-        task.task_list.space.workspace_id,
-        task.task_list.space_id,
-        task.task_list_id,
+    const baseUrl = route('projects.show', [
+        task.project.space.workspace_id,
+        task.project.space_id,
+        task.project_id,
     ]);
 
     const assignedSubtaskId = Array.isArray(task?.subtasks)

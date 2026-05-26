@@ -7,7 +7,7 @@ use App\Http\Requests\UpdateTimeEntryRequest;
 use App\Models\Space;
 use App\Models\Subtask;
 use App\Models\Task;
-use App\Models\TaskList;
+use App\Models\Project;
 use App\Models\TimeEntry;
 use App\Models\Workspace;
 use App\Services\AccessService;
@@ -51,8 +51,8 @@ class TimeEntryController extends Controller
             'spaces' => function ($q) use ($user) {
                 $q->whereHas('members', fn($mq) => $mq->where('user_id', $user->id));
                 $q->with([
-                    'folders.lists' => fn($lq) => $lq->accessibleBy($user),
-                    'listsWithoutFolder' => fn($lq) => $lq->accessibleBy($user),
+                    'folders.projects' => fn($lq) => $lq->accessibleBy($user),
+                    'projectsWithoutFolder' => fn($lq) => $lq->accessibleBy($user),
                 ])->orderBy('position');
             },
         ])->get();
@@ -69,7 +69,7 @@ class TimeEntryController extends Controller
                 ->whereHas('space', fn($sq) => $sq->where('workspace_id', $activeWorkspace->id))
                 ->accessibleBy($user)
             )
-            ->with(['task.taskList.space'])
+            ->with(['task.project.space'])
             ->orderByDesc('updated_at')
             ->limit(200)
             ->get()
@@ -78,10 +78,10 @@ class TimeEntryController extends Controller
                 'name'       => $s->name,
                 'task_id'    => $s->task->id,
                 'task_name'  => $s->task->name,
-                'list_id'    => $s->task->taskList->id,
-                'list_name'  => $s->task->taskList->name,
-                'space_id'   => $s->task->taskList->space->id,
-                'space_name' => $s->task->taskList->space->name,
+                'list_id'    => $s->task->project->id,
+                'list_name'  => $s->task->project->name,
+                'space_id'   => $s->task->project->space->id,
+                'space_name' => $s->task->project->space->name,
             ])
             : collect();
 
@@ -96,7 +96,7 @@ class TimeEntryController extends Controller
     /**
      * Log time entry.
      */
-    public function store(StoreTimeEntryRequest $request, Workspace $workspace, Space $space, TaskList $list, Task $task, Subtask $subtask): RedirectResponse
+    public function store(StoreTimeEntryRequest $request, Workspace $workspace, Space $space, Project $list, Task $task, Subtask $subtask): RedirectResponse
     {
         abort_unless($this->accessService->canTrackTime($request->user(), $list), 403);
         try {
@@ -118,7 +118,7 @@ class TimeEntryController extends Controller
     /**
      * Start timer.
      */
-    public function startTimer(Request $request, Workspace $workspace, Space $space, TaskList $list, Task $task)
+    public function startTimer(Request $request, Workspace $workspace, Space $space, Project $list, Task $task)
     {
         abort_unless($this->accessService->canTrackTime($request->user(), $list), 403);
         $validated = $request->validate([
@@ -158,7 +158,7 @@ class TimeEntryController extends Controller
     /**
      * Stop timer.
      */
-    public function stopTimer(Request $request, Workspace $workspace, Space $space, TaskList $list, Task $task, TimeEntry $entry)
+    public function stopTimer(Request $request, Workspace $workspace, Space $space, Project $list, Task $task, TimeEntry $entry)
     {
         abort_unless($this->accessService->canManageTimeEntry($request->user(), $entry), 403);
         try {

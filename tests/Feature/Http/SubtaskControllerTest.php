@@ -25,7 +25,7 @@ beforeEach(function () {
 
 test('owner can create a subtask', function () {
     actingAs($this->owner)
-        ->from(route('lists.show', [$this->h['workspace'], $this->h['space'], $this->h['list']]))
+        ->from(route('projects.show', [$this->h['workspace'], $this->h['space'], $this->h['list']]))
         ->post(route('tasks.subtasks.store', [$this->h['workspace'], $this->h['space'], $this->h['list'], $this->h['task']]), [
             'task_id' => $this->h['task']->id,
             'name' => 'New Subtask',
@@ -48,7 +48,7 @@ test('unauthenticated user is redirected when creating a subtask', function () {
 
 test('creating a subtask without a name returns a validation error', function () {
     actingAs($this->owner)
-        ->from(route('lists.show', [$this->h['workspace'], $this->h['space'], $this->h['list']]))
+        ->from(route('projects.show', [$this->h['workspace'], $this->h['space'], $this->h['list']]))
         ->post(route('tasks.subtasks.store', [$this->h['workspace'], $this->h['space'], $this->h['list'], $this->h['task']]), [])
         ->assertSessionHasErrors(['name']);
 });
@@ -58,7 +58,7 @@ test('creating a subtask with more than one assignee returns a validation error'
     $userB = $this->createUser();
 
     actingAs($this->owner)
-        ->from(route('lists.show', [$this->h['workspace'], $this->h['space'], $this->h['list']]))
+        ->from(route('projects.show', [$this->h['workspace'], $this->h['space'], $this->h['list']]))
         ->post(route('tasks.subtasks.store', [$this->h['workspace'], $this->h['space'], $this->h['list'], $this->h['task']]), [
             'task_id'      => $this->h['task']->id,
             'name'         => 'Multi Assignee',
@@ -71,7 +71,7 @@ test('creating a subtask with exactly one assignee succeeds', function () {
     $assignee = $this->createUser();
 
     actingAs($this->owner)
-        ->from(route('lists.show', [$this->h['workspace'], $this->h['space'], $this->h['list']]))
+        ->from(route('projects.show', [$this->h['workspace'], $this->h['space'], $this->h['list']]))
         ->post(route('tasks.subtasks.store', [$this->h['workspace'], $this->h['space'], $this->h['list'], $this->h['task']]), [
             'task_id'      => $this->h['task']->id,
             'name'         => 'Single Assignee',
@@ -85,7 +85,7 @@ test('creating a subtask with exactly one assignee succeeds', function () {
 
 test('creating subtask with due date before start date fails validation', function () {
     actingAs($this->owner)
-        ->from(route('lists.show', [$this->h['workspace'], $this->h['space'], $this->h['list']]))
+        ->from(route('projects.show', [$this->h['workspace'], $this->h['space'], $this->h['list']]))
         ->post(route('tasks.subtasks.store', [$this->h['workspace'], $this->h['space'], $this->h['list'], $this->h['task']]), [
             'task_id'    => $this->h['task']->id,
             'name'       => 'Bad Dates',
@@ -99,7 +99,7 @@ test('creating subtask with due date before start date fails validation', functi
 
 test('owner can update a subtask name and description', function () {
     actingAs($this->owner)
-        ->from(route('lists.show', [$this->h['workspace'], $this->h['space'], $this->h['list']]))
+        ->from(route('projects.show', [$this->h['workspace'], $this->h['space'], $this->h['list']]))
         ->patch(route('tasks.subtasks.update', [$this->h['workspace'], $this->h['space'], $this->h['list'], $this->h['task'], $this->subtask]), [
             'name'        => 'Renamed Subtask',
             'description' => 'Some detail',
@@ -119,7 +119,7 @@ test('developer (product member) can update a subtask', function () {
     $this->h['list']->addMember($dev, 'development_team');
 
     actingAs($dev)
-        ->from(route('lists.show', [$this->h['workspace'], $this->h['space'], $this->h['list']]))
+        ->from(route('projects.show', [$this->h['workspace'], $this->h['space'], $this->h['list']]))
         ->patch(route('tasks.subtasks.update', [$this->h['workspace'], $this->h['space'], $this->h['list'], $this->h['task'], $this->subtask]), [
             'name' => 'Dev Updated',
         ])
@@ -144,7 +144,7 @@ test('non-member gets 403 when updating a subtask', function () {
 
 test('owner can complete a subtask', function () {
     actingAs($this->owner)
-        ->from(route('lists.show', [$this->h['workspace'], $this->h['space'], $this->h['list']]))
+        ->from(route('projects.show', [$this->h['workspace'], $this->h['space'], $this->h['list']]))
         ->post(route('tasks.subtasks.complete', [$this->h['workspace'], $this->h['space'], $this->h['list'], $this->h['task'], $this->subtask]))
         ->assertRedirect();
 
@@ -156,7 +156,7 @@ test('owner can complete a subtask', function () {
 
 test('completing a subtask sets its status to the provided closed status', function () {
     actingAs($this->owner)
-        ->from(route('lists.show', [$this->h['workspace'], $this->h['space'], $this->h['list']]))
+        ->from(route('projects.show', [$this->h['workspace'], $this->h['space'], $this->h['list']]))
         ->post(route('tasks.subtasks.complete', [$this->h['workspace'], $this->h['space'], $this->h['list'], $this->h['task'], $this->subtask]), [
             'target_status_id' => $this->closedStatus->id,
         ])
@@ -174,7 +174,7 @@ test('owner can reopen a completed subtask', function () {
     $this->subtask->update(['completed_at' => now()]);
 
     actingAs($this->owner)
-        ->from(route('lists.show', [$this->h['workspace'], $this->h['space'], $this->h['list']]))
+        ->from(route('projects.show', [$this->h['workspace'], $this->h['space'], $this->h['list']]))
         ->post(route('tasks.subtasks.reopen', [$this->h['workspace'], $this->h['space'], $this->h['list'], $this->h['task'], $this->subtask]))
         ->assertRedirect();
 
@@ -208,7 +208,7 @@ test('developer cannot delete a subtask (requires canManageTaskStructure)', func
 
 test('owner can duplicate a subtask', function () {
     actingAs($this->owner)
-        ->from(route('lists.show', [$this->h['workspace'], $this->h['space'], $this->h['list']]))
+        ->from(route('projects.show', [$this->h['workspace'], $this->h['space'], $this->h['list']]))
         ->post(route('tasks.subtasks.duplicate', [$this->h['workspace'], $this->h['space'], $this->h['list'], $this->h['task'], $this->subtask]))
         ->assertRedirect();
 

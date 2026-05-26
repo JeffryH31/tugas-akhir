@@ -3,33 +3,33 @@
 namespace App\Http\Controllers;
 
 use App\Http\Requests\ReorderRequest;
-use App\Http\Requests\StoreTaskListRequest;
-use App\Http\Requests\UpdateTaskListRequest;
+use App\Http\Requests\StoreProjectRequest;
+use App\Http\Requests\UpdateProjectRequest;
 use App\Models\Folder;
 use App\Models\Space;
 use App\Models\Task;
-use App\Models\TaskList;
+use App\Models\Project;
 use App\Models\User;
 use App\Models\Workspace;
 use App\Services\AccessService;
-use App\Services\TaskListService;
+use App\Services\ProjectService;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Validation\Rule;
 use Inertia\Inertia;
 use Inertia\Response;
 
-class TaskListController extends Controller
+class ProjectController extends Controller
 {
     public function __construct(
-        protected TaskListService $taskListService,
+        protected ProjectService $projectService,
         protected AccessService $accessService,
     ) {}
 
     /**
      * Store a newly created list.
      */
-    public function store(StoreTaskListRequest $request, Workspace $workspace, Space $space): RedirectResponse
+    public function store(StoreProjectRequest $request, Workspace $workspace, Space $space): RedirectResponse
     {
         abort_unless((int) $space->workspace_id === (int) $workspace->id, 404);
         abort_unless($this->accessService->canManageWorkspace($request->user(), $workspace), 403);
@@ -39,7 +39,7 @@ class TaskListController extends Controller
             return back()->withErrors(['error' => 'Folder must belong to the same space.']);
         }
 
-        $list = $this->taskListService->create(
+        $project = $this->projectService->create(
             $request->validated(),
             $space,
             $request->user(),
@@ -47,42 +47,42 @@ class TaskListController extends Controller
         );
 
         return redirect()
-            ->route('lists.show', [$workspace, $space, $list])
+            ->route('projects.show', [$workspace, $space, $project])
             ->with('success', 'List created successfully.');
     }
 
     /**
      * Display the specified list (Board view).
      */
-    public function show(Request $request, Workspace $workspace, Space $space, TaskList $list): Response
+    public function show(Request $request, Workspace $workspace, Space $space, Project $project): Response
     {
         abort_unless((int) $space->workspace_id === (int) $workspace->id, 404);
-        abort_unless((int) $list->space_id === (int) $space->id, 404);
-        abort_unless($this->accessService->canViewProject($request->user(), $list), 403);
+        abort_unless((int) $project->space_id === (int) $space->id, 404);
+        abort_unless($this->accessService->canViewProject($request->user(), $project), 403);
         $requestedTaskId = (int) $request->integer('task_id');
         $parentTask = null;
 
         if ($requestedTaskId > 0) {
             // Accept task_id only if the task belongs to the currently opened list.
-            $parentTask = $list->tasks()->whereKey($requestedTaskId)->first();
+            $parentTask = $project->tasks()->whereKey($requestedTaskId)->first();
         }
 
-        $tasksByStatus = $this->taskListService->getWithTasksByStatus($list, $parentTask?->id);
+        $tasksByStatus = $this->projectService->getWithTasksByStatus($project, $parentTask?->id);
 
         $user = $request->user();
         $isWsAdmin = $this->accessService->canManageWorkspace($user, $workspace);
-        $listFilter = function ($q) use ($user, $isWsAdmin) {
+        $projectFilter = function ($q) use ($user, $isWsAdmin) {
             return $isWsAdmin ? $q : $q->whereHas('members', fn($mq) => $mq->where('user_id', $user->id));
         };
 
         $workspace->load([
-            'spaces' => function ($q) use ($user, $isWsAdmin, $listFilter) {
+            'spaces' => function ($q) use ($user, $isWsAdmin, $projectFilter) {
                 if (!$isWsAdmin) {
                     $q->whereHas('members', fn($mq) => $mq->where('user_id', $user->id));
                 }
                 $q->with([
-                    'folders.lists' => $listFilter,
-                    'listsWithoutFolder' => $listFilter,
+                    'folders.projects' => $projectFilter,
+                    'projectsWithoutFolder' => $projectFilter,
                 ])->orderBy('position');
             },
             'members',
@@ -97,19 +97,19 @@ class TaskListController extends Controller
             $statusesQuery->forTasks(); // Only task-applicable statuses
         }
 
-        return Inertia::render('Lists/Show', [
+        return Inertia::render('Projects/Show', [
             'workspace' => $workspace,
             'space' => $space,
-            'list' => $list,
+            'list' => $project,
             'tasksByStatus' => $tasksByStatus,
             'statuses' => $statusesQuery->get(),
-            'sprints' => $list->sprints()->withCount('subtasks')->orderBy('position')->get(),
+            'sprints' => $project->sprints()->withCount('subtasks')->orderBy('position')->get(),
             'parentTask' => $parentTask,
-            'projectMembers' => $list->members()->get(['users.id', 'users.name', 'users.email']),
-            'canManageProduct' => $this->accessService->canManageProduct($request->user(), $list),
-            'canDeleteProduct' => $this->accessService->canDeleteProduct($request->user(), $list),
-            'canManageTaskStructure' => $this->accessService->canManageTaskStructure($request->user(), $list),
-            'canOperateTasks' => $this->accessService->canOperateTasks($request->user(), $list),
+            'projectMembers' => $project->members()->get(['users.id', 'users.name', 'users.email']),
+            'canManageProduct' => $this->accessService->canManageProduct($request->user(), $project),
+            'canDeleteProduct' => $this->accessService->canDeleteProduct($request->user(), $project),
+            'canManageTaskStructure' => $this->accessService->canManageTaskStructure($request->user(), $project),
+            'canOperateTasks' => $this->accessService->canOperateTasks($request->user(), $project),
             'canManageSpace' => $this->accessService->canManageSpace($request->user(), $space),
         ]);
     }
@@ -117,16 +117,16 @@ class TaskListController extends Controller
     /**
      * Display product access settings.
      */
-    public function settings(Request $request, Workspace $workspace, Space $space, TaskList $list): Response
+    public function settings(Request $request, Workspace $workspace, Space $space, Project $project): Response
     {
         abort_unless((int) $space->workspace_id === (int) $workspace->id, 404);
-        abort_unless((int) $list->space_id === (int) $space->id, 404);
-        abort_unless($this->accessService->canViewProject($request->user(), $list), 403);
+        abort_unless((int) $project->space_id === (int) $space->id, 404);
+        abort_unless($this->accessService->canViewProject($request->user(), $project), 403);
 
         $workspace->load('members');
-        $list->load('members');
+        $project->load('members');
 
-        $listMemberIds = $list->members->pluck('id');
+        $projectMemberIds = $project->members->pluck('id');
 
         $mapUser = fn($member, ?string $role = null) => [
             'id' => $member->id,
@@ -138,38 +138,38 @@ class TaskListController extends Controller
             'role' => $role,
         ];
 
-        return Inertia::render('Lists/Settings', [
+        return Inertia::render('Projects/Settings', [
             'workspace' => $workspace,
             'space' => [
                 'id' => $space->id,
                 'name' => $space->name,
             ],
             'list' => [
-                'id' => $list->id,
-                'name' => $list->name,
-                'description' => $list->description,
-                'is_archived' => (bool) $list->is_archived,
+                'id' => $project->id,
+                'name' => $project->name,
+                'description' => $project->description,
+                'is_archived' => (bool) $project->is_archived,
             ],
-            'members' => $list->members
+            'members' => $project->members
                 ->map(fn($member) => $mapUser($member, $member->pivot?->role))
                 ->values(),
             'availableUsers' => $workspace->members
-                ->filter(fn($member) => !$listMemberIds->contains($member->id))
+                ->filter(fn($member) => !$projectMemberIds->contains($member->id))
                 ->map(fn($member) => $mapUser($member))
                 ->values(),
-            'canManageMembers' => $this->accessService->canManageProjectMembers($request->user(), $list),
+            'canManageMembers' => $this->accessService->canManageProjectMembers($request->user(), $project),
         ]);
     }
 
     /**
      * Update the specified list.
      */
-    public function update(UpdateTaskListRequest $request, Workspace $workspace, Space $space, TaskList $list): RedirectResponse
+    public function update(UpdateProjectRequest $request, Workspace $workspace, Space $space, Project $project): RedirectResponse
     {
         abort_unless((int) $space->workspace_id === (int) $workspace->id, 404);
-        abort_unless((int) $list->space_id === (int) $space->id, 404);
-        abort_unless($this->accessService->canManageProject($request->user(), $list), 403);
-        $this->taskListService->update($list, $request->validated(), $request->user());
+        abort_unless((int) $project->space_id === (int) $space->id, 404);
+        abort_unless($this->accessService->canManageProject($request->user(), $project), 403);
+        $this->projectService->update($project, $request->validated(), $request->user());
 
         return back()->with('success', 'List updated successfully.');
     }
@@ -177,12 +177,12 @@ class TaskListController extends Controller
     /**
      * Remove the specified list.
      */
-    public function destroy(Request $request, Workspace $workspace, Space $space, TaskList $list): RedirectResponse
+    public function destroy(Request $request, Workspace $workspace, Space $space, Project $project): RedirectResponse
     {
         abort_unless((int) $space->workspace_id === (int) $workspace->id, 404);
-        abort_unless((int) $list->space_id === (int) $space->id, 404);
-        abort_unless($this->accessService->canDeleteProject($request->user(), $list), 403);
-        $this->taskListService->delete($list, $request->user());
+        abort_unless((int) $project->space_id === (int) $space->id, 404);
+        abort_unless($this->accessService->canDeleteProject($request->user(), $project), 403);
+        $this->projectService->delete($project, $request->user());
 
         return redirect()
             ->route('spaces.show', [$workspace, $space])
@@ -194,11 +194,11 @@ class TaskListController extends Controller
     /**
      * Move list to folder.
      */
-    public function moveToFolder(Request $request, Workspace $workspace, Space $space, TaskList $list): RedirectResponse
+    public function moveToFolder(Request $request, Workspace $workspace, Space $space, Project $project): RedirectResponse
     {
         abort_unless((int) $space->workspace_id === (int) $workspace->id, 404);
-        abort_unless((int) $list->space_id === (int) $space->id, 404);
-        abort_unless($this->accessService->canManageProject($request->user(), $list), 403);
+        abort_unless((int) $project->space_id === (int) $space->id, 404);
+        abort_unless($this->accessService->canManageProject($request->user(), $project), 403);
         $request->validate([
             'folder_id' => [
                 'nullable',
@@ -208,7 +208,7 @@ class TaskListController extends Controller
 
         $folder = $request->folder_id ? Folder::where('space_id', $space->id)->find($request->folder_id) : null;
 
-        $this->taskListService->moveToFolder($list, $folder, $request->user());
+        $this->projectService->moveToFolder($project, $folder, $request->user());
 
         return back()->with('success', 'List moved successfully.');
     }
@@ -220,7 +220,7 @@ class TaskListController extends Controller
     {
         abort_unless((int) $space->workspace_id === (int) $workspace->id, 404);
         abort_unless($this->accessService->canManageWorkspace($request->user(), $workspace), 403);
-        $this->taskListService->reorder($space, $request->order);
+        $this->projectService->reorder($space, $request->order);
 
         return back();
     }
@@ -228,26 +228,26 @@ class TaskListController extends Controller
     /**
      * Duplicate the list.
      */
-    public function duplicate(Request $request, Workspace $workspace, Space $space, TaskList $list): RedirectResponse
+    public function duplicate(Request $request, Workspace $workspace, Space $space, Project $project): RedirectResponse
     {
         abort_unless((int) $space->workspace_id === (int) $workspace->id, 404);
-        abort_unless((int) $list->space_id === (int) $space->id, 404);
-        abort_unless($this->accessService->canManageProject($request->user(), $list), 403);
-        $newList = $this->taskListService->duplicate($list, $request->user());
+        abort_unless((int) $project->space_id === (int) $space->id, 404);
+        abort_unless($this->accessService->canManageProject($request->user(), $project), 403);
+        $newProject = $this->projectService->duplicate($project, $request->user());
 
         return redirect()
-            ->route('lists.show', [$workspace, $space, $newList])
+            ->route('projects.show', [$workspace, $space, $newProject])
             ->with('success', 'List duplicated successfully.');
     }
 
     /**
      * Change product status (for kanban board drag-and-drop).
      */
-    public function changeStatus(Request $request, Workspace $workspace, Space $space, TaskList $list): RedirectResponse
+    public function changeStatus(Request $request, Workspace $workspace, Space $space, Project $project): RedirectResponse
     {
         abort_unless((int) $space->workspace_id === (int) $workspace->id, 404);
-        abort_unless((int) $list->space_id === (int) $space->id, 404);
-        abort_unless($this->accessService->canManageProject($request->user(), $list), 403);
+        abort_unless((int) $project->space_id === (int) $space->id, 404);
+        abort_unless($this->accessService->canManageProject($request->user(), $project), 403);
         $request->validate([
             'status_id' => [
                 'required',
@@ -255,16 +255,16 @@ class TaskListController extends Controller
             ],
         ]);
 
-        $list->update(['status_id' => $request->status_id]);
+        $project->update(['status_id' => $request->status_id]);
 
         return back()->with('success', 'Product status updated.');
     }
 
-    public function addMember(Request $request, Workspace $workspace, Space $space, TaskList $list): RedirectResponse
+    public function addMember(Request $request, Workspace $workspace, Space $space, Project $project): RedirectResponse
     {
         abort_unless((int) $space->workspace_id === (int) $workspace->id, 404);
-        abort_unless((int) $list->space_id === (int) $space->id, 404);
-        abort_unless($this->accessService->canManageProjectMembers($request->user(), $list), 403);
+        abort_unless((int) $project->space_id === (int) $space->id, 404);
+        abort_unless($this->accessService->canManageProjectMembers($request->user(), $project), 403);
 
         $validated = $request->validate([
             'user_id' => ['required', 'exists:users,id'],
@@ -272,16 +272,16 @@ class TaskListController extends Controller
         ]);
 
         $user = User::findOrFail($validated['user_id']);
-        $this->taskListService->addMember($list, $user, $validated['role'], $request->user());
+        $this->projectService->addMember($project, $user, $validated['role'], $request->user());
 
         return back()->with('success', 'Project member added successfully.');
     }
 
-    public function updateMemberRole(Request $request, Workspace $workspace, Space $space, TaskList $list): RedirectResponse
+    public function updateMemberRole(Request $request, Workspace $workspace, Space $space, Project $project): RedirectResponse
     {
         abort_unless((int) $space->workspace_id === (int) $workspace->id, 404);
-        abort_unless((int) $list->space_id === (int) $space->id, 404);
-        abort_unless($this->accessService->canManageProjectMembers($request->user(), $list), 403);
+        abort_unless((int) $project->space_id === (int) $space->id, 404);
+        abort_unless($this->accessService->canManageProjectMembers($request->user(), $project), 403);
 
         $validated = $request->validate([
             'user_id' => ['required', 'exists:users,id'],
@@ -289,23 +289,23 @@ class TaskListController extends Controller
         ]);
 
         $user = User::findOrFail($validated['user_id']);
-        $this->taskListService->updateMemberRole($list, $user, $validated['role'], $request->user());
+        $this->projectService->updateMemberRole($project, $user, $validated['role'], $request->user());
 
         return back()->with('success', 'Project member role updated successfully.');
     }
 
-    public function removeMember(Request $request, Workspace $workspace, Space $space, TaskList $list): RedirectResponse
+    public function removeMember(Request $request, Workspace $workspace, Space $space, Project $project): RedirectResponse
     {
         abort_unless((int) $space->workspace_id === (int) $workspace->id, 404);
-        abort_unless((int) $list->space_id === (int) $space->id, 404);
-        abort_unless($this->accessService->canManageProjectMembers($request->user(), $list), 403);
+        abort_unless((int) $project->space_id === (int) $space->id, 404);
+        abort_unless($this->accessService->canManageProjectMembers($request->user(), $project), 403);
 
         $validated = $request->validate([
             'user_id' => ['required', 'exists:users,id'],
         ]);
 
         $user = User::findOrFail($validated['user_id']);
-        $this->taskListService->removeMember($list, $user, $request->user());
+        $this->projectService->removeMember($project, $user, $request->user());
 
         return back()->with('success', 'Project member removed successfully.');
     }

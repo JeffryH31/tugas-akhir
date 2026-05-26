@@ -81,7 +81,7 @@ const tableItems = computed(() => {
         ...e,
         subtask_name: e.subtask?.name ?? '?',
         task_name: e.subtask?.task?.name ?? '?',
-        list_name: e.subtask?.task?.task_list?.name ?? '',
+        list_name: e.subtask?.task?.project?.name ?? '',
     }));
 });
 
@@ -97,10 +97,10 @@ const goToTask = (entry) => {
     const subtask = entry?.subtask;
     const task = subtask?.task;
     if (!task) return;
-    const baseUrl = route('lists.show', [
+    const baseUrl = route('projects.show', [
         props.activeWorkspace.id,
-        task.task_list?.space_id,
-        task.task_list_id,
+        task.project?.space_id,
+        task.project_id,
     ]);
     const url = `${baseUrl}?task_id=${task.id}&open_subtask_id=${subtask.id}`;
     router.visit(url);
@@ -113,8 +113,8 @@ const stopTimer = async (entry) => {
     try {
         const url = route('tasks.timer.stop', [
             props.activeWorkspace.id,
-            task.task_list?.space_id,
-            task.task_list_id,
+            task.project?.space_id,
+            task.project_id,
             task.id,
             entry.id,
         ]);
@@ -290,8 +290,8 @@ watch(() => props.runningTimer, (newTimer) => {
                                     </div>
                                     <div class="text-xs opacity-70 truncate">
                                         {{ runningTimer.subtask?.task?.name }}
-                                        <span v-if="runningTimer.subtask?.task?.task_list">
-                                            &middot; {{ runningTimer.subtask.task.task_list.name }}
+                                        <span v-if="runningTimer.subtask?.task?.project">
+                                            &middot; {{ runningTimer.subtask.task.project.name }}
                                         </span>
                                     </div>
                                 </div>

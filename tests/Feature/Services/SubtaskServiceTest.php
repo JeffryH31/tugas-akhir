@@ -162,7 +162,7 @@ test('update priority change logs priority_changed with labels', function () {
 });
 
 test('update sprint_id rejects sprint from different product', function () {
-    $otherList = \App\Models\TaskList::create([
+    $otherList = \App\Models\Project::create([
         'space_id' => $this->hierarchy['space']->id,
         'name' => 'Other List',
         'created_by' => $this->owner->id,

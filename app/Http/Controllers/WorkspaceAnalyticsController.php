@@ -58,7 +58,7 @@ class WorkspaceAnalyticsController extends Controller
             ? $workspace->members->map(function ($m) use ($spaceMemberMap) {
                 $running = TimeEntry::where('user_id', $m->id)
                     ->where('is_running', true)
-                    ->with('subtask.task.taskList.space')
+                    ->with('subtask.task.project.space')
                     ->first();
 
                 $runningOn = null;
@@ -66,7 +66,7 @@ class WorkspaceAnalyticsController extends Controller
                     $runningOn = [
                         'subtask' => $running->subtask->name,
                         'task'    => $running->subtask->task?->name,
-                        'space'   => $running->subtask->task?->taskList?->space?->name,
+                        'space'   => $running->subtask->task?->project?->space?->name,
                     ];
                 }
 

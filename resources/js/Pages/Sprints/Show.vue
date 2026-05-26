@@ -49,7 +49,7 @@ const isSprintCompleted = computed(() => {
 
 const validBacklogSubtasks = computed(() => (props.backlogSubtasks || []).filter((s) => !!s.task));
 const validSprintSubtasks = computed(() => (props.sprint?.subtasks || []).filter((s) => !!s.task));
-const activeListId = computed(() => props.list?.id || props.sprint?.task_list_id || null);
+const activeListId = computed(() => props.list?.id || props.sprint?.project_id || null);
 
 const goToSprintIndex = () => {
     if (!activeListId.value) {
@@ -57,7 +57,7 @@ const goToSprintIndex = () => {
         return;
     }
 
-    router.visit(route('lists.show', {
+    router.visit(route('projects.show', {
         workspace: props.workspace.id,
         space: props.space.id,
         list: activeListId.value,

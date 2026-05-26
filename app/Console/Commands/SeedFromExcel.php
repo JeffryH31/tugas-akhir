@@ -9,7 +9,7 @@ use App\Models\Sprint;
 use App\Models\Status;
 use App\Models\Subtask;
 use App\Models\Task;
-use App\Models\TaskList;
+use App\Models\Project;
 use App\Models\TimeEntry;
 use App\Models\User;
 use App\Models\Workspace;
@@ -46,7 +46,7 @@ class SeedFromExcel extends Command
     /** @var array<string, Folder> keyed as "space::name" */
     private array $folders = [];
 
-    /** @var array<string, TaskList> */
+    /** @var array<string, Project> */
     private array $lists = [];
 
     /** @var array<string, Sprint> */
@@ -87,7 +87,7 @@ class SeedFromExcel extends Command
             $this->importStatuses($spreadsheet);
             $this->importLabels($spreadsheet);
             $this->importFolders($spreadsheet);
-            $this->importTaskLists($spreadsheet);
+            $this->importProjects($spreadsheet);
             $this->importSprints($spreadsheet);
             $this->importTasks($spreadsheet);
             $this->importSubtasks($spreadsheet);
@@ -307,14 +307,14 @@ class SeedFromExcel extends Command
         $this->info("    Folders: {$count}");
     }
 
-    private function importTaskLists(Spreadsheet $s): void
+    private function importProjects(Spreadsheet $s): void
     {
-        $sheet = $s->getSheetByName('TaskLists');
+        $sheet = $s->getSheetByName('Projects');
         if (! $sheet) {
             return;
         }
 
-        $this->line('  Importing TaskLists…');
+        $this->line('  Importing Projects…');
         $count = 0;
 
         foreach ($this->rows($sheet) as $row) {
@@ -328,7 +328,7 @@ class SeedFromExcel extends Command
             $status = $this->resolveStatus($statusSpace, $statusName);
             $creator = $this->resolveUser($createdBy);
 
-            $list = TaskList::updateOrCreate(
+            $list = Project::updateOrCreate(
                 ['space_id' => $space->id, 'name' => trim($name)],
                 [
                     'folder_id' => $folder?->id,
@@ -355,7 +355,7 @@ class SeedFromExcel extends Command
             $count++;
         }
 
-        $this->info("    TaskLists: {$count}");
+        $this->info("    Projects: {$count}");
     }
 
     private function importSprints(Spreadsheet $s): void
@@ -377,7 +377,7 @@ class SeedFromExcel extends Command
             }
 
             $sprint = Sprint::updateOrCreate(
-                ['task_list_id' => $list->id, 'name' => trim($name)],
+                ['project_id' => $list->id, 'name' => trim($name)],
                 [
                     'space_id' => $space->id,
                     'goal' => $goal,
@@ -416,7 +416,7 @@ class SeedFromExcel extends Command
             $creator = $this->resolveUser($createdBy);
 
             $task = Task::updateOrCreate(
-                ['task_list_id' => $list->id, 'name' => trim($name)],
+                ['project_id' => $list->id, 'name' => trim($name)],
                 [
                     'description' => $description,
                     'status_id' => $status?->id,
@@ -666,7 +666,7 @@ class SeedFromExcel extends Command
         foreach ([
             'time_entries', 'subtask_dependencies', 'subtask_assignees', 'subtask_labels',
             'subtasks', 'task_assignees', 'task_labels', 'task_dependencies', 'tasks',
-            'sprints', 'task_list_members', 'task_lists',
+            'sprints', 'project_members', 'projects',
             'folders', 'labels', 'statuses', 'spaces',
             'workspace_members', 'workspaces', 'users',
         ] as $table) {

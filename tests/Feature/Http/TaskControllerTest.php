@@ -3,7 +3,7 @@
 use App\Models\Label;
 use App\Models\Space;
 use App\Models\Task;
-use App\Models\TaskList;
+use App\Models\Project;
 use App\Models\User;
 use App\Models\Workspace;
 use Tests\Traits\CreatesWorkspaceHierarchy;
@@ -30,14 +30,14 @@ beforeEach(function () {
 
 test('owner can create a task', function () {
     actingAs($this->owner)
-        ->from(route('lists.show', [$this->h['workspace'], $this->h['space'], $this->h['list']]))
+        ->from(route('projects.show', [$this->h['workspace'], $this->h['space'], $this->h['list']]))
         ->post(route('tasks.store', [$this->h['workspace'], $this->h['space'], $this->h['list']]), [
             'name' => 'New Integration Task',
         ])
         ->assertRedirect();
 
     $this->assertDatabaseHas('tasks', [
-        'task_list_id' => $this->h['list']->id,
+        'project_id' => $this->h['list']->id,
         'name'         => 'New Integration Task',
     ]);
 });
@@ -65,14 +65,14 @@ test('non-member gets 403 when creating a task', function () {
 
 test('creating a task without a name returns a validation error', function () {
     actingAs($this->owner)
-        ->from(route('lists.show', [$this->h['workspace'], $this->h['space'], $this->h['list']]))
+        ->from(route('projects.show', [$this->h['workspace'], $this->h['space'], $this->h['list']]))
         ->post(route('tasks.store', [$this->h['workspace'], $this->h['space'], $this->h['list']]), [])
         ->assertSessionHasErrors(['name']);
 });
 
 test('creating a task with due date before start date fails validation', function () {
     actingAs($this->owner)
-        ->from(route('lists.show', [$this->h['workspace'], $this->h['space'], $this->h['list']]))
+        ->from(route('projects.show', [$this->h['workspace'], $this->h['space'], $this->h['list']]))
         ->post(route('tasks.store', [$this->h['workspace'], $this->h['space'], $this->h['list']]), [
             'name'       => 'Bad Dates',
             'start_date' => '2026-05-10',
@@ -83,7 +83,7 @@ test('creating a task with due date before start date fails validation', functio
 
 test('creating a task with equal start and due date passes validation', function () {
     actingAs($this->owner)
-        ->from(route('lists.show', [$this->h['workspace'], $this->h['space'], $this->h['list']]))
+        ->from(route('projects.show', [$this->h['workspace'], $this->h['space'], $this->h['list']]))
         ->post(route('tasks.store', [$this->h['workspace'], $this->h['space'], $this->h['list']]), [
             'name'       => 'Same Dates',
             'start_date' => '2026-05-05',
@@ -98,7 +98,7 @@ test('creating a task with equal start and due date passes validation', function
 
 test('owner can update a task', function () {
     actingAs($this->owner)
-        ->from(route('lists.show', [$this->h['workspace'], $this->h['space'], $this->h['list']]))
+        ->from(route('projects.show', [$this->h['workspace'], $this->h['space'], $this->h['list']]))
         ->patch(route('tasks.update', [$this->h['workspace'], $this->h['space'], $this->h['list'], $this->h['task']]), [
             'name'        => 'Renamed Task',
             'description' => 'Updated description',
@@ -113,13 +113,13 @@ test('owner can update a task', function () {
 });
 
 test('updating a task with a task from another list returns 404', function () {
-    $otherList = TaskList::create([
+    $otherList = Project::create([
         'space_id'   => $this->h['space']->id,
         'name'       => 'Other List',
         'created_by' => $this->owner->id,
     ]);
     $otherTask = Task::create([
-        'task_list_id' => $otherList->id,
+        'project_id' => $otherList->id,
         'name'         => 'Other Task',
         'created_by'   => $this->owner->id,
     ]);
@@ -153,7 +153,7 @@ test('non-member gets 403 when deleting a task', function () {
 
 test('owner can change task status', function () {
     actingAs($this->owner)
-        ->from(route('lists.show', [$this->h['workspace'], $this->h['space'], $this->h['list']]))
+        ->from(route('projects.show', [$this->h['workspace'], $this->h['space'], $this->h['list']]))
         ->patch(route('tasks.change-status', [$this->h['workspace'], $this->h['space'], $this->h['list'], $this->h['task']]), [
             'status_id' => $this->status->id,
         ])
@@ -167,7 +167,7 @@ test('owner can change task status', function () {
 
 test('changing task status with invalid status_id returns validation error', function () {
     actingAs($this->owner)
-        ->from(route('lists.show', [$this->h['workspace'], $this->h['space'], $this->h['list']]))
+        ->from(route('projects.show', [$this->h['workspace'], $this->h['space'], $this->h['list']]))
         ->patch(route('tasks.change-status', [$this->h['workspace'], $this->h['space'], $this->h['list'], $this->h['task']]), [
             'status_id' => 99999,
         ])
@@ -178,7 +178,7 @@ test('changing task status with invalid status_id returns validation error', fun
 
 test('owner can change task priority', function () {
     actingAs($this->owner)
-        ->from(route('lists.show', [$this->h['workspace'], $this->h['space'], $this->h['list']]))
+        ->from(route('projects.show', [$this->h['workspace'], $this->h['space'], $this->h['list']]))
         ->patch(route('tasks.change-priority', [$this->h['workspace'], $this->h['space'], $this->h['list'], $this->h['task']]), [
             'priority_level' => 2,
         ])
@@ -192,7 +192,7 @@ test('owner can change task priority', function () {
 
 test('invalid priority level returns validation error', function () {
     actingAs($this->owner)
-        ->from(route('lists.show', [$this->h['workspace'], $this->h['space'], $this->h['list']]))
+        ->from(route('projects.show', [$this->h['workspace'], $this->h['space'], $this->h['list']]))
         ->patch(route('tasks.change-priority', [$this->h['workspace'], $this->h['space'], $this->h['list'], $this->h['task']]), [
             'priority_level' => 9,
         ])
@@ -205,7 +205,7 @@ test('owner can add a label to a task', function () {
     $label = $this->createLabel($this->h['workspace']);
 
     actingAs($this->owner)
-        ->from(route('lists.show', [$this->h['workspace'], $this->h['space'], $this->h['list']]))
+        ->from(route('projects.show', [$this->h['workspace'], $this->h['space'], $this->h['list']]))
         ->post(route('tasks.labels.add', [$this->h['workspace'], $this->h['space'], $this->h['list'], $this->h['task']]), [
             'label_id' => $label->id,
         ])
@@ -222,7 +222,7 @@ test('cannot attach a label from a different workspace', function () {
     $foreignLabel   = Label::create(['workspace_id' => $otherWorkspace->id, 'name' => 'Foreign', 'color' => '#FF0000']);
 
     actingAs($this->owner)
-        ->from(route('lists.show', [$this->h['workspace'], $this->h['space'], $this->h['list']]))
+        ->from(route('projects.show', [$this->h['workspace'], $this->h['space'], $this->h['list']]))
         ->post(route('tasks.labels.add', [$this->h['workspace'], $this->h['space'], $this->h['list'], $this->h['task']]), [
             'label_id' => $foreignLabel->id,
         ])
@@ -234,7 +234,7 @@ test('owner can remove a label from a task', function () {
     $this->h['task']->labels()->attach($label->id);
 
     actingAs($this->owner)
-        ->from(route('lists.show', [$this->h['workspace'], $this->h['space'], $this->h['list']]))
+        ->from(route('projects.show', [$this->h['workspace'], $this->h['space'], $this->h['list']]))
         ->delete(route('tasks.labels.remove', [$this->h['workspace'], $this->h['space'], $this->h['list'], $this->h['task']]), [
             'label_id' => $label->id,
         ])
@@ -250,7 +250,7 @@ test('owner can remove a label from a task', function () {
 
 test('owner can duplicate a task', function () {
     actingAs($this->owner)
-        ->from(route('lists.show', [$this->h['workspace'], $this->h['space'], $this->h['list']]))
+        ->from(route('projects.show', [$this->h['workspace'], $this->h['space'], $this->h['list']]))
         ->post(route('tasks.duplicate', [$this->h['workspace'], $this->h['space'], $this->h['list'], $this->h['task']]))
         ->assertRedirect();
 

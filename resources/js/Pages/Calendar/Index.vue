@@ -459,7 +459,7 @@ const handleDrop = (date, event) => {
 
     const subtask = JSON.parse(subtaskData);
     const task = subtask.task;
-    const space = task?.task_list?.space;
+    const space = task?.project?.space;
     if (!space || !task) return;
 
     const newDueDate = date.toISOString().split("T")[0];
@@ -468,7 +468,7 @@ const handleDrop = (date, event) => {
         route("tasks.subtasks.update", [
             space.workspace_id,
             space.id,
-            task.task_list_id || task.task_list?.id,
+            task.project_id || task.project?.id,
             task.id,
             subtask.id,
         ]),
@@ -1317,8 +1317,8 @@ const formatScheduleRange = (startDate, dueDate) => {
             v-model="showTaskDetail"
             :task="selectedTask"
             :workspace="workspace"
-            :space="selectedTask?.task?.task_list?.space"
-            :list="selectedTask?.task?.task_list"
+            :space="selectedTask?.task?.project?.space"
+            :list="selectedTask?.task?.project"
             :parent-task="selectedTask?.task"
             :statuses="workspace.spaces?.flatMap((s) => s.statuses) || []"
             :members="workspace.members || []"

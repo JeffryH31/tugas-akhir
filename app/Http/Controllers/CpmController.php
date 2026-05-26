@@ -5,7 +5,7 @@ namespace App\Http\Controllers;
 use App\Models\Space;
 use App\Models\Subtask;
 use App\Models\Task;
-use App\Models\TaskList;
+use App\Models\Project;
 use App\Models\Workspace;
 use App\Services\AccessService;
 use App\Services\CpmService;
@@ -27,11 +27,11 @@ class CpmController extends Controller
         Request $request,
         Workspace $workspace,
         Space $space,
-        TaskList $list,
+        Project $list,
         Task $task
     ) {
         abort_unless($this->accessService->canViewProject($request->user(), $list), 403);
-        if ($task->task_list_id !== $list->id) {
+        if ($task->project_id !== $list->id) {
             abort(404);
         }
 
@@ -51,11 +51,11 @@ class CpmController extends Controller
         Request $request,
         Workspace $workspace,
         Space $space,
-        TaskList $list,
+        Project $list,
         Task $task
     ): Response {
         abort_unless($this->accessService->canViewProject($request->user(), $list), 403);
-        if ($task->task_list_id !== $list->id) {
+        if ($task->project_id !== $list->id) {
             abort(404);
         }
 
@@ -73,8 +73,8 @@ class CpmController extends Controller
                     $q->whereHas('members', fn($mq) => $mq->where('user_id', $user->id));
                 }
                 $q->with([
-                    'folders.lists' => $listFilter,
-                    'listsWithoutFolder' => $listFilter,
+                    'folders.projects' => $listFilter,
+                    'projectsWithoutFolder' => $listFilter,
                 ])->orderBy('position');
             },
             'members',
@@ -103,7 +103,7 @@ class CpmController extends Controller
         Request $request,
         Workspace $workspace,
         Space $space,
-        TaskList $list,
+        Project $list,
         Task $task
     ) {
         abort_unless($this->accessService->canManageDependencies($request->user(), $list), 403);
@@ -147,7 +147,7 @@ class CpmController extends Controller
         Request $request,
         Workspace $workspace,
         Space $space,
-        TaskList $list,
+        Project $list,
         Task $task
     ) {
         abort_unless($this->accessService->canManageDependencies($request->user(), $list), 403);

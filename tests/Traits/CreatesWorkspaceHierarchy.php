@@ -8,7 +8,7 @@ use App\Models\Sprint;
 use App\Models\Status;
 use App\Models\Subtask;
 use App\Models\Task;
-use App\Models\TaskList;
+use App\Models\Project;
 use App\Models\User;
 use App\Models\Workspace;
 
@@ -43,7 +43,7 @@ trait CreatesWorkspaceHierarchy
 
         $statuses = Status::where('space_id', $space->id)->orderBy('position')->get();
 
-        $list = TaskList::create([
+        $list = Project::create([
             'space_id' => $space->id,
             'name' => "List {$suffix}",
             'description' => "Test list {$suffix}",
@@ -51,7 +51,7 @@ trait CreatesWorkspaceHierarchy
         ]);
 
         $task = Task::create([
-            'task_list_id' => $list->id,
+            'project_id' => $list->id,
             'name' => "Task {$suffix}",
             'description' => "Test task {$suffix}",
             'created_by' => $owner->id,
@@ -69,11 +69,11 @@ trait CreatesWorkspaceHierarchy
         ], $overrides));
     }
 
-    protected function createSprint(TaskList $list, array $overrides = []): Sprint
+    protected function createSprint(Project $list, array $overrides = []): Sprint
     {
         return Sprint::create(array_merge([
             'space_id' => $list->space_id,
-            'task_list_id' => $list->id,
+            'project_id' => $list->id,
             'name' => 'Sprint 1',
             'start_date' => now()->startOfDay(),
             'end_date' => now()->addDays(14)->startOfDay(),

@@ -210,10 +210,10 @@ test('getStatistics returns space metrics', function () {
         'in_progress_tasks',
         'overdue_tasks',
         'folders_count',
-        'lists_count',
+        'projects_count',
         'progress',
     ]);
-    expect($stats['lists_count'])->toBeGreaterThanOrEqual(1);
+    expect($stats['projects_count'])->toBeGreaterThanOrEqual(1);
 });
 
 test('getProductsByStatus groups lists by status', function () {

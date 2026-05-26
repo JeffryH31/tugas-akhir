@@ -44,7 +44,7 @@ class CommentService
                 'attachments' => $data['attachments'] ?? null,
             ]);
 
-            Activity::log($task->taskList->space->workspace, $user, $task, 'commented', [
+            Activity::log($task->project->space->workspace, $user, $task, 'commented', [
                 'name' => $task->name,
                 'comment_preview' => substr($data['content'], 0, 100),
             ]);
@@ -69,7 +69,7 @@ class CommentService
     public function delete(Comment $comment, User $user): void
     {
         DB::transaction(function () use ($comment, $user) {
-            Activity::log($comment->task->taskList->space->workspace, $user, $comment->task, 'comment_deleted', [
+            Activity::log($comment->task->project->space->workspace, $user, $comment->task, 'comment_deleted', [
                 'name' => $comment->task->name,
             ]);
 
@@ -95,7 +95,7 @@ class CommentService
     {
         $comment->resolve();
 
-        Activity::log($comment->task->taskList->space->workspace, $user, $comment->task, 'comment_resolved', [
+        Activity::log($comment->task->project->space->workspace, $user, $comment->task, 'comment_resolved', [
             'name' => $comment->task->name,
         ]);
 

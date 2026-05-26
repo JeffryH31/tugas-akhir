@@ -34,8 +34,8 @@ const mapSubtaskToCard = (subtask) => ({
     time_spent: subtask.time_spent,
     completed_at: subtask.completed_at,
     assignees: subtask.assignees || [],
-    task_list: subtask.task?.task_list,
-    task_list_id: subtask.task?.task_list_id,
+    project: subtask.task?.project,
+    project_id: subtask.task?.project_id,
     // Extra context for navigation
     _subtask_id: subtask.id,
     _task: subtask.task,
@@ -44,11 +44,11 @@ const mapSubtaskToCard = (subtask) => ({
 const buildSubtaskDeepLink = (cardItem) => {
     const task = cardItem._task;
     if (!task) return '#';
-    const workspaceId = task.task_list?.space?.workspace_id || props.activeWorkspace?.id;
-    const spaceId = task.task_list?.space_id;
-    const listId = task.task_list_id;
+    const workspaceId = task.project?.space?.workspace_id || props.activeWorkspace?.id;
+    const spaceId = task.project?.space_id;
+    const listId = task.project_id;
 
-    const baseUrl = route('lists.show', [workspaceId, spaceId, listId]);
+    const baseUrl = route('projects.show', [workspaceId, spaceId, listId]);
     return `${baseUrl}?task_id=${task.id}&open_subtask_id=${cardItem._subtask_id}`;
 };
 
@@ -56,7 +56,7 @@ const buildSubtaskDeepLink = (cardItem) => {
 // Quick create
 const showQuickCreate = ref(false);
 const quickTaskName = ref('');
-const quickTaskList = ref(null);
+const quickProject = ref(null);
 const isProcessing = ref(false);
 
 // Get all lists from active workspace
@@ -66,8 +66,8 @@ const availableLists = computed(() => {
     const lists = [];
     props.activeWorkspace.spaces.forEach(space => {
         // Lists without folder
-        if (space.lists_without_folder) {
-            space.lists_without_folder.forEach(list => {
+        if (space.projects_without_folder) {
+            space.projects_without_folder.forEach(list => {
                 lists.push({
                     id: list.id,
                     name: list.name,
@@ -81,8 +81,8 @@ const availableLists = computed(() => {
         // Lists in folders
         if (space.folders) {
             space.folders.forEach(folder => {
-                if (folder.lists) {
-                    folder.lists.forEach(list => {
+                if (folder.projects) {
+                    folder.projects.forEach(list => {
                         lists.push({
                             id: list.id,
                             name: list.name,
@@ -105,21 +105,21 @@ const hasSpaces = computed(() => {
 });
 
 const createQuickTask = () => {
-    if (!quickTaskName.value.trim() || !quickTaskList.value || isProcessing.value) return;
+    if (!quickTaskName.value.trim() || !quickProject.value || isProcessing.value) return;
     isProcessing.value = true;
 
     router.post(
         route('tasks.store', [
-            quickTaskList.value.workspace_id,
-            quickTaskList.value.space_id,
-            quickTaskList.value.id
+            quickProject.value.workspace_id,
+            quickProject.value.space_id,
+            quickProject.value.id
         ]),
         { name: quickTaskName.value.trim() },
         {
             preserveScroll: true,
             onSuccess: () => {
                 quickTaskName.value = '';
-                quickTaskList.value = null;
+                quickProject.value = null;
                 showQuickCreate.value = false;
             },
             onFinish: () => { isProcessing.value = false; }
@@ -147,10 +147,10 @@ const goToTimerTask = () => {
     const t = subtask?.task;
     if (!t) return;
 
-    const baseUrl = route('lists.show', [
-        t.task_list.space.workspace_id,
-        t.task_list.space.id,
-        t.task_list.id,
+    const baseUrl = route('projects.show', [
+        t.project.space.workspace_id,
+        t.project.space.id,
+        t.project.id,
     ]);
 
     // Open subtask board and auto-open running subtask detail panel
@@ -297,14 +297,14 @@ const fmtRelative = (ts) => {
                                     </div>
                                 </v-alert>
 
-                                <v-select v-model="quickTaskList" :items="availableLists" item-title="display"
+                                <v-select v-model="quickProject" :items="availableLists" item-title="display"
                                     item-value="id" return-object label="Select Product" variant="outlined"
                                     density="compact" hide-details :disabled="!availableLists.length"
                                     placeholder="Choose a product..." bg-color="#1e1e1e" base-color="white"
                                     color="primary" />
                                 <div class="flex gap-2">
                                     <v-btn color="primary" size="small" @click="createQuickTask" :loading="isProcessing"
-                                        :disabled="!quickTaskName.trim() || !quickTaskList">
+                                        :disabled="!quickTaskName.trim() || !quickProject">
                                         Create Task
                                     </v-btn>
                                     <v-btn variant="text" size="small" @click="showQuickCreate = false">
@@ -410,7 +410,7 @@ const fmtRelative = (ts) => {
                                 </div>
                                 <div class="text-sm truncate">{{ runningTimer.subtask?.name }}</div>
                                 <div class="text-xs text-gray-500">{{ runningTimer.subtask?.task?.name }} &middot; {{
-                                    runningTimer.subtask?.task?.task_list?.space?.name }}</div>
+                                    runningTimer.subtask?.task?.project?.space?.name }}</div>
                             </div>
                         </v-card-text>
                     </v-card>

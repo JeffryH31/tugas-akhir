@@ -71,7 +71,7 @@ class SubtaskService
             }
 
             Activity::log(
-                $task->taskList->space->workspace,
+                $task->project->space->workspace,
                 $user,
                 $subtask,
                 'created',
@@ -127,8 +127,8 @@ class SubtaskService
                             ]);
                         }
 
-                        $subtaskListId = (int) $subtask->task->task_list_id;
-                        $sprintListId = (int) ($sprint->task_list_id ?? 0);
+                        $subtaskListId = (int) $subtask->task->project_id;
+                        $sprintListId = (int) ($sprint->project_id ?? 0);
 
                         if ($sprintListId > 0 && $sprintListId !== $subtaskListId) {
                             throw ValidationException::withMessages([
@@ -186,7 +186,7 @@ class SubtaskService
                 $addedIds   = array_diff($newAssigneeIds, $oldAssigneeIds);
                 $removedIds = array_diff($oldAssigneeIds, $newAssigneeIds);
 
-                $workspace = $subtask->task->taskList->space->workspace;
+                $workspace = $subtask->task->project->space->workspace;
                 foreach ($addedIds as $id) {
                     $assignee = User::find($id);
                     if ($assignee) {
@@ -219,7 +219,7 @@ class SubtaskService
             // Log activity with changes
             if (!empty($changes)) {
                 Activity::log(
-                    $subtask->task->taskList->space->workspace,
+                    $subtask->task->project->space->workspace,
                     $user,
                     $subtask,
                     'updated',
@@ -228,7 +228,7 @@ class SubtaskService
                 );
             }
 
-            $workspace = $subtask->task->taskList->space->workspace;
+            $workspace = $subtask->task->project->space->workspace;
 
             // Log status change with readable names
             if (isset($data['status_id']) && (int) $data['status_id'] !== (int) $oldStatusId) {
@@ -293,7 +293,7 @@ class SubtaskService
         DB::transaction(function () use ($subtask, $user) {
             $subtaskName = $subtask->name;
             $task        = $subtask->task;
-            $workspace   = $task->taskList->space->workspace;
+            $workspace   = $task->project->space->workspace;
 
             $subtask->delete();
 
@@ -350,7 +350,7 @@ class SubtaskService
 
             $task = $subtask->task;
             Activity::log(
-                $task->taskList->space->workspace,
+                $task->project->space->workspace,
                 $user,
                 $task,
                 'duplicated',

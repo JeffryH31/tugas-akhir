@@ -6,7 +6,7 @@ use App\Models\Folder;
 use App\Models\Space;
 use App\Models\Subtask;
 use App\Models\Task;
-use App\Models\TaskList;
+use App\Models\Project;
 use App\Models\Workspace;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\JsonResource;
@@ -58,19 +58,19 @@ class ActivityResource extends JsonResource
                     ? route('spaces.show', [$workspaceId, $subject->space_id])
                     : null,
 
-            $subject instanceof TaskList =>
+            $subject instanceof Project =>
                 $subject->space_id
-                    ? route('lists.show', [$workspaceId, $subject->space_id, $subject->id])
+                    ? route('projects.show', [$workspaceId, $subject->space_id, $subject->id])
                     : null,
 
             $subject instanceof Task =>
-                $subject->taskList?->space_id
-                    ? route('lists.show', [$workspaceId, $subject->taskList->space_id, $subject->task_list_id])
+                $subject->project?->space_id
+                    ? route('projects.show', [$workspaceId, $subject->project->space_id, $subject->project_id])
                     : null,
 
             $subject instanceof Subtask =>
-                $subject->task?->taskList?->space_id
-                    ? route('lists.show', [$workspaceId, $subject->task->taskList->space_id, $subject->task->task_list_id])
+                $subject->task?->project?->space_id
+                    ? route('projects.show', [$workspaceId, $subject->task->project->space_id, $subject->task->project_id])
                     : null,
 
             default => null,
@@ -86,16 +86,16 @@ class ActivityResource extends JsonResource
 
         return match (true) {
             $subject instanceof Task =>
-                $subject->taskList?->space
-                    ? $subject->taskList->space->name . ' / ' . $subject->taskList->name
+                $subject->project?->space
+                    ? $subject->project->space->name . ' / ' . $subject->project->name
                     : null,
 
             $subject instanceof Subtask =>
-                $subject->task?->taskList?->space
-                    ? $subject->task->taskList->space->name . ' / ' . $subject->task->taskList->name
+                $subject->task?->project?->space
+                    ? $subject->task->project->space->name . ' / ' . $subject->task->project->name
                     : null,
 
-            $subject instanceof TaskList =>
+            $subject instanceof Project =>
                 $subject->space?->name,
 
             $subject instanceof Folder =>

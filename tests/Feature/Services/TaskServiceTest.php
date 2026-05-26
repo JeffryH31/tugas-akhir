@@ -4,7 +4,7 @@ use App\Enums\PriorityLevel;
 use App\Models\Activity;
 use App\Models\Status;
 use App\Models\Task;
-use App\Models\TaskList;
+use App\Models\Project;
 use App\Services\TaskService;
 use Tests\Traits\CreatesWorkspaceHierarchy;
 
@@ -25,7 +25,7 @@ test('create task with name and description', function () {
     expect($task)->toBeInstanceOf(Task::class);
     expect($task->name)->toBe('New Feature');
     expect($task->description)->toBe('Build the new feature');
-    expect($task->task_list_id)->toBe($this->hierarchy['list']->id);
+    expect($task->project_id)->toBe($this->hierarchy['list']->id);
 });
 
 test('create task logs created activity', function () {
@@ -118,7 +118,7 @@ test('move task to different list', function () {
         'name' => 'Movable Task',
     ], $this->hierarchy['list'], $this->owner);
 
-    $newList = TaskList::create([
+    $newList = Project::create([
         'space_id' => $this->hierarchy['space']->id,
         'name' => 'New List',
         'created_by' => $this->owner->id,
@@ -126,7 +126,7 @@ test('move task to different list', function () {
 
     $moved = $this->service->move($task, $newList, $this->owner);
 
-    expect($moved->task_list_id)->toBe($newList->id);
+    expect($moved->project_id)->toBe($newList->id);
 
     $activity = Activity::where('action', 'moved')
         ->where('subject_type', Task::class)
@@ -270,7 +270,7 @@ test('getTaskWithRelations loads all expected relations', function () {
 
     $loaded = $this->service->getTaskWithRelations($task);
 
-    expect($loaded->relationLoaded('taskList'))->toBeTrue();
+    expect($loaded->relationLoaded('project'))->toBeTrue();
     expect($loaded->relationLoaded('status'))->toBeTrue();
     expect($loaded->relationLoaded('assignees'))->toBeTrue();
     expect($loaded->relationLoaded('labels'))->toBeTrue();
@@ -281,6 +281,6 @@ test('getTaskWithRelations loads all expected relations', function () {
     expect($loaded->relationLoaded('activities'))->toBeTrue();
     expect($loaded->relationLoaded('attachments'))->toBeTrue();
     expect($loaded->relationLoaded('creator'))->toBeTrue();
-    expect($loaded->taskList->relationLoaded('space'))->toBeTrue();
+    expect($loaded->project->relationLoaded('space'))->toBeTrue();
     expect($loaded->subtasks)->toHaveCount(1);
 });

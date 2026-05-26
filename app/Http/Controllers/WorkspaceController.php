@@ -62,7 +62,7 @@ class WorkspaceController extends Controller
                 ->orderBy('position')
                 ->with([
                     'members',
-                    'lists' => fn($listQuery) => $listQuery
+                    'projects' => fn($listQuery) => $listQuery
                         ->orderBy('position')
                         ->with(['members']),
                 ]),
@@ -73,7 +73,7 @@ class WorkspaceController extends Controller
         $availableUsers = User::whereNotIn('id', $members->pluck('id'))
             ->get();
 
-        $projectLists = $workspace->spaces
+        $projects = $workspace->spaces
             ->flatMap(function ($space) {
                 return $space->lists->map(function ($list) use ($space) {
                     return [
@@ -124,7 +124,7 @@ class WorkspaceController extends Controller
             'workspace' => $workspace,
             'members' => $members,
             'availableUsers' => $availableUsers,
-            'projectLists' => $projectLists,
+            'projects' => $projects,
             'spaces' => $spaces,
         ]);
     }
@@ -137,7 +137,7 @@ class WorkspaceController extends Controller
         abort_unless($this->accessService->canViewWorkspace($request->user(), $workspace), 403);
 
         $workspace->load([
-            'spaces' => fn($q) => $q->withCount(['lists', 'tasks'])
+            'spaces' => fn($q) => $q->withCount(['projects', 'tasks'])
                 ->orderBy('position'),
         ]);
 

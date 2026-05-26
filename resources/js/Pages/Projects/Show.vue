@@ -365,7 +365,7 @@ watch(
 
 const viewSubtasks = (task) => {
     router.visit(
-        route('lists.show', [props.workspace.id, props.space.id, props.list.id]) +
+        route('projects.show', [props.workspace.id, props.space.id, props.list.id]) +
             `?task_id=${task.id}`
     );
 };
@@ -398,7 +398,7 @@ const handleAddTask = ({ name, status_id }) => {
                 preserveScroll: true,
                 onSuccess: () => {
                     router.visit(
-                        route('lists.show', [
+                        route('projects.show', [
                             props.workspace.id,
                             props.space.id,
                             props.list.id,
@@ -462,7 +462,7 @@ const openEditList = () => {
 const updateList = () => {
     if (!editListName.value.trim()) return;
     router.patch(
-        route('lists.update', [props.workspace.id, props.space.id, props.list.id]),
+        route('projects.update', [props.workspace.id, props.space.id, props.list.id]),
         { name: editListName.value.trim() },
         {
             preserveScroll: true,
@@ -475,7 +475,7 @@ const updateList = () => {
 
 const duplicateList = () => {
     router.post(
-        route('lists.duplicate', [props.workspace.id, props.space.id, props.list.id]),
+        route('projects.duplicate', [props.workspace.id, props.space.id, props.list.id]),
         {},
         { preserveScroll: true }
     );
@@ -486,7 +486,7 @@ const showDeleteList = ref(false);
 const confirmDeleteList = () => {
     if (isDeleting.value) return;
     isDeleting.value = true;
-    router.delete(route('lists.destroy', [props.workspace.id, props.space.id, props.list.id]), {
+    router.delete(route('projects.destroy', [props.workspace.id, props.space.id, props.list.id]), {
         onSuccess: () => router.visit(route('spaces.show', [props.workspace.id, props.space.id])),
         onFinish: () => {
             isDeleting.value = false;
@@ -510,7 +510,7 @@ const openMoveToFolder = () => {
 
 const moveToFolder = () => {
     router.post(
-        route('lists.move-to-folder', [props.workspace.id, props.space.id, props.list.id]),
+        route('projects.move-to-folder', [props.workspace.id, props.space.id, props.list.id]),
         { folder_id: selectedFolder.value },
         {
             preserveScroll: true,
@@ -650,7 +650,7 @@ onMounted(() => {
                         </a>
                     </div>
                     <v-icon size="16" class="text-gray-600">mdi-chevron-right</v-icon>
-                    <a v-if="parentTask" :href="route('lists.show', [workspace.id, space.id, list.id])"
+                    <a v-if="parentTask" :href="route('projects.show', [workspace.id, space.id, list.id])"
                         class="flex items-center gap-2 text-gray-400 hover:text-white">
                         <v-icon size="16">mdi-package-variant-closed</v-icon>
                         <span>{{ list?.name }}</span>
@@ -673,7 +673,7 @@ onMounted(() => {
             <div v-if="parentTask"
                 class="bg-gradient-to-r from-blue-900/40 to-purple-900/40 border border-blue-700/30 rounded-lg p-3 mb-4 flex items-center gap-3">
                 <v-btn icon="mdi-arrow-left" variant="tonal" size="small" color="primary"
-                    @click="router.visit(route('lists.show', [workspace.id, space.id, list.id]))" />
+                    @click="router.visit(route('projects.show', [workspace.id, space.id, list.id]))" />
                 <div class="flex items-center gap-2 flex-1">
                     <v-icon size="20" color="primary">mdi-file-tree-outline</v-icon>
                     <div>
@@ -781,7 +781,7 @@ onMounted(() => {
                         <v-card color="surface">
                             <v-list density="compact">
                                 <v-list-item prepend-icon="mdi-account-lock-outline" title="Product Access"
-                                    @click="router.visit(route('lists.settings', [workspace.id, space.id, list.id]))" />
+                                    @click="router.visit(route('projects.settings', [workspace.id, space.id, list.id]))" />
                                 <v-list-item v-if="canManageProduct" prepend-icon="mdi-pencil-outline"
                                     title="Edit Product" @click="openEditList" />
                                 <v-list-item v-if="canManageSpace" prepend-icon="mdi-folder-move-outline"

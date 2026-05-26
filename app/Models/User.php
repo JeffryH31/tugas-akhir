@@ -93,9 +93,9 @@ class User extends Authenticatable
             ->withTimestamps();
     }
 
-    public function projectLists(): BelongsToMany
+    public function projects(): BelongsToMany
     {
-        return $this->belongsToMany(TaskList::class, 'task_list_members')
+        return $this->belongsToMany(Project::class, 'project_members')
             ->withPivot('role')
             ->withTimestamps();
     }
@@ -153,7 +153,7 @@ class User extends Authenticatable
     public function getMyTasks()
     {
         return $this->assignedTasks()
-            ->with(['taskList.space', 'status'])
+            ->with(['project.space', 'status'])
             ->orderBy('position')
             ->get();
     }

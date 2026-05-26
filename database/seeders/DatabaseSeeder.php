@@ -8,7 +8,7 @@ use App\Models\Folder;
 use App\Models\Sprint;
 use App\Models\Subtask;
 use App\Models\Task;
-use App\Models\TaskList;
+use App\Models\Project;
 use App\Models\TimeEntry;
 use App\Models\View;
 use Illuminate\Database\Seeder;
@@ -24,7 +24,7 @@ class DatabaseSeeder extends Seeder
             SpacesSeeder::class,
             StatusesSeeder::class,
             FoldersSeeder::class,
-            TaskListsSeeder::class,
+            ProjectsSeeder::class,
             TasksSeeder::class,
             SubtasksSeeder::class,
             TimeEntriesSeeder::class,
@@ -41,7 +41,7 @@ class DatabaseSeeder extends Seeder
         $this->command->info('Spaces:       3 (Manufacturing, B2B, B2C)');
         $this->command->info('Sprints:      ' . Sprint::count());
         $this->command->info('Folders:      ' . Folder::count());
-        $this->command->info('Lists:        ' . TaskList::count());
+        $this->command->info('Lists:        ' . Project::count());
         $this->command->info('Tasks:        ' . Task::count());
         $this->command->info('Subtasks:     ' . Subtask::count());
         $this->command->info('Time Entries: ' . TimeEntry::count());

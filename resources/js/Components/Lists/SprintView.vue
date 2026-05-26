@@ -222,7 +222,7 @@ const openCreateSprintDialog = () => {
 const editSprint = (sprint) => {
     editingSprintId.value = sprint.id;
     sprintForm.value = {
-        list_id: sprint.task_list_id || props.list?.id || null,
+        list_id: sprint.project_id || props.list?.id || null,
         name: sprint.name || '',
         goal: sprint.goal || '',
         start_date: normalizeDateInput(sprint.start_date),

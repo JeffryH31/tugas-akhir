@@ -18,7 +18,7 @@ beforeEach(function () {
 
 test('owner can log time to a subtask', function () {
     actingAs($this->owner)
-        ->from(route('lists.show', [$this->h['workspace'], $this->h['space'], $this->h['list']]))
+        ->from(route('projects.show', [$this->h['workspace'], $this->h['space'], $this->h['list']]))
         ->post(
             route('tasks.subtasks.time-entries.store', [
                 $this->h['workspace'],
@@ -54,7 +54,7 @@ test('unauthenticated user cannot log time', function () {
 
 test('logging time with duration 0 returns a validation error', function () {
     actingAs($this->owner)
-        ->from(route('lists.show', [$this->h['workspace'], $this->h['space'], $this->h['list']]))
+        ->from(route('projects.show', [$this->h['workspace'], $this->h['space'], $this->h['list']]))
         ->post(
             route('tasks.subtasks.time-entries.store', [
                 $this->h['workspace'],
@@ -70,7 +70,7 @@ test('logging time with duration 0 returns a validation error', function () {
 
 test('logging time over 1440 minutes (24 h) returns a validation error', function () {
     actingAs($this->owner)
-        ->from(route('lists.show', [$this->h['workspace'], $this->h['space'], $this->h['list']]))
+        ->from(route('projects.show', [$this->h['workspace'], $this->h['space'], $this->h['list']]))
         ->post(
             route('tasks.subtasks.time-entries.store', [
                 $this->h['workspace'],
@@ -107,7 +107,7 @@ test('non-member gets 403 when logging time', function () {
 
 test('owner can start a timer', function () {
     actingAs($this->owner)
-        ->from(route('lists.show', [$this->h['workspace'], $this->h['space'], $this->h['list']]))
+        ->from(route('projects.show', [$this->h['workspace'], $this->h['space'], $this->h['list']]))
         ->post(
             route('tasks.timer.start', [
                 $this->h['workspace'],
@@ -172,7 +172,7 @@ test('owner can stop their own running timer', function () {
     ]);
 
     actingAs($this->owner)
-        ->from(route('lists.show', [$this->h['workspace'], $this->h['space'], $this->h['list']]))
+        ->from(route('projects.show', [$this->h['workspace'], $this->h['space'], $this->h['list']]))
         ->post(route('tasks.timer.stop', [
             $this->h['workspace'],
             $this->h['space'],

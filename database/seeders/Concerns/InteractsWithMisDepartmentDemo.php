@@ -9,7 +9,7 @@ use App\Models\Sprint;
 use App\Models\Status;
 use App\Models\Subtask;
 use App\Models\Task;
-use App\Models\TaskList;
+use App\Models\Project;
 use App\Models\User;
 use App\Models\Workspace;
 
@@ -50,9 +50,9 @@ trait InteractsWithMisDepartmentDemo
         return Folder::where('name', $name)->firstOrFail();
     }
 
-    protected function demoTaskList(string $name): TaskList
+    protected function demoProject(string $name): Project
     {
-        return TaskList::where('name', $name)->firstOrFail();
+        return Project::where('name', $name)->firstOrFail();
     }
 
     protected function demoTask(string $name): Task

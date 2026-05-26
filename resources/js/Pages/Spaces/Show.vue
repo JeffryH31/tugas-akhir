@@ -46,7 +46,7 @@ const createList = () => {
     if (!newListName.value.trim()) return;
 
     router.post(
-        route('lists.store', [props.workspace.id, props.space.id]),
+        route('projects.store', [props.workspace.id, props.space.id]),
         {
             name: newListName.value.trim(),
             folder_id: selectedFolderId.value,
@@ -176,7 +176,7 @@ const moveListToFolder = () => {
     if (!movingList.value) return;
 
     router.post(
-        route('lists.move-to-folder', [props.workspace.id, props.space.id, movingList.value.id]),
+        route('projects.move-to-folder', [props.workspace.id, props.space.id, movingList.value.id]),
         { folder_id: targetFolderId.value },
         {
             preserveScroll: true,
@@ -203,7 +203,7 @@ const updateList = () => {
     if (!editListName.value.trim() || !editingList.value) return;
 
     router.patch(
-        route('lists.update', [props.workspace.id, props.space.id, editingList.value.id]),
+        route('projects.update', [props.workspace.id, props.space.id, editingList.value.id]),
         { name: editListName.value.trim() },
         {
             preserveScroll: true,
@@ -228,7 +228,7 @@ const confirmDeleteList = () => {
     if (!deletingList.value) return;
 
     router.delete(
-        route('lists.destroy', [props.workspace.id, props.space.id, deletingList.value.id]),
+        route('projects.destroy', [props.workspace.id, props.space.id, deletingList.value.id]),
         {
             preserveScroll: true,
             onSuccess: () => {
@@ -242,7 +242,7 @@ const confirmDeleteList = () => {
 // Duplicate list
 const duplicateList = (list) => {
     router.post(
-        route('lists.duplicate', [props.workspace.id, props.space.id, list.id]),
+        route('projects.duplicate', [props.workspace.id, props.space.id, list.id]),
         {},
         { preserveScroll: true }
     );
@@ -293,7 +293,7 @@ const handleDrop = (event, targetFolderId = null) => {
     }
 
     router.post(
-        route('lists.move-to-folder', [props.workspace.id, props.space.id, list.id]),
+        route('projects.move-to-folder', [props.workspace.id, props.space.id, list.id]),
         { folder_id: targetFolderId },
         {
             preserveScroll: true,
@@ -328,14 +328,14 @@ const filteredFolders = computed(() => {
     if (!q) return props.space?.folders || [];
     return (props.space?.folders || []).map(folder => ({
         ...folder,
-        lists: (folder.lists || []).filter(l => l.name.toLowerCase().includes(q)),
-    })).filter(folder => folder.name.toLowerCase().includes(q) || folder.lists.length > 0);
+        lists: (folder.projects || []).filter(l => l.name.toLowerCase().includes(q)),
+    })).filter(folder => folder.name.toLowerCase().includes(q) || folder.projects.length > 0);
 });
 
 const filteredListsWithoutFolder = computed(() => {
     const q = hierarchySearch.value.trim().toLowerCase();
-    if (!q) return props.space?.lists_without_folder || [];
-    return (props.space?.lists_without_folder || []).filter(l => l.name.toLowerCase().includes(q));
+    if (!q) return props.space?.projects_without_folder || [];
+    return (props.space?.projects_without_folder || []).filter(l => l.name.toLowerCase().includes(q));
 });
 
 // Product kanban board state
@@ -396,7 +396,7 @@ const boardDrop = (event, toStatusId) => {
     toCol.push(moved);
 
     router.patch(
-        route('lists.change-status', [props.workspace.id, props.space.id, dragged.element.id]),
+        route('projects.change-status', [props.workspace.id, props.space.id, dragged.element.id]),
         { status_id: toStatusId },
         { preserveScroll: true }
     );
@@ -561,7 +561,7 @@ const boardDrop = (event, toStatusId) => {
                                     :class="{ 'product-card--dragging': boardDraggedItem?.element?.id === element.id }"
                                     :draggable="canManageSpace" @dragstart="boardDragStart($event, element, status.id)"
                                     @dragend="boardDraggedItem = null"
-                                    @click="router.visit(route('lists.show', [workspace.id, space.id, element.id]))">
+                                    @click="router.visit(route('projects.show', [workspace.id, space.id, element.id]))">
                                     <div class="product-card__status-bar" :style="{ backgroundColor: status.color }" />
                                     <div class="product-card__body">
                                         <div class="product-card__name">{{ element.name }}</div>
@@ -599,7 +599,7 @@ const boardDrop = (event, toStatusId) => {
                             </v-icon>
                             <v-icon size="20" color="warning">mdi-folder</v-icon>
                             <span class="font-medium">{{ folder.name }}</span>
-                            <span class="text-gray-500 text-sm">({{ folder.lists?.length || 0 }} products)</span>
+                            <span class="text-gray-500 text-sm">({{ folder.projects?.length || 0 }} products)</span>
                         </div>
                         <div class="folder-actions">
                             <v-btn v-if="canManageSpace" icon variant="text" size="x-small"
@@ -618,13 +618,13 @@ const boardDrop = (event, toStatusId) => {
                     </div>
 
                     <div v-if="!collapsedFolders[folder.id] || hierarchySearch.trim()" class="folder-lists" :class="{
-                        'folder-lists--empty': !(folder.lists?.length),
+                        'folder-lists--empty': !(folder.projects?.length),
                         'drag-over': draggedList !== null && dragOverFolder === folder.id
                     }" @dragover="handleDragOver($event, folder.id)" @dragleave="handleDragLeave($event, folder.id)"
                         @drop="handleDrop($event, folder.id)">
-                        <div v-for="list in folder.lists" :key="list.id" class="list-item" :draggable="canManageSpace"
+                        <div v-for="list in folder.projects" :key="list.id" class="list-item" :draggable="canManageSpace"
                             @dragstart="handleDragStart($event, list)"
-                            @click="router.visit(route('lists.show', [workspace.id, space.id, list.id]))">
+                            @click="router.visit(route('projects.show', [workspace.id, space.id, list.id]))">
                             <div class="flex items-center gap-3">
                                 <v-icon v-if="canManageSpace" size="18" class="drag-handle cursor-move"
                                     @click.stop>mdi-drag</v-icon>
@@ -650,13 +650,13 @@ const boardDrop = (event, toStatusId) => {
                                     <v-icon size="16">mdi-content-copy</v-icon>
                                 </v-btn>
                                 <v-btn icon variant="text" size="x-small"
-                                    @click.stop="router.visit(route('lists.settings', [workspace.id, space.id, list.id]))">
+                                    @click.stop="router.visit(route('projects.settings', [workspace.id, space.id, list.id]))">
                                     <v-icon size="16">mdi-account-cog-outline</v-icon>
                                 </v-btn>
                             </div>
                         </div>
 
-                        <div v-if="!folder.lists?.length" class="folder-drop-hint">
+                        <div v-if="!folder.projects?.length" class="folder-drop-hint">
                             <span>Empty folder</span>
                         </div>
                     </div>
@@ -665,13 +665,13 @@ const boardDrop = (event, toStatusId) => {
                 <!-- Lists without folder -->
                 <div v-if="filteredListsWithoutFolder.length || filteredFolders.length" class="root-lists-zone" :class="{
                     'drag-over': draggedList !== null && dragOverFolder === null,
-                    'root-lists-zone--empty': !space?.lists_without_folder?.length
+                    'root-lists-zone--empty': !space?.projects_without_folder?.length
                 }" @dragover="handleDragOver($event, null)" @dragleave="handleDragLeave($event, null)"
                     @drop="handleDrop($event, null)">
                     <div v-for="list in filteredListsWithoutFolder" :key="list.id"
                         class="list-item list-item--standalone" :draggable="canManageSpace"
                         @dragstart="handleDragStart($event, list)"
-                        @click="router.visit(route('lists.show', [workspace.id, space.id, list.id]))">
+                        @click="router.visit(route('projects.show', [workspace.id, space.id, list.id]))">
                         <div class="flex items-center gap-3">
                             <v-icon v-if="canManageSpace" size="18" class="drag-handle cursor-move"
                                 @click.stop>mdi-drag</v-icon>
@@ -697,7 +697,7 @@ const boardDrop = (event, toStatusId) => {
                                 <v-icon size="16">mdi-content-copy</v-icon>
                             </v-btn>
                             <v-btn icon variant="text" size="x-small"
-                                @click.stop="router.visit(route('lists.settings', [workspace.id, space.id, list.id]))">
+                                @click.stop="router.visit(route('projects.settings', [workspace.id, space.id, list.id]))">
                                 <v-icon size="16">mdi-account-cog-outline</v-icon>
                             </v-btn>
                             <v-icon size="16" color="grey">mdi-chevron-right</v-icon>

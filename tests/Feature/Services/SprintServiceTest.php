@@ -2,7 +2,7 @@
 
 use App\Models\Sprint;
 use App\Models\Subtask;
-use App\Models\TaskList;
+use App\Models\Project;
 use App\Services\SprintService;
 use Illuminate\Validation\ValidationException;
 use Tests\Traits\CreatesWorkspaceHierarchy;
@@ -69,14 +69,14 @@ test('addSubtaskToSprint sets sprint_id on subtask', function () {
 });
 
 test('addSubtaskToSprint rejects subtask from different product', function () {
-    $otherList = TaskList::create([
+    $otherList = Project::create([
         'space_id' => $this->hierarchy['space']->id,
         'name' => 'Other List',
         'created_by' => $this->owner->id,
     ]);
 
     $otherTask = \App\Models\Task::create([
-        'task_list_id' => $otherList->id,
+        'project_id' => $otherList->id,
         'name' => 'Other Task',
         'created_by' => $this->owner->id,
     ]);

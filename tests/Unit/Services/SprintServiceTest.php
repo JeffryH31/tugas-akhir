@@ -25,7 +25,7 @@ test('createSprint creates sprint for list', function () {
 
     expect($sprint)->toBeInstanceOf(Sprint::class);
     expect($sprint->name)->toBe('Sprint 1');
-    expect($sprint->task_list_id)->toBe($this->hierarchy['list']->id);
+    expect($sprint->project_id)->toBe($this->hierarchy['list']->id);
     expect($sprint->is_active)->toBeFalse();
 });
 

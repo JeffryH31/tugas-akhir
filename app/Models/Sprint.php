@@ -11,7 +11,7 @@ class Sprint extends Model
 
     protected $fillable = [
         'space_id',
-        'task_list_id',
+        'project_id',
         'name',
         'goal',
         'start_date',
@@ -37,9 +37,9 @@ class Sprint extends Model
     /**
      * Get the product/list that owns the sprint.
      */
-    public function taskList()
+    public function project()
     {
-        return $this->belongsTo(TaskList::class);
+        return $this->belongsTo(Project::class);
     }
 
     /**

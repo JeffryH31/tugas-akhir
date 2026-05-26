@@ -3,7 +3,7 @@
 use App\Enums\PriorityLevel;
 use App\Models\Activity;
 use App\Models\Task;
-use App\Models\TaskList;
+use App\Models\Project;
 use App\Services\TaskService;
 use Tests\Traits\CreatesWorkspaceHierarchy;
 
@@ -26,7 +26,7 @@ test('create task with name', function () {
 
     expect($task)->toBeInstanceOf(Task::class);
     expect($task->name)->toBe('New Feature');
-    expect($task->task_list_id)->toBe($this->hierarchy['list']->id);
+    expect($task->project_id)->toBe($this->hierarchy['list']->id);
     expect($task->created_by)->toBe($this->owner->id);
 });
 
@@ -191,7 +191,7 @@ test('assign and unassign user', function () {
 test('move task to different list', function () {
     $task = $this->service->create(['name' => 'Movable'], $this->hierarchy['list'], $this->owner);
 
-    $newList = TaskList::create([
+    $newList = Project::create([
         'space_id' => $this->hierarchy['space']->id,
         'name' => 'New List',
         'created_by' => $this->owner->id,
@@ -199,7 +199,7 @@ test('move task to different list', function () {
 
     $moved = $this->service->move($task, $newList, $this->owner);
 
-    expect($moved->task_list_id)->toBe($newList->id);
+    expect($moved->project_id)->toBe($newList->id);
 });
 
 // reorder
@@ -236,7 +236,7 @@ test('duplicate task creates copy with "(Copy)" suffix', function () {
     $copy = $this->service->duplicate($task, $this->owner);
 
     expect($copy->name)->toBe('Original (Copy)');
-    expect($copy->task_list_id)->toBe($task->task_list_id);
+    expect($copy->project_id)->toBe($task->project_id);
 });
 
 // getMyTasks

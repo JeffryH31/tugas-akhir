@@ -4,7 +4,7 @@ use App\Models\Folder;
 use App\Models\Label;
 use App\Models\Space;
 use App\Models\Task;
-use App\Models\TaskList;
+use App\Models\Project;
 use App\Models\User;
 use App\Models\Workspace;
 use function Pest\Laravel\actingAs;
@@ -24,7 +24,7 @@ function createWorkspaceHierarchy(User $owner, string $suffix = 'A'): array
         'created_by' => $owner->id,
     ]);
 
-    $list = TaskList::create([
+    $list = Project::create([
         'space_id' => $space->id,
         'name' => "List {$suffix}",
         'description' => "List {$suffix} description",
@@ -32,7 +32,7 @@ function createWorkspaceHierarchy(User $owner, string $suffix = 'A'): array
     ]);
 
     $task = Task::create([
-        'task_list_id' => $list->id,
+        'project_id' => $list->id,
         'name' => "Task {$suffix}",
         'description' => "Task {$suffix} description",
         'created_by' => $owner->id,
@@ -124,7 +124,7 @@ test('scoped bindings reject task outside list context', function () {
     $owner = User::factory()->create();
     $hierarchy = createWorkspaceHierarchy($owner, 'Scope');
 
-    $otherList = TaskList::create([
+    $otherList = Project::create([
         'space_id' => $hierarchy['space']->id,
         'name' => 'Other List',
         'description' => 'Other List description',
@@ -132,7 +132,7 @@ test('scoped bindings reject task outside list context', function () {
     ]);
 
     $otherTask = Task::create([
-        'task_list_id' => $otherList->id,
+        'project_id' => $otherList->id,
         'name' => 'Task In Other List',
         'description' => 'Task In Other List description',
         'created_by' => $owner->id,
