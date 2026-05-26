@@ -2,10 +2,11 @@
 import { ref, computed } from 'vue';
 import { Head, router } from '@inertiajs/vue3';
 import MainLayout from '@/Layouts/MainLayout.vue';
+import { formatMinutes as formatDuration } from '@/utils/duration';
 
 const props = defineProps({
-    workspace: Object,
-    report: Object,
+    workspace: { type: Object, default: null },
+    report: { type: Object, default: null },
 });
 
 const memberSearch = ref('');
@@ -20,13 +21,6 @@ const sortOptions = [
     { title: 'Name Z-A', value: 'name_desc' },
 ];
 
-// Format duration (input is in minutes)
-const formatDuration = (minutes) => {
-    if (!minutes) return '0h 0m';
-    const hours = Math.floor(minutes / 60);
-    const mins = Math.round(minutes % 60);
-    return `${hours}h ${mins}m`;
-};
 
 // Calculate percentage for bar chart
 const maxUserMinutes = computed(() => {

@@ -1,4 +1,4 @@
-﻿<?php
+<?php
 
 use App\Models\TimeEntry;
 use Tests\Traits\CreatesWorkspaceHierarchy;

@@ -438,22 +438,38 @@ class TaskListService
                 ->max('position') + 1;
             $newList->save();
 
-            foreach ($list->tasks as $task) {
-                $newTask = $task->replicate();
+            // Only copy the creator as project_owner, not all members
+            $newList->addMember($user, 'project_owner');
+
+            foreach ($list->tasks()->with(['labels', 'subtasks.labels'])->get() as $task) {
+                $newTask = $task->replicate(['task_id']);
                 $newTask->task_list_id = $newList->id;
-                $newTask->task_id = null; // Will be auto-generated
+                // Reset operational fields — this is a template copy, not a continuation
+                $newTask->start_date = null;
+                $newTask->due_date = null;
                 $newTask->save();
 
-                $newTask->assignees()->sync($task->assignees->pluck('id'));
+                // Copy labels (structural), but NOT assignees (operational)
                 $newTask->labels()->sync($task->labels->pluck('id'));
 
                 foreach ($task->subtasks as $subtask) {
-                    $newSubtask = $subtask->replicate();
+                    $newSubtask = $subtask->replicate([
+                        'subtask_id',
+                        'completed_at',
+                        'completed_by',
+                        'time_spent',
+                        'sprint_id',
+                    ]);
                     $newSubtask->task_id = $newTask->id;
-                    $newSubtask->subtask_id = null; // Will be auto-generated
+                    // Reset operational fields
+                    $newSubtask->start_date = null;
+                    $newSubtask->due_date = null;
+                    $newSubtask->baseline_start_date = null;
+                    $newSubtask->baseline_due_date = null;
+                    $newSubtask->progress = 0;
                     $newSubtask->save();
 
-                    $newSubtask->assignees()->sync($subtask->assignees->pluck('id'));
+                    // Copy labels (structural), but NOT assignees (operational)
                     $newSubtask->labels()->sync($subtask->labels->pluck('id'));
                 }
             }

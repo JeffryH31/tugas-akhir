@@ -1,4 +1,4 @@
-﻿<?php
+<?php
 
 use App\Models\Activity;
 use App\Models\Subtask;
@@ -246,7 +246,7 @@ test('duplicate subtask creates copy with "(Copy)" suffix', function () {
     expect($copy->task_id)->toBe($subtask->task_id);
 });
 
-test('duplicate subtask copies assignees and labels', function () {
+test('duplicate subtask copies labels but NOT assignees', function () {
     $subtask = $this->createSubtask($this->hierarchy['task'], ['name' => 'With Relations']);
     $assignee = $this->createUser();
     $label = $this->createLabel($this->hierarchy['workspace']);
@@ -258,8 +258,10 @@ test('duplicate subtask copies assignees and labels', function () {
     $copy = $this->service->duplicate($subtask, $this->owner);
     $copy = $copy->fresh(['assignees', 'labels']);
 
-    expect($copy->assignees)->toHaveCount(1);
+    // Labels are structural — should be copied
     expect($copy->labels)->toHaveCount(1);
+    // Assignees are operational — should NOT be copied
+    expect($copy->assignees)->toHaveCount(0);
 });
 
 test('duplicate subtask does not copy completed_at or time_spent', function () {
@@ -274,6 +276,21 @@ test('duplicate subtask does not copy completed_at or time_spent', function () {
 
     expect($copy->completed_at)->toBeNull();
     expect($copy->time_spent)->toBeNull();
+});
+
+test('duplicate subtask does not copy dates or sprint', function () {
+    $subtask = $this->createSubtask($this->hierarchy['task'], [
+        'name' => 'With Dates',
+        'start_date' => now()->subDays(5),
+        'due_date' => now()->addDays(5),
+    ]);
+    $subtask = $subtask->fresh(['assignees', 'labels']);
+
+    $copy = $this->service->duplicate($subtask, $this->owner);
+
+    expect($copy->start_date)->toBeNull();
+    expect($copy->due_date)->toBeNull();
+    expect($copy->sprint_id)->toBeNull();
 });
 
 // normalizeDateForComparison (pure logic, no DB)

@@ -2,11 +2,12 @@
 import { computed, ref } from 'vue';
 import { router } from '@inertiajs/vue3';
 import MainLayout from '@/Layouts/MainLayout.vue';
+import { formatDateLong as formatDate } from '@/utils/date';
 
 const props = defineProps({
-    workspace: Object,
-    trash: Object,
-    canRestore: Boolean,
+    workspace: { type: Object, default: null },
+    trash: { type: Object, default: null },
+    canRestore: { type: Boolean, default: false },
 });
 
 const activeTab = ref('tasks');
@@ -40,12 +41,6 @@ const restoreItem = (type, id) => {
 
 const isRestoring = (type, id) => restoringIds.value.has(`${type}-${id}`);
 
-const formatDate = (dateString) => {
-    if (!dateString) return '-';
-    return new Date(dateString).toLocaleDateString('en-GB', {
-        day: '2-digit', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit',
-    });
-};
 
 const getItemName = (item, type) => {
     if (type === 'time_entries') {

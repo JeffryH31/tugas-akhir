@@ -1,4 +1,4 @@
-﻿<?php
+<?php
 
 use Tests\Traits\CreatesWorkspaceHierarchy;
 use function Pest\Laravel\actingAs;

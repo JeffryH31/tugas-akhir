@@ -4,6 +4,12 @@ import { router } from '@inertiajs/vue3';
 import draggable from 'vuedraggable';
 import TaskCard from './TaskCard.vue';
 import ColorPicker from '@/Components/ColorPicker.vue';
+import { useSnackbar } from '@/composables/useSnackbar';
+import { useConfirmDialog } from '@/composables/useConfirmDialog';
+import { normalizeHexColor } from '@/utils/color';
+
+const { showSnackbar } = useSnackbar();
+const { confirm: confirmDialog } = useConfirmDialog();
 
 const props = defineProps({
     status: {
@@ -68,13 +74,6 @@ const moveToStatusId = ref(null);
 
 // Task count
 const taskCount = computed(() => props.tasks.length);
-
-const normalizeHexColor = (value, fallback = '#6366F1') => {
-    const raw = (value || '').trim();
-    if (!raw) return fallback;
-    const hex = raw.startsWith('#') ? raw : `#${raw}`;
-    return /^#[0-9A-Fa-f]{6}$/.test(hex) ? hex.toUpperCase() : fallback;
-};
 
 // Available statuses for moving tasks (exclude current status)
 const availableStatuses = computed(() => {
@@ -144,9 +143,7 @@ const saveStatus = () => {
             preserveScroll: true,
             onSuccess: () => {
                 showEditStatus.value = false;
-                if (window.showSnackbar) {
-                    window.showSnackbar('Status updated successfully!', 'success');
-                }
+                showSnackbar('Status updated successfully!', 'success');
             },
         }
     );
@@ -159,10 +156,12 @@ const openDeleteStatus = () => {
 };
 
 // Delete status
-const deleteStatus = () => {
-    if (!confirm(`Delete status "${props.status.name}"? All items will be moved to the selected status.`)) {
-        return;
-    }
+const deleteStatus = async () => {
+    const ok = await confirmDialog(
+        `Delete status "${props.status.name}"? All items will be moved to the selected status.`,
+        'Delete Status'
+    );
+    if (!ok) return;
 
     router.delete(
         route('spaces.statuses.delete', [props.workspace.id, props.space.id, props.status.id]),
@@ -171,9 +170,7 @@ const deleteStatus = () => {
             preserveScroll: true,
             onSuccess: () => {
                 showDeleteStatus.value = false;
-                if (window.showSnackbar) {
-                    window.showSnackbar('Status deleted successfully!', 'success');
-                }
+                showSnackbar('Status deleted successfully!', 'success');
             },
         }
     );

@@ -1,11 +1,13 @@
 <script setup>
-import { ref, computed, onMounted, onUnmounted, watch } from 'vue';
+import { ref, computed, onMounted, onUnmounted, provide, watch } from 'vue';
 import { Head, Link, router, usePage } from '@inertiajs/vue3';
 import { useDisplay } from 'vuetify';
 import { useSnackbar } from '@/composables/useSnackbar';
 import { useConfirmDialog } from '@/composables/useConfirmDialog';
 import { useIdleDetector } from '@/composables/useIdleDetector';
 import ColorPicker from '@/Components/ColorPicker.vue';
+import { normalizeHexColor } from '@/utils/color';
+import { formatHMS as formatDuration } from '@/utils/duration';
 
 const props = defineProps({
     title: String,
@@ -200,17 +202,16 @@ const newSpaceName = ref('');
 const newSpaceColor = ref('#6366F1');
 const isCreatingSpace = ref(false);
 
+// Provide a way for child pages to open the Create Space dialog without
+// touching window globals. Pages can `inject('openCreateSpaceDialog')`.
+provide('openCreateSpaceDialog', () => {
+    showCreateSpace.value = true;
+});
+
 const showCreateWorkspace = ref(false);
 const newWorkspaceName = ref('');
 const newWorkspaceColor = ref('#3B82F6');
 const isCreatingWorkspace = ref(false);
-
-const normalizeHexColor = (value, fallback) => {
-    const raw = (value || '').trim();
-    if (!raw) return fallback;
-    const hex = raw.startsWith('#') ? raw : `#${raw}`;
-    return /^#[0-9A-Fa-f]{6}$/.test(hex) ? hex.toUpperCase() : fallback;
-};
 
 const createSpace = () => {
     if (!newSpaceName.value.trim() || !activeWorkspace.value || isCreatingSpace.value) return;
@@ -295,12 +296,6 @@ useIdleDetector({
 
 // Expose functions to window for global access
 onMounted(() => {
-    if (typeof window !== 'undefined') {
-        window.showSnackbar = showSnackbar;
-        window.openCreateSpaceDialog = () => {
-            showCreateSpace.value = true;
-        };
-    }
     startGlobalTimerInterval();
 
     // Minta izin browser notification (untuk idle alert)
@@ -336,14 +331,6 @@ watch(searchDialog, (open) => {
     }
 });
 
-// Format duration helper
-const formatDuration = (seconds) => {
-    if (!seconds) return '00:00:00';
-    const h = Math.floor(seconds / 3600);
-    const m = Math.floor((seconds % 3600) / 60);
-    const s = seconds % 60;
-    return `${h.toString().padStart(2, '0')}:${m.toString().padStart(2, '0')}:${s.toString().padStart(2, '0')}`;
-};
 </script>
 
 <template>

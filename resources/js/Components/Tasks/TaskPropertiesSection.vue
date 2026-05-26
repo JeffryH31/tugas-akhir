@@ -5,6 +5,7 @@ import { PRIORITIES, PRIORITY_MAP } from "@/constants/priorities";
 import { useConfirmDialog } from "@/composables/useConfirmDialog";
 import { useSnackbar } from "@/composables/useSnackbar";
 import ColorPicker from "@/Components/ColorPicker.vue";
+import { formatSeconds as formatDuration } from "@/utils/duration";
 import {
   getFallbackCompletionTarget,
   getStoredSubtaskCompletionTarget,
@@ -16,21 +17,21 @@ const { confirm: confirmDialog } = useConfirmDialog();
 const { showSnackbar } = useSnackbar();
 
 const props = defineProps({
-  localTask: Object,
-  task: Object,
-  isSubtask: Boolean,
-  workspace: Object,
-  space: Object,
-  list: Object,
-  parentTask: Object,
+  localTask: { type: Object, default: null },
+  task: { type: Object, default: null },
+  isSubtask: { type: Boolean, default: false },
+  workspace: { type: Object, default: null },
+  space: { type: Object, default: null },
+  list: { type: Object, default: null },
+  parentTask: { type: Object, default: null },
   statuses: { type: Array, default: () => [] },
   members: { type: Array, default: () => [] },
   labels: { type: Array, default: () => [] },
   sprints: { type: Array, default: () => [] },
   siblingSubtasks: { type: Array, default: () => [] },
-  isTracking: Boolean,
-  formatTrackingDuration: String,
-  isTimerLoading: Boolean,
+  isTracking: { type: Boolean, default: false },
+  formatTrackingDuration: { type: String, default: '' },
+  isTimerLoading: { type: Boolean, default: false },
   canOperateTasks: { type: Boolean, default: false },
   canManageTaskStructure: { type: Boolean, default: false },
 });
@@ -56,13 +57,6 @@ const getUpdateRoute = () => {
   ]);
 };
 
-// Formatters
-const formatDuration = (seconds) => {
-  if (!seconds) return "Not set";
-  const h = Math.floor(seconds / 3600),
-    m = Math.floor((seconds % 3600) / 60);
-  return h > 0 ? `${h}h ${m}m` : `${m}m`;
-};
 const formatTimeEstimate = (minutes) => {
   if (!minutes) return "Not set";
   const h = minutes / 60;
@@ -151,7 +145,7 @@ const completionTargetStatusName = computed(() => {
 const setCompletionAutomation = (statusId) => {
   completionTargetStatusIdState.value = statusId ? Number(statusId) : null;
   setStoredSubtaskCompletionTarget(props.space?.id, statusId);
-  window.showSnackbar?.(
+  showSnackbar(
     statusId ? "Automation status updated!" : "Automation disabled!",
     "success"
   );
@@ -234,7 +228,7 @@ const updateStartDate = () => {
     ? String(props.task.due_date).substring(0, 10)
     : null;
   if (tempStartDate.value && dueDay && tempStartDate.value > dueDay) {
-    window.showSnackbar?.("Start date cannot be after due date.", "error");
+    showSnackbar("Start date cannot be after due date.", "error");
     return;
   }
   showStartDatePicker.value = false;
@@ -246,7 +240,7 @@ const updateStartDate = () => {
       preserveState: true,
       onSuccess: () => router.reload({ only: ["task", "tasksByStatus"] }),
       onError: (errors) => {
-        window.showSnackbar?.(
+        showSnackbar(
           Object.values(errors).flat().join(", ") ||
           "Failed to update start date",
           "error"
@@ -266,7 +260,7 @@ const updateDueDate = () => {
     ? String(props.task.start_date).substring(0, 10)
     : null;
   if (tempDueDate.value && startDay && tempDueDate.value < startDay) {
-    window.showSnackbar?.("Due date cannot be before start date.", "error");
+    showSnackbar("Due date cannot be before start date.", "error");
     return;
   }
   showDueDatePicker.value = false;
@@ -278,7 +272,7 @@ const updateDueDate = () => {
       preserveState: true,
       onSuccess: () => router.reload({ only: ["task", "tasksByStatus"] }),
       onError: (errors) => {
-        window.showSnackbar?.(
+        showSnackbar(
           Object.values(errors).flat().join(", ") ||
           "Failed to update due date",
           "error"
@@ -339,7 +333,7 @@ const scheduleEstimateSave = () => {
         preserveScroll: true,
         preserveState: true,
         onSuccess: () => router.reload({ only: ['task', 'tasksByStatus'] }),
-        onError: () => window.showSnackbar?.('Failed to update time estimate', 'error'),
+        onError: () => showSnackbar('Failed to update time estimate', 'error'),
       }
     );
   }, 800);
@@ -375,7 +369,7 @@ const updatePertEstimates = () => {
   const m = Math.round((parseFloat(tempMostLikely.value) || 0) * 60);
   const p = Math.round((parseFloat(tempPessimistic.value) || 0) * 60);
   if (o > m || m > p) {
-    window.showSnackbar?.(
+    showSnackbar(
       "PERT estimates must satisfy optimistic <= most likely <= pessimistic.",
       "error"
     );
@@ -404,7 +398,7 @@ const updatePertEstimates = () => {
 // Baseline
 const setBaselineFromCurrent = () => {
   if (!props.task.start_date && !props.task.due_date) {
-    window.showSnackbar?.(
+    showSnackbar(
       "Set actual start/due dates first before capturing a baseline.",
       "error"
     );
@@ -490,7 +484,7 @@ const addLabel = (label) => {
         router.reload({ only: ["task", "tasksByStatus"] });
       },
       onError: () => {
-        window.showSnackbar?.("Failed to add label", "error");
+        showSnackbar("Failed to add label", "error");
       },
     }
   );
@@ -518,7 +512,7 @@ const removeLabel = (label) => {
       router.reload({ only: ["task", "tasksByStatus"] });
     },
     onError: () => {
-      window.showSnackbar?.("Failed to remove label", "error");
+      showSnackbar("Failed to remove label", "error");
     },
   });
 };
@@ -528,12 +522,12 @@ const saveWorkspaceLabel = () => {
   const color = normalizeLabelColor(labelForm.value.color);
 
   if (!name) {
-    window.showSnackbar?.("Label name is required.", "error");
+    showSnackbar("Label name is required.", "error");
     return;
   }
 
   if (!/^#[0-9A-F]{6}$/.test(color)) {
-    window.showSnackbar?.("Color must be valid hex format (#RRGGBB).", "error");
+    showSnackbar("Color must be valid hex format (#RRGGBB).", "error");
     return;
   }
 
@@ -623,7 +617,7 @@ const toggleAssignee = (userId) => {
         router.reload({ only: ["task", "tasksByStatus"] });
       },
       onError: () => {
-        window.showSnackbar?.("Failed to update assignee", "error");
+        showSnackbar("Failed to update assignee", "error");
       },
     }
   );

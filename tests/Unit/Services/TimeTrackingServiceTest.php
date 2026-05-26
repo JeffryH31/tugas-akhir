@@ -1,4 +1,4 @@
-﻿<?php
+<?php
 
 use App\Models\Activity;
 use App\Models\TimeEntry;

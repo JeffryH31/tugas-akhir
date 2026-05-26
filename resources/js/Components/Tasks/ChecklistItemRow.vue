@@ -6,10 +6,10 @@ import { router } from '@inertiajs/vue3';
 defineOptions({ name: 'ChecklistItemRow' });
 
 const props = defineProps({
-    item: Object,
+    item: { type: Object, default: null },
     // [workspaceId, spaceId, listId, taskId, subtaskId]
     routeParams: { type: Array, required: true },
-    canEdit: Boolean,
+    canEdit: { type: Boolean, default: false },
     indentLevel: { type: Number, default: 0 },
 });
 

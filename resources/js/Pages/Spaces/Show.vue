@@ -3,14 +3,18 @@ import { ref, computed, watch } from 'vue';
 import { router } from '@inertiajs/vue3';
 import MainLayout from '@/Layouts/MainLayout.vue';
 import ColorPicker from '@/Components/ColorPicker.vue';
+import { useSnackbar } from '@/composables/useSnackbar';
+import { normalizeHexColor } from '@/utils/color';
+
+const { showSnackbar } = useSnackbar();
 
 const props = defineProps({
-    workspace: Object,
-    space: Object,
-    statistics: Object,
-    productsByStatus: Object,
-    canManageSpace: Boolean,
-    canManageWorkspace: Boolean,
+    workspace: { type: Object, default: null },
+    space: { type: Object, default: null },
+    statistics: { type: Object, default: null },
+    productsByStatus: { type: Object, default: null },
+    canManageSpace: { type: Boolean, default: false },
+    canManageWorkspace: { type: Boolean, default: false },
 });
 
 // Create folder dialog
@@ -73,13 +77,6 @@ const openEditSpace = () => {
     editSpaceName.value = props.space.name;
     editSpaceColor.value = props.space.color || '#6366F1';
     showEditSpace.value = true;
-};
-
-const normalizeHexColor = (value, fallback = '#6366F1') => {
-    const raw = (value || '').trim();
-    if (!raw) return fallback;
-    const hex = raw.startsWith('#') ? raw : `#${raw}`;
-    return /^#[0-9A-Fa-f]{6}$/.test(hex) ? hex.toUpperCase() : fallback;
 };
 
 const updateSpace = () => {
@@ -303,9 +300,7 @@ const handleDrop = (event, targetFolderId = null) => {
             onSuccess: () => {
             },
             onError: () => {
-                if (window.showSnackbar) {
-                    window.showSnackbar('Failed to move product', 'error');
-                }
+                showSnackbar('Failed to move product', 'error');
             },
             onFinish: () => {
                 resetDragState();

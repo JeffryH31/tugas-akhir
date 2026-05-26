@@ -1,9 +1,11 @@
 import { ref, computed, watch } from 'vue';
 import { router, usePage } from '@inertiajs/vue3';
 import { safeFetch } from '@/utils/safeFetch';
+import { useSnackbar } from '@/composables/useSnackbar';
 
 export function useTaskTimer(props, localTask) {
     const page = usePage();
+    const { showSnackbar } = useSnackbar();
 
     const isTracking = ref(false);
     const trackingDuration = ref(0);
@@ -88,7 +90,7 @@ export function useTaskTimer(props, localTask) {
         const routeParams = getTimerRouteParams();
         const subtaskId = props.task?.id;
         if (!routeParams || !subtaskId) {
-            window.showSnackbar?.('Task context is not ready yet. Please try again.', 'warning');
+            showSnackbar('Task context is not ready yet. Please try again.', 'warning');
             return;
         }
 
@@ -106,15 +108,15 @@ export function useTaskTimer(props, localTask) {
                 runningEntryId.value = data.timeEntry?.id || data.time_entry?.id || data.id || null;
                 startInterval();
                 router.reload({ preserveScroll: true, only: ['task', 'tasksByStatus', 'runningTimer'] });
-                window.showSnackbar?.('Timer started!', 'success');
+                showSnackbar('Timer started!', 'success');
             } else if (res.status === 419) {
-                window.location.reload();
+                router.reload();
             } else {
                 const data = await res.json().catch(() => ({}));
-                window.showSnackbar?.(data.message || 'Failed to start timer', 'error');
+                showSnackbar(data.message || 'Failed to start timer', 'error');
             }
         } catch {
-            window.showSnackbar?.('Failed to start timer', 'error');
+            showSnackbar('Failed to start timer', 'error');
         } finally {
             isTimerLoading.value = false;
         }
@@ -125,7 +127,7 @@ export function useTaskTimer(props, localTask) {
 
         const routeParams = getTimerRouteParams();
         if (!routeParams) {
-            window.showSnackbar?.('Task context is not ready yet. Please try again.', 'warning');
+            showSnackbar('Task context is not ready yet. Please try again.', 'warning');
             return;
         }
 
@@ -149,7 +151,7 @@ export function useTaskTimer(props, localTask) {
         }
 
         if (!entryId) {
-            window.showSnackbar?.('No running timer found.', 'warning');
+            showSnackbar('No running timer found.', 'warning');
             isTracking.value = false;
             trackingDuration.value = 0;
             isTimerLoading.value = false;
@@ -164,7 +166,7 @@ export function useTaskTimer(props, localTask) {
                 const data = await res.json().catch(() => ({}));
                 isTracking.value = false;
                 runningEntryId.value = null;
-                window.showSnackbar?.(`Timer stopped: ${formatTrackingDuration.value}`, 'success');
+                showSnackbar(`Timer stopped: ${formatTrackingDuration.value}`, 'success');
                 if (data.timeEntry) {
                     const entry = data.timeEntry;
                     if (localTask.value) {
@@ -183,12 +185,12 @@ export function useTaskTimer(props, localTask) {
                 trackingDuration.value = 0;
                 router.reload({ preserveScroll: true, only: ['task', 'tasksByStatus', 'runningTimer'] });
             } else if (res.status === 419) {
-                window.location.reload();
+                router.reload();
             } else {
-                window.showSnackbar?.('Failed to stop timer', 'error');
+                showSnackbar('Failed to stop timer', 'error');
             }
         } catch {
-            window.showSnackbar?.('Failed to stop timer', 'error');
+            showSnackbar('Failed to stop timer', 'error');
         } finally {
             isTimerLoading.value = false;
         }

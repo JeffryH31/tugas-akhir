@@ -1,5 +1,6 @@
 <script setup>
 import { computed } from 'vue';
+import { formatHours as formatDuration } from '@/utils/duration';
 
 const props = defineProps({
     cpmData: {
@@ -31,18 +32,6 @@ const stats = computed(() => {
     };
 });
 
-// Format duration
-const formatDuration = (hours) => {
-    if (!hours && hours !== 0) return 'N/A';
-    if (hours < 1) {
-        return `${Math.round(hours * 60)} minutes`;
-    }
-    if (hours < 24) {
-        return `${hours.toFixed(1)} hours`;
-    }
-    const days = hours / 24;
-    return `${days.toFixed(1)} days`;
-};
 
 // Handle click on subtask
 const handleSubtaskClick = (subtask) => {

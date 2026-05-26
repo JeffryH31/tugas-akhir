@@ -2,23 +2,20 @@
 import { computed, ref } from 'vue';
 import { router } from '@inertiajs/vue3';
 import { useConfirmDialog } from '@/composables/useConfirmDialog';
+import { useSnackbar } from '@/composables/useSnackbar';
+import { formatSeconds as formatDuration } from '@/utils/duration';
 
 const { confirm: confirmDialog } = useConfirmDialog();
+const { showSnackbar } = useSnackbar();
 
 const props = defineProps({
     task: Object,       // localTask (time_entries, time_estimate, time_spent)
-    workspace: Object,
-    space: Object,
-    list: Object,
-    parentTask: Object,
+    workspace: { type: Object, default: null },
+    space: { type: Object, default: null },
+    list: { type: Object, default: null },
+    parentTask: { type: Object, default: null },
 });
 
-const formatDuration = (seconds) => {
-    if (!seconds) return '0m';
-    const h = Math.floor(seconds / 3600);
-    const m = Math.floor((seconds % 3600) / 60);
-    return h > 0 ? `${h}h ${m}m` : `${m}m`;
-};
 
 const formatTimeEstimate = (minutes) => {
     if (!minutes) return 'Not set';
@@ -138,22 +135,22 @@ const addEntry = () => {
     const end = endDateTime.value;
 
     if (Number.isNaN(start.getTime()) || Number.isNaN(end.getTime())) {
-        window.showSnackbar?.('Start and end time are required.', 'error');
+        showSnackbar('Start and end time are required.', 'error');
         return;
     }
 
     if (end <= start) {
-        window.showSnackbar?.('End time must be after start time.', 'error');
+        showSnackbar('End time must be after start time.', 'error');
         return;
     }
 
     if ((durationMinutes.value || 0) <= 0) {
-        window.showSnackbar?.('End time must be after start time.', 'error');
+        showSnackbar('End time must be after start time.', 'error');
         return;
     }
 
     if ((durationMinutes.value || 0) > 1440) {
-        window.showSnackbar?.('Duration cannot exceed 24 hours.', 'error');
+        showSnackbar('Duration cannot exceed 24 hours.', 'error');
         return;
     }
 

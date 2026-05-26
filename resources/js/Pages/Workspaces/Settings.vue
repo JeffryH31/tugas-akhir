@@ -3,15 +3,17 @@ import { computed, ref } from 'vue';
 import { router, usePage } from '@inertiajs/vue3';
 import MainLayout from '@/Layouts/MainLayout.vue';
 import { useConfirmDialog } from '@/composables/useConfirmDialog';
+import { useSnackbar } from '@/composables/useSnackbar';
 
 const { confirm: confirmDialog } = useConfirmDialog();
+const { showSnackbar } = useSnackbar();
 
 const props = defineProps({
-    workspace: Object,
-    members: Array,
-    availableUsers: Array,
-    projectLists: Array,
-    spaces: Array,
+    workspace: { type: Object, default: null },
+    members: { type: Array, default: () => [] },
+    availableUsers: { type: Array, default: () => [] },
+    projectLists: { type: Array, default: () => [] },
+    spaces: { type: Array, default: () => [] },
 });
 
 const page = usePage();
@@ -438,9 +440,7 @@ const deleteWorkspace = () => {
                 confirmationName.value = '';
             },
             onError: () => {
-                if (window.showSnackbar) {
-                    window.showSnackbar('Failed to delete workspace', 'error');
-                }
+                showSnackbar('Failed to delete workspace', 'error');
             }
         }
     );

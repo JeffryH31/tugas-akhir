@@ -15,7 +15,11 @@ const parseStorage = () => {
 };
 
 const writeStorage = (data) => {
-    window.localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
+    try {
+        window.localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
+    } catch {
+        // localStorage may be disabled (private mode, quota exceeded, etc.) — fail silently
+    }
 };
 
 export const getSubtaskCompletionStatusOptions = (statuses = []) => {

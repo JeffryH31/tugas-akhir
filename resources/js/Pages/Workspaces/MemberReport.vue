@@ -4,9 +4,9 @@ import { Link } from '@inertiajs/vue3';
 import MainLayout from '@/Layouts/MainLayout.vue';
 
 const props = defineProps({
-    workspace: Object,
-    member: Object,
-    report: Object,
+    workspace: { type: Object, default: null },
+    member: { type: Object, default: null },
+    report: { type: Object, default: null },
 });
 
 // Helpers
@@ -291,8 +291,8 @@ const billablePct = computed(() => {
                         <div v-if="activeSubtasks.length === 0" class="pa-6 text-center text-gray-400">
                             No active work assigned.
                         </div>
-                        <div class="overflow-x-auto">
-                        <v-table v-else density="compact">
+                        <div v-else class="overflow-x-auto">
+                        <v-table density="compact">
                             <thead>
                                 <tr>
                                     <th>ID</th>
@@ -361,8 +361,8 @@ const billablePct = computed(() => {
                         <div v-if="recentEntries.length === 0" class="pa-6 text-center text-gray-400">
                             No time entries yet.
                         </div>
-                        <div class="overflow-x-auto">
-                        <v-table v-else density="compact">
+                        <div v-else class="overflow-x-auto">
+                        <v-table density="compact">
                             <thead>
                                 <tr>
                                     <th>Date</th>

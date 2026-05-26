@@ -1,4 +1,4 @@
-﻿<?php
+<?php
 
 use App\Models\Label;
 use App\Models\Space;

@@ -366,25 +366,34 @@ class TaskService
         return DB::transaction(function () use ($task, $user) {
             $newTask = $task->replicate(['task_id']);
             $newTask->name = $task->name . ' (Copy)';
+            // Reset operational fields — assignees and dates are not part of the template
+            $newTask->start_date = null;
+            $newTask->due_date = null;
             $newTask->position = Task::where('task_list_id', $task->task_list_id)
                 ->max('position') + 1;
             $newTask->save();
 
-            $newTask->assignees()->sync($task->assignees->pluck('id'));
-
+            // Copy labels (structural), but NOT assignees (operational)
             $newTask->labels()->sync($task->labels->pluck('id'));
 
-            foreach ($task->subtasks as $subtask) {
+            foreach ($task->subtasks()->with(['labels'])->get() as $subtask) {
                 $newSubtask = $subtask->replicate([
                     'subtask_id',
                     'completed_at',
                     'completed_by',
-                    'time_spent'
+                    'time_spent',
+                    'sprint_id',
                 ]);
                 $newSubtask->task_id = $newTask->id;
+                // Reset operational fields
+                $newSubtask->start_date = null;
+                $newSubtask->due_date = null;
+                $newSubtask->baseline_start_date = null;
+                $newSubtask->baseline_due_date = null;
+                $newSubtask->progress = 0;
                 $newSubtask->save();
 
-                $newSubtask->assignees()->sync($subtask->assignees->pluck('id'));
+                // Copy labels (structural), but NOT assignees (operational)
                 $newSubtask->labels()->sync($subtask->labels->pluck('id'));
             }
 

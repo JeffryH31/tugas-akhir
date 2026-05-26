@@ -333,12 +333,19 @@ class SubtaskService
                 'completed_at',
                 'completed_by',
                 'time_spent',
+                'sprint_id',
                 'position',
             ]);
             $newSubtask->name = $subtask->name . ' (Copy)';
+            // Reset operational fields — dates and assignees are not part of the template
+            $newSubtask->start_date = null;
+            $newSubtask->due_date = null;
+            $newSubtask->baseline_start_date = null;
+            $newSubtask->baseline_due_date = null;
+            $newSubtask->progress = 0;
             $newSubtask->save();
 
-            $newSubtask->assignees()->sync($subtask->assignees->pluck('id'));
+            // Copy labels (structural), but NOT assignees (operational)
             $newSubtask->labels()->sync($subtask->labels->pluck('id'));
 
             $task = $subtask->task;

@@ -12,6 +12,7 @@ import SprintView from '@/Components/Lists/SprintView.vue';
 import { useSnackbar } from '@/composables/useSnackbar';
 import { useCpm } from '@/composables/useCpm';
 import { PRIORITIES, getPriority } from '@/constants/priorities';
+import { normalizeHexColor } from '@/utils/color';
 import { getStoredSubtaskCompletionTarget } from '@/utils/subtaskCompletionAutomation';
 
 const props = defineProps({
@@ -432,13 +433,6 @@ const handleAddTask = ({ name, status_id }) => {
 const showAddStatus = ref(false);
 const newStatusName = ref('');
 const newStatusColor = ref('#6366F1');
-
-const normalizeHexColor = (value, fallback = '#6366F1') => {
-    const raw = (value || '').trim();
-    if (!raw) return fallback;
-    const hex = raw.startsWith('#') ? raw : `#${raw}`;
-    return /^#[0-9A-Fa-f]{6}$/.test(hex) ? hex.toUpperCase() : fallback;
-};
 
 const addStatus = () => {
     if (!newStatusName.value.trim()) return;

@@ -11,7 +11,7 @@ const page = usePage();
 const currentUserId = computed(() => page.props?.auth?.user?.id || null);
 
 const props = defineProps({
-    tasks: [Array, Object],
+    tasks: { type: [Array, Object], default: () => [] },
 });
 
 const taskItems = computed(() => {

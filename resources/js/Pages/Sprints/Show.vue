@@ -5,18 +5,21 @@ import MainLayout from '@/Layouts/MainLayout.vue';
 import TaskCard from '@/Components/Tasks/TaskCard.vue';
 import TaskDetailPanel from '@/Components/Tasks/TaskDetailPanel.vue';
 import { useConfirmDialog } from '@/composables/useConfirmDialog';
+import { useSnackbar } from '@/composables/useSnackbar';
+
+const { showSnackbar } = useSnackbar();
 
 const props = defineProps({
-    workspace: Object,
-    space: Object,
-    list: Object,
-    sprint: Object,
-    backlogSubtasks: Array,
-    statistics: Object,
-    burndown: Object,
-    statuses: Array,
-    labels: Array,
-    members: Array,
+    workspace: { type: Object, default: null },
+    space: { type: Object, default: null },
+    list: { type: Object, default: null },
+    sprint: { type: Object, default: null },
+    backlogSubtasks: { type: Array, default: () => [] },
+    statistics: { type: Object, default: null },
+    burndown: { type: Object, default: null },
+    statuses: { type: Array, default: () => [] },
+    labels: { type: Array, default: () => [] },
+    members: { type: Array, default: () => [] },
     canManageTaskStructure: { type: Boolean, default: false },
     canOperateTasks: { type: Boolean, default: false },
 });
@@ -90,7 +93,7 @@ const completeSprint = async () => {
 const openTask = (subtask) => {
     const parentTask = subtask.task;
     if (!parentTask) {
-        window.showSnackbar?.('Task detail is unavailable because its parent task no longer exists.', 'error');
+        showSnackbar('Task detail is unavailable because its parent task no longer exists.', 'error');
         return;
     }
     detailTask.value = subtask;
@@ -300,7 +303,7 @@ const onDropToBacklog = () => {
                     class="mt-6 sm:mt-8 bg-[#2D2D2D] rounded-lg p-4 sm:p-6">
                     <h3 class="text-lg font-semibold text-white mb-4">Burndown Chart</h3>
                     <div class="h-64 flex items-end gap-2">
-                        <div v-for="(point, index) in burndown.actual" :key="index"
+                        <div v-for="(point, index) in burndown.actual" :key="point.day"
                             class="flex-1 flex flex-col items-center">
                             <div class="w-full flex items-end justify-center gap-1 h-48">
                                 <!-- Ideal line -->

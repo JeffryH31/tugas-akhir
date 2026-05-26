@@ -3,12 +3,13 @@ import { ref, computed, watch } from "vue";
 import { Head, router } from "@inertiajs/vue3";
 import MainLayout from "@/Layouts/MainLayout.vue";
 import TaskDetailPanel from "@/Components/Tasks/TaskDetailPanel.vue";
+import { PRIORITY_MAP } from "@/constants/priorities";
 
 const props = defineProps({
-    workspace: Object,
-    subtasks: Array,
-    startDate: String,
-    endDate: String,
+    workspace: { type: Object, default: null },
+    subtasks: { type: Array, default: () => [] },
+    startDate: { type: String, default: '' },
+    endDate: { type: String, default: '' },
     viewMode: {
         type: String,
         default: "month",
@@ -282,13 +283,12 @@ const assigneeOptions = computed(() => {
     return Array.from(assignees.values());
 });
 
-const PRIORITY_LABELS = { 1: "Urgent", 2: "High", 3: "Normal", 4: "Low" };
-const PRIORITY_COLORS = {
-    1: "#EF4444",
-    2: "#F97316",
-    3: "#3B82F6",
-    4: "#9CA3AF",
-};
+const PRIORITY_LABELS = Object.fromEntries(
+    Object.values(PRIORITY_MAP).map((p) => [p.level, p.name])
+);
+const PRIORITY_COLORS = Object.fromEntries(
+    Object.values(PRIORITY_MAP).map((p) => [p.level, p.color])
+);
 
 const priorityOptions = computed(() => {
     const levels = new Set();

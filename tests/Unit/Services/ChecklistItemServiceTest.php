@@ -1,4 +1,4 @@
-﻿<?php
+<?php
 
 use App\Models\ChecklistItem;
 use App\Models\Subtask;

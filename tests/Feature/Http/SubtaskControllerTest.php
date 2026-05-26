@@ -1,4 +1,4 @@
-﻿<?php
+<?php
 
 use App\Models\Subtask;
 use App\Models\User;

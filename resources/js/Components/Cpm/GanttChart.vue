@@ -1,5 +1,6 @@
 <script setup>
 import { ref, computed, onMounted, watch } from 'vue';
+import { formatHours as formatDuration } from '@/utils/duration';
 
 const props = defineProps({
     cpmData: {
@@ -97,13 +98,6 @@ const getBarColor = (subtask) => {
     return 'bg-blue-500'; // Normal
 };
 
-// Format duration display
-const formatDuration = (hours) => {
-    if (hours < 1) {
-        return `${Math.round(hours * 60)}m`;
-    }
-    return `${hours.toFixed(1)}h`;
-};
 
 // Zoom controls
 const zoomIn = () => {

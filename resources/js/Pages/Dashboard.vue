@@ -1,18 +1,19 @@
 <script setup>
-import { ref, computed } from 'vue';
+import { ref, computed, inject } from 'vue';
 import { router, usePage } from '@inertiajs/vue3';
 import MainLayout from '@/Layouts/MainLayout.vue';
 import TaskCard from '@/Components/Tasks/TaskCard.vue';
 import { useSnackbar } from '@/composables/useSnackbar';
+import { formatMinutes as formatDuration } from '@/utils/duration';
 
 const props = defineProps({
-    workspaces: Array,
-    activeWorkspace: Object,
-    mySubtasks: Array,
-    overdueSubtasks: Array,
-    runningTimer: Object,
-    timeStats: Object,
-    recentActivity: Array,
+    workspaces: { type: Array, default: () => [] },
+    activeWorkspace: { type: Object, default: null },
+    mySubtasks: { type: Array, default: () => [] },
+    overdueSubtasks: { type: Array, default: () => [] },
+    runningTimer: { type: Object, default: null },
+    timeStats: { type: Object, default: null },
+    recentActivity: { type: Array, default: () => [] },
 });
 
 // Active tab for tasks
@@ -51,13 +52,6 @@ const buildSubtaskDeepLink = (cardItem) => {
     return `${baseUrl}?task_id=${task.id}&open_subtask_id=${cardItem._subtask_id}`;
 };
 
-// Format duration (input is in minutes from backend)
-const formatDuration = (minutes) => {
-    if (!minutes) return '0h 0m';
-    const hours = Math.floor(minutes / 60);
-    const mins = Math.round(minutes % 60);
-    return `${hours}h ${mins}m`;
-};
 
 // Quick create
 const showQuickCreate = ref(false);
@@ -183,10 +177,11 @@ const goToFirstSpaceOrWorkspaces = () => {
     }
 };
 
-// Open create space dialog
+// Open create space dialog (provided by MainLayout via inject)
+const openCreateSpaceDialog = inject('openCreateSpaceDialog', null);
 const openCreateSpace = () => {
-    if (typeof window !== 'undefined' && typeof window.openCreateSpaceDialog === 'function') {
-        window.openCreateSpaceDialog();
+    if (typeof openCreateSpaceDialog === 'function') {
+        openCreateSpaceDialog();
     } else {
         showSnackbar('Please use the sidebar to create a space.', 'info');
     }

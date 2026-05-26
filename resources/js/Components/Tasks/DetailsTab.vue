@@ -5,26 +5,29 @@ import ChecklistItemRow from "./ChecklistItemRow.vue";
 import SubtaskRow from "./SubtaskRow.vue";
 import TaskPropertiesSection from "./TaskPropertiesSection.vue";
 import TaskDescriptionSection from "./TaskDescriptionSection.vue";
+import { useSnackbar } from "@/composables/useSnackbar";
 import {
   getStoredSubtaskCompletionTarget,
 } from "@/utils/subtaskCompletionAutomation";
 
+const { showSnackbar } = useSnackbar();
+
 const props = defineProps({
-  localTask: Object,
-  task: Object,
-  isSubtask: Boolean,
-  workspace: Object,
-  space: Object,
-  list: Object,
-  parentTask: Object,
+  localTask: { type: Object, default: null },
+  task: { type: Object, default: null },
+  isSubtask: { type: Boolean, default: false },
+  workspace: { type: Object, default: null },
+  space: { type: Object, default: null },
+  list: { type: Object, default: null },
+  parentTask: { type: Object, default: null },
   statuses: { type: Array, default: () => [] },
   members: { type: Array, default: () => [] },
   labels: { type: Array, default: () => [] },
   sprints: { type: Array, default: () => [] },
   siblingSubtasks: { type: Array, default: () => [] },
-  isTracking: Boolean,
-  formatTrackingDuration: String,
-  isTimerLoading: Boolean,
+  isTracking: { type: Boolean, default: false },
+  formatTrackingDuration: { type: String, default: '' },
+  isTimerLoading: { type: Boolean, default: false },
   canOperateTasks: { type: Boolean, default: false },
   canManageTaskStructure: { type: Boolean, default: false },
 });
@@ -110,7 +113,7 @@ const toggleSubtask = (subtask) => {
       },
       onError: (errors) => {
         if (errors.dependency)
-          window.showSnackbar?.(errors.dependency, "error");
+          showSnackbar(errors.dependency, "error");
       },
     }
   );
@@ -230,7 +233,7 @@ const toggleChildSubtask = (child) => {
       },
       onError: (errors) => {
         if (errors.dependency)
-          window.showSnackbar?.(errors.dependency, "error");
+          showSnackbar(errors.dependency, "error");
       },
     }
   );

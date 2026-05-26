@@ -3,24 +3,18 @@ import { ref } from 'vue';
 import { Head, router } from '@inertiajs/vue3';
 import MainLayout from '@/Layouts/MainLayout.vue';
 import ColorPicker from '@/Components/ColorPicker.vue';
+import { normalizeHexColor } from '@/utils/color';
 
 const props = defineProps({
-    workspace: Object,
-    statistics: Object,
-    canManageWorkspace: Boolean,
+    workspace: { type: Object, default: null },
+    statistics: { type: Object, default: null },
+    canManageWorkspace: { type: Boolean, default: false },
 });
 
 // Create Space dialog
 const showCreateSpace = ref(false);
 const newSpaceName = ref('');
 const newSpaceColor = ref('#6366F1');
-
-const normalizeHexColor = (value, fallback = '#6366F1') => {
-    const raw = (value || '').trim();
-    if (!raw) return fallback;
-    const hex = raw.startsWith('#') ? raw : `#${raw}`;
-    return /^#[0-9A-Fa-f]{6}$/.test(hex) ? hex.toUpperCase() : fallback;
-};
 
 const createSpace = () => {
     if (!newSpaceName.value.trim()) return;

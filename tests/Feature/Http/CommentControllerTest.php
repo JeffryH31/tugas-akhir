@@ -1,4 +1,4 @@
-﻿<?php
+<?php
 
 use App\Models\Comment;
 use Tests\Traits\CreatesWorkspaceHierarchy;

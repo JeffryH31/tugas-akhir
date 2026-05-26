@@ -2,6 +2,7 @@
 import { ref, computed, watch, nextTick, onMounted, onUnmounted } from "vue";
 import { router } from "@inertiajs/vue3";
 import { useConfirmDialog } from "@/composables/useConfirmDialog";
+import { useSnackbar } from "@/composables/useSnackbar";
 import { useTaskTimer } from "@/composables/useTaskTimer";
 import { getStoredSubtaskCompletionTarget } from "@/utils/subtaskCompletionAutomation";
 import DetailsTab from "./DetailsTab.vue";
@@ -10,14 +11,15 @@ import TimeTab from "./TimeTab.vue";
 import ActivityTab from "./ActivityTab.vue";
 
 const { confirm: confirmDialog } = useConfirmDialog();
+const { showSnackbar } = useSnackbar();
 
 const props = defineProps({
-  modelValue: Boolean,
-  task: Object,
-  workspace: Object,
-  space: Object,
-  list: Object,
-  parentTask: Object,
+  modelValue: { type: Boolean, default: false },
+  task: { type: Object, default: null },
+  workspace: { type: Object, default: null },
+  space: { type: Object, default: null },
+  list: { type: Object, default: null },
+  parentTask: { type: Object, default: null },
   siblingSubtasks: { type: Array, default: () => [] },
   statuses: { type: Array, default: () => [] },
   members: { type: Array, default: () => [] },
@@ -38,7 +40,17 @@ const emit = defineEmits([
 const localTask = ref(null);
 const panelBodyRef = ref(null);
 
-const deepClone = (obj) => (!obj ? null : JSON.parse(JSON.stringify(obj)));
+const deepClone = (obj) => {
+  if (!obj) return null;
+  if (typeof structuredClone === 'function') {
+    try {
+      return structuredClone(obj);
+    } catch {
+      // structuredClone can fail on objects with functions/DOM nodes — fall through
+    }
+  }
+  return JSON.parse(JSON.stringify(obj));
+};
 
 // Timer composable
 const {
@@ -105,7 +117,7 @@ watch(
 const saveName = () => {
   if (editedName.value.trim() && editedName.value !== props.task.name) {
     if (editedName.value.trim().length > 255) {
-      window.showSnackbar?.("Name cannot exceed 255 characters.", "error");
+      showSnackbar("Name cannot exceed 255 characters.", "error");
       isEditing.value = false;
       return;
     }
@@ -116,7 +128,7 @@ const saveName = () => {
         preserveScroll: true,
         onSuccess: () => {
           router.reload({ only: ["tasksByStatus"] });
-          window.showSnackbar?.(
+          showSnackbar(
             `${isSubtask.value ? "Subtask" : "Task"} name updated!`,
             "success"
           );
@@ -144,7 +156,7 @@ const changeStatus = (statusId) => {
       preserveScroll: true,
       onSuccess: () => {
         router.reload({ only: ["tasksByStatus"] });
-        window.showSnackbar?.("Status changed!", "success");
+        showSnackbar("Status changed!", "success");
       },
     }
   );
@@ -173,7 +185,7 @@ const toggleComplete = () => {
     {
       preserveScroll: true,
       onSuccess: () => {
-        window.showSnackbar?.(
+        showSnackbar(
           wasCompleted ? "Subtask reopened!" : "Subtask completed!",
           "success"
         );
@@ -181,7 +193,7 @@ const toggleComplete = () => {
       },
       onError: (errors) => {
         if (errors.dependency)
-          window.showSnackbar?.(errors.dependency, "error");
+          showSnackbar(errors.dependency, "error");
       },
     }
   );
@@ -214,7 +226,7 @@ const deleteTask = async () => {
       {
         preserveScroll: true,
         onSuccess: () => {
-          window.showSnackbar?.("Task deleted!", "success");
+          showSnackbar("Task deleted!", "success");
           close();
         },
       }
@@ -244,7 +256,7 @@ const duplicateTask = () => {
     {
       preserveScroll: true,
       onSuccess: () => {
-        window.showSnackbar?.(
+        showSnackbar(
           isSubtask.value ? "Subtask duplicated!" : "Task duplicated!",
           "success"
         );

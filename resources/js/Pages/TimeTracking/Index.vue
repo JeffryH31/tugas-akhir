@@ -1,14 +1,19 @@
-﻿<script setup>
+<script setup>
 import { ref, computed, watch, onMounted, onUnmounted } from 'vue';
 import { Head, router } from '@inertiajs/vue3';
 import MainLayout from '@/Layouts/MainLayout.vue';
 import { safeFetch } from '@/utils/safeFetch';
+import { useSnackbar } from '@/composables/useSnackbar';
+import { formatMinutes as formatDuration } from '@/utils/duration';
+import { formatDateTime } from '@/utils/date';
+
+const { showSnackbar } = useSnackbar();
 
 const props = defineProps({
-    activeWorkspace: Object,
-    entries: Array,
-    runningTimer: Object,
-    subtasks: Array,
+    activeWorkspace: { type: Object, default: null },
+    entries: { type: Array, default: () => [] },
+    runningTimer: { type: Object, default: null },
+    subtasks: { type: Array, default: () => [] },
 });
 
 // Date filter
@@ -57,7 +62,7 @@ const periodLabel = computed(() => {
     if (dateRange.value === 'custom') {
         if (!customStart.value && !customEnd.value) return 'Custom Range';
         if (customStart.value === customEnd.value) return customStart.value;
-        return `${customStart.value} – ${customEnd.value}`;
+        return `${customStart.value} ? ${customEnd.value}`;
     }
     return 'All Time';
 });
@@ -74,8 +79,8 @@ const periodStats = computed(() => {
 const tableItems = computed(() => {
     return props.entries.map(e => ({
         ...e,
-        subtask_name: e.subtask?.name ?? '—',
-        task_name: e.subtask?.task?.name ?? '—',
+        subtask_name: e.subtask?.name ?? '?',
+        task_name: e.subtask?.task?.name ?? '?',
         list_name: e.subtask?.task?.task_list?.name ?? '',
     }));
 });
@@ -85,20 +90,7 @@ const canSave = computed(() => {
     return editingEntry.value ? hasTime : (selectedSubtask.value && hasTime);
 });
 
-// Formatters
-const formatDuration = (minutes) => {
-    if (!minutes) return '0h 0m';
-    const h = Math.floor(minutes / 60);
-    const m = Math.round(minutes % 60);
-    return h > 0 ? `${h}h ${m}m` : `${m}m`;
-};
 
-const formatDateTime = (dateString) => {
-    if (!dateString) return '-';
-    return new Date(dateString).toLocaleString('id-ID', {
-        day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit',
-    });
-};
 
 // Navigation
 const goToTask = (entry) => {
@@ -132,10 +124,11 @@ const stopTimer = async (entry) => {
             elapsedSeconds.value = 0;
             router.reload({ preserveScroll: true });
         } else if (res.status === 419) {
-            window.location.reload();
+            // CSRF token expired ? fall back to a full reload to refresh it
+            router.reload();
         }
     } catch {
-        if (window.showSnackbar) window.showSnackbar('Failed to stop timer', 'error');
+        showSnackbar('Failed to stop timer', 'error');
     }
 };
 
@@ -241,7 +234,7 @@ watch(dateRange, (range) => {
         startDate = new Date(now.getFullYear(), now.getMonth(), 1).toISOString().split('T')[0];
         endDate = now.toISOString().split('T')[0];
     }
-    // range === 'all': startDate and endDate remain null → no filter
+    // range === 'all': startDate and endDate remain null ? no filter
     router.reload({ preserveScroll: true, data: { start_date: startDate, end_date: endDate }, only: ['entries'] });
 });
 
@@ -358,7 +351,7 @@ watch(() => props.runningTimer, (newTimer) => {
                 <v-card rounded="lg" variant="flat">
                     <!-- Search & filter toolbar -->
                     <div class="flex flex-wrap items-center gap-3 px-4 py-3">
-                        <v-text-field v-model="search" prepend-inner-icon="mdi-magnify" label="Search entries…"
+                        <v-text-field v-model="search" prepend-inner-icon="mdi-magnify" label="Search entries?"
                             density="compact" variant="outlined" hide-details clearable class="max-w-xs" />
                         <v-btn-toggle v-model="dateRange" mandatory color="primary" density="compact"
                             variant="outlined">
@@ -371,7 +364,7 @@ watch(() => props.runningTimer, (newTimer) => {
                         <template v-if="dateRange === 'custom'">
                             <v-text-field v-model="customStart" type="date" label="From" density="compact"
                                 variant="outlined" hide-details style="max-width: 150px" />
-                            <span class="text-gray-500 text-xs">—</span>
+                            <span class="text-gray-500 text-xs">?</span>
                             <v-text-field v-model="customEnd" type="date" label="To" density="compact"
                                 variant="outlined" hide-details :min="customStart" style="max-width: 150px" />
                             <v-btn color="primary" size="small" variant="flat" @click="applyCustom">Apply</v-btn>
@@ -414,7 +407,7 @@ watch(() => props.runningTimer, (newTimer) => {
                         <!-- End time -->
                         <template #item.ended_at="{ item }">
                             <span class="text-sm" :class="item.is_running ? 'text-red-400 italic' : 'text-gray-300'">
-                                {{ item.is_running ? 'running…' : formatDateTime(item.ended_at) }}
+                                {{ item.is_running ? 'running?' : formatDateTime(item.ended_at) }}
                             </span>
                         </template>
 
@@ -457,14 +450,14 @@ watch(() => props.runningTimer, (newTimer) => {
                     <v-divider />
 
                     <v-card-text class="px-5 pt-5 pb-3 space-y-4">
-                        <!-- Subtask picker — new entries only -->
+                        <!-- Subtask picker ? new entries only -->
                         <v-autocomplete v-if="!editingEntry" v-model="selectedSubtask" v-model:search="subtaskSearch"
                             :items="subtasks" item-title="name" return-object label="Subtask"
-                            placeholder="Search for a subtask…" variant="outlined" density="compact" hide-details
+                            placeholder="Search for a subtask?" variant="outlined" density="compact" hide-details
                             clearable no-data-text="No active subtasks found" prepend-inner-icon="mdi-magnify">
                             <template #item="{ item, props: iProps }">
                                 <v-list-item v-bind="iProps"
-                                    :subtitle="`${item.raw.task_name} · ${item.raw.list_name}`" />
+                                    :subtitle="`${item.raw.task_name} ? ${item.raw.list_name}`" />
                             </template>
                         </v-autocomplete>
 

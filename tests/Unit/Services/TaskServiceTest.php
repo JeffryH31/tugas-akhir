@@ -1,4 +1,4 @@
-﻿<?php
+<?php
 
 use App\Enums\PriorityLevel;
 use App\Models\Activity;

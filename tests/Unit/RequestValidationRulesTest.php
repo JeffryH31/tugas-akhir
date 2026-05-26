@@ -1,4 +1,4 @@
-﻿<?php
+<?php
 
 use App\Http\Requests\StoreTaskRequest;
 use App\Http\Requests\UpdateTaskRequest;

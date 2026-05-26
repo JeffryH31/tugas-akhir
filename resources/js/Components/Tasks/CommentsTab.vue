@@ -1,15 +1,18 @@
 <script setup>
 import { ref } from 'vue';
 import { router } from '@inertiajs/vue3';
+import { useSnackbar } from '@/composables/useSnackbar';
+
+const { showSnackbar } = useSnackbar();
 
 const props = defineProps({
     comments: { type: Array, default: () => [] },
-    isSubtask: Boolean,
-    workspace: Object,
-    space: Object,
-    list: Object,
-    mainTaskId: [Number, String],   // parent task ID (for comments route)
-    subtaskId: [Number, String],    // subtask ID (if isSubtask)
+    isSubtask: { type: Boolean, default: false },
+    workspace: { type: Object, default: null },
+    space: { type: Object, default: null },
+    list: { type: Object, default: null },
+    mainTaskId: { type: [Number, String], default: null },   // parent task ID (for comments route)
+    subtaskId: { type: [Number, String], default: null },    // subtask ID (if isSubtask)
 });
 
 const emit = defineEmits(['updated']);
@@ -36,7 +39,7 @@ const submitComment = () => {
                 emit('updated');
             },
             onError: () => {
-                window.showSnackbar?.('Failed to add comment', 'error');
+                showSnackbar('Failed to add comment', 'error');
             },
             onFinish: () => { isSubmitting.value = false; },
         }

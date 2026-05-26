@@ -3,22 +3,16 @@ import { ref } from 'vue';
 import { Head, router } from '@inertiajs/vue3';
 import MainLayout from '@/Layouts/MainLayout.vue';
 import ColorPicker from '@/Components/ColorPicker.vue';
+import { normalizeHexColor } from '@/utils/color';
 
 const props = defineProps({
-    workspaces: Array,
+    workspaces: { type: Array, default: () => [] },
 });
 
 const showCreateDialog = ref(false);
 const workspaceName = ref('');
 const workspaceColor = ref('#3B82F6');
 const isCreating = ref(false);
-
-const normalizeHexColor = (value, fallback = '#3B82F6') => {
-    const raw = (value || '').trim();
-    if (!raw) return fallback;
-    const hex = raw.startsWith('#') ? raw : `#${raw}`;
-    return /^#[0-9A-Fa-f]{6}$/.test(hex) ? hex.toUpperCase() : fallback;
-};
 
 const openDialog = () => {
     workspaceName.value = '';

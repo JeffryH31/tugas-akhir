@@ -2,14 +2,17 @@
 import { ref } from 'vue';
 import { Head, router } from '@inertiajs/vue3';
 import MainLayout from '@/Layouts/MainLayout.vue';
+import { useConfirmDialog } from '@/composables/useConfirmDialog';
+
+const { confirm: confirmDialog } = useConfirmDialog();
 
 const props = defineProps({
-    workspace: Object,
-    space: Object,
-    list: Object,
-    members: Array,
-    availableUsers: Array,
-    canManageMembers: Boolean,
+    workspace: { type: Object, default: null },
+    space: { type: Object, default: null },
+    list: { type: Object, default: null },
+    members: { type: Array, default: () => [] },
+    availableUsers: { type: Array, default: () => [] },
+    canManageMembers: { type: Boolean, default: false },
 });
 
 const showAddMemberDialog = ref(false);
@@ -81,10 +84,12 @@ const changeMemberRole = (member, role) => {
     );
 };
 
-const removeMember = (member) => {
-    if (!confirm(`Remove ${member.name} from ${props.list.name}?`)) {
-        return;
-    }
+const removeMember = async (member) => {
+    const ok = await confirmDialog(
+        `Remove ${member.name} from ${props.list.name}?`,
+        'Remove Member'
+    );
+    if (!ok) return;
 
     router.delete(
         route('lists.members.remove', [props.workspace.id, props.space.id, props.list.id]),
