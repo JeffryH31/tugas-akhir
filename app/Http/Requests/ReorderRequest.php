@@ -12,7 +12,6 @@ class ReorderRequest extends FormRequest
         return true;
     }
 
-
     public function rules(): array
     {
         return [
@@ -20,7 +19,6 @@ class ReorderRequest extends FormRequest
             'order.*' => ['required', 'integer'],
         ];
     }
-
 
     public function messages(): array
     {

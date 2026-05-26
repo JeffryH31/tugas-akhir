@@ -2,7 +2,6 @@
 
 namespace App\Services;
 
-use App\Models\Space;
 use App\Models\Sprint;
 use App\Models\Subtask;
 use App\Models\Project;
@@ -182,25 +181,25 @@ class SprintService
             ->where('end_date', '<', now())
             ->orderBy('end_date', 'desc')
             ->limit($lastNSprints)
+            ->withCount([
+                'subtasks as completed_subtasks_count' => function ($q) {
+                    $q->whereNotNull('completed_at');
+                },
+            ])
+            ->withSum([
+                'subtasks as total_time_spent' => function ($q) {
+                    $q->whereNotNull('completed_at');
+                },
+            ], 'time_spent')
             ->get();
 
-        $velocityData = [];
-        
-        foreach ($sprints as $sprint) {
-            $completedSubtasks = $sprint->subtasks()
-                ->whereNotNull('completed_at')
-                ->count();
-
-            $totalTimeSpent = $sprint->subtasks()
-                ->whereNotNull('completed_at')
-                ->sum('time_spent');
-
-            $velocityData[] = [
+        $velocityData = $sprints->map(function ($sprint) {
+            return [
                 'sprint_name' => $sprint->name,
-                'completed_subtasks' => $completedSubtasks,
-                'total_time_spent' => $totalTimeSpent, // in minutes
+                'completed_subtasks' => $sprint->completed_subtasks_count ?? 0,
+                'total_time_spent' => $sprint->total_time_spent ?? 0, // in minutes
             ];
-        }
+        })->toArray();
 
         $averageVelocity = collect($velocityData)->avg('completed_subtasks');
         $averageTimeSpent = collect($velocityData)->avg('total_time_spent');

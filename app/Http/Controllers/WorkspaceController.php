@@ -2,8 +2,10 @@
 
 namespace App\Http\Controllers;
 
-use App\Http\Requests\ReorderRequest;
+use App\Http\Requests\AddMemberRequest;
+use App\Http\Requests\RemoveMemberRequest;
 use App\Http\Requests\StoreWorkspaceRequest;
+use App\Http\Requests\UpdateMemberRoleRequest;
 use App\Http\Requests\UpdateWorkspaceRequest;
 use App\Models\User;
 use App\Models\Workspace;
@@ -70,7 +72,10 @@ class WorkspaceController extends Controller
 
         $members = $workspace->members;
 
+        // Limit available users to prevent exposing all system users
         $availableUsers = User::whereNotIn('id', $members->pluck('id'))
+            ->orderBy('name')
+            ->limit(100)
             ->get();
 
         $projects = $workspace->spaces
@@ -188,12 +193,9 @@ class WorkspaceController extends Controller
     /**
      * Add member to workspace.
      */
-    public function addMember(Request $request, Workspace $workspace): RedirectResponse
+    public function addMember(AddMemberRequest $request, Workspace $workspace): RedirectResponse
     {
-        $validated = $request->validate([
-            'user_id' => 'required|exists:users,id',
-            'role' => 'nullable|in:admin,member',
-        ]);
+        $validated = $request->validated();
 
         abort_unless($this->accessService->canManageWorkspace($request->user(), $workspace), 403);
 
@@ -203,7 +205,7 @@ class WorkspaceController extends Controller
             $this->workspaceService->addMember(
                 $workspace,
                 $user,
-                $validated['role'] ?? 'member',
+                $validated['role'] ?? AccessService::WORKSPACE_MEMBER,
                 $request->user()
             );
 
@@ -216,11 +218,9 @@ class WorkspaceController extends Controller
     /**
      * Remove member from workspace.
      */
-    public function removeMember(Request $request, Workspace $workspace): RedirectResponse
+    public function removeMember(RemoveMemberRequest $request, Workspace $workspace): RedirectResponse
     {
-        $validated = $request->validate([
-            'user_id' => 'required|exists:users,id',
-        ]);
+        $validated = $request->validated();
 
         abort_unless($this->accessService->canManageWorkspace($request->user(), $workspace), 403);
 
@@ -242,12 +242,9 @@ class WorkspaceController extends Controller
     /**
      * Update member role.
      */
-    public function updateMemberRole(Request $request, Workspace $workspace): RedirectResponse
+    public function updateMemberRole(UpdateMemberRoleRequest $request, Workspace $workspace): RedirectResponse
     {
-        $validated = $request->validate([
-            'user_id' => 'required|exists:users,id',
-            'role' => 'required|in:admin,member',
-        ]);
+        $validated = $request->validated();
 
         abort_unless($this->accessService->canManageWorkspace($request->user(), $workspace), 403);
 
@@ -288,13 +285,13 @@ class WorkspaceController extends Controller
                 'name' => $validated['name'],
                 'email' => $validated['email'],
                 'password' => Hash::make($validated['password']),
-                'hourly_rate' => $validated['hourly_rate'] ?? 150000,
+                'hourly_rate' => $validated['hourly_rate'] ?? config('business.default_hourly_rate', 150000),
             ]);
 
             $this->workspaceService->addMember(
                 $workspace,
                 $user,
-                $validated['role'] ?? 'member',
+                $validated['role'] ?? AccessService::WORKSPACE_MEMBER,
                 $request->user()
             );
 

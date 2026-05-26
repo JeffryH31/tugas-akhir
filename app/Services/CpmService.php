@@ -374,7 +374,7 @@ class CpmService
         $startDate = $projectStart ? Carbon::parse($projectStart) : Carbon::today();
 
         // Assuming 8 working hours per day
-        $workingHoursPerDay = 8;
+        $workingHoursPerDay = config('business.working_hours_per_day', 8);
         $workingDays = ceil($projectDuration / $workingHoursPerDay);
         $endDate = $startDate->copy()->addWeekdays($workingDays);
 
@@ -455,6 +455,18 @@ class CpmService
             return true;
         }
 
+        // Pre-load all dependency edges for the parent task in one query
+        // to avoid N+1 inside the BFS loop.
+        // "dependents of X" = subtasks that depend ON X = rows where depends_on_subtask_id = X
+        $allDependents = \Illuminate\Support\Facades\DB::table('subtask_dependencies')
+            ->whereIn('depends_on_subtask_id', function ($q) use ($subtask) {
+                $q->select('id')->from('subtasks')->where('task_id', $subtask->task_id);
+            })
+            ->get()
+            ->groupBy('depends_on_subtask_id')
+            ->map(fn($rows) => $rows->pluck('subtask_id')->all())
+            ->all();
+
         $visited = [];
         $queue = [$subtask->id];
 
@@ -462,7 +474,7 @@ class CpmService
             $current = array_shift($queue);
 
             if ($current === $dependsOn->id) {
-                return true; // Found path subtask -> ... -> dependsOn; adding dependsOn -> subtask closes a loop
+                return true;
             }
 
             if (in_array($current, $visited)) {
@@ -471,10 +483,9 @@ class CpmService
 
             $visited[] = $current;
 
-            $dependents = Subtask::find($current)?->dependents ?? collect();
-            foreach ($dependents as $dependent) {
-                if (!in_array($dependent->id, $visited)) {
-                    $queue[] = $dependent->id;
+            foreach ($allDependents[$current] ?? [] as $dependentId) {
+                if (!in_array($dependentId, $visited)) {
+                    $queue[] = $dependentId;
                 }
             }
         }

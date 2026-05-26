@@ -2,6 +2,8 @@
 
 namespace App\Http\Controllers;
 
+use App\Http\Requests\AddDependencyRequest;
+use App\Http\Requests\RemoveDependencyRequest;
 use App\Models\Space;
 use App\Models\Subtask;
 use App\Models\Task;
@@ -29,7 +31,7 @@ class CpmController extends Controller
         Space $space,
         Project $list,
         Task $task
-    ) {
+    ): \Illuminate\Http\JsonResponse|\Illuminate\Http\RedirectResponse {
         abort_unless($this->accessService->canViewProject($request->user(), $list), 403);
         if ($task->project_id !== $list->id) {
             abort(404);
@@ -100,18 +102,14 @@ class CpmController extends Controller
      * Add a dependency between two subtasks
      */
     public function addDependency(
-        Request $request,
+        AddDependencyRequest $request,
         Workspace $workspace,
         Space $space,
         Project $list,
         Task $task
-    ) {
+    ): \Illuminate\Http\JsonResponse|\Illuminate\Http\RedirectResponse {
         abort_unless($this->accessService->canManageDependencies($request->user(), $list), 403);
-        $validated = $request->validate([
-            'subtask_id' => 'required|exists:subtasks,id',
-            'depends_on_id' => 'required|exists:subtasks,id',
-            'type' => 'nullable|in:blocks,relates_to',
-        ]);
+        $validated = $request->validated();
 
         $subtask = Subtask::findOrFail($validated['subtask_id']);
         $dependsOn = Subtask::findOrFail($validated['depends_on_id']);
@@ -144,17 +142,14 @@ class CpmController extends Controller
      * Remove a dependency between two subtasks
      */
     public function removeDependency(
-        Request $request,
+        RemoveDependencyRequest $request,
         Workspace $workspace,
         Space $space,
         Project $list,
         Task $task
-    ) {
+    ): \Illuminate\Http\JsonResponse|\Illuminate\Http\RedirectResponse {
         abort_unless($this->accessService->canManageDependencies($request->user(), $list), 403);
-        $validated = $request->validate([
-            'subtask_id' => 'required|exists:subtasks,id',
-            'depends_on_id' => 'required|exists:subtasks,id',
-        ]);
+        $validated = $request->validated();
 
         $subtask = Subtask::findOrFail($validated['subtask_id']);
         $dependsOn = Subtask::findOrFail($validated['depends_on_id']);

@@ -89,9 +89,13 @@ class TaskService
 
 
             if (!empty($data['assignee_ids'])) {
+                // Batch load all assignees to avoid N+1
+                $assignees = User::whereIn('id', $data['assignee_ids'])->get()->keyBy('id');
                 foreach ($data['assignee_ids'] as $assigneeId) {
-                    $assignee = User::findOrFail($assigneeId);
-                    $task->assign($assignee, $user);
+                    $assignee = $assignees->get($assigneeId);
+                    if ($assignee) {
+                        $task->assign($assignee, $user);
+                    }
                 }
             }
 
@@ -147,8 +151,14 @@ class TaskService
                 $addedIds   = array_diff($newAssigneeIds, $oldAssigneeIds);
                 $removedIds = array_diff($oldAssigneeIds, $newAssigneeIds);
 
+                // Batch load all changed assignees to avoid N+1
+                $changedIds = array_merge($addedIds, $removedIds);
+                $assignees = !empty($changedIds) 
+                    ? User::whereIn('id', $changedIds)->get()->keyBy('id')
+                    : collect();
+
                 foreach ($addedIds as $id) {
-                    $assignee = User::find($id);
+                    $assignee = $assignees->get($id);
                     if ($assignee) {
                         Activity::log($task->project->space->workspace, $user, $task, 'assigned', [
                             'name'          => $task->name,
@@ -159,7 +169,7 @@ class TaskService
                 }
 
                 foreach ($removedIds as $id) {
-                    $assignee = User::find($id);
+                    $assignee = $assignees->get($id);
                     if ($assignee) {
                         Activity::log($task->project->space->workspace, $user, $task, 'unassigned', [
                             'name'          => $task->name,

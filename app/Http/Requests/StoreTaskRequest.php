@@ -7,12 +7,10 @@ use Illuminate\Foundation\Http\FormRequest;
 
 class StoreTaskRequest extends FormRequest
 {
-
     public function authorize(): bool
     {
         return true;
     }
-
 
     public function rules(): array
     {
@@ -42,7 +40,6 @@ class StoreTaskRequest extends FormRequest
             'label_ids.*' => ['exists:labels,id'],
         ];
     }
-
 
     public function messages(): array
     {

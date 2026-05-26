@@ -95,7 +95,7 @@ class SpaceService
                 ? $space->workspace->members()->where('user_id', $user->id)->first()?->pivot?->role
                 : null;
 
-            if (in_array($wsRole, ['admin', 'owner'], true)) {
+            if (in_array($wsRole, [AccessService::WORKSPACE_ADMIN, AccessService::WORKSPACE_OWNER], true)) {
                 return $query;
             }
 
@@ -293,7 +293,7 @@ class SpaceService
     /**
      * Add custom status to space
      */
-    public function addStatus(Space $space, array $data)
+    public function addStatus(Space $space, array $data): Status
     {
         $maxPosition = $space->statuses()->max('position') ?? -1;
 
@@ -311,7 +311,7 @@ class SpaceService
     /**
      * Update status
      */
-    public function updateStatus(Status $status, array $data)
+    public function updateStatus(Status $status, array $data): Status
     {
         $status->update([
             'name' => $data['name'] ?? $status->name,

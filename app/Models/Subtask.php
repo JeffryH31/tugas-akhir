@@ -203,7 +203,7 @@ class Subtask extends Model
 
         $progress = $total > 0 ? (int) round(($checked / $total) * 100) : 0;
 
-        $this->withoutEvents(fn () => $this->update(['progress' => $progress]));
+        $this->withoutEvents(fn() => $this->update(['progress' => $progress]));
     }
 
     public function sprint(): BelongsTo

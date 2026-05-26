@@ -48,18 +48,24 @@ class WorkspaceAnalyticsController extends Controller
             // Owner/admin members get all space IDs so they appear in every space filter
             $workspace->members->each(function ($m) use (&$spaceMemberMap, $allSpaceIds) {
                 $role = $m->pivot?->role;
-                if (in_array($role, ['admin'], true)) {
+                if (in_array($role, [AccessService::WORKSPACE_OWNER, AccessService::WORKSPACE_ADMIN], true)) {
                     $spaceMemberMap[$m->id] = $allSpaceIds;
                 }
             });
         }
 
+        // Batch load running time entries to avoid N+1 query
+        $runningEntries = $canManage 
+            ? TimeEntry::whereIn('user_id', $workspace->members->pluck('id'))
+                ->where('is_running', true)
+                ->with('subtask.task.project.space')
+                ->get()
+                ->keyBy('user_id')
+            : collect();
+
         $members = $canManage
-            ? $workspace->members->map(function ($m) use ($spaceMemberMap) {
-                $running = TimeEntry::where('user_id', $m->id)
-                    ->where('is_running', true)
-                    ->with('subtask.task.project.space')
-                    ->first();
+            ? $workspace->members->map(function ($m) use ($spaceMemberMap, $runningEntries) {
+                $running = $runningEntries->get($m->id);
 
                 $runningOn = null;
                 if ($running && $running->subtask) {
@@ -99,7 +105,7 @@ class WorkspaceAnalyticsController extends Controller
         ]);
     }
 
-    public function export(Request $request, Workspace $workspace)
+    public function export(Request $request, Workspace $workspace): \Symfony\Component\HttpFoundation\StreamedResponse
     {
         abort_unless($this->accessService->canViewAnalytics($request->user(), $workspace), 403);
         $validated = $request->validate([

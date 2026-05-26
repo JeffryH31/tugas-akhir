@@ -10,22 +10,22 @@ use App\Models\Project;
 use App\Models\Workspace;
 use App\Services\AccessService;
 use App\Services\SprintService;
+use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
+use Inertia\Response;
 
 class SprintController extends Controller
 {
-    protected $sprintService;
-
-    public function __construct(SprintService $sprintService, protected AccessService $accessService)
-    {
-        $this->sprintService = $sprintService;
-    }
+    public function __construct(
+        protected SprintService $sprintService,
+        protected AccessService $accessService,
+    ) {}
 
     /**
      * Display a listing of sprints.
      */
-    public function index(Request $request, Workspace $workspace, Space $space)
+    public function index(Request $request, Workspace $workspace, Space $space): RedirectResponse
     {
         abort_unless($this->accessService->canViewSpace($request->user(), $space), 403);
 
@@ -59,7 +59,7 @@ class SprintController extends Controller
     /**
      * Display the sprint board.
      */
-    public function show(Request $request, Workspace $workspace, Space $space, Sprint $sprint)
+    public function show(Request $request, Workspace $workspace, Space $space, Sprint $sprint): Response
     {
         abort_unless($this->accessService->canViewSpace($request->user(), $space), 403);
         $this->ensureSprintBelongsToSpace($sprint, $space);
@@ -101,7 +101,7 @@ class SprintController extends Controller
     /**
      * Store a newly created sprint.
      */
-    public function store(StoreSprintRequest $request, Workspace $workspace, Space $space)
+    public function store(StoreSprintRequest $request, Workspace $workspace, Space $space): RedirectResponse
     {
         $validated = $request->validated();
         $list = Project::where('space_id', $space->id)->findOrFail((int) $validated['list_id']);
@@ -115,7 +115,7 @@ class SprintController extends Controller
     /**
      * Update the specified sprint.
      */
-    public function update(UpdateSprintRequest $request, Workspace $workspace, Space $space, Sprint $sprint)
+    public function update(UpdateSprintRequest $request, Workspace $workspace, Space $space, Sprint $sprint): RedirectResponse
     {
         $this->ensureSprintBelongsToSpace($sprint, $space);
         abort_unless($this->accessService->canManageTaskStructure($request->user(), $sprint->project), 403);
@@ -133,7 +133,7 @@ class SprintController extends Controller
     /**
      * Start sprint.
      */
-    public function start(Request $request, Workspace $workspace, Space $space, Sprint $sprint)
+    public function start(Request $request, Workspace $workspace, Space $space, Sprint $sprint): RedirectResponse
     {
         $this->ensureSprintBelongsToSpace($sprint, $space);
         abort_unless($this->accessService->canManageTaskStructure($request->user(), $sprint->project), 403);
@@ -146,7 +146,7 @@ class SprintController extends Controller
     /**
      * Complete sprint.
      */
-    public function complete(Request $request, Workspace $workspace, Space $space, Sprint $sprint)
+    public function complete(Request $request, Workspace $workspace, Space $space, Sprint $sprint): RedirectResponse
     {
         $this->ensureSprintBelongsToSpace($sprint, $space);
         abort_unless($this->accessService->canManageTaskStructure($request->user(), $sprint->project), 403);
@@ -159,13 +159,13 @@ class SprintController extends Controller
     /**
      * Add subtask to sprint.
      */
-    public function addTask(Request $request, Workspace $workspace, Space $space, Sprint $sprint)
+    public function addTask(Request $request, Workspace $workspace, Space $space, Sprint $sprint): RedirectResponse
     {
         $this->ensureSprintBelongsToSpace($sprint, $space);
         abort_unless($this->accessService->canManageTaskStructure($request->user(), $sprint->project), 403);
 
         $validated = $request->validate([
-            'subtask_id' => 'required|exists:subtasks,id',
+            'subtask_id' => ['required', 'exists:subtasks,id'],
         ]);
 
         $this->sprintService->addSubtaskToSprint($sprint, $validated['subtask_id']);
@@ -176,13 +176,13 @@ class SprintController extends Controller
     /**
      * Remove subtask from sprint.
      */
-    public function removeTask(Request $request, Workspace $workspace, Space $space, Sprint $sprint)
+    public function removeTask(Request $request, Workspace $workspace, Space $space, Sprint $sprint): RedirectResponse
     {
         $this->ensureSprintBelongsToSpace($sprint, $space);
         abort_unless($this->accessService->canManageTaskStructure($request->user(), $sprint->project), 403);
 
         $validated = $request->validate([
-            'subtask_id' => 'required|exists:subtasks,id',
+            'subtask_id' => ['required', 'exists:subtasks,id'],
         ]);
 
         $this->sprintService->removeSubtaskFromSprint($sprint, $validated['subtask_id']);
@@ -193,7 +193,7 @@ class SprintController extends Controller
     /**
      * Remove the specified sprint.
      */
-    public function destroy(Request $request, Workspace $workspace, Space $space, Sprint $sprint)
+    public function destroy(Request $request, Workspace $workspace, Space $space, Sprint $sprint): RedirectResponse
     {
         $this->ensureSprintBelongsToSpace($sprint, $space);
         abort_unless($this->accessService->canManageTaskStructure($request->user(), $sprint->project), 403);

@@ -6,12 +6,10 @@ use Illuminate\Foundation\Http\FormRequest;
 
 class StoreSpaceRequest extends FormRequest
 {
-
     public function authorize(): bool
     {
         return true;
     }
-
 
     public function rules(): array
     {
@@ -21,7 +19,6 @@ class StoreSpaceRequest extends FormRequest
 
         ];
     }
-
 
     public function messages(): array
     {

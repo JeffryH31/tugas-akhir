@@ -2,12 +2,14 @@
 
 namespace App\Http\Controllers;
 
+use App\Http\Requests\AddMemberRequest;
+use App\Http\Requests\RemoveMemberRequest;
 use App\Http\Requests\ReorderRequest;
 use App\Http\Requests\StoreProjectRequest;
+use App\Http\Requests\UpdateMemberRoleRequest;
 use App\Http\Requests\UpdateProjectRequest;
 use App\Models\Folder;
 use App\Models\Space;
-use App\Models\Task;
 use App\Models\Project;
 use App\Models\User;
 use App\Models\Workspace;
@@ -260,16 +262,13 @@ class ProjectController extends Controller
         return back()->with('success', 'Product status updated.');
     }
 
-    public function addMember(Request $request, Workspace $workspace, Space $space, Project $project): RedirectResponse
+    public function addMember(AddMemberRequest $request, Workspace $workspace, Space $space, Project $project): RedirectResponse
     {
         abort_unless((int) $space->workspace_id === (int) $workspace->id, 404);
         abort_unless((int) $project->space_id === (int) $space->id, 404);
         abort_unless($this->accessService->canManageProjectMembers($request->user(), $project), 403);
 
-        $validated = $request->validate([
-            'user_id' => ['required', 'exists:users,id'],
-            'role' => ['required', 'in:project_owner,project_manager,development_team,guest'],
-        ]);
+        $validated = $request->validated();
 
         $user = User::findOrFail($validated['user_id']);
         $this->projectService->addMember($project, $user, $validated['role'], $request->user());
@@ -277,16 +276,13 @@ class ProjectController extends Controller
         return back()->with('success', 'Project member added successfully.');
     }
 
-    public function updateMemberRole(Request $request, Workspace $workspace, Space $space, Project $project): RedirectResponse
+    public function updateMemberRole(UpdateMemberRoleRequest $request, Workspace $workspace, Space $space, Project $project): RedirectResponse
     {
         abort_unless((int) $space->workspace_id === (int) $workspace->id, 404);
         abort_unless((int) $project->space_id === (int) $space->id, 404);
         abort_unless($this->accessService->canManageProjectMembers($request->user(), $project), 403);
 
-        $validated = $request->validate([
-            'user_id' => ['required', 'exists:users,id'],
-            'role' => ['required', 'in:project_owner,project_manager,development_team,guest'],
-        ]);
+        $validated = $request->validated();
 
         $user = User::findOrFail($validated['user_id']);
         $this->projectService->updateMemberRole($project, $user, $validated['role'], $request->user());
@@ -294,15 +290,13 @@ class ProjectController extends Controller
         return back()->with('success', 'Project member role updated successfully.');
     }
 
-    public function removeMember(Request $request, Workspace $workspace, Space $space, Project $project): RedirectResponse
+    public function removeMember(RemoveMemberRequest $request, Workspace $workspace, Space $space, Project $project): RedirectResponse
     {
         abort_unless((int) $space->workspace_id === (int) $workspace->id, 404);
         abort_unless((int) $project->space_id === (int) $space->id, 404);
         abort_unless($this->accessService->canManageProjectMembers($request->user(), $project), 403);
 
-        $validated = $request->validate([
-            'user_id' => ['required', 'exists:users,id'],
-        ]);
+        $validated = $request->validated();
 
         $user = User::findOrFail($validated['user_id']);
         $this->projectService->removeMember($project, $user, $request->user());

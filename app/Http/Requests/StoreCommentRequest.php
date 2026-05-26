@@ -12,7 +12,6 @@ class StoreCommentRequest extends FormRequest
         return true;
     }
 
-
     public function rules(): array
     {
         return [
@@ -23,7 +22,6 @@ class StoreCommentRequest extends FormRequest
             'mentions.*' => ['exists:users,id'],
         ];
     }
-
 
     public function messages(): array
     {

@@ -8,6 +8,12 @@ use App\Models\TimeEntry;
 use App\Models\User;
 use App\Models\Workspace;
 
+/**
+ * Service for generating comprehensive member activity and productivity reports.
+ *
+ * Provides time tracking summaries, daily/weekly breakdowns, active tasks,
+ * completed work, and recent activity logs for workspace members.
+ */
 class MemberReportService
 {
     public function getReport(Workspace $workspace, User $member): array

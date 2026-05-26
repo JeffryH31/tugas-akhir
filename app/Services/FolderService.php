@@ -17,7 +17,7 @@ class FolderService
     /**
      * Get folders for a space
      */
-    public function getFoldersForSpace(Space $space)
+    public function getFoldersForSpace(Space $space): \Illuminate\Database\Eloquent\Collection
     {
         return $space->folders()
             ->with(['children', 'projects'])

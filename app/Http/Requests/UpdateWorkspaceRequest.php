@@ -6,12 +6,10 @@ use Illuminate\Foundation\Http\FormRequest;
 
 class UpdateWorkspaceRequest extends FormRequest
 {
-
     public function authorize(): bool
     {
         return true;
     }
-
 
     public function rules(): array
     {
@@ -20,7 +18,6 @@ class UpdateWorkspaceRequest extends FormRequest
             'color' => ['nullable', 'string', 'regex:/^#[0-9A-Fa-f]{6}$/'],
         ];
     }
-
 
     public function messages(): array
     {

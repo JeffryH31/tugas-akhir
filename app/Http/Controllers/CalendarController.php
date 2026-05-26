@@ -42,13 +42,13 @@ class CalendarController extends Controller
                     $sq->where('workspace_id', $workspace->id);
 
                     // Non-admin users can only see spaces they are a member of
-                    if ($workspaceRole !== 'admin') {
+                    if (!in_array($workspaceRole, [AccessService::WORKSPACE_OWNER, AccessService::WORKSPACE_ADMIN], true)) {
                         $sq->whereHas('members', fn($m) => $m->where('user_id', $user->id));
                     }
                 });
 
                 // Workspace admin can see all; others only see products they belong to
-                if ($workspaceRole !== 'admin') {
+                if (!in_array($workspaceRole, [AccessService::WORKSPACE_OWNER, AccessService::WORKSPACE_ADMIN], true)) {
                     $query->whereHas('members', fn($m) => $m->where('user_id', $user->id));
                 }
             })

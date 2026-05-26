@@ -4,7 +4,6 @@ namespace App\Services;
 
 use App\Models\Comment;
 use App\Models\Space;
-use App\Models\Task;
 use App\Models\Project;
 use App\Models\TimeEntry;
 use App\Models\User;
@@ -71,6 +70,14 @@ class AccessService
     public const PROJECT_DEVELOPER = 'development_team';
     public const PROJECT_GUEST = 'guest';
 
+    /** @var array<string, ?string> Per-request role cache to avoid repeated DB queries. */
+    private array $roleCache = [];
+
+    private function cacheKey(string $scope, int $userId, int $entityId): string
+    {
+        return "{$scope}:{$userId}:{$entityId}";
+    }
+
     // Role getters
 
     /**
@@ -86,7 +93,15 @@ class AccessService
      */
     public function getWorkspaceRole(User $user, Workspace $workspace): ?string
     {
-        return $workspace->members()->where('user_id', $user->id)->first()?->pivot?->role;
+        $key = $this->cacheKey('ws', $user->id, $workspace->id);
+
+        if (!array_key_exists($key, $this->roleCache)) {
+            $this->roleCache[$key] = $workspace->members()
+                ->where('user_id', $user->id)
+                ->first()?->pivot?->role;
+        }
+
+        return $this->roleCache[$key];
     }
 
     /**
@@ -94,7 +109,15 @@ class AccessService
      */
     public function getSpaceRole(User $user, Space $space): ?string
     {
-        return $space->members()->where('user_id', $user->id)->first()?->pivot?->role;
+        $key = $this->cacheKey('sp', $user->id, $space->id);
+
+        if (!array_key_exists($key, $this->roleCache)) {
+            $this->roleCache[$key] = $space->members()
+                ->where('user_id', $user->id)
+                ->first()?->pivot?->role;
+        }
+
+        return $this->roleCache[$key];
     }
 
     /**
@@ -102,7 +125,15 @@ class AccessService
      */
     public function getProjectRole(User $user, Project $list): ?string
     {
-        return $list->members()->where('user_id', $user->id)->first()?->pivot?->role;
+        $key = $this->cacheKey('pj', $user->id, $list->id);
+
+        if (!array_key_exists($key, $this->roleCache)) {
+            $this->roleCache[$key] = $list->members()
+                ->where('user_id', $user->id)
+                ->first()?->pivot?->role;
+        }
+
+        return $this->roleCache[$key];
     }
 
     /**

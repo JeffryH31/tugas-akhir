@@ -186,9 +186,15 @@ class SubtaskService
                 $addedIds   = array_diff($newAssigneeIds, $oldAssigneeIds);
                 $removedIds = array_diff($oldAssigneeIds, $newAssigneeIds);
 
+                // Batch load all changed assignees to avoid N+1
+                $changedIds = array_merge($addedIds, $removedIds);
+                $assignees = !empty($changedIds)
+                    ? User::whereIn('id', $changedIds)->get()->keyBy('id')
+                    : collect();
+
                 $workspace = $subtask->task->project->space->workspace;
                 foreach ($addedIds as $id) {
-                    $assignee = User::find($id);
+                    $assignee = $assignees->get($id);
                     if ($assignee) {
                         Activity::log($workspace, $user, $subtask, 'assigned', [
                             'name'          => $subtask->name,
@@ -199,7 +205,7 @@ class SubtaskService
                 }
 
                 foreach ($removedIds as $id) {
-                    $assignee = User::find($id);
+                    $assignee = $assignees->get($id);
                     if ($assignee) {
                         Activity::log($workspace, $user, $subtask, 'unassigned', [
                             'name'          => $subtask->name,

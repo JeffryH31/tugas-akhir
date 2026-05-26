@@ -14,11 +14,6 @@ use App\Http\Resources\UserResource;
 
 class ActivityResource extends JsonResource
 {
-    /**
-     * Transform the resource into an array.
-     *
-     * @return array<string, mixed>
-     */
     public function toArray(Request $request): array
     {
         return [
@@ -48,30 +43,30 @@ class ActivityResource extends JsonResource
 
         return match (true) {
             $subject instanceof Workspace =>
-                route('workspaces.show', $workspaceId),
+            route('workspaces.show', $workspaceId),
 
             $subject instanceof Space =>
-                route('spaces.show', [$workspaceId, $subject->id]),
+            route('spaces.show', [$workspaceId, $subject->id]),
 
             $subject instanceof Folder =>
-                $subject->space_id
-                    ? route('spaces.show', [$workspaceId, $subject->space_id])
-                    : null,
+            $subject->space_id
+                ? route('spaces.show', [$workspaceId, $subject->space_id])
+                : null,
 
             $subject instanceof Project =>
-                $subject->space_id
-                    ? route('projects.show', [$workspaceId, $subject->space_id, $subject->id])
-                    : null,
+            $subject->space_id
+                ? route('projects.show', [$workspaceId, $subject->space_id, $subject->id])
+                : null,
 
             $subject instanceof Task =>
-                $subject->project?->space_id
-                    ? route('projects.show', [$workspaceId, $subject->project->space_id, $subject->project_id])
-                    : null,
+            $subject->project?->space_id
+                ? route('projects.show', [$workspaceId, $subject->project->space_id, $subject->project_id])
+                : null,
 
             $subject instanceof Subtask =>
-                $subject->task?->project?->space_id
-                    ? route('projects.show', [$workspaceId, $subject->task->project->space_id, $subject->task->project_id])
-                    : null,
+            $subject->task?->project?->space_id
+                ? route('projects.show', [$workspaceId, $subject->task->project->space_id, $subject->task->project_id])
+                : null,
 
             default => null,
         };
@@ -86,20 +81,20 @@ class ActivityResource extends JsonResource
 
         return match (true) {
             $subject instanceof Task =>
-                $subject->project?->space
-                    ? $subject->project->space->name . ' / ' . $subject->project->name
-                    : null,
+            $subject->project?->space
+                ? $subject->project->space->name . ' / ' . $subject->project->name
+                : null,
 
             $subject instanceof Subtask =>
-                $subject->task?->project?->space
-                    ? $subject->task->project->space->name . ' / ' . $subject->task->project->name
-                    : null,
+            $subject->task?->project?->space
+                ? $subject->task->project->space->name . ' / ' . $subject->task->project->name
+                : null,
 
             $subject instanceof Project =>
-                $subject->space?->name,
+            $subject->space?->name,
 
             $subject instanceof Folder =>
-                $subject->space?->name,
+            $subject->space?->name,
 
             default => null,
         };

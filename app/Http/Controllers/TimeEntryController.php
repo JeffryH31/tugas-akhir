@@ -118,7 +118,7 @@ class TimeEntryController extends Controller
     /**
      * Start timer.
      */
-    public function startTimer(Request $request, Workspace $workspace, Space $space, Project $list, Task $task)
+    public function startTimer(Request $request, Workspace $workspace, Space $space, Project $list, Task $task): \Illuminate\Http\JsonResponse|\Illuminate\Http\RedirectResponse
     {
         abort_unless($this->accessService->canTrackTime($request->user(), $list), 403);
         $validated = $request->validate([
@@ -158,7 +158,7 @@ class TimeEntryController extends Controller
     /**
      * Stop timer.
      */
-    public function stopTimer(Request $request, Workspace $workspace, Space $space, Project $list, Task $task, TimeEntry $entry)
+    public function stopTimer(Request $request, Workspace $workspace, Space $space, Project $list, Task $task, TimeEntry $entry): \Illuminate\Http\JsonResponse|\Illuminate\Http\RedirectResponse
     {
         abort_unless($this->accessService->canManageTimeEntry($request->user(), $entry), 403);
         try {
@@ -187,7 +187,7 @@ class TimeEntryController extends Controller
     /**
      * Get running timer.
      */
-    public function runningTimer(Request $request)
+    public function runningTimer(Request $request): \Illuminate\Http\JsonResponse|\Inertia\Response
     {
         $timer = $this->timeTrackingService->getRunningTimer($request->user());
 
@@ -207,9 +207,9 @@ class TimeEntryController extends Controller
      */
     public function update(UpdateTimeEntryRequest $request, TimeEntry $entry): RedirectResponse
     {
+        abort_unless($this->accessService->canManageTimeEntry($request->user(), $entry), 403);
+        
         try {
-            abort_unless($this->accessService->canManageTimeEntry($request->user(), $entry), 403);
-
             $updatedEntry = $this->timeTrackingService->updateEntry($entry, $request->validated(), $request->user());
 
             return redirect()->back()->with([

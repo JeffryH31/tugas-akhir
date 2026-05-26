@@ -40,7 +40,7 @@ class WorkspaceService
             ]);
 
             // Creator is always the first admin
-            $workspace->addMember($owner, 'owner');
+            $workspace->addMember($owner, AccessService::WORKSPACE_OWNER);
 
             Activity::log($workspace, $owner, $workspace, 'created', [
                 'name' => $workspace->name,
@@ -91,7 +91,7 @@ class WorkspaceService
     /**
      * Add a member to the workspace
      */
-    public function addMember(Workspace $workspace, User $user, string $role = 'member', ?User $addedBy = null): void
+    public function addMember(Workspace $workspace, User $user, string $role = AccessService::WORKSPACE_MEMBER, ?User $addedBy = null): void
     {
         $workspace->addMember($user, $role);
 

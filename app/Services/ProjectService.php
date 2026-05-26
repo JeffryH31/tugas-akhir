@@ -150,7 +150,7 @@ class ProjectService
                 'created_by' => $user->id,
             ]);
 
-            $project->addMember($user, 'project_owner');
+            $project->addMember($user, AccessService::PROJECT_OWNER);
 
             Activity::log($space->workspace, $user, $project, 'created', [
                 'name' => $project->name,
@@ -170,12 +170,19 @@ class ProjectService
      */
     private function ensureDefaultTaskStatuses(Space $space): void
     {
+        $statusColors = config('business.default_status_colors', [
+            'open' => '#6B7280',
+            'in_progress' => '#3B82F6',
+            'review' => '#F59E0B',
+            'done' => '#10B981',
+        ]);
+
         $defaults = [
             [
                 'type' => 'open',
                 'name' => 'Open',
                 'slug' => 'open',
-                'color' => '#6B7280',
+                'color' => $statusColors['backlog'] ?? '#6B7280',
                 'position' => 0,
                 'is_default' => true,
                 'is_closed' => false,
@@ -184,7 +191,7 @@ class ProjectService
                 'type' => 'in_progress',
                 'name' => 'In Progress',
                 'slug' => 'in-progress',
-                'color' => '#3B82F6',
+                'color' => $statusColors['todo'] ?? '#3B82F6',
                 'position' => 1,
                 'is_default' => false,
                 'is_closed' => false,
@@ -193,7 +200,7 @@ class ProjectService
                 'type' => 'review',
                 'name' => 'Review',
                 'slug' => 'review',
-                'color' => '#F59E0B',
+                'color' => $statusColors['in_progress'] ?? '#F59E0B',
                 'position' => 2,
                 'is_default' => false,
                 'is_closed' => false,
@@ -202,7 +209,7 @@ class ProjectService
                 'type' => 'closed',
                 'name' => 'Completed',
                 'slug' => 'completed',
-                'color' => '#10B981',
+                'color' => $statusColors['done'] ?? '#10B981',
                 'position' => 3,
                 'is_default' => false,
                 'is_closed' => true,
@@ -439,7 +446,7 @@ class ProjectService
             $newProject->save();
 
             // Only copy the creator as project_owner, not all members
-            $newProject->addMember($user, 'project_owner');
+            $newProject->addMember($user, AccessService::PROJECT_OWNER);
 
             foreach ($project->tasks()->with(['labels', 'subtasks.labels'])->get() as $task) {
                 $newTask = $task->replicate(['task_id']);

@@ -6,12 +6,10 @@ use Illuminate\Foundation\Http\FormRequest;
 
 class StoreFolderRequest extends FormRequest
 {
-
     public function authorize(): bool
     {
         return true;
     }
-
 
     public function rules(): array
     {
@@ -22,7 +20,6 @@ class StoreFolderRequest extends FormRequest
             'parent_id' => ['nullable', 'exists:folders,id'],
         ];
     }
-
 
     public function messages(): array
     {

@@ -4,15 +4,9 @@ namespace App\Http\Resources;
 
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\JsonResource;
-// ChecklistItemResource is in the same namespace — no import needed
 
 class SubtaskResource extends JsonResource
 {
-    /**
-     * Transform the resource into an array.
-     *
-     * @return array<string, mixed>
-     */
     public function toArray(Request $request): array
     {
         return [
@@ -49,13 +43,13 @@ class SubtaskResource extends JsonResource
 
             // Progress is auto-calculated from checklist items
             'progress'          => $this->progress,
-            'checklist_total'   => $this->whenLoaded('checklistItems', fn () => $this->checklistItems->count(), 0),
-            'checklist_checked' => $this->whenLoaded('checklistItems', fn () => $this->checklistItems->where('is_checked', true)->count(), 0),
+            'checklist_total'   => $this->whenLoaded('checklistItems', fn() => $this->checklistItems->count(), 0),
+            'checklist_checked' => $this->whenLoaded('checklistItems', fn() => $this->checklistItems->where('is_checked', true)->count(), 0),
             // Flat list — Vue builds the tree client-side using parent_id
             'checklist_items'   => ChecklistItemResource::collection($this->whenLoaded('checklistItems')),
 
             'children'       => self::collection($this->whenLoaded('children')),
-            'children_count' => $this->whenLoaded('children', fn () => $this->children->count(), 0),
+            'children_count' => $this->whenLoaded('children', fn() => $this->children->count(), 0),
 
             'position'   => $this->position,
             'is_overdue' => $this->isOverdue(),

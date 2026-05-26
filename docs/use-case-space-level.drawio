@@ -1,0 +1,124 @@
+<mxfile host="app.diagrams.net" agent="Kiro">
+  <diagram name="Space Level Use Case" id="space-uc">
+    <mxGraphModel dx="1471" dy="994" grid="0" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="1600" pageHeight="1000" math="0" shadow="0">
+      <root>
+        <mxCell id="0" />
+        <mxCell id="1" parent="0" />
+        <mxCell id="boundary" parent="1" style="shape=rect;rounded=1;whiteSpace=wrap;html=1;dashed=1;dashPattern=5 5;fillColor=none;strokeColor=#666666;fontSize=16;fontStyle=1;verticalAlign=top;spacingTop=10;arcSize=10;" value="Space Level - Project Management System" vertex="1">
+          <mxGeometry height="920" width="900" x="300" y="30" as="geometry" />
+        </mxCell>
+        <mxCell id="actor_ws_owner" parent="1" style="shape=umlActor;verticalLabelPosition=bottom;verticalAlign=top;html=1;outlineConnect=0;fontSize=16;" value="Workspace&#xa;Owner" vertex="1">
+          <mxGeometry height="60" width="40" x="80" y="100" as="geometry" />
+        </mxCell>
+        <mxCell id="actor_ws_admin" parent="1" style="shape=umlActor;verticalLabelPosition=bottom;verticalAlign=top;html=1;outlineConnect=0;fontSize=16;" value="Workspace&#xa;Admin" vertex="1">
+          <mxGeometry height="60" width="40" x="80" y="300" as="geometry" />
+        </mxCell>
+        <mxCell id="actor_space_admin" parent="1" style="shape=umlActor;verticalLabelPosition=bottom;verticalAlign=top;html=1;outlineConnect=0;fontSize=16;" value="Space&#xa;Admin" vertex="1">
+          <mxGeometry height="60" width="40" x="80" y="560" as="geometry" />
+        </mxCell>
+        <mxCell id="actor_space_member" parent="1" style="shape=umlActor;verticalLabelPosition=bottom;verticalAlign=top;html=1;outlineConnect=0;fontSize=16;" value="Space&#xa;Member" vertex="1">
+          <mxGeometry height="60" width="40" x="1380" y="400" as="geometry" />
+        </mxCell>
+        <mxCell id="actor_space_guest" parent="1" style="shape=umlActor;verticalLabelPosition=bottom;verticalAlign=top;html=1;outlineConnect=0;fontSize=16;" value="Space&#xa;Guest" vertex="1">
+          <mxGeometry height="60" width="40" x="1380" y="650" as="geometry" />
+        </mxCell>
+        <mxCell id="gen1" edge="1" parent="1" source="actor_ws_owner" style="endArrow=block;endFill=0;endSize=16;html=1;strokeColor=#333333;fontSize=16;" target="actor_ws_admin">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="gen2" edge="1" parent="1" source="actor_space_member" style="endArrow=block;endFill=0;endSize=16;html=1;strokeColor=#333333;fontSize=16;" target="actor_space_guest">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="uc_create_space" parent="1" style="ellipse;whiteSpace=wrap;html=1;fontSize=16;" value="Create Space" vertex="1">
+          <mxGeometry height="50" width="160" x="400" y="80" as="geometry" />
+        </mxCell>
+        <mxCell id="uc_delete_space" parent="1" style="ellipse;whiteSpace=wrap;html=1;fontSize=16;" value="Delete Space" vertex="1">
+          <mxGeometry height="50" width="160" x="400" y="160" as="geometry" />
+        </mxCell>
+        <mxCell id="uc_reorder_space" parent="1" style="ellipse;whiteSpace=wrap;html=1;fontSize=16;" value="Reorder Spaces" vertex="1">
+          <mxGeometry height="50" width="160" x="400" y="240" as="geometry" />
+        </mxCell>
+        <mxCell id="uc_edit_space" parent="1" style="ellipse;whiteSpace=wrap;html=1;fontSize=16;" value="Edit Space" vertex="1">
+          <mxGeometry height="50" width="160" x="400" y="360" as="geometry" />
+        </mxCell>
+        <mxCell id="uc_manage_space_members" parent="1" style="ellipse;whiteSpace=wrap;html=1;fontSize=16;" value="Manage Space&#xa;Members" vertex="1">
+          <mxGeometry height="50" width="160" x="400" y="440" as="geometry" />
+        </mxCell>
+        <mxCell id="uc_manage_statuses" parent="1" style="ellipse;whiteSpace=wrap;html=1;fontSize=16;" value="Manage Statuses" vertex="1">
+          <mxGeometry height="50" width="160" x="400" y="520" as="geometry" />
+        </mxCell>
+        <mxCell id="uc_manage_folders" parent="1" style="ellipse;whiteSpace=wrap;html=1;fontSize=16;" value="Manage Folders" vertex="1">
+          <mxGeometry height="50" width="160" x="400" y="600" as="geometry" />
+        </mxCell>
+        <mxCell id="uc_create_project" parent="1" style="ellipse;whiteSpace=wrap;html=1;fontSize=16;" value="Create Project" vertex="1">
+          <mxGeometry height="50" width="160" x="400" y="680" as="geometry" />
+        </mxCell>
+        <mxCell id="uc_add_space_member" parent="1" style="ellipse;whiteSpace=wrap;html=1;fontSize=16;" value="Add Space Member" vertex="1">
+          <mxGeometry height="45" width="150" x="680" y="400" as="geometry" />
+        </mxCell>
+        <mxCell id="uc_remove_space_member" parent="1" style="ellipse;whiteSpace=wrap;html=1;fontSize=16;" value="Remove Space Member" vertex="1">
+          <mxGeometry height="45" width="150" x="680" y="455" as="geometry" />
+        </mxCell>
+        <mxCell id="uc_update_space_role" parent="1" style="ellipse;whiteSpace=wrap;html=1;fontSize=16;" value="Update Space&#xa;Member Role" vertex="1">
+          <mxGeometry height="45" width="150" x="680" y="510" as="geometry" />
+        </mxCell>
+        <mxCell id="uc_move_folder" parent="1" style="ellipse;whiteSpace=wrap;html=1;fontSize=16;" value="Move Folder" vertex="1">
+          <mxGeometry height="45" width="150" x="680" y="600" as="geometry" />
+        </mxCell>
+        <mxCell id="uc_star_space" parent="1" style="ellipse;whiteSpace=wrap;html=1;fontSize=16;" value="Star/Unstar Space" vertex="1">
+          <mxGeometry height="50" width="160" x="900" y="400" as="geometry" />
+        </mxCell>
+        <mxCell id="uc_view_project_list" parent="1" style="ellipse;whiteSpace=wrap;html=1;fontSize=16;" value="View Project List" vertex="1">
+          <mxGeometry height="50" width="160" x="900" y="490" as="geometry" />
+        </mxCell>
+        <mxCell id="uc_view_space" parent="1" style="ellipse;whiteSpace=wrap;html=1;fontSize=16;" value="View Space" vertex="1">
+          <mxGeometry height="50" width="160" x="900" y="650" as="geometry" />
+        </mxCell>
+        <mxCell id="s_inc1" edge="1" parent="1" source="uc_manage_space_members" style="dashed=1;endArrow=open;endSize=12;html=1;strokeColor=#555555;fontStyle=2;fontSize=16;" target="uc_add_space_member" value="&amp;lt;&amp;gt;">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="s_inc2" edge="1" parent="1" source="uc_manage_space_members" style="dashed=1;endArrow=open;endSize=12;html=1;strokeColor=#555555;fontStyle=2;fontSize=16;" target="uc_remove_space_member" value="&amp;lt;&amp;gt;">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="s_inc3" edge="1" parent="1" source="uc_manage_space_members" style="dashed=1;endArrow=open;endSize=12;html=1;strokeColor=#555555;fontStyle=2;fontSize=16;" target="uc_update_space_role" value="&amp;lt;&amp;gt;">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="s_ext1" edge="1" parent="1" source="uc_move_folder" style="dashed=1;endArrow=open;endSize=12;html=1;strokeColor=#555555;fontStyle=2;fontSize=16;" target="uc_manage_folders" value="&amp;lt;&amp;gt;">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="s_a1" edge="1" parent="1" source="actor_ws_admin" style="endArrow=none;html=1;strokeColor=#333333;fontSize=16;" target="uc_create_space">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="s_a2" edge="1" parent="1" source="actor_ws_admin" style="endArrow=none;html=1;strokeColor=#333333;fontSize=16;" target="uc_delete_space">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="s_a3" edge="1" parent="1" source="actor_ws_admin" style="endArrow=none;html=1;strokeColor=#333333;fontSize=16;" target="uc_reorder_space">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="s_a4" edge="1" parent="1" source="actor_space_admin" style="endArrow=none;html=1;strokeColor=#333333;fontSize=16;" target="uc_edit_space">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="s_a5" edge="1" parent="1" source="actor_space_admin" style="endArrow=none;html=1;strokeColor=#333333;fontSize=16;" target="uc_manage_space_members">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="s_a6" edge="1" parent="1" source="actor_space_admin" style="endArrow=none;html=1;strokeColor=#333333;fontSize=16;" target="uc_manage_statuses">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="s_a7" edge="1" parent="1" source="actor_space_admin" style="endArrow=none;html=1;strokeColor=#333333;fontSize=16;" target="uc_manage_folders">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="s_a8" edge="1" parent="1" source="actor_space_admin" style="endArrow=none;html=1;strokeColor=#333333;fontSize=16;" target="uc_create_project">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="s_a9" edge="1" parent="1" source="actor_space_member" style="endArrow=none;html=1;strokeColor=#333333;fontSize=16;" target="uc_star_space">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="s_a10" edge="1" parent="1" source="actor_space_member" style="endArrow=none;html=1;strokeColor=#333333;fontSize=16;" target="uc_view_project_list">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="s_a11" edge="1" parent="1" source="actor_space_guest" style="endArrow=none;html=1;strokeColor=#333333;fontSize=16;" target="uc_view_space">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+      </root>
+    </mxGraphModel>
+  </diagram>
+</mxfile>

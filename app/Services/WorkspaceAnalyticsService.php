@@ -118,7 +118,7 @@ class WorkspaceAnalyticsService
                 continue;
             }
 
-            $hourlyRate = (float) ($subtask->assignees->avg('hourly_rate') ?? 44000.0);
+            $hourlyRate = (float) ($subtask->assignees->avg('hourly_rate') ?? config('business.default_hourly_rate', 150000));
             $plannedCost = ($plannedMinutes / 60) * $hourlyRate;
             $actualCost = (($subtask->time_spent ?? 0) / 60) * $hourlyRate;
             $progressRatio = $subtask->completed_at ? 1.0 : (($subtask->progress ?? 0) / 100);

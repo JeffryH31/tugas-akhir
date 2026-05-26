@@ -6,7 +6,6 @@ use App\Http\Requests\StoreChecklistItemRequest;
 use App\Http\Requests\UpdateChecklistItemRequest;
 use App\Http\Resources\ChecklistItemResource;
 use App\Models\ChecklistItem;
-use App\Models\Space;
 use App\Models\Subtask;
 use App\Models\Task;
 use App\Models\Project;

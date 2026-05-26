@@ -152,14 +152,17 @@ class TaskController extends Controller
     }
 
     /**
-     * Assign user to task.
+     * Assign user to task — intentionally disabled.
+     *
+     * Task-level assignment is not supported; assignees are managed at the
+     * subtask level. This endpoint exists to return a helpful error message
+     * if the route is ever hit.
      */
     public function assign(Request $request, Workspace $workspace, Space $space, Project $list, Task $task): RedirectResponse
     {
         abort_unless((int) $space->workspace_id === (int) $workspace->id, 404);
         abort_unless((int) $list->space_id === (int) $space->id, 404);
         abort_unless((int) $task->project_id === (int) $list->id, 404);
-        abort_unless($this->accessService->canAssignTasks($request->user(), $list), 403);
 
         return redirect()->back()->withErrors([
             'error' => 'Task assignees are managed through subtasks and cannot be assigned directly.',
@@ -415,7 +418,7 @@ class TaskController extends Controller
                 'workspace_id' => $workspaceId,
                 'count' => [
                     'tasks' => $tasks->count(),
-                    'projects' => $projects->count(),
+                    'projects' => $lists->count(),
                     'spaces' => $spaces->count(),
                 ],
             ],

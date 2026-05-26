@@ -6,7 +6,6 @@ use App\Http\Requests\StoreCommentRequest;
 use App\Http\Requests\UpdateCommentRequest;
 use App\Http\Resources\CommentResource;
 use App\Models\Comment;
-use App\Models\Space;
 use App\Models\Task;
 use App\Models\Project;
 use App\Models\Workspace;
@@ -48,9 +47,9 @@ class CommentController extends Controller
      */
     public function update(UpdateCommentRequest $request, Comment $comment): RedirectResponse
     {
+        $this->authorize('update', $comment);
+        
         try {
-            $this->authorize('update', $comment);
-            
             $updatedComment = $this->commentService->update($comment, $request->validated(), $request->user());
 
             return redirect()->back()->with([
@@ -67,9 +66,9 @@ class CommentController extends Controller
      */
     public function destroy(Request $request, Comment $comment): RedirectResponse
     {
+        $this->authorize('delete', $comment);
+        
         try {
-            $this->authorize('delete', $comment);
-            
             $this->commentService->delete($comment, $request->user());
 
             return redirect()->back()->with('success', 'Comment deleted successfully.');

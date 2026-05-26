@@ -6,12 +6,10 @@ use Illuminate\Foundation\Http\FormRequest;
 
 class StoreTimeEntryRequest extends FormRequest
 {
-
     public function authorize(): bool
     {
         return true;
     }
-
 
     public function rules(): array
     {
@@ -22,7 +20,6 @@ class StoreTimeEntryRequest extends FormRequest
             'is_billable' => ['nullable', 'boolean'],
         ];
     }
-
 
     public function messages(): array
     {

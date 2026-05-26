@@ -2,12 +2,9 @@
 
 namespace App\Http\Controllers;
 
-use App\Models\Subtask;
-use App\Models\Task;
-use App\Models\Project;
-use App\Models\TimeEntry;
 use App\Models\Workspace;
 use App\Services\AccessService;
+use App\Services\RecycleBinService;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
@@ -17,44 +14,16 @@ class RecycleBinController extends Controller
 {
     public function __construct(
         protected AccessService $accessService,
+        protected RecycleBinService $recycleBinService,
     ) {}
 
     public function index(Request $request, Workspace $workspace): Response
     {
         abort_unless($this->accessService->canViewWorkspace($request->user(), $workspace), 403);
 
-        $taskLists = Project::onlyTrashed()
-            ->whereHas('space', fn($q) => $q->where('workspace_id', $workspace->id))
-            ->with('space:id,name')
-            ->latest('deleted_at')
-            ->get(['id', 'space_id', 'name', 'deleted_at']);
-
-        $tasks = Task::onlyTrashed()
-            ->whereHas('project.space', fn($q) => $q->where('workspace_id', $workspace->id))
-            ->with(['project:id,name,space_id', 'project.space:id,name'])
-            ->latest('deleted_at')
-            ->get(['id', 'project_id', 'name', 'task_id', 'deleted_at']);
-
-        $subtasks = Subtask::onlyTrashed()
-            ->whereHas('task.project.space', fn($q) => $q->where('workspace_id', $workspace->id))
-            ->with(['task:id,name,project_id', 'task.project:id,name'])
-            ->latest('deleted_at')
-            ->get(['id', 'task_id', 'name', 'subtask_id', 'deleted_at']);
-
-        $timeEntries = TimeEntry::onlyTrashed()
-            ->whereHas('subtask.task.project.space', fn($q) => $q->where('workspace_id', $workspace->id))
-            ->with(['user:id,name', 'subtask:id,name'])
-            ->latest('deleted_at')
-            ->get(['id', 'subtask_id', 'user_id', 'duration', 'deleted_at']);
-
         return Inertia::render('Workspaces/RecycleBin', [
             'workspace' => $workspace,
-            'trash' => [
-                'projects' => $taskLists,
-                'tasks' => $tasks,
-                'subtasks' => $subtasks,
-                'time_entries' => $timeEntries,
-            ],
+            'trash' => $this->recycleBinService->getTrashedItems($workspace),
             'canRestore' => $this->accessService->canManageWorkspace($request->user(), $workspace),
         ]);
     }
@@ -69,28 +38,7 @@ class RecycleBinController extends Controller
         ]);
 
         try {
-            match ($validated['type']) {
-                'list' => Project::onlyTrashed()
-                    ->where('id', $validated['id'])
-                    ->whereHas('space', fn($q) => $q->where('workspace_id', $workspace->id))
-                    ->firstOrFail()
-                    ->restore(),
-                'task' => Task::onlyTrashed()
-                    ->where('id', $validated['id'])
-                    ->whereHas('project.space', fn($q) => $q->where('workspace_id', $workspace->id))
-                    ->firstOrFail()
-                    ->restore(),
-                'subtask' => Subtask::onlyTrashed()
-                    ->where('id', $validated['id'])
-                    ->whereHas('task.project.space', fn($q) => $q->where('workspace_id', $workspace->id))
-                    ->firstOrFail()
-                    ->restore(),
-                'time_entry' => TimeEntry::onlyTrashed()
-                    ->where('id', $validated['id'])
-                    ->whereHas('subtask.task.project.space', fn($q) => $q->where('workspace_id', $workspace->id))
-                    ->firstOrFail()
-                    ->restore(),
-            };
+            $this->recycleBinService->restoreItem($workspace, $validated['type'], (int) $validated['id']);
 
             return back()->with('success', 'Item restored successfully.');
         } catch (\Throwable $e) {

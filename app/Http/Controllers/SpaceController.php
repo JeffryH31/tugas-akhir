@@ -2,9 +2,12 @@
 
 namespace App\Http\Controllers;
 
+use App\Http\Requests\AddMemberRequest;
+use App\Http\Requests\RemoveMemberRequest;
 use App\Http\Requests\ReorderRequest;
 use App\Http\Requests\StoreSpaceRequest;
 use App\Http\Requests\StoreStatusRequest;
+use App\Http\Requests\UpdateMemberRoleRequest;
 use App\Http\Requests\UpdateSpaceRequest;
 use App\Http\Requests\UpdateStatusRequest;
 use App\Models\Space;
@@ -13,7 +16,6 @@ use App\Models\User;
 use App\Models\Workspace;
 use App\Services\AccessService;
 use App\Services\SpaceService;
-use Illuminate\Foundation\Auth\Access\AuthorizesRequests;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Validation\Rule;
@@ -22,8 +24,6 @@ use Inertia\Response;
 
 class SpaceController extends Controller
 {
-    use AuthorizesRequests;
-
     public function __construct(
         protected SpaceService $spaceService,
         protected AccessService $accessService,
@@ -294,15 +294,12 @@ class SpaceController extends Controller
         }
     }
 
-    public function addMember(Request $request, Workspace $workspace, Space $space): RedirectResponse
+    public function addMember(AddMemberRequest $request, Workspace $workspace, Space $space): RedirectResponse
     {
         abort_unless((int) $space->workspace_id === (int) $workspace->id, 404);
         abort_unless($this->accessService->canManageSpace($request->user(), $space), 403);
 
-        $validated = $request->validate([
-            'user_id' => ['required', 'exists:users,id'],
-            'role' => ['required', 'in:owner,admin,manager,member,guest'],
-        ]);
+        $validated = $request->validated();
 
         $user = User::findOrFail($validated['user_id']);
         if (!$workspace->isMember($user)) {
@@ -314,15 +311,12 @@ class SpaceController extends Controller
         return redirect()->back()->with('success', 'Space member added successfully.');
     }
 
-    public function updateMemberRole(Request $request, Workspace $workspace, Space $space): RedirectResponse
+    public function updateMemberRole(UpdateMemberRoleRequest $request, Workspace $workspace, Space $space): RedirectResponse
     {
         abort_unless((int) $space->workspace_id === (int) $workspace->id, 404);
         abort_unless($this->accessService->canManageSpace($request->user(), $space), 403);
 
-        $validated = $request->validate([
-            'user_id' => ['required', 'exists:users,id'],
-            'role' => ['required', 'in:owner,admin,manager,member,guest'],
-        ]);
+        $validated = $request->validated();
 
         $user = User::findOrFail($validated['user_id']);
         $this->spaceService->updateMemberRole($space, $user, $validated['role'], $request->user());
@@ -330,17 +324,15 @@ class SpaceController extends Controller
         return redirect()->back()->with('success', 'Space member role updated successfully.');
     }
 
-    public function removeMember(Request $request, Workspace $workspace, Space $space): RedirectResponse
+    public function removeMember(RemoveMemberRequest $request, Workspace $workspace, Space $space): RedirectResponse
     {
         abort_unless((int) $space->workspace_id === (int) $workspace->id, 404);
         abort_unless($this->accessService->canManageSpace($request->user(), $space), 403);
 
-        $validated = $request->validate([
-            'user_id' => ['required', 'exists:users,id'],
-        ]);
+        $validated = $request->validated();
 
         $user = User::findOrFail($validated['user_id']);
-        $isSpaceOwner = $space->members()->where('user_id', $user->id)->wherePivot('role', 'owner')->exists();
+        $isSpaceOwner = $space->members()->where('user_id', $user->id)->wherePivot('role', AccessService::WORKSPACE_OWNER)->exists();
         if ($isSpaceOwner) {
             return redirect()->back()->withErrors(['error' => 'Space owner cannot be removed.']);
         }

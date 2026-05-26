@@ -38,9 +38,8 @@ class DashboardController extends Controller
         $activeWorkspace = $workspaces->firstWhere('id', $activeWorkspaceId) ?? $workspaces->first();
 
         if ($activeWorkspace) {
-            $wsRole = $activeWorkspace->members()
-                ->where('user_id', $user->id)->first()?->pivot?->role;
-            $isWsAdmin = in_array($wsRole, ['admin', 'owner'], true);
+            $wsRole = $this->accessService->getWorkspaceRole($user, $activeWorkspace);
+            $isWsAdmin = in_array($wsRole, [AccessService::WORKSPACE_OWNER, AccessService::WORKSPACE_ADMIN], true);
             $listFilter = function ($q) use ($user, $isWsAdmin) {
                 return $isWsAdmin ? $q : $q->whereHas('members', fn($mq) => $mq->where('user_id', $user->id));
             };
@@ -73,10 +72,10 @@ class DashboardController extends Controller
         // Time stats
         $todayTimeSpent = $user->getTodayTimeSpent();
         $weekTimeSpent = $user->getWeekTimeSpent();
-        $workdayStart = now()->copy()->setTime(8, 0);
-        $workdayEnd   = now()->copy()->setTime(17, 0);
-        $breakStart   = now()->copy()->setTime(12, 0);
-        $breakEnd     = now()->copy()->setTime(13, 0);
+        $workdayStart = now()->copy()->setTime(config('business.workday_start_hour'), 0);
+        $workdayEnd   = now()->copy()->setTime(config('business.workday_end_hour'), 0);
+        $breakStart   = now()->copy()->setTime(config('business.break_start_hour'), 0);
+        $breakEnd     = now()->copy()->setTime(config('business.break_end_hour'), 0);
         if (now()->lessThanOrEqualTo($workdayStart)) {
             $todayCapacity = 0;
         } else {
@@ -86,15 +85,15 @@ class DashboardController extends Controller
                 : 0;
             $todayCapacity = max(0, $raw - $breakElapsed);
         }
-        $weekCapacity = now()->startOfWeek()->diffInWeekdays(now()->endOfDay()->min(now())) * 8 * 60;
+        $weekCapacity = now()->startOfWeek()->diffInWeekdays(now()->endOfDay()->min(now())) * config('business.working_hours_per_day', 8) * 60;
         $todoCount = $mySubtasks->count();
 
-        // Recent activity in the active workspace (last 15 events)
+        // Recent activity in the active workspace
         $recentActivity = $activeWorkspace
             ? Activity::where('workspace_id', $activeWorkspace->id)
                 ->with('user')
                 ->latest()
-                ->limit(15)
+                ->limit(config('business.limits.recent_activity'))
                 ->get()
                 ->map(fn($a) => [
                     'id'           => $a->id,
@@ -132,7 +131,7 @@ class DashboardController extends Controller
     /**
      * Switch active workspace.
      */
-    public function switchWorkspace(Request $request, Workspace $workspace)
+    public function switchWorkspace(Request $request, Workspace $workspace): RedirectResponse
     {
         abort_unless($this->accessService->canViewWorkspace($request->user(), $workspace), 403);
 
@@ -141,7 +140,7 @@ class DashboardController extends Controller
         return redirect()->route('dashboard');
     }
 
-    public function markNotificationsRead(Request $request)
+    public function markNotificationsRead(Request $request): RedirectResponse
     {
         $request->user()->markNotificationsRead();
 
