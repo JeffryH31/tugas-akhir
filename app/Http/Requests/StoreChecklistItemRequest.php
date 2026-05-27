@@ -14,9 +14,8 @@ class StoreChecklistItemRequest extends FormRequest
     public function rules(): array
     {
         return [
-            'name'       => ['required', 'string', 'max:500'],
-            'parent_id'  => ['nullable', 'exists:checklist_items,id'],
-            'is_checked' => ['sometimes', 'boolean'],
+            'name'      => ['required', 'string', 'max:500'],
+            'parent_id' => ['nullable', 'exists:checklist_items,id'],
         ];
     }
 

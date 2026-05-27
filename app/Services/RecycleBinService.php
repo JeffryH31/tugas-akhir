@@ -9,10 +9,16 @@ use App\Models\TimeEntry;
 use App\Models\Workspace;
 use Illuminate\Support\Facades\DB;
 
+/**
+ * Handles soft-deleted item retrieval and restoration for the workspace recycle bin.
+     *
+ */
 class RecycleBinService
 {
     /**
-     * Get all trashed items for a workspace.
+     * Get all trashed items for a workspace, grouped by entity type.
+     *
+     * @return array{projects: Collection, tasks: Collection, subtasks: Collection, time_entries: Collection}
      */
     public function getTrashedItems(Workspace $workspace): array
     {
@@ -49,9 +55,12 @@ class RecycleBinService
     }
 
     /**
-     * Restore a trashed item by type and ID.
+     * Restore a soft-deleted item by type and ID within a transaction.
      *
-     * @throws \Illuminate\Database\Eloquent\ModelNotFoundException
+     * Verifies the item belongs to the given workspace before restoring
+     * to prevent cross-tenant restoration.
+     *
+     * @throws \Illuminate\Database\Eloquent\ModelNotFoundException If item not found or doesn't belong to workspace.
      */
     public function restoreItem(Workspace $workspace, string $type, int $id): void
     {

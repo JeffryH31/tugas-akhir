@@ -9,18 +9,13 @@ use App\Models\TimeEntry;
 use App\Models\Workspace;
 use Carbon\Carbon;
 use Illuminate\Support\Collection;
+use Illuminate\Support\Facades\DB;
 
-/**
- * Provide workspace-wide KPIs, EVM metrics, and analytics exports.
- */
 class WorkspaceAnalyticsService
 {
     /**
      * Build overview analytics payload for dashboards.
      *
-     * @param Workspace $workspace
-     * @param string|null $startDate
-     * @param string|null $endDate
      * @return array<string, mixed>
      */
     public function getOverview(Workspace $workspace, ?string $startDate = null, ?string $endDate = null): array
@@ -72,10 +67,6 @@ class WorkspaceAnalyticsService
     /**
      * Get flat rows suitable for CSV export.
      *
-     * @param Workspace $workspace
-     * @param string|null $startDate
-     * @param string|null $endDate
-     * @return Collection<int, array<string, mixed>>
      */
     public function getCsvRows(Workspace $workspace, ?string $startDate = null, ?string $endDate = null): Collection
     {
@@ -95,10 +86,78 @@ class WorkspaceAnalyticsService
     }
 
     /**
+     * Build the members payload for the analytics page.
+     *
+     * Includes space membership mapping and running timer info.
+     *
+     * @return array{members: Collection, spaces: Collection}
+     */
+    public function getMembersPayload(Workspace $workspace): array
+    {
+        $spaces = $workspace->spaces()->select('id', 'name')->get();
+        $allSpaceIds = $spaces->pluck('id')->toArray();
+
+        // Build map: user_id → [space_ids]
+        $spaceMemberMap = [];
+        $rows = DB::table('space_members')
+            ->whereIn('space_id', $allSpaceIds)
+            ->select('space_id', 'user_id')
+            ->get();
+
+        foreach ($rows as $row) {
+            $spaceMemberMap[$row->user_id][] = $row->space_id;
+        }
+
+        // Owner/admin members get all space IDs
+        $workspace->members->each(function ($m) use (&$spaceMemberMap, $allSpaceIds) {
+            $role = $m->pivot?->role;
+            if (in_array($role, [AccessService::WORKSPACE_OWNER, AccessService::WORKSPACE_ADMIN], true)) {
+                $spaceMemberMap[$m->id] = $allSpaceIds;
+            }
+        });
+
+        // Batch load running time entries
+        $runningEntries = TimeEntry::whereIn('user_id', $workspace->members->pluck('id'))
+            ->where('is_running', true)
+            ->with('subtask.task.project.space')
+            ->get()
+            ->keyBy('user_id');
+
+        $members = $workspace->members->map(function ($m) use ($spaceMemberMap, $runningEntries) {
+            $running = $runningEntries->get($m->id);
+
+            $runningOn = null;
+            if ($running && $running->subtask) {
+                $runningOn = [
+                    'subtask' => $running->subtask->name,
+                    'task' => $running->subtask->task?->name,
+                    'space' => $running->subtask->task?->project?->space?->name,
+                ];
+            }
+
+            return [
+                'id' => $m->id,
+                'name' => $m->name,
+                'email' => $m->email,
+                'initials' => $m->initials,
+                'avatar_color' => $m->avatar_color,
+                'profile_photo_url' => $m->profile_photo_url,
+                'hourly_rate' => $m->hourly_rate,
+                'role' => $m->pivot?->role,
+                'space_ids' => $spaceMemberMap[$m->id] ?? [],
+                'running_on' => $runningOn,
+            ];
+        })->values();
+
+        return [
+            'members' => $members,
+            'spaces' => $spaces->map(fn($s) => ['id' => $s->id, 'name' => $s->name])->values(),
+        ];
+    }
+
+    /**
      * Calculate earned value management metrics as of a date.
      *
-     * @param Workspace $workspace
-     * @param Carbon $asOf
      * @return array<string, float|int|null>
      */
     protected function calculateEvm(Workspace $workspace, Carbon $asOf): array
@@ -142,10 +201,6 @@ class WorkspaceAnalyticsService
 
     /**
      * Estimate scheduled progress ratio from baseline/current date ranges.
-     *
-     * @param Subtask $subtask
-     * @param Carbon $asOf
-     * @return float
      */
     protected function getScheduledProgressRatio(Subtask $subtask, Carbon $asOf): float
     {

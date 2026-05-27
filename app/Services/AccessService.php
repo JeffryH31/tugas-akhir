@@ -9,52 +9,6 @@ use App\Models\TimeEntry;
 use App\Models\User;
 use App\Models\Workspace;
 
-/**
- * Centralized authorization helper for workspace, space, and product scopes.
- *
- * ──────────────────────────────────────────────────────────────────
- *  RBAC Hierarchy (3 levels — workspace → space → product)
- * ──────────────────────────────────────────────────────────────────
- *
- *  WORKSPACE LEVEL (workspace_members)
- *  ┌──────────┬────────────────────────────────────────────────────┐
- *  │ admin    │ God-mode. Full control over workspace settings,   │
- *  │          │ members, analytics, all spaces & products.        │
- *  │          │ Automatic bypass on ALL product-level operations. │
- *  ├──────────┼────────────────────────────────────────────────────┤
- *  │ member   │ Access public spaces. Join products via invite.   │
- *  │          │ Cannot manage workspace settings.                 │
- *  └──────────┴────────────────────────────────────────────────────┘
- *
- *  SPACE LEVEL (space_members — required for all spaces)
- *  ┌──────────┬────────────────────────────────────────────────────┐
- *  │ admin    │ Manage space settings, statuses, folders,         │
- *  │          │ and space members.                                │
- *  ├──────────┼────────────────────────────────────────────────────┤
- *  │ member   │ View space and products. Must have product role   │
- *  │          │ to perform task-level operations.                 │
- *  ├──────────┼────────────────────────────────────────────────────┤
- *  │ guest    │ Read-only view of the space.                      │
- *  └──────────┴────────────────────────────────────────────────────┘
- *
- *  PRODUCT LEVEL (project_members — the real gate for task ops)
- *  ┌─────────────────┬─────────────────────────────────────────────┐
- *  │ project_owner   │ Full product control. Manage members, del  │
- *  │                 │ product, sprints, tasks, labels, deps,     │
- *  │                 │ assignments, time tracking.                │
- *  ├─────────────────┼─────────────────────────────────────────────┤
- *  │ project_manager │ Manage tasks, sprints, assignments, labels │
- *  │                 │ and dependencies. Cannot delete product or │
- *  │                 │ manage product members.                    │
- *  ├─────────────────┼─────────────────────────────────────────────┤
- *  │ development_team│ Edit tasks/subtasks, change status &       │
- *  │                 │ priority, track time, comment. Cannot      │
- *  │                 │ manage structure (sprints, labels, deps)   │
- *  │                 │ or assign others.                          │
- *  ├─────────────────┼─────────────────────────────────────────────┤
- *  │ guest           │ Read-only access to product.               │
- *  └─────────────────┴─────────────────────────────────────────────┘
- */
 class AccessService
 {
     public const WORKSPACE_OWNER = 'owner';
@@ -70,7 +24,8 @@ class AccessService
     public const PROJECT_DEVELOPER = 'development_team';
     public const PROJECT_GUEST = 'guest';
 
-    /** @var array<string, ?string> Per-request role cache to avoid repeated DB queries. */
+    /** @var array<string, ?string> Per-request role cache to avoid repeated DB queries.
+     */
     private array $roleCache = [];
 
     private function cacheKey(string $scope, int $userId, int $entityId): string
@@ -265,7 +220,8 @@ class AccessService
         return !$list->members()->exists();
     }
 
-    /** Alias of canViewProduct for project terminology. */
+    /** Alias of canViewProduct for project terminology.
+     */
     public function canViewProject(User $user, Project $list): bool
     {
         return $this->canViewProduct($user, $list);
@@ -288,7 +244,8 @@ class AccessService
         return in_array($this->getProductRole($user, $list), [self::PROJECT_OWNER, self::PROJECT_MANAGER], true);
     }
 
-    /** Alias of canManageProduct for project terminology. */
+    /** Alias of canManageProduct for project terminology.
+     */
     public function canManageProject(User $user, Project $list): bool
     {
         return $this->canManageProduct($user, $list);
@@ -311,7 +268,8 @@ class AccessService
         return $this->getProductRole($user, $list) === self::PROJECT_OWNER;
     }
 
-    /** Alias of canDeleteProduct for project terminology. */
+    /** Alias of canDeleteProduct for project terminology.
+     */
     public function canDeleteProject(User $user, Project $list): bool
     {
         return $this->canDeleteProduct($user, $list);
@@ -335,7 +293,8 @@ class AccessService
         return $this->getProductRole($user, $list) === self::PROJECT_OWNER;
     }
 
-    /** Alias of canManageProductMembers for project terminology. */
+    /** Alias of canManageProductMembers for project terminology.
+     */
     public function canManageProjectMembers(User $user, Project $list): bool
     {
         return $this->canManageProductMembers($user, $list);

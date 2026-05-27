@@ -5,7 +5,6 @@ namespace App\Http\Controllers;
 use App\Http\Requests\StoreSubtaskRequest;
 use App\Http\Requests\UpdateSubtaskRequest;
 use App\Http\Resources\SubtaskResource;
-use App\Models\Activity;
 use App\Models\Label;
 use App\Models\Space;
 use App\Models\Subtask;
@@ -123,21 +122,13 @@ class SubtaskController extends Controller
             ],
         ]);
 
-        if ($subtask->hasUncompletedDependencies()) {
-            $names = $subtask->getUncompletedDependencyNames();
-            $nameList = implode(', ', $names);
-            return redirect()->back()->withErrors([
-                'dependency' => "Cannot complete this subtask. It depends on uncompleted subtasks: {$nameList}"
-            ]);
+        try {
+            $this->subtaskService->complete($subtask, $request->user(), $validated['target_status_id'] ?? null);
+
+            return redirect()->back()->with('success', 'Subtask completed.');
+        } catch (\Illuminate\Validation\ValidationException $e) {
+            return redirect()->back()->withErrors($e->errors());
         }
-
-        $subtask->markAsCompleted($request->user(), $validated['target_status_id'] ?? null);
-
-        Activity::log($workspace, $request->user(), $subtask, 'completed', [
-            'name' => $subtask->name,
-        ]);
-
-        return redirect()->back()->with('success', 'Subtask completed.');
     }
 
     /**
@@ -150,11 +141,8 @@ class SubtaskController extends Controller
         abort_unless((int) $task->project_id === (int) $list->id, 404);
         abort_unless((int) $subtask->task_id === (int) $task->id, 404);
         abort_unless($this->accessService->canEditTasks($request->user(), $list), 403);
-        $subtask->markAsIncomplete();
 
-        Activity::log($workspace, $request->user(), $subtask, 'reopened', [
-            'name' => $subtask->name,
-        ]);
+        $this->subtaskService->reopen($subtask, $request->user());
 
         return redirect()->back()->with('success', 'Subtask reopened.');
     }
@@ -203,22 +191,7 @@ class SubtaskController extends Controller
 
         try {
             $label = Label::where('workspace_id', $workspace->id)->findOrFail($validated['label_id']);
-
-            $alreadyAttached = $subtask->labels()->whereKey($label->id)->exists();
-            if (!$alreadyAttached) {
-                $subtask->labels()->syncWithoutDetaching([$label->id]);
-
-                Activity::log(
-                    $subtask->task->project->space->workspace,
-                    $request->user(),
-                    $subtask,
-                    'label_added',
-                    [
-                        'name' => $subtask->name,
-                        'label_name' => $label->name,
-                    ]
-                );
-            }
+            $this->subtaskService->addLabel($subtask, $label, $request->user());
 
             return redirect()->back()->with('success', 'Label added successfully.');
         } catch (\Exception $e) {
@@ -245,20 +218,7 @@ class SubtaskController extends Controller
 
         try {
             $label = Label::where('workspace_id', $workspace->id)->findOrFail($validated['label_id']);
-
-            $detached = $subtask->labels()->detach($label->id);
-            if ($detached > 0) {
-                Activity::log(
-                    $subtask->task->project->space->workspace,
-                    $request->user(),
-                    $subtask,
-                    'label_removed',
-                    [
-                        'name' => $subtask->name,
-                        'label_name' => $label->name,
-                    ]
-                );
-            }
+            $this->subtaskService->removeLabel($subtask, $label, $request->user());
 
             return redirect()->back()->with('success', 'Label removed successfully.');
         } catch (\Exception $e) {

@@ -13,17 +13,11 @@ use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
 
-/**
- * Manage product/list lifecycle, membership, board grouping, and cloning.
- */
 class ProjectService
 {
     /**
      * Get lists for a space, optionally scoped to a specific folder.
      *
-     * @param Space $space The parent space that owns the lists.
-     * @param Folder|null $folder Optional folder filter.
-     * @return Collection<int, Project>
      */
     public function getListsForSpace(Space $space, ?Folder $folder = null): Collection
     {
@@ -44,8 +38,6 @@ class ProjectService
      * When taskId is provided, returns subtasks for the parent task grouped by status.
      * Otherwise returns task-level board items grouped by status.
      *
-     * @param Project $list The list being viewed.
-     * @param int|string|null $taskId Optional parent task id for subtask mode.
      * @return array<int, array<int, array<string, mixed>>>
      */
     public function getWithTasksByStatus(Project $project, $taskId = null): array
@@ -128,10 +120,6 @@ class ProjectService
      * Create a new list/product inside a space.
      *
      * @param array<string, mixed> $data Validated list payload.
-     * @param Space $space Parent space.
-     * @param User $user Current actor.
-     * @param Folder|null $folder Optional folder destination.
-     * @return Project
      */
     public function create(array $data, Space $space, User $user, ?Folder $folder = null): Project
     {
@@ -165,8 +153,6 @@ class ProjectService
     /**
      * Ensure canonical task statuses exist for the space.
      *
-     * @param Space $space Target space.
-     * @return void
      */
     private function ensureDefaultTaskStatuses(Space $space): void
     {
@@ -270,11 +256,6 @@ class ProjectService
     /**
      * Add a member to a list with a role.
      *
-     * @param Project $list Target list.
-     * @param User $user Member to add.
-     * @param string $role Membership role.
-     * @param User $addedBy Actor performing the operation.
-     * @return void
      */
     public function addMember(Project $project, User $user, string $role, User $addedBy): void
     {
@@ -290,11 +271,6 @@ class ProjectService
     /**
      * Update an existing list member role.
      *
-     * @param Project $list Target list.
-     * @param User $user Member whose role is being updated.
-     * @param string $role New role value.
-     * @param User $updatedBy Actor performing the operation.
-     * @return void
      */
     public function updateMemberRole(Project $project, User $user, string $role, User $updatedBy): void
     {
@@ -310,10 +286,6 @@ class ProjectService
     /**
      * Remove a member from a list.
      *
-     * @param Project $list Target list.
-     * @param User $user Member to remove.
-     * @param User $removedBy Actor performing the operation.
-     * @return void
      */
     public function removeMember(Project $project, User $user, User $removedBy): void
     {
@@ -328,10 +300,7 @@ class ProjectService
     /**
      * Update list metadata.
      *
-     * @param Project $list Target list.
      * @param array<string, mixed> $data Validated update payload.
-     * @param User $user Current actor.
-     * @return Project
      */
     public function update(Project $project, array $data, User $user): Project
     {
@@ -363,9 +332,6 @@ class ProjectService
     /**
      * Soft-delete a list.
      *
-     * @param Project $list Target list.
-     * @param User $user Current actor.
-     * @return void
      */
     public function delete(Project $project, User $user): void
     {
@@ -383,10 +349,6 @@ class ProjectService
     /**
      * Move a list to another folder (or root when null).
      *
-     * @param Project $list Target list.
-     * @param Folder|null $folder Destination folder, null for root.
-     * @param User $user Current actor.
-     * @return Project
      */
     public function moveToFolder(Project $project, ?Folder $folder, User $user): Project
     {
@@ -412,9 +374,7 @@ class ProjectService
     /**
      * Reorder list positions within a space.
      *
-     * @param Space $space Target space.
      * @param array<int, int|string> $order Ordered list ids.
-     * @return void
      */
     public function reorder(Space $space, array $order): void
     {
@@ -430,9 +390,6 @@ class ProjectService
     /**
      * Duplicate a list and clone all tasks/subtasks and their assignments/labels.
      *
-     * @param Project $list Source list.
-     * @param User $user Current actor.
-     * @return Project
      */
     public function duplicate(Project $project, User $user): Project
     {

@@ -3,11 +3,9 @@
 namespace App\Http\Controllers;
 
 use App\Models\Workspace;
-use App\Models\TimeEntry;
 use App\Services\AccessService;
 use App\Services\WorkspaceAnalyticsService;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\DB;
 use Inertia\Inertia;
 use Inertia\Response;
 
@@ -28,80 +26,21 @@ class WorkspaceAnalyticsController extends Controller
 
         $canManage = $this->accessService->canManageWorkspace($request->user(), $workspace);
 
-        $spaces = $workspace->spaces()->select('id', 'name')->get();
-
-        // Build map: user_id → [space_ids] based on explicit space membership
-        // Admin role gets access to ALL spaces
-        $spaceMemberMap = [];
-        if ($canManage) {
-            $allSpaceIds = $spaces->pluck('id')->toArray();
-
-            $rows = DB::table('space_members')
-                ->whereIn('space_id', $allSpaceIds)
-                ->select('space_id', 'user_id')
-                ->get();
-
-            foreach ($rows as $row) {
-                $spaceMemberMap[$row->user_id][] = $row->space_id;
-            }
-
-            // Owner/admin members get all space IDs so they appear in every space filter
-            $workspace->members->each(function ($m) use (&$spaceMemberMap, $allSpaceIds) {
-                $role = $m->pivot?->role;
-                if (in_array($role, [AccessService::WORKSPACE_OWNER, AccessService::WORKSPACE_ADMIN], true)) {
-                    $spaceMemberMap[$m->id] = $allSpaceIds;
-                }
-            });
-        }
-
-        // Batch load running time entries to avoid N+1 query
-        $runningEntries = $canManage 
-            ? TimeEntry::whereIn('user_id', $workspace->members->pluck('id'))
-                ->where('is_running', true)
-                ->with('subtask.task.project.space')
-                ->get()
-                ->keyBy('user_id')
-            : collect();
-
-        $members = $canManage
-            ? $workspace->members->map(function ($m) use ($spaceMemberMap, $runningEntries) {
-                $running = $runningEntries->get($m->id);
-
-                $runningOn = null;
-                if ($running && $running->subtask) {
-                    $runningOn = [
-                        'subtask' => $running->subtask->name,
-                        'task'    => $running->subtask->task?->name,
-                        'space'   => $running->subtask->task?->project?->space?->name,
-                    ];
-                }
-
-                return [
-                    'id'                => $m->id,
-                    'name'              => $m->name,
-                    'email'             => $m->email,
-                    'initials'          => $m->initials,
-                    'avatar_color'      => $m->avatar_color,
-                    'profile_photo_url' => $m->profile_photo_url,
-                    'hourly_rate'       => $m->hourly_rate,
-                    'role'              => $m->pivot?->role,
-                    'space_ids'         => $spaceMemberMap[$m->id] ?? [],
-                    'running_on'        => $runningOn,
-                ];
-            })->values()
-            : collect();
+        $membersPayload = $canManage
+            ? $this->analyticsService->getMembersPayload($workspace)
+            : ['members' => collect(), 'spaces' => collect()];
 
         return Inertia::render('Workspaces/Analytics', [
-            'workspace'  => $workspace,
-            'analytics'  => $this->analyticsService->getOverview(
+            'workspace' => $workspace,
+            'analytics' => $this->analyticsService->getOverview(
                 $workspace,
                 $validated['start_date'] ?? null,
                 $validated['end_date'] ?? null,
             ),
-            'filters'    => $validated,
-            'members'    => $members,
-            'spaces'     => $spaces->map(fn($s) => ['id' => $s->id, 'name' => $s->name])->values(),
-            'canManage'  => $canManage,
+            'filters' => $validated,
+            'members' => $membersPayload['members'],
+            'spaces' => $membersPayload['spaces'],
+            'canManage' => $canManage,
         ]);
     }
 

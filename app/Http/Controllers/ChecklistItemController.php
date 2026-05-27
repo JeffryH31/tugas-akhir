@@ -6,6 +6,7 @@ use App\Http\Requests\StoreChecklistItemRequest;
 use App\Http\Requests\UpdateChecklistItemRequest;
 use App\Http\Resources\ChecklistItemResource;
 use App\Models\ChecklistItem;
+use App\Models\Space;
 use App\Models\Subtask;
 use App\Models\Task;
 use App\Models\Project;
@@ -25,14 +26,12 @@ class ChecklistItemController extends Controller
     /**
      * Store a new checklist item under a subtask.
      */
-    public function store(
-        StoreChecklistItemRequest $request,
+    public function store(StoreChecklistItemRequest $request,
         Workspace $workspace,
         Space $space,
         Project $list,
         Task $task,
-        Subtask $subtask,
-    ): RedirectResponse {
+        Subtask $subtask,): RedirectResponse {
         $this->authorizeScope($workspace, $space, $list, $task, $subtask);
         abort_unless($this->accessService->canEditTasks($request->user(), $list), 403);
 
@@ -55,15 +54,13 @@ class ChecklistItemController extends Controller
     /**
      * Update checklist item name.
      */
-    public function update(
-        UpdateChecklistItemRequest $request,
+    public function update(UpdateChecklistItemRequest $request,
         Workspace $workspace,
         Space $space,
         Project $list,
         Task $task,
         Subtask $subtask,
-        ChecklistItem $checklistItem,
-    ): RedirectResponse {
+        ChecklistItem $checklistItem,): RedirectResponse {
         $this->authorizeScope($workspace, $space, $list, $task, $subtask);
         abort_unless((int) $checklistItem->subtask_id === (int) $subtask->id, 404);
         abort_unless($this->accessService->canEditTasks($request->user(), $list), 403);
@@ -80,15 +77,13 @@ class ChecklistItemController extends Controller
     /**
      * Delete a checklist item (children cascade via FK).
      */
-    public function destroy(
-        Request $request,
+    public function destroy(Request $request,
         Workspace $workspace,
         Space $space,
         Project $list,
         Task $task,
         Subtask $subtask,
-        ChecklistItem $checklistItem,
-    ): RedirectResponse {
+        ChecklistItem $checklistItem,): RedirectResponse {
         $this->authorizeScope($workspace, $space, $list, $task, $subtask);
         abort_unless((int) $checklistItem->subtask_id === (int) $subtask->id, 404);
         abort_unless($this->accessService->canEditTasks($request->user(), $list), 403);
@@ -105,15 +100,13 @@ class ChecklistItemController extends Controller
     /**
      * Toggle the checked state of a checklist item.
      */
-    public function toggle(
-        Request $request,
+    public function toggle(Request $request,
         Workspace $workspace,
         Space $space,
         Project $list,
         Task $task,
         Subtask $subtask,
-        ChecklistItem $checklistItem,
-    ): RedirectResponse {
+        ChecklistItem $checklistItem,): RedirectResponse {
         $this->authorizeScope($workspace, $space, $list, $task, $subtask);
         abort_unless((int) $checklistItem->subtask_id === (int) $subtask->id, 404);
         abort_unless($this->accessService->canEditTasks($request->user(), $list), 403);
@@ -132,14 +125,12 @@ class ChecklistItemController extends Controller
     /**
      * Reorder checklist items within the same parent.
      */
-    public function reorder(
-        Request $request,
+    public function reorder(Request $request,
         Workspace $workspace,
         Space $space,
         Project $list,
         Task $task,
-        Subtask $subtask,
-    ): RedirectResponse {
+        Subtask $subtask,): RedirectResponse {
         $this->authorizeScope($workspace, $space, $list, $task, $subtask);
         abort_unless($this->accessService->canEditTasks($request->user(), $list), 403);
 

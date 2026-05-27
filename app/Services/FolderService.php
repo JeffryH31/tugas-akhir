@@ -9,9 +9,6 @@ use App\Models\User;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
 
-/**
- * Manage folder CRUD and ordering within a space hierarchy.
- */
 class FolderService
 {
     /**

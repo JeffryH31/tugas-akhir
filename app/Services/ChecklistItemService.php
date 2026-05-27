@@ -8,12 +8,6 @@ use App\Models\User;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\ValidationException;
 
-/**
- * Service for managing checklist items (nested subtask checklists).
- *
- * Handles CRUD operations, hierarchical structure (parent/child relationships),
- * state management (checked/unchecked), and cascading state updates.
- */
 class ChecklistItemService
 {
     /**

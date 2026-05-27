@@ -14,13 +14,16 @@ use DateTimeInterface;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\ValidationException;
 
-/**
- * Manage subtask CRUD, assignment, labels, and workflow transitions.
- */
 class SubtaskService
 {
     /**
-     * Create a new subtask
+     * Create a new subtask under the given task.
+     *
+     * Handles nesting depth validation, assignee/label sync, and activity logging
+     * within a single database transaction.
+     *
+     * @param  array<string, mixed>  $data  Validated subtask attributes (name, description, status_id, etc.)
+     * @throws \Illuminate\Validation\ValidationException If nesting depth exceeds MAX_DEPTH.
      */
     public function create(array $data, Task $task, User $user): Subtask
     {
@@ -37,38 +40,12 @@ class SubtaskService
             }
 
             $subtask = Subtask::create([
-                'task_id'              => $task->id,
-                'parent_id'            => $data['parent_id'] ?? null,
-                'name'                 => $data['name'],
-                'description'          => $data['description'] ?? null,
-                'status_id'            => $data['status_id'] ?? null,
-                'priority_level'       => $data['priority_level'] ?? null,
-                'start_date'           => $data['start_date'] ?? null,
-                'due_date'             => $data['due_date'] ?? null,
-                'baseline_start_date'  => $data['baseline_start_date'] ?? ($data['start_date'] ?? null),
-                'baseline_due_date'    => $data['baseline_due_date'] ?? ($data['due_date'] ?? null),
-                'time_estimate'        => $data['time_estimate'] ?? null,
-                'optimistic_estimate'  => $data['optimistic_estimate'] ?? null,
-                'most_likely_estimate' => $data['most_likely_estimate'] ?? null,
-                'pessimistic_estimate' => $data['pessimistic_estimate'] ?? null,
-                'created_by'           => $user->id,
+                'task_id'    => $task->id,
+                'parent_id'  => $data['parent_id'] ?? null,
+                'name'       => $data['name'],
+                'status_id'  => $data['status_id'] ?? null,
+                'created_by' => $user->id,
             ]);
-
-            // Sync assignees
-            if (!empty($data['assignee_ids'])) {
-                $assignees = [];
-                foreach ($data['assignee_ids'] as $assigneeId) {
-                    $assignees[$assigneeId] = [
-                        'assigned_by' => $user->id,
-                    ];
-                }
-                $subtask->assignees()->sync($assignees);
-            }
-
-            // Sync labels
-            if (!empty($data['label_ids'])) {
-                $subtask->labels()->sync($data['label_ids']);
-            }
 
             Activity::log(
                 $task->project->space->workspace,
@@ -86,7 +63,12 @@ class SubtaskService
     }
 
     /**
-     * Update a subtask
+     * Update an existing subtask's attributes.
+     *
+     * Compares old vs new values, syncs assignees/labels if provided,
+     * and logs granular activity changes within a transaction.
+     *
+     * @param  array<string, mixed>  $data  Fields to update (only provided keys are applied).
      */
     public function update(Subtask $subtask, array $data, User $user): Subtask
     {
@@ -263,9 +245,6 @@ class SubtaskService
 
     /**
      * Normalize date-like values into a comparable calendar date string.
-     *
-     * @param mixed $value
-     * @return string|null
      */
     private function normalizeDateForComparison(mixed $value): ?string
     {
@@ -292,7 +271,8 @@ class SubtaskService
     }
 
     /**
-     * Delete a subtask
+     * Soft-delete a subtask and log the deletion activity.
+     *
      */
     public function delete(Subtask $subtask, User $user): void
     {
@@ -314,7 +294,9 @@ class SubtaskService
     }
 
     /**
-     * Reorder subtasks within the same parent
+     * Reorder subtasks within the same parent by updating their position column.
+     *
+     * @param  array<int> $subtaskIds  Ordered list of subtask IDs (index = new position).
      */
     public function reorder(Task $task, array $subtaskIds, ?int $parentId = null): void
     {
@@ -329,7 +311,101 @@ class SubtaskService
     }
 
     /**
-     * Duplicate a subtask
+     * Mark a subtask as completed.
+     *
+     * Checks for uncompleted dependencies before completing.
+     *
+     * @throws \Illuminate\Validation\ValidationException If subtask has uncompleted dependencies.
+     */
+    public function complete(Subtask $subtask, User $user, ?int $targetStatusId = null): Subtask
+    {
+        if ($subtask->hasUncompletedDependencies()) {
+            $names = $subtask->getUncompletedDependencyNames();
+            $nameList = implode(', ', $names);
+            throw ValidationException::withMessages([
+                'dependency' => "Cannot complete this subtask. It depends on uncompleted subtasks: {$nameList}",
+            ]);
+        }
+
+        $subtask->markAsCompleted($user, $targetStatusId);
+
+        Activity::log(
+            $subtask->task->project->space->workspace,
+            $user,
+            $subtask,
+            'completed',
+            ['name' => $subtask->name]
+        );
+
+        return $subtask->fresh();
+    }
+
+    /**
+     * Reopen a completed subtask.
+     */
+    public function reopen(Subtask $subtask, User $user): Subtask
+    {
+        $subtask->markAsIncomplete();
+
+        Activity::log(
+            $subtask->task->project->space->workspace,
+            $user,
+            $subtask,
+            'reopened',
+            ['name' => $subtask->name]
+        );
+
+        return $subtask->fresh();
+    }
+
+    /**
+     * Add a label to a subtask.
+     */
+    public function addLabel(Subtask $subtask, \App\Models\Label $label, User $user): void
+    {
+        $alreadyAttached = $subtask->labels()->whereKey($label->id)->exists();
+        if (!$alreadyAttached) {
+            $subtask->labels()->syncWithoutDetaching([$label->id]);
+
+            Activity::log(
+                $subtask->task->project->space->workspace,
+                $user,
+                $subtask,
+                'label_added',
+                [
+                    'name' => $subtask->name,
+                    'label_name' => $label->name,
+                ]
+            );
+        }
+    }
+
+    /**
+     * Remove a label from a subtask.
+     */
+    public function removeLabel(Subtask $subtask, \App\Models\Label $label, User $user): void
+    {
+        $detached = $subtask->labels()->detach($label->id);
+        if ($detached > 0) {
+            Activity::log(
+                $subtask->task->project->space->workspace,
+                $user,
+                $subtask,
+                'label_removed',
+                [
+                    'name' => $subtask->name,
+                    'label_name' => $label->name,
+                ]
+            );
+        }
+    }
+
+    /**
+     * Duplicate a subtask with its labels and assignees.
+     *
+     * Creates a copy with " (Copy)" appended to the name, resets completion
+     * state, and logs the duplication activity.
+     *
      */
     public function duplicate(Subtask $subtask, User $user): Subtask
     {

@@ -8,9 +8,6 @@ use App\Models\Project;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\ValidationException;
 
-/**
- * Handle sprint lifecycle, backlog movement, and sprint metrics.
- */
 class SprintService
 {
     /**
@@ -59,7 +56,7 @@ class SprintService
     public function deleteSprint(Sprint $sprint): bool
     {
         $sprint->subtasks()->update(['sprint_id' => null]);
-        
+
         return $sprint->delete();
     }
 
@@ -138,14 +135,15 @@ class SprintService
 
         $totalSubtasks = $subtasks->count();
         $completedSubtasks = $subtasks->filter(fn($subtask) => $subtask->completed_at !== null)->count();
-        $inProgressSubtasks = $subtasks->filter(fn($subtask) => 
-            $subtask->completed_at === null && 
-            in_array($subtask->status?->type, ['in_progress', 'review'])
+        $inProgressSubtasks = $subtasks->filter(
+            fn($subtask) =>
+            $subtask->completed_at === null &&
+                in_array($subtask->status?->type, ['in_progress', 'review'])
         )->count();
-        
+
         $totalEstimate = $subtasks->sum('time_estimate'); // in minutes
         $totalSpent = $subtasks->sum('time_spent'); // in minutes
-        
+
         $completionRate = $totalSubtasks > 0 ? round(($completedSubtasks / $totalSubtasks) * 100) : 0;
 
         return [
@@ -217,14 +215,14 @@ class SprintService
     public function getBurndownData(Sprint $sprint): array
     {
         $totalSubtasks = $sprint->subtasks()->count();
-        
+
         if ($totalSubtasks === 0) {
             return [];
         }
 
         $daysInSprint = $sprint->getDurationInDays();
         $idealBurndown = [];
-        
+
         for ($day = 0; $day <= $daysInSprint; $day++) {
             $idealBurndown[] = [
                 'day' => $day,
@@ -245,21 +243,21 @@ class SprintService
 
         $actualBurndown = [];
         $remainingSubtasks = $totalSubtasks;
-        
+
         for ($day = 0; $day <= $daysInSprint; $day++) {
             $currentDate = $sprint->start_date->copy()->addDays($day);
             $dateStr = $currentDate->format('Y-m-d');
-            
+
             if (isset($completedByDate[$dateStr])) {
                 $remainingSubtasks -= $completedByDate[$dateStr]->count;
             }
-            
+
             $actualBurndown[] = [
                 'day' => $day,
                 'date' => $dateStr,
                 'remaining' => max(0, $remainingSubtasks),
             ];
-            
+
             // Stop at today for active sprints
             if ($currentDate->isToday() || $currentDate->isFuture()) {
                 break;

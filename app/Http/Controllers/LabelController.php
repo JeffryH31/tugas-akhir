@@ -8,6 +8,7 @@ use App\Models\Label;
 use App\Models\Workspace;
 use App\Services\AccessService;
 use Illuminate\Http\RedirectResponse;
+use Illuminate\Http\Request;
 
 class LabelController extends Controller
 {
@@ -44,9 +45,9 @@ class LabelController extends Controller
         return redirect()->back()->with('success', 'Label updated successfully.');
     }
 
-    public function destroy(Workspace $workspace, Label $label): RedirectResponse
+    public function destroy(Request $request, Workspace $workspace, Label $label): RedirectResponse
     {
-        abort_unless($this->accessService->canManageWorkspace(request()->user(), $workspace), 403);
+        abort_unless($this->accessService->canManageWorkspace($request->user(), $workspace), 403);
         abort_unless((int) $label->workspace_id === (int) $workspace->id, 404);
 
         $label->delete();

@@ -13,21 +13,16 @@ use Illuminate\Pagination\LengthAwarePaginator;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
 
-/**
- * Manage task CRUD, movement, assignment, labels, and filtering.
- */
 class TaskService
 {
     /**
      * Get tasks for a list with filtering and pagination
      */
-    public function getTasksForList(
-        Project $list,
+    public function getTasksForList(Project $list,
         array $filters = [],
         ?string $sortBy = 'position',
         string $sortDirection = 'asc',
-        ?int $perPage = null
-    ): Collection|LengthAwarePaginator {
+        ?int $perPage = null): Collection|LengthAwarePaginator {
         $query = $list->tasks()
             ->with([
                 'status',
@@ -87,27 +82,11 @@ class TaskService
                 'created_by'    => $user->id,
             ]);
 
-
-            if (!empty($data['assignee_ids'])) {
-                // Batch load all assignees to avoid N+1
-                $assignees = User::whereIn('id', $data['assignee_ids'])->get()->keyBy('id');
-                foreach ($data['assignee_ids'] as $assigneeId) {
-                    $assignee = $assignees->get($assigneeId);
-                    if ($assignee) {
-                        $task->assign($assignee, $user);
-                    }
-                }
-            }
-
-            if (!empty($data['label_ids'])) {
-                $task->labels()->sync($data['label_ids']);
-            }
-
             Activity::log($list->space->workspace, $user, $task, 'created', [
                 'name' => $task->name,
             ]);
 
-            return $task->fresh(['status', 'assignees', 'labels']);
+            return $task->fresh(['status']);
         });
     }
 
@@ -418,10 +397,8 @@ class TaskService
 
     /**
      * Apply filters to task query
-        *
-        * @param \Illuminate\Database\Eloquent\Builder $query
+     *
         * @param array<string, mixed> $filters
-        * @return \Illuminate\Database\Eloquent\Builder
      */
     protected function applyFilters($query, array $filters)
     {
@@ -528,5 +505,82 @@ class TaskService
         }
 
         return $query->get();
+    }
+
+    /**
+     * Global search across tasks, projects, and spaces.
+     *
+     * @param  array<string, mixed>  $params  Validated search parameters.
+     * @return array{tasks: Collection, projects: Collection, spaces: Collection, meta: array}
+     */
+    public function globalSearch(User $user, array $params): array
+    {
+        $query = $params['q'] ?? '';
+        $type = $params['type'] ?? 'all';
+        $limit = $params['limit'] ?? 20;
+        $workspaceId = $params['workspace_id'] ?? null;
+
+        if (strlen($query) < 2) {
+            return ['tasks' => collect(), 'projects' => collect(), 'spaces' => collect(), 'meta' => [
+                'query' => $query, 'type' => $type, 'workspace_id' => $workspaceId,
+                'count' => ['tasks' => 0, 'projects' => 0, 'spaces' => 0],
+            ]];
+        }
+
+        $query = str_replace(['%', '_'], ['\%', '\_'], $query);
+
+        $tasksQuery = Task::whereHas('project.space.workspace', function ($q) use ($user, $workspaceId) {
+            $q->where('created_by', $user->id)
+                ->orWhereHas('members', fn($q2) => $q2->where('users.id', $user->id));
+        })
+            ->when($workspaceId, fn($q) => $q->whereHas('project.space', fn($q2) => $q2->where('workspace_id', $workspaceId)))
+            ->where(function ($q) use ($query) {
+                $q->where('name', 'like', "%{$query}%")
+                    ->orWhere('description', 'like', "%{$query}%");
+            })
+            ->when(!empty($params['status_id']), fn($q) => $q->where('status_id', $params['status_id']))
+            ->when(!empty($params['assignee_id']), fn($q) => $q->whereHas('assignees', fn($q2) => $q2->where('users.id', $params['assignee_id'])))
+            ->with(['project.space', 'status', 'assignees'])
+            ->limit($limit);
+
+        $tasks = $type === 'all' || $type === 'tasks' ? $tasksQuery->get() : collect();
+
+        $projectsQuery = \App\Models\Project::whereHas('space.workspace', function ($q) use ($user) {
+            $q->where('created_by', $user->id)
+                ->orWhereHas('members', fn($q2) => $q2->where('users.id', $user->id));
+        })
+            ->when($workspaceId, fn($q) => $q->whereHas('space', fn($q2) => $q2->where('workspace_id', $workspaceId)))
+            ->where('name', 'like', "%{$query}%")
+            ->with('space')
+            ->limit(min($limit, 15));
+
+        $projects = $type === 'all' || $type === 'projects' ? $projectsQuery->get() : collect();
+
+        $spacesQuery = \App\Models\Space::whereHas('workspace', function ($q) use ($user, $workspaceId) {
+            $q->where('created_by', $user->id)
+                ->orWhereHas('members', fn($q2) => $q2->where('users.id', $user->id));
+        })
+            ->when($workspaceId, fn($q) => $q->where('workspace_id', $workspaceId))
+            ->where('name', 'like', "%{$query}%")
+            ->with('workspace')
+            ->limit(min($limit, 15));
+
+        $spaces = $type === 'all' || $type === 'spaces' ? $spacesQuery->get() : collect();
+
+        return [
+            'tasks' => $tasks,
+            'projects' => $projects,
+            'spaces' => $spaces,
+            'meta' => [
+                'query' => $query,
+                'type' => $type,
+                'workspace_id' => $workspaceId,
+                'count' => [
+                    'tasks' => $tasks->count(),
+                    'projects' => $projects->count(),
+                    'spaces' => $spaces->count(),
+                ],
+            ],
+        ];
     }
 }

@@ -11,9 +11,6 @@ use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
 
-/**
- * Manage space CRUD, hierarchy views, statuses, and membership operations.
- */
 class SpaceService
 {
     /**
@@ -83,6 +80,8 @@ class SpaceService
 
     /**
      * Build a closure that filters a Project query by user access.
+     *
+    
      */
     private function buildListAccessFilter(?User $user, Space $space): \Closure
     {
@@ -200,12 +199,6 @@ class SpaceService
 
     /**
      * Add a member to the space with a role.
-     *
-     * @param Space $space
-     * @param User $user
-     * @param string $role
-     * @param User $addedBy
-     * @return void
      */
     public function addMember(Space $space, User $user, string $role, User $addedBy): void
     {
@@ -222,12 +215,6 @@ class SpaceService
 
     /**
      * Update role for an existing space member.
-     *
-     * @param Space $space
-     * @param User $user
-     * @param string $role
-     * @param User $updatedBy
-     * @return void
      */
     public function updateMemberRole(Space $space, User $user, string $role, User $updatedBy): void
     {
@@ -242,11 +229,6 @@ class SpaceService
 
     /**
      * Remove a member from the space.
-     *
-     * @param Space $space
-     * @param User $user
-     * @param User $removedBy
-     * @return void
      */
     public function removeMember(Space $space, User $user, User $removedBy): void
     {

@@ -9,13 +9,11 @@ use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
 
-/**
- * Manage workspace lifecycle, membership, and high-level statistics.
- */
 class WorkspaceService
 {
     /**
-     * Get all workspaces for a user
+     * Get all workspaces the user is a member of, with spaces eager-loaded.
+     *
      */
     public function getWorkspacesForUser(User $user): Collection
     {
@@ -27,7 +25,9 @@ class WorkspaceService
     }
 
     /**
-     * Create a new workspace
+     * Create a new workspace and assign the creator as owner.
+     *
+     * @param  array{name: string, color?: string, is_personal?: bool}  $data
      */
     public function create(array $data, User $owner): Workspace
     {
@@ -51,7 +51,9 @@ class WorkspaceService
     }
 
     /**
-     * Update a workspace
+     * Update workspace name and/or color. Logs activity if name changed.
+     *
+     * @param  array{name?: string, color?: string}  $data
      */
     public function update(Workspace $workspace, array $data, User $user): Workspace
     {
@@ -74,7 +76,8 @@ class WorkspaceService
     }
 
     /**
-     * Delete a workspace
+     * Permanently delete a workspace and all its nested data.
+     *
      */
     public function delete(Workspace $workspace, User $user): void
     {
@@ -89,7 +92,8 @@ class WorkspaceService
     }
 
     /**
-     * Add a member to the workspace
+     * Add a user as a member of the workspace with the given role.
+     *
      */
     public function addMember(Workspace $workspace, User $user, string $role = AccessService::WORKSPACE_MEMBER, ?User $addedBy = null): void
     {
@@ -106,7 +110,8 @@ class WorkspaceService
     }
 
     /**
-     * Remove a member from the workspace
+     * Remove a user from the workspace membership.
+     *
      */
     public function removeMember(Workspace $workspace, User $user, ?User $removedBy = null): void
     {
@@ -122,7 +127,8 @@ class WorkspaceService
     }
 
     /**
-     * Update member role
+     * Change a workspace member's role.
+     *
      */
     public function updateMemberRole(Workspace $workspace, User $user, string $role, ?User $updatedBy = null): void
     {
@@ -138,7 +144,9 @@ class WorkspaceService
     }
 
     /**
-     * Get workspace statistics
+     * Get aggregate statistics for a workspace (spaces, tasks, completion, overdue).
+     *
+     * @return array{spaces_count: int, projects_count: int, tasks_count: int, completed_subtasks_count: int, overdue_subtasks_count: int, members_count: int}
      */
     public function getStatistics(Workspace $workspace): array
     {

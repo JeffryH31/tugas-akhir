@@ -14,21 +14,16 @@ class StoreTimeEntryRequest extends FormRequest
     public function rules(): array
     {
         return [
-            'duration' => ['nullable', 'integer', 'min:1', 'max:1440', 'required_without_all:started_at,ended_at'], // max 24 hours in minutes
-            'started_at' => ['nullable', 'date', 'required_with:ended_at'],
-            'ended_at' => ['nullable', 'date', 'after:started_at', 'required_with:started_at'],
-            'is_billable' => ['nullable', 'boolean'],
+            'started_at' => ['required', 'date'],
+            'ended_at' => ['required', 'date', 'after:started_at'],
         ];
     }
 
     public function messages(): array
     {
         return [
-            'duration.required_without_all' => 'Duration or start/end time is required.',
-            'duration.min' => 'Duration must be at least 1 minute.',
-            'duration.max' => 'Duration cannot exceed 24 hours.',
-            'started_at.required_with' => 'Start time is required when end time is provided.',
-            'ended_at.required_with' => 'End time is required when start time is provided.',
+            'started_at.required' => 'Start time is required.',
+            'ended_at.required' => 'End time is required.',
             'ended_at.after' => 'End time must be after start time.',
         ];
     }

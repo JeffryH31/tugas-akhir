@@ -14,7 +14,6 @@ use App\Models\Project;
 use App\Models\Workspace;
 use App\Services\AccessService;
 use App\Services\TaskService;
-use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Validation\Rule;
@@ -45,7 +44,7 @@ class TaskController extends Controller
 
             return redirect()->back()->with([
                 'success' => 'Task created successfully.',
-                'task' => new TaskResource($task->load(['status', 'assignees', 'labels']))
+                'task' => new TaskResource($task->load(['status']))
             ]);
         } catch (\Exception $e) {
             return redirect()->back()->withErrors(['error' => 'Failed to create task: ' . $e->getMessage()]);
@@ -348,80 +347,13 @@ class TaskController extends Controller
             'limit' => ['nullable', 'integer', 'min:1', 'max:50'],
         ]);
 
-        $query = $validated['q'] ?? '';
-        $type = $validated['type'] ?? 'all';
-        $limit = $validated['limit'] ?? 20;
-        $workspaceId = $validated['workspace_id'] ?? null;
-
-        if (strlen($query) < 2) {
-            return response()->json(['tasks' => [], 'projects' => [], 'spaces' => []]);
-        }
-
-        $query = str_replace(['%', '_'], ['\%', '\_'], $query);
-
-        $user = $request->user();
-
-        $tasksQuery = Task::whereHas('project.space.workspace', function ($q) use ($user, $workspaceId) {
-            $q->where('created_by', $user->id)
-                ->orWhereHas('members', function ($q2) use ($user) {
-                    $q2->where('users.id', $user->id);
-                });
-        })
-            ->when($workspaceId, fn($q) => $q->whereHas('project.space', fn($q2) => $q2->where('workspace_id', $workspaceId)))
-            ->where(function ($q) use ($query) {
-                $q->where('name', 'like', "%{$query}%")
-                    ->orWhere('description', 'like', "%{$query}%");
-            })
-            ->when(!empty($validated['status_id']), fn($q) => $q->where('status_id', $validated['status_id']))
-            ->when(!empty($validated['assignee_id']), fn($q) => $q->whereHas('assignees', fn($q2) => $q2->where('users.id', $validated['assignee_id'])))
-            ->with(['project.space', 'status', 'assignees'])
-            ->limit($limit);
-
-        // Search tasks
-        $tasks = $type === 'all' || $type === 'tasks' ? $tasksQuery->get() : collect();
-
-        // Search lists
-        $projectsQuery = Project::whereHas('space.workspace', function ($q) use ($user) {
-            $q->where('created_by', $user->id)
-                ->orWhereHas('members', function ($q2) use ($user) {
-                    $q2->where('users.id', $user->id);
-                });
-        })
-            ->when($workspaceId, fn($q) => $q->whereHas('space', fn($q2) => $q2->where('workspace_id', $workspaceId)))
-            ->where('name', 'like', "%{$query}%")
-            ->with('space')
-            ->limit(min($limit, 15));
-
-        $lists = $type === 'all' || $type === 'projects' ? $projectsQuery->get() : collect();
-
-        // Search spaces
-        $spacesQuery = Space::whereHas('workspace', function ($q) use ($user, $workspaceId) {
-            $q->where('created_by', $user->id)
-                ->orWhereHas('members', function ($q2) use ($user) {
-                    $q2->where('users.id', $user->id);
-                });
-        })
-            ->when($workspaceId, fn($q) => $q->where('workspace_id', $workspaceId))
-            ->where('name', 'like', "%{$query}%")
-            ->with('workspace')
-            ->limit(min($limit, 15));
-
-        $spaces = $type === 'all' || $type === 'spaces' ? $spacesQuery->get() : collect();
+        $results = $this->taskService->globalSearch($request->user(), $validated);
 
         return response()->json([
-            'tasks' => TaskResource::collection($tasks),
-            'projects' => $lists,
-            'spaces' => $spaces,
-            'meta' => [
-                'query' => $query,
-                'type' => $type,
-                'workspace_id' => $workspaceId,
-                'count' => [
-                    'tasks' => $tasks->count(),
-                    'projects' => $lists->count(),
-                    'spaces' => $spaces->count(),
-                ],
-            ],
+            'tasks' => TaskResource::collection($results['tasks']),
+            'projects' => $results['projects'],
+            'spaces' => $results['spaces'],
+            'meta' => $results['meta'],
         ]);
     }
 }

@@ -9,9 +9,6 @@ use App\Models\User;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
 
-/**
- * Handle task comment lifecycle and related activity logs.
- */
 class CommentService
 {
     /**

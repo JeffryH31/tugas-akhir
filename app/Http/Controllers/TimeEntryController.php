@@ -60,29 +60,8 @@ class TimeEntryController extends Controller
         $activeWorkspaceId = session('active_workspace_id', $workspaces->first()?->id);
         $activeWorkspace = $workspaces->firstWhere('id', $activeWorkspaceId) ?? $workspaces->first();
 
-        // Flat list of active subtasks for the "Log Time" dialog
         $subtasks = $activeWorkspace
-            ? \App\Models\Subtask::query()
-            ->whereNull('completed_at')
-            ->whereNull('deleted_at')
-            ->whereHas('task.project', fn($q) => $q
-                ->whereHas('space', fn($sq) => $sq->where('workspace_id', $activeWorkspace->id))
-                ->accessibleBy($user)
-            )
-            ->with(['task.project.space'])
-            ->orderByDesc('updated_at')
-            ->limit(200)
-            ->get()
-            ->map(fn($s) => [
-                'id'         => $s->id,
-                'name'       => $s->name,
-                'task_id'    => $s->task->id,
-                'task_name'  => $s->task->name,
-                'project_id'   => $s->task->project->id,
-                'project_name' => $s->task->project->name,
-                'space_id'   => $s->task->project->space->id,
-                'space_name' => $s->task->project->space->name,
-            ])
+            ? $this->timeTrackingService->getAvailableSubtasksForTimeLog($user, $activeWorkspace)
             : collect();
 
         return Inertia::render('TimeTracking/Index', [

@@ -7,13 +7,16 @@ use App\Models\Task;
 use Carbon\Carbon;
 use Illuminate\Support\Collection;
 
-/**
- * Perform Critical Path Method (CPM) analysis for task subtasks.
- */
 class CpmService
 {
     /**
-     * Analyze CPM for all subtasks of a given task
+     * Run Critical Path Method analysis on all subtasks of a task.
+     *
+     * Builds a dependency graph, performs topological sort, then executes
+     * forward and backward passes to compute early/late start/finish times,
+     * slack, and the critical path.
+     *
+     * @return array{success: bool, message?: string, data?: array}
      */
     public function analyze(Task $task): array
     {
@@ -148,11 +151,9 @@ class CpmService
     /**
      * Depth-first search helper used for cycle detection.
      *
-     * @param int $nodeId
      * @param array<int, array<int>> $graph
      * @param array<int, bool> $visited
      * @param array<int, bool> $recStack
-     * @return bool
      */
     protected function hasCycleDFS(int $nodeId, array $graph, array &$visited, array &$recStack): bool
     {
@@ -393,7 +394,12 @@ class CpmService
     }
 
     /**
-     * Add a dependency between two subtasks
+     * Create a dependency relationship between two subtasks.
+     *
+     * Validates same-task constraint, cycle detection, and duplicate check
+     * before attaching the dependency.
+     *
+     * @return array{success: bool, message: string}
      */
     public function addDependency(Subtask $subtask, Subtask $dependsOn, string $type = 'blocks'): array
     {
@@ -431,7 +437,9 @@ class CpmService
     }
 
     /**
-     * Remove a dependency between two subtasks
+     * Remove a dependency relationship between two subtasks.
+     *
+     * @return array{success: bool, message: string}
      */
     public function removeDependency(Subtask $subtask, Subtask $dependsOn): array
     {
@@ -444,7 +452,12 @@ class CpmService
     }
 
     /**
-     * Check if adding a dependency would create a cycle
+     * Detect if adding a dependency from $dependsOn → $subtask would create a cycle.
+     *
+     * Uses BFS from $subtask through existing dependents. If $dependsOn is
+     * reachable, adding the reverse edge would close a loop.
+     *
+     * Pre-loads all edges in one query to avoid N+1.
      */
     protected function wouldCreateCycle(Subtask $subtask, Subtask $dependsOn): bool
     {

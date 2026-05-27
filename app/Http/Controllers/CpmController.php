@@ -25,13 +25,11 @@ class CpmController extends Controller
     /**
      * Get CPM analysis for a task's subtasks
      */
-    public function analyze(
-        Request $request,
+    public function analyze(Request $request,
         Workspace $workspace,
         Space $space,
         Project $list,
-        Task $task
-    ): \Illuminate\Http\JsonResponse|\Illuminate\Http\RedirectResponse {
+        Task $task): \Illuminate\Http\JsonResponse|\Illuminate\Http\RedirectResponse {
         abort_unless($this->accessService->canViewProject($request->user(), $list), 403);
         if ($task->project_id !== $list->id) {
             abort(404);
@@ -49,13 +47,11 @@ class CpmController extends Controller
     /**
      * Show Gantt view for a task's subtasks
      */
-    public function gantt(
-        Request $request,
+    public function gantt(Request $request,
         Workspace $workspace,
         Space $space,
         Project $list,
-        Task $task
-    ): Response {
+        Task $task): Response {
         abort_unless($this->accessService->canViewProject($request->user(), $list), 403);
         if ($task->project_id !== $list->id) {
             abort(404);
@@ -101,13 +97,11 @@ class CpmController extends Controller
     /**
      * Add a dependency between two subtasks
      */
-    public function addDependency(
-        AddDependencyRequest $request,
+    public function addDependency(AddDependencyRequest $request,
         Workspace $workspace,
         Space $space,
         Project $list,
-        Task $task
-    ): \Illuminate\Http\JsonResponse|\Illuminate\Http\RedirectResponse {
+        Task $task): \Illuminate\Http\JsonResponse|\Illuminate\Http\RedirectResponse {
         abort_unless($this->accessService->canManageDependencies($request->user(), $list), 403);
         $validated = $request->validated();
 
@@ -141,13 +135,11 @@ class CpmController extends Controller
     /**
      * Remove a dependency between two subtasks
      */
-    public function removeDependency(
-        RemoveDependencyRequest $request,
+    public function removeDependency(RemoveDependencyRequest $request,
         Workspace $workspace,
         Space $space,
         Project $list,
-        Task $task
-    ): \Illuminate\Http\JsonResponse|\Illuminate\Http\RedirectResponse {
+        Task $task): \Illuminate\Http\JsonResponse|\Illuminate\Http\RedirectResponse {
         abort_unless($this->accessService->canManageDependencies($request->user(), $list), 403);
         $validated = $request->validated();
 

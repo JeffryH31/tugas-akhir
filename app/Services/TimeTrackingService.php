@@ -11,9 +11,6 @@ use App\Models\Workspace;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
 
-/**
- * Handle time entry logging, timers, and reporting across scopes.
- */
 class TimeTrackingService
 {
     /**
@@ -22,8 +19,8 @@ class TimeTrackingService
     public function logTime(Subtask $subtask, User $user, array $data): TimeEntry
     {
         return DB::transaction(function () use ($subtask, $user, $data) {
-            $startedAt = isset($data['started_at']) ? now()->parse($data['started_at']) : now();
-            $endedAt = isset($data['ended_at']) ? now()->parse($data['ended_at']) : null;
+            $startedAt = isset($data['started_at']) ? \Carbon\Carbon::parse($data['started_at']) : now();
+            $endedAt = isset($data['ended_at']) ? \Carbon\Carbon::parse($data['ended_at']) : null;
 
             $duration = $data['duration'] ?? null;
             if (!is_null($endedAt)) {
@@ -180,6 +177,36 @@ class TimeTrackingService
     }
 
     /**
+     * Get available subtasks for the "Log Time" dialog in a workspace.
+     *
+     * Returns active (not completed, not deleted) subtasks accessible by the user.
+     */
+    public function getAvailableSubtasksForTimeLog(User $user, Workspace $workspace): Collection
+    {
+        return Subtask::query()
+            ->whereNull('completed_at')
+            ->whereNull('deleted_at')
+            ->whereHas('task.project', fn($q) => $q
+                ->whereHas('space', fn($sq) => $sq->where('workspace_id', $workspace->id))
+                ->accessibleBy($user)
+            )
+            ->with(['task.project.space'])
+            ->orderByDesc('updated_at')
+            ->limit(200)
+            ->get()
+            ->map(fn($s) => [
+                'id' => $s->id,
+                'name' => $s->name,
+                'task_id' => $s->task->id,
+                'task_name' => $s->task->name,
+                'project_id' => $s->task->project->id,
+                'project_name' => $s->task->project->name,
+                'space_id' => $s->task->project->space->id,
+                'space_name' => $s->task->project->space->name,
+            ]);
+    }
+
+    /**
      * Get time summary for a task
      */
     public function getTaskTimeSummary(Task $task): array
@@ -243,11 +270,9 @@ class TimeTrackingService
     /**
      * Get workspace time report
      */
-    public function getWorkspaceTimeReport(
-        Workspace $workspace,
+    public function getWorkspaceTimeReport(Workspace $workspace,
         ?string $startDate = null,
-        ?string $endDate = null
-    ): array {
+        ?string $endDate = null): array {
         $query = TimeEntry::query()
             ->join('subtasks', 'time_entries.subtask_id', '=', 'subtasks.id')
             ->join('tasks', 'subtasks.task_id', '=', 'tasks.id')

@@ -15,9 +15,6 @@ class StoreFolderRequest extends FormRequest
     {
         return [
             'name' => ['required', 'string', 'max:255'],
-            'description' => ['nullable', 'string', 'max:1000'],
-            'color' => ['nullable', 'string', 'regex:/^#[0-9A-Fa-f]{6}$/'],
-            'parent_id' => ['nullable', 'exists:folders,id'],
         ];
     }
 
@@ -26,7 +23,6 @@ class StoreFolderRequest extends FormRequest
         return [
             'name.required' => 'Folder name is required.',
             'name.max' => 'Folder name must not exceed 255 characters.',
-            'parent_id.exists' => 'Parent folder does not exist.',
         ];
     }
 }

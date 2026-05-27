@@ -15,10 +15,9 @@ class StoreSubtaskRequest extends FormRequest
     public function rules(): array
     {
         return [
-            'name'         => ['required', 'string', 'max:255'],
-            'description'  => ['nullable', 'string', 'max:10000'],
-            'parent_id'    => ['nullable', 'exists:subtasks,id'],
-            'status_id'    => [
+            'name'      => ['required', 'string', 'max:255'],
+            'parent_id' => ['nullable', 'exists:subtasks,id'],
+            'status_id' => [
                 'nullable',
                 'exists:statuses,id',
                 function ($attribute, $value, $fail) {
@@ -30,32 +29,18 @@ class StoreSubtaskRequest extends FormRequest
                     }
                 },
             ],
-            'priority_level'  => ['nullable', 'integer', 'in:1,2,3,4'],
-            'task_id'         => ['required', 'exists:tasks,id'],
-            'start_date'      => ['nullable', 'date'],
-            'due_date'        => ['nullable', 'date', 'after_or_equal:start_date'],
-            'time_estimate'   => ['nullable', 'integer', 'min:0', 'max:525600'],
-            'assignee_ids'    => ['nullable', 'array', 'max:1'],
-            'assignee_ids.*'  => ['exists:users,id'],
-            'label_ids'       => ['nullable', 'array'],
-            'label_ids.*'     => ['exists:labels,id'],
+            'task_id' => ['required', 'exists:tasks,id'],
         ];
     }
 
-    /**
-     * Get custom messages for validator errors.
-     */
     public function messages(): array
     {
         return [
             'name.required' => 'Subtask name is required.',
             'name.max' => 'Subtask name must not exceed 255 characters.',
-            'due_date.after_or_equal' => 'Due date must be after or equal to start date.',
             'status_id.exists' => 'Selected status does not exist.',
-            'priority_level.in' => 'Selected priority does not exist.',
             'task_id.required' => 'Task ID is required.',
             'task_id.exists' => 'Parent task does not exist.',
-            'time_estimate.max' => 'Time estimate cannot exceed 1 year.',
         ];
     }
 }
