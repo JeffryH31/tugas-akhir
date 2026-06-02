@@ -40,12 +40,33 @@ class SubtaskService
             }
 
             $subtask = Subtask::create([
-                'task_id'    => $task->id,
-                'parent_id'  => $data['parent_id'] ?? null,
-                'name'       => $data['name'],
-                'status_id'  => $data['status_id'] ?? null,
-                'created_by' => $user->id,
+                'task_id'              => $task->id,
+                'parent_id'            => $data['parent_id'] ?? null,
+                'name'                 => $data['name'],
+                'description'          => $data['description'] ?? null,
+                'status_id'            => $data['status_id'] ?? null,
+                'priority_level'       => $data['priority_level'] ?? null,
+                'start_date'           => $data['start_date'] ?? null,
+                'due_date'             => $data['due_date'] ?? null,
+                'baseline_start_date'  => $data['start_date'] ?? null,
+                'baseline_due_date'    => $data['due_date'] ?? null,
+                'time_estimate'        => $data['time_estimate'] ?? null,
+                'created_by'           => $user->id,
             ]);
+
+            // Sync assignees if provided
+            if (!empty($data['assignee_ids'])) {
+                $pivotData = [];
+                foreach ($data['assignee_ids'] as $assigneeId) {
+                    $pivotData[$assigneeId] = ['assigned_by' => $user->id];
+                }
+                $subtask->assignees()->sync($pivotData);
+            }
+
+            // Sync labels if provided
+            if (!empty($data['label_ids'])) {
+                $subtask->labels()->sync($data['label_ids']);
+            }
 
             Activity::log(
                 $task->project->space->workspace,
@@ -58,7 +79,7 @@ class SubtaskService
                 ]
             );
 
-            return $subtask;
+            return $subtask->fresh(['assignees', 'labels', 'status']);
         });
     }
 

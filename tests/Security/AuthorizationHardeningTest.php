@@ -7,59 +7,10 @@ use App\Models\Task;
 use App\Models\Project;
 use App\Models\User;
 use App\Models\Workspace;
+use Tests\Traits\CreatesWorkspaceHierarchy;
 use function Pest\Laravel\actingAs;
 
-function createWorkspaceHierarchy(User $owner, string $suffix = 'A'): array
-{
-    $workspace = Workspace::create([
-        'name' => "Workspace {$suffix}",
-        'color' => '#1D4ED8',
-    ]);
-    $workspace->addMember($owner, 'owner');
-
-    $space = Space::create([
-        'workspace_id' => $workspace->id,
-        'name' => "Space {$suffix}",
-        'description' => "Space {$suffix} description",
-        'created_by' => $owner->id,
-    ]);
-
-    $list = Project::create([
-        'space_id' => $space->id,
-        'name' => "List {$suffix}",
-        'description' => "List {$suffix} description",
-        'created_by' => $owner->id,
-    ]);
-
-    $task = Task::create([
-        'project_id' => $list->id,
-        'name' => "Task {$suffix}",
-        'description' => "Task {$suffix} description",
-        'created_by' => $owner->id,
-    ]);
-
-    return [
-        'workspace' => $workspace,
-        'space' => $space,
-        'list' => $list,
-        'task' => $task,
-    ];
-}
-
-test('non-member cannot switch active workspace', function () {
-    $owner = User::factory()->create();
-    $otherOwner = User::factory()->create();
-
-    $foreignWorkspace = Workspace::create([
-        'name' => 'Foreign Workspace',
-        'color' => '#7C3AED',
-    ]);
-    $foreignWorkspace->addMember($otherOwner, 'admin');
-
-    actingAs($owner)
-        ->post(route('workspaces.switch', $foreignWorkspace->id))
-        ->assertForbidden();
-});
+uses(CreatesWorkspaceHierarchy::class);
 
 test('workspace member cannot delete workspace', function () {
     $admin = User::factory()->create();
@@ -75,27 +26,14 @@ test('workspace member cannot delete workspace', function () {
     actingAs($member)
         ->delete(route('workspaces.destroy', $workspace->id))
         ->assertForbidden();
-});
 
-test('recycle bin requires workspace membership', function () {
-    $owner = User::factory()->create();
-    $stranger = User::factory()->create();
-
-    $workspace = Workspace::create([
-        'name' => 'Recycle Bin Guard',
-        'color' => '#0891B2',
-    ]);
-    $workspace->addMember($owner, 'admin');
-
-    actingAs($stranger)
-        ->get(route('workspaces.recycle-bin.index', $workspace->id))
-        ->assertForbidden();
+    expect(Workspace::find($workspace->id))->not->toBeNull();
 });
 
 test('cannot attach label from different workspace to task', function () {
     $owner = User::factory()->create();
 
-    $primary = createWorkspaceHierarchy($owner, 'Primary');
+    $primary = $this->createFullHierarchy($owner, 'Primary');
     $secondaryWorkspace = Workspace::create([
         'name' => 'Secondary Workspace',
         'color' => '#DC2626',
@@ -118,11 +56,13 @@ test('cannot attach label from different workspace to task', function () {
             'label_id' => $foreignLabel->id,
         ])
         ->assertSessionHasErrors(['label_id']);
+
+    expect($primary['task']->fresh()->labels()->where('label_id', $foreignLabel->id)->exists())->toBeFalse();
 });
 
 test('scoped bindings reject task outside list context', function () {
     $owner = User::factory()->create();
-    $hierarchy = createWorkspaceHierarchy($owner, 'Scope');
+    $hierarchy = $this->createFullHierarchy($owner, 'Scope');
 
     $otherList = Project::create([
         'space_id' => $hierarchy['space']->id,
@@ -146,6 +86,8 @@ test('scoped bindings reject task outside list context', function () {
             $otherTask->id,
         ]), ['name' => 'Hacked'])
         ->assertNotFound();
+
+    expect($otherTask->fresh()->name)->toBe('Task In Other List');
 });
 
 test('cannot create folder using parent from another space', function () {
@@ -184,6 +126,8 @@ test('cannot create folder using parent from another space', function () {
             'parent_id' => $foreignParent->id,
         ])
         ->assertSessionHasErrors(['error']);
+
+    expect(Folder::where('space_id', $spaceA->id)->where('name', 'New Folder')->exists())->toBeFalse();
 });
 
 test('workspace member without manage permission cannot create folder', function () {
@@ -205,7 +149,6 @@ test('workspace member without manage permission cannot create folder', function
         'created_by' => $owner->id,
     ]);
 
-    // Add member to space so they can view it
     $space->members()->attach($member->id, ['role' => 'member']);
 
     actingAs($member)
@@ -213,4 +156,6 @@ test('workspace member without manage permission cannot create folder', function
             'name' => 'Unauthorized Folder',
         ])
         ->assertForbidden();
+
+    expect(Folder::where('space_id', $space->id)->where('name', 'Unauthorized Folder')->exists())->toBeFalse();
 });

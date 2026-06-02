@@ -1,0 +1,123 @@
+<mxfile host="app.diagrams.net" modified="2026-05-30T00:00:00.000Z" agent="Kiro" version="24.0.0">
+  <diagram id="evm-flowchart" name="Earned Value Management">
+    <mxGraphModel dx="1200" dy="1800" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="800" pageHeight="1600" math="0" shadow="0">
+      <root>
+        <mxCell id="0" />
+        <mxCell id="1" parent="0" />
+
+        <!-- START -->
+        <mxCell id="s1" value="Mulai" style="ellipse;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=#82b366;" vertex="1" parent="1">
+          <mxGeometry x="300" y="20" width="120" height="50" as="geometry" />
+        </mxCell>
+
+        <!-- Input -->
+        <mxCell id="p1" value="Ambil seluruh subtask&#xa;dalam workspace beserta&#xa;assignee dan time_spent" style="shape=parallelogram;perimeter=parallelogramPerimeter;whiteSpace=wrap;html=1;fixedSize=1;fillColor=#dae8fc;strokeColor=#6c8ebf;" vertex="1" parent="1">
+          <mxGeometry x="250" y="100" width="220" height="65" as="geometry" />
+        </mxCell>
+        <mxCell id="e1" style="edgeStyle=orthogonalEdgeStyle;" edge="1" source="s1" target="p1" parent="1"><mxGeometry relative="1" as="geometry" /></mxCell>
+
+        <!-- Loop start -->
+        <mxCell id="p_loop" value="Untuk setiap subtask:" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#e1d5e7;strokeColor=#9673a6;" vertex="1" parent="1">
+          <mxGeometry x="280" y="195" width="160" height="40" as="geometry" />
+        </mxCell>
+        <mxCell id="e2" style="edgeStyle=orthogonalEdgeStyle;" edge="1" source="p1" target="p_loop" parent="1"><mxGeometry relative="1" as="geometry" /></mxCell>
+
+        <!-- Decision: has estimate? -->
+        <mxCell id="d1" value="time_estimate&#xa;&gt; 0?" style="rhombus;whiteSpace=wrap;html=1;fillColor=#fff2cc;strokeColor=#d6b656;" vertex="1" parent="1">
+          <mxGeometry x="300" y="265" width="120" height="80" as="geometry" />
+        </mxCell>
+        <mxCell id="e3" style="edgeStyle=orthogonalEdgeStyle;" edge="1" source="p_loop" target="d1" parent="1"><mxGeometry relative="1" as="geometry" /></mxCell>
+
+        <!-- Skip -->
+        <mxCell id="p_skip" value="Lewati subtask ini" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#f5f5f5;strokeColor=#666666;" vertex="1" parent="1">
+          <mxGeometry x="500" y="280" width="140" height="35" as="geometry" />
+        </mxCell>
+        <mxCell id="e4" value="Tidak" style="edgeStyle=orthogonalEdgeStyle;" edge="1" source="d1" target="p_skip" parent="1"><mxGeometry relative="1" as="geometry" /></mxCell>
+
+        <!-- Hourly rate -->
+        <mxCell id="p2" value="Tentukan hourly rate:&#xa;rata-rata hourly_rate&#xa;assignee, atau default" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=#333333;" vertex="1" parent="1">
+          <mxGeometry x="260" y="380" width="200" height="55" as="geometry" />
+        </mxCell>
+        <mxCell id="e5" value="Ya" style="edgeStyle=orthogonalEdgeStyle;" edge="1" source="d1" target="p2" parent="1"><mxGeometry relative="1" as="geometry" /></mxCell>
+
+        <!-- Planned Cost -->
+        <mxCell id="p3" value="Hitung Planned Cost:&#xa;PC = (time_estimate / 60)&#xa;× hourly_rate" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=#333333;" vertex="1" parent="1">
+          <mxGeometry x="260" y="465" width="200" height="55" as="geometry" />
+        </mxCell>
+        <mxCell id="e6" style="edgeStyle=orthogonalEdgeStyle;" edge="1" source="p2" target="p3" parent="1"><mxGeometry relative="1" as="geometry" /></mxCell>
+
+        <!-- Actual Cost -->
+        <mxCell id="p4" value="Hitung Actual Cost:&#xa;AC_i = (time_spent / 60)&#xa;× hourly_rate" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=#333333;" vertex="1" parent="1">
+          <mxGeometry x="260" y="550" width="200" height="55" as="geometry" />
+        </mxCell>
+        <mxCell id="e7" style="edgeStyle=orthogonalEdgeStyle;" edge="1" source="p3" target="p4" parent="1"><mxGeometry relative="1" as="geometry" /></mxCell>
+
+        <!-- Progress ratio -->
+        <mxCell id="p5" value="Tentukan progress ratio:&#xa;Jika selesai → 1.0&#xa;Jika belum → progress / 100" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=#333333;" vertex="1" parent="1">
+          <mxGeometry x="250" y="635" width="220" height="55" as="geometry" />
+        </mxCell>
+        <mxCell id="e8" style="edgeStyle=orthogonalEdgeStyle;" edge="1" source="p4" target="p5" parent="1"><mxGeometry relative="1" as="geometry" /></mxCell>
+
+        <!-- Scheduled progress -->
+        <mxCell id="p6" value="Hitung Scheduled Progress Ratio:&#xa;Berdasarkan posisi tanggal saat ini&#xa;relatif terhadap baseline&#xa;start_date dan due_date" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=#333333;" vertex="1" parent="1">
+          <mxGeometry x="240" y="720" width="240" height="70" as="geometry" />
+        </mxCell>
+        <mxCell id="e9" style="edgeStyle=orthogonalEdgeStyle;" edge="1" source="p5" target="p6" parent="1"><mxGeometry relative="1" as="geometry" /></mxCell>
+
+        <!-- Accumulate PV -->
+        <mxCell id="p7" value="Akumulasi per subtask:&#xa;PV += PC × scheduled_progress&#xa;EV += PC × progress_ratio&#xa;AC += AC_i" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=#333333;" vertex="1" parent="1">
+          <mxGeometry x="250" y="820" width="220" height="70" as="geometry" />
+        </mxCell>
+        <mxCell id="e10" style="edgeStyle=orthogonalEdgeStyle;" edge="1" source="p6" target="p7" parent="1"><mxGeometry relative="1" as="geometry" /></mxCell>
+
+        <!-- Loop back arrow (visual) -->
+        <mxCell id="e_loop" value="Subtask berikutnya" style="edgeStyle=orthogonalEdgeStyle;exitX=1;exitY=0.5;entryX=1;entryY=0.5;" edge="1" source="p7" target="p_loop" parent="1">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="700" y="855" />
+              <mxPoint x="700" y="215" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+
+        <!-- Skip loop back -->
+        <mxCell id="e_skip_loop" style="edgeStyle=orthogonalEdgeStyle;exitX=0.5;exitY=1;entryX=1;entryY=0;" edge="1" source="p_skip" target="p_loop" parent="1">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="570" y="340" />
+              <mxPoint x="700" y="340" />
+              <mxPoint x="700" y="215" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+
+        <!-- After loop: calculate variances -->
+        <mxCell id="p8" value="Hitung Variance:&#xa;CV = EV − AC&#xa;SV = EV − PV" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=#333333;" vertex="1" parent="1">
+          <mxGeometry x="270" y="930" width="180" height="55" as="geometry" />
+        </mxCell>
+        <mxCell id="e11" value="Semua subtask&#xa;selesai diproses" style="edgeStyle=orthogonalEdgeStyle;exitX=0.5;exitY=1;" edge="1" source="p7" target="p8" parent="1">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+
+        <!-- Calculate indices -->
+        <mxCell id="p9" value="Hitung Performance Index:&#xa;CPI = EV / AC&#xa;SPI = EV / PV" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=#333333;" vertex="1" parent="1">
+          <mxGeometry x="270" y="1015" width="180" height="55" as="geometry" />
+        </mxCell>
+        <mxCell id="e12" style="edgeStyle=orthogonalEdgeStyle;" edge="1" source="p8" target="p9" parent="1"><mxGeometry relative="1" as="geometry" /></mxCell>
+
+        <!-- Output -->
+        <mxCell id="p10" value="Tampilkan hasil EVM:&#xa;PV, EV, AC,&#xa;CV, SV, CPI, SPI" style="shape=parallelogram;perimeter=parallelogramPerimeter;whiteSpace=wrap;html=1;fixedSize=1;fillColor=#dae8fc;strokeColor=#6c8ebf;" vertex="1" parent="1">
+          <mxGeometry x="255" y="1100" width="210" height="65" as="geometry" />
+        </mxCell>
+        <mxCell id="e13" style="edgeStyle=orthogonalEdgeStyle;" edge="1" source="p9" target="p10" parent="1"><mxGeometry relative="1" as="geometry" /></mxCell>
+
+        <!-- END -->
+        <mxCell id="end1" value="Selesai" style="ellipse;whiteSpace=wrap;html=1;fillColor=#f8cecc;strokeColor=#b85450;" vertex="1" parent="1">
+          <mxGeometry x="300" y="1200" width="120" height="50" as="geometry" />
+        </mxCell>
+        <mxCell id="e14" style="edgeStyle=orthogonalEdgeStyle;" edge="1" source="p10" target="end1" parent="1"><mxGeometry relative="1" as="geometry" /></mxCell>
+
+      </root>
+    </mxGraphModel>
+  </diagram>
+</mxfile>

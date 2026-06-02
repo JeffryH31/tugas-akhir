@@ -69,6 +69,8 @@ test('space member cannot update space', function () {
     actingAs($this->spaceMember)
         ->patch(route('spaces.update', [$this->workspace->id, $this->space->id]), ['name' => 'Hacked'])
         ->assertForbidden();
+
+    expect($this->space->fresh()->name)->toBe('Test Space');
 });
 
 test('workspace admin can update space', function () {
@@ -83,12 +85,16 @@ test('space member cannot delete space', function () {
     actingAs($this->spaceMember)
         ->delete(route('spaces.destroy', [$this->workspace->id, $this->space->id]))
         ->assertForbidden();
+
+    expect(\App\Models\Space::find($this->space->id))->not->toBeNull();
 });
 
 test('space admin cannot delete space (workspace admin only)', function () {
     actingAs($this->spaceAdmin)
         ->delete(route('spaces.destroy', [$this->workspace->id, $this->space->id]))
         ->assertForbidden();
+
+    expect(\App\Models\Space::find($this->space->id))->not->toBeNull();
 });
 
 // Status Management
@@ -99,6 +105,8 @@ test('space member cannot add status', function () {
             'color' => '#FF0000',
         ])
         ->assertForbidden();
+
+    expect(\App\Models\Status::where('space_id', $this->space->id)->where('name', 'Custom Status')->exists())->toBeFalse();
 });
 
 test('space admin can add status', function () {
@@ -121,6 +129,8 @@ test('space member cannot add another member', function () {
             'role' => 'member',
         ])
         ->assertForbidden();
+
+    expect($this->space->members()->where('user_id', $newUser->id)->exists())->toBeFalse();
 });
 
 test('space admin can add space member', function () {

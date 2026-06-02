@@ -171,3 +171,88 @@ test('getWithTasksByStatus groups items by status', function () {
         expect(array_key_exists($status->id, $grouped))->toBeTrue();
     }
 });
+
+// ============================================================
+// Merged from Unit/Services/ProjectServiceTest.php
+// ============================================================
+
+test('create list adds creator as project_owner', function () {
+    $list = $this->service->create(
+        ['name' => 'My List'],
+        $this->hierarchy['space'],
+        $this->owner
+    );
+
+    $member = $list->members()->where('user_id', $this->owner->id)->first();
+    expect($member)->not->toBeNull();
+    expect($member->pivot->role)->toBe('project_owner');
+});
+
+test('create list logs activity', function () {
+    $this->service->create(['name' => 'Logged'], $this->hierarchy['space'], $this->owner);
+
+    $activity = Activity::where('action', 'created')
+        ->where('subject_type', Project::class)
+        ->latest('id')->first();
+    expect($activity)->not->toBeNull();
+});
+
+test('update list name', function () {
+    $list = $this->hierarchy['list'];
+
+    $updated = $this->service->update($list, ['name' => 'Renamed List'], $this->owner);
+
+    expect($updated->name)->toBe('Renamed List');
+});
+
+test('update list logs activity when changed', function () {
+    $list = $this->hierarchy['list'];
+    Activity::truncate();
+
+    $this->service->update($list, ['name' => 'Different Name'], $this->owner);
+
+    $activity = Activity::where('action', 'updated')
+        ->where('subject_type', Project::class)
+        ->first();
+    expect($activity)->not->toBeNull();
+});
+
+test('delete list soft deletes it', function () {
+    $list = $this->service->create(['name' => 'Delete Me'], $this->hierarchy['space'], $this->owner);
+
+    $this->service->delete($list, $this->owner);
+
+    expect(Project::find($list->id))->toBeNull();
+    expect(Project::withTrashed()->find($list->id))->not->toBeNull();
+});
+
+test('addMember adds user to list', function () {
+    $user = $this->createUser();
+
+    $this->service->addMember($this->hierarchy['list'], $user, 'development_team', $this->owner);
+
+    expect($this->hierarchy['list']->members()->where('user_id', $user->id)->exists())->toBeTrue();
+});
+
+test('removeMember removes user from list', function () {
+    $user = $this->createUser();
+    $this->hierarchy['list']->addMember($user, 'development_team');
+
+    $this->service->removeMember($this->hierarchy['list'], $user, $this->owner);
+
+    expect($this->hierarchy['list']->members()->where('user_id', $user->id)->exists())->toBeFalse();
+});
+
+test('moveToFolder updates folder_id', function () {
+    $list = $this->service->create(['name' => 'Movable'], $this->hierarchy['space'], $this->owner);
+    $folder = Folder::create([
+        'space_id' => $this->hierarchy['space']->id,
+        'name' => 'Destination',
+        'slug' => 'destination',
+        'created_by' => $this->owner->id,
+    ]);
+
+    $moved = $this->service->moveToFolder($list, $folder, $this->owner);
+
+    expect($moved->folder_id)->toBe($folder->id);
+});

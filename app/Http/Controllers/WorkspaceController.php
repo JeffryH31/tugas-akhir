@@ -80,7 +80,7 @@ class WorkspaceController extends Controller
 
         $projects = $workspace->spaces
             ->flatMap(function ($space) {
-                return $space->lists->map(function ($list) use ($space) {
+                return $space->projects->map(function ($list) use ($space) {
                     return [
                         'id' => $list->id,
                         'name' => $list->name,

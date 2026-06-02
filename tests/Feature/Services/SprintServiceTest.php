@@ -246,3 +246,121 @@ test('getBurndownData returns empty for sprint with no subtasks', function () {
 
     expect($burndown)->toBeEmpty();
 });
+
+// ============================================================
+// Merged from Unit/Services/SprintServiceTest.php
+// ============================================================
+
+test('createSprint creates sprint for list', function () {
+    $sprint = $this->service->createSprint($this->hierarchy['list'], [
+        'name' => 'Sprint 1',
+        'start_date' => '2026-06-01',
+        'end_date' => '2026-06-14',
+    ]);
+
+    expect($sprint)->toBeInstanceOf(Sprint::class);
+    expect($sprint->name)->toBe('Sprint 1');
+    expect($sprint->project_id)->toBe($this->hierarchy['list']->id);
+    expect($sprint->is_active)->toBeFalse();
+});
+
+test('createSprint with goal and active state', function () {
+    $sprint = $this->service->createSprint($this->hierarchy['list'], [
+        'name' => 'Sprint Active',
+        'goal' => 'Complete feature X',
+        'start_date' => '2026-06-01',
+        'end_date' => '2026-06-14',
+        'is_active' => true,
+    ]);
+
+    expect($sprint->goal)->toBe('Complete feature X');
+    expect($sprint->is_active)->toBeTrue();
+});
+
+test('updateSprint changes sprint name', function () {
+    $sprint = $this->createSprint($this->hierarchy['list']);
+
+    $updated = $this->service->updateSprint($sprint, ['name' => 'Renamed Sprint']);
+
+    expect($updated->name)->toBe('Renamed Sprint');
+});
+
+test('deleteSprint removes sprint and unlinks subtasks', function () {
+    $sprint = $this->createSprint($this->hierarchy['list']);
+    $subtask = $this->createSubtask($this->hierarchy['task'], ['sprint_id' => $sprint->id]);
+
+    $this->service->deleteSprint($sprint);
+
+    expect(Sprint::find($sprint->id))->toBeNull();
+    expect($subtask->fresh()->sprint_id)->toBeNull();
+});
+
+test('startSprint activates sprint and deactivates others', function () {
+    $sprint1 = $this->createSprint($this->hierarchy['list'], ['is_active' => true]);
+    $sprint2 = $this->createSprint($this->hierarchy['list']);
+
+    $this->service->startSprint($sprint2);
+
+    expect($sprint2->fresh()->is_active)->toBeTrue();
+    expect($sprint1->fresh()->is_active)->toBeFalse();
+});
+
+test('completeSprint deactivates sprint', function () {
+    $sprint = $this->createSprint($this->hierarchy['list'], ['is_active' => true]);
+
+    $completed = $this->service->completeSprint($sprint);
+
+    expect($completed->is_active)->toBeFalse();
+});
+
+test('addSubtaskToSprint links subtask to sprint', function () {
+    $sprint = $this->createSprint($this->hierarchy['list']);
+    $subtask = $this->createSubtask($this->hierarchy['task']);
+
+    $this->service->addSubtaskToSprint($sprint, $subtask->id);
+
+    expect($subtask->fresh()->sprint_id)->toBe($sprint->id);
+});
+
+test('addSubtaskToSprint throws for subtask not in product', function () {
+    $sprint = $this->createSprint($this->hierarchy['list']);
+
+    // Create subtask in different product
+    $otherHierarchy = $this->createFullHierarchy($this->owner, 'B');
+    $otherSubtask = $this->createSubtask($otherHierarchy['task']);
+
+    expect(fn() => $this->service->addSubtaskToSprint($sprint, $otherSubtask->id))
+        ->toThrow(ValidationException::class);
+});
+
+test('removeSubtaskFromSprint unlinks subtask', function () {
+    $sprint = $this->createSprint($this->hierarchy['list']);
+    $subtask = $this->createSubtask($this->hierarchy['task'], ['sprint_id' => $sprint->id]);
+
+    $this->service->removeSubtaskFromSprint($sprint, $subtask->id);
+
+    expect($subtask->fresh()->sprint_id)->toBeNull();
+});
+
+test('getSprintStatistics returns correct counts', function () {
+    $sprint = $this->createSprint($this->hierarchy['list']);
+    $this->createSubtask($this->hierarchy['task'], ['sprint_id' => $sprint->id]);
+    $this->createSubtask($this->hierarchy['task'], ['sprint_id' => $sprint->id, 'completed_at' => now()]);
+
+    $stats = $this->service->getSprintStatistics($sprint);
+
+    expect($stats['total_subtasks'])->toBe(2);
+    expect($stats['completed_subtasks'])->toBe(1);
+    expect($stats['completion_rate'])->toEqual(50);
+});
+
+test('getBacklogSubtasks returns subtasks without sprint', function () {
+    $sprint = $this->createSprint($this->hierarchy['list']);
+    $inSprint = $this->createSubtask($this->hierarchy['task'], ['sprint_id' => $sprint->id]);
+    $backlog = $this->createSubtask($this->hierarchy['task'], ['name' => 'Backlog Item']);
+
+    $result = $this->service->getBacklogSubtasks($this->hierarchy['list']);
+
+    expect($result->pluck('id'))->toContain($backlog->id);
+    expect($result->pluck('id'))->not->toContain($inSprint->id);
+});

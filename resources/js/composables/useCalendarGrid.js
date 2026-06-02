@@ -14,7 +14,7 @@ export function useCalendarGrid(itemsRef, getColor = () => '#6366F1') {
     const currentDate = ref(new Date());
     const subView = ref('month'); // 'month' | 'week'
 
-    // ---------- Date helpers ----------
+    // Date helpers
     const toDateOnly = (value) => {
         if (!value) return null;
         const d = new Date(value);
@@ -50,7 +50,7 @@ export function useCalendarGrid(itemsRef, getColor = () => '#6366F1') {
         return start <= end ? { start, end } : { start: end, end: start };
     };
 
-    // ---------- Header labels ----------
+    // Header labels
     const calendarYear = computed(() => currentDate.value.getFullYear());
     const calendarMonth = computed(() => currentDate.value.getMonth());
 
@@ -70,7 +70,7 @@ export function useCalendarGrid(itemsRef, getColor = () => '#6366F1') {
         subView.value === 'month' ? monthLabel.value : weekLabel.value
     );
 
-    // ---------- Grids ----------
+    // Grids
     const calendarDays = computed(() => {
         const days = [];
         const firstDay = new Date(calendarYear.value, calendarMonth.value, 1).getDay();
@@ -119,7 +119,7 @@ export function useCalendarGrid(itemsRef, getColor = () => '#6366F1') {
         });
     });
 
-    // ---------- Pre-computed item maps for performance ----------
+    // Pre-computed item maps for performance
     const dateKey = (date) => {
         const d = toDateOnly(date);
         return d ? `${d.getFullYear()}-${d.getMonth()}-${d.getDate()}` : '';
@@ -202,7 +202,7 @@ export function useCalendarGrid(itemsRef, getColor = () => '#6366F1') {
     const weekBarsByIndex = computed(() => calendarWeeks.value.map(buildWeekBars));
     const standaloneWeekBars = computed(() => buildWeekBars(weekDays.value));
 
-    // ---------- Navigation ----------
+    // Navigation
     const previousMonth = () => {
         currentDate.value = new Date(calendarYear.value, calendarMonth.value - 1, 1);
     };

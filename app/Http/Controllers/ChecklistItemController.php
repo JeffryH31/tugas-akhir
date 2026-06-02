@@ -29,11 +29,11 @@ class ChecklistItemController extends Controller
     public function store(StoreChecklistItemRequest $request,
         Workspace $workspace,
         Space $space,
-        Project $list,
+        Project $project,
         Task $task,
         Subtask $subtask,): RedirectResponse {
-        $this->authorizeScope($workspace, $space, $list, $task, $subtask);
-        abort_unless($this->accessService->canEditTasks($request->user(), $list), 403);
+        $this->authorizeScope($workspace, $space, $project, $task, $subtask);
+        abort_unless($this->accessService->canEditTasks($request->user(), $project), 403);
 
         try {
             $item = $this->checklistService->create(
@@ -57,13 +57,13 @@ class ChecklistItemController extends Controller
     public function update(UpdateChecklistItemRequest $request,
         Workspace $workspace,
         Space $space,
-        Project $list,
+        Project $project,
         Task $task,
         Subtask $subtask,
         ChecklistItem $checklistItem,): RedirectResponse {
-        $this->authorizeScope($workspace, $space, $list, $task, $subtask);
+        $this->authorizeScope($workspace, $space, $project, $task, $subtask);
         abort_unless((int) $checklistItem->subtask_id === (int) $subtask->id, 404);
-        abort_unless($this->accessService->canEditTasks($request->user(), $list), 403);
+        abort_unless($this->accessService->canEditTasks($request->user(), $project), 403);
 
         try {
             $this->checklistService->update($checklistItem, $request->validated());
@@ -80,13 +80,13 @@ class ChecklistItemController extends Controller
     public function destroy(Request $request,
         Workspace $workspace,
         Space $space,
-        Project $list,
+        Project $project,
         Task $task,
         Subtask $subtask,
         ChecklistItem $checklistItem,): RedirectResponse {
-        $this->authorizeScope($workspace, $space, $list, $task, $subtask);
+        $this->authorizeScope($workspace, $space, $project, $task, $subtask);
         abort_unless((int) $checklistItem->subtask_id === (int) $subtask->id, 404);
-        abort_unless($this->accessService->canEditTasks($request->user(), $list), 403);
+        abort_unless($this->accessService->canEditTasks($request->user(), $project), 403);
 
         try {
             $this->checklistService->delete($checklistItem);
@@ -103,13 +103,13 @@ class ChecklistItemController extends Controller
     public function toggle(Request $request,
         Workspace $workspace,
         Space $space,
-        Project $list,
+        Project $project,
         Task $task,
         Subtask $subtask,
         ChecklistItem $checklistItem,): RedirectResponse {
-        $this->authorizeScope($workspace, $space, $list, $task, $subtask);
+        $this->authorizeScope($workspace, $space, $project, $task, $subtask);
         abort_unless((int) $checklistItem->subtask_id === (int) $subtask->id, 404);
-        abort_unless($this->accessService->canEditTasks($request->user(), $list), 403);
+        abort_unless($this->accessService->canEditTasks($request->user(), $project), 403);
 
         $cascade = (bool) $request->input('cascade', false);
 
@@ -128,11 +128,11 @@ class ChecklistItemController extends Controller
     public function reorder(Request $request,
         Workspace $workspace,
         Space $space,
-        Project $list,
+        Project $project,
         Task $task,
         Subtask $subtask,): RedirectResponse {
-        $this->authorizeScope($workspace, $space, $list, $task, $subtask);
-        abort_unless($this->accessService->canEditTasks($request->user(), $list), 403);
+        $this->authorizeScope($workspace, $space, $project, $task, $subtask);
+        abort_unless($this->accessService->canEditTasks($request->user(), $project), 403);
 
         $request->validate([
             'item_ids'   => ['required', 'array'],
@@ -158,13 +158,13 @@ class ChecklistItemController extends Controller
     private function authorizeScope(
         Workspace $workspace,
         Space $space,
-        Project $list,
+        Project $project,
         Task $task,
         Subtask $subtask,
     ): void {
         abort_unless((int) $space->workspace_id === (int) $workspace->id, 404);
-        abort_unless((int) $list->space_id === (int) $space->id, 404);
-        abort_unless((int) $task->project_id === (int) $list->id, 404);
+        abort_unless((int) $project->space_id === (int) $space->id, 404);
+        abort_unless((int) $task->project_id === (int) $project->id, 404);
         abort_unless((int) $subtask->task_id === (int) $task->id, 404);
     }
 }

@@ -28,9 +28,9 @@ class CommentController extends Controller
     /**
      * Store a new comment.
      */
-    public function store(StoreCommentRequest $request, Workspace $workspace, Space $space, Project $list, Task $task): RedirectResponse
+    public function store(StoreCommentRequest $request, Workspace $workspace, Space $space, Project $project, Task $task): RedirectResponse
     {
-        abort_unless($this->accessService->canComment($request->user(), $list), 403);
+        abort_unless($this->accessService->canComment($request->user(), $project), 403);
         try {
             $comment = $this->commentService->create($task, $request->user(), $request->validated());
 
@@ -48,15 +48,16 @@ class CommentController extends Controller
      */
     public function update(UpdateCommentRequest $request, Comment $comment): RedirectResponse
     {
-        $this->authorize('update', $comment);
-        
         try {
+            $this->authorize('update', $comment);
             $updatedComment = $this->commentService->update($comment, $request->validated(), $request->user());
 
             return redirect()->back()->with([
                 'success' => 'Comment updated successfully.',
                 'comment' => new CommentResource($updatedComment->load('user'))
             ]);
+        } catch (\Illuminate\Auth\Access\AuthorizationException $e) {
+            return redirect()->back()->withErrors(['error' => 'You are not authorized to update this comment.']);
         } catch (\Exception $e) {
             return redirect()->back()->withErrors(['error' => 'Failed to update comment: ' . $e->getMessage()]);
         }
@@ -67,12 +68,13 @@ class CommentController extends Controller
      */
     public function destroy(Request $request, Comment $comment): RedirectResponse
     {
-        $this->authorize('delete', $comment);
-        
         try {
+            $this->authorize('delete', $comment);
             $this->commentService->delete($comment, $request->user());
 
             return redirect()->back()->with('success', 'Comment deleted successfully.');
+        } catch (\Illuminate\Auth\Access\AuthorizationException $e) {
+            return redirect()->back()->withErrors(['error' => 'You are not authorized to delete this comment.']);
         } catch (\Exception $e) {
             return redirect()->back()->withErrors(['error' => 'Failed to delete comment: ' . $e->getMessage()]);
         }

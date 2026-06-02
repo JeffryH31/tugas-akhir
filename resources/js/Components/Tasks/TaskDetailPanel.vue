@@ -42,7 +42,11 @@ const panelBodyRef = ref(null);
 
 const deepClone = (obj) => {
   if (!obj) return null;
-  return structuredClone(obj);
+  try {
+    return structuredClone(obj);
+  } catch {
+    return JSON.parse(JSON.stringify(obj));
+  }
 };
 
 // Timer composable

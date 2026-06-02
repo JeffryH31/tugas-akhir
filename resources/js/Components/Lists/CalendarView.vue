@@ -32,7 +32,7 @@ const {
     currentDate,
 } = useCalendarGrid(itemsRef, getItemColor);
 
-// ---------- Stats ----------
+// Stats
 const completionRate = computed(() => {
     const total = props.items.length;
     if (!total) return 0;

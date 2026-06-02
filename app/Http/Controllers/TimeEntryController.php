@@ -75,9 +75,9 @@ class TimeEntryController extends Controller
     /**
      * Log time entry.
      */
-    public function store(StoreTimeEntryRequest $request, Workspace $workspace, Space $space, Project $list, Task $task, Subtask $subtask): RedirectResponse
+    public function store(StoreTimeEntryRequest $request, Workspace $workspace, Space $space, Project $project, Task $task, Subtask $subtask): RedirectResponse
     {
-        abort_unless($this->accessService->canTrackTime($request->user(), $list), 403);
+        abort_unless($this->accessService->canTrackTime($request->user(), $project), 403);
         try {
             $entry = $this->timeTrackingService->logTime(
                 $subtask,
@@ -97,9 +97,9 @@ class TimeEntryController extends Controller
     /**
      * Start timer.
      */
-    public function startTimer(Request $request, Workspace $workspace, Space $space, Project $list, Task $task): \Illuminate\Http\JsonResponse|\Illuminate\Http\RedirectResponse
+    public function startTimer(Request $request, Workspace $workspace, Space $space, Project $project, Task $task): \Illuminate\Http\JsonResponse|\Illuminate\Http\RedirectResponse
     {
-        abort_unless($this->accessService->canTrackTime($request->user(), $list), 403);
+        abort_unless($this->accessService->canTrackTime($request->user(), $project), 403);
         $validated = $request->validate([
             'subtask_id' => ['nullable', 'integer', 'exists:subtasks,id'],
         ]);
@@ -137,7 +137,7 @@ class TimeEntryController extends Controller
     /**
      * Stop timer.
      */
-    public function stopTimer(Request $request, Workspace $workspace, Space $space, Project $list, Task $task, TimeEntry $entry): \Illuminate\Http\JsonResponse|\Illuminate\Http\RedirectResponse
+    public function stopTimer(Request $request, Workspace $workspace, Space $space, Project $project, Task $task, TimeEntry $entry): \Illuminate\Http\JsonResponse|\Illuminate\Http\RedirectResponse
     {
         abort_unless($this->accessService->canManageTimeEntry($request->user(), $entry), 403);
         try {
@@ -186,7 +186,9 @@ class TimeEntryController extends Controller
      */
     public function update(UpdateTimeEntryRequest $request, TimeEntry $entry): RedirectResponse
     {
-        abort_unless($this->accessService->canManageTimeEntry($request->user(), $entry), 403);
+        if (!$this->accessService->canManageTimeEntry($request->user(), $entry)) {
+            return redirect()->back()->withErrors(['error' => 'You are not authorized to update this time entry.']);
+        }
         
         try {
             $updatedEntry = $this->timeTrackingService->updateEntry($entry, $request->validated(), $request->user());

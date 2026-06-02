@@ -12,7 +12,6 @@ use App\Http\Requests\StoreFolderRequest;
 use App\Http\Requests\StoreProjectRequest;
 
 // StoreTaskRequest
-
 test('StoreTaskRequest requires name field', function () {
     $request = new StoreTaskRequest();
     $rules = $request->rules();
@@ -87,7 +86,6 @@ test('StoreTaskRequest has custom error messages', function () {
 });
 
 // UpdateTaskRequest
-
 test('UpdateTaskRequest name uses sometimes rule', function () {
     $request = new UpdateTaskRequest();
     $rules = $request->rules();

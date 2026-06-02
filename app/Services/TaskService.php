@@ -82,11 +82,25 @@ class TaskService
                 'created_by'    => $user->id,
             ]);
 
+            // Sync assignees if provided
+            if (!empty($data['assignee_ids'])) {
+                $pivotData = [];
+                foreach ($data['assignee_ids'] as $assigneeId) {
+                    $pivotData[$assigneeId] = ['assigned_by' => $user->id];
+                }
+                $task->assignees()->sync($pivotData);
+            }
+
+            // Sync labels if provided
+            if (!empty($data['label_ids'])) {
+                $task->labels()->sync($data['label_ids']);
+            }
+
             Activity::log($list->space->workspace, $user, $task, 'created', [
                 'name' => $task->name,
             ]);
 
-            return $task->fresh(['status']);
+            return $task->fresh(['status', 'assignees', 'labels']);
         });
     }
 

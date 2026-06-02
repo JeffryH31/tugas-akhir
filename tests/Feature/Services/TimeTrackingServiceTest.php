@@ -214,3 +214,25 @@ test('getWorkspaceTimeReport returns by user and by space breakdown', function (
     expect($report['by_user'])->not->toBeEmpty();
     expect($report['by_space'])->not->toBeEmpty();
 });
+
+// ============================================================
+// Merged from Unit/Services/TimeTrackingServiceTest.php
+// ============================================================
+
+test('logTime calculates duration from start and end times', function () {
+    $entry = $this->service->logTime($this->subtask, $this->owner, [
+        'started_at' => '2026-06-01 10:00:00',
+        'ended_at' => '2026-06-01 11:30:00',
+    ]);
+
+    expect($entry->duration)->toBe(90);
+});
+
+test('startTimer stops previous running timer', function () {
+    $entry1 = $this->service->startTimer($this->subtask, $this->owner);
+    $subtask2 = $this->createSubtask($this->hierarchy['task'], ['name' => 'Another']);
+    $entry2 = $this->service->startTimer($subtask2, $this->owner);
+
+    expect($entry1->fresh()->is_running)->toBeFalse();
+    expect($entry2->is_running)->toBeTrue();
+});

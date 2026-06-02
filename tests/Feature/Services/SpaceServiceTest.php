@@ -233,3 +233,71 @@ test('getProductsByStatus groups lists by status', function () {
     $listsUnderStatus = collect($grouped[$firstStatus->id]);
     expect($listsUnderStatus->pluck('id'))->toContain($this->hierarchy['list']->id);
 });
+
+// ============================================================
+// Merged from Unit/Services/SpaceServiceTest.php
+// ============================================================
+
+test('create space with name', function () {
+    $space = $this->service->create(
+        ['name' => 'Backend'],
+        $this->hierarchy['workspace'],
+        $this->owner
+    );
+
+    expect($space)->toBeInstanceOf(Space::class);
+    expect($space->name)->toBe('Backend');
+    expect($space->workspace_id)->toBe($this->hierarchy['workspace']->id);
+});
+
+test('create space logs activity', function () {
+    $this->service->create(['name' => 'Logged'], $this->hierarchy['workspace'], $this->owner);
+
+    $activity = Activity::where('action', 'created')
+        ->where('subject_type', Space::class)
+        ->latest('id')->first();
+    expect($activity)->not->toBeNull();
+});
+
+test('update space name', function () {
+    $space = $this->hierarchy['space'];
+
+    $updated = $this->service->update($space, ['name' => 'Renamed'], $this->owner);
+
+    expect($updated->name)->toBe('Renamed');
+});
+
+test('delete space removes it', function () {
+    $space = $this->service->create(['name' => 'To Delete'], $this->hierarchy['workspace'], $this->owner);
+
+    $this->service->delete($space, $this->owner);
+
+    expect(Space::find($space->id))->toBeNull();
+});
+
+test('addMember adds user to space with role', function () {
+    $user = $this->createUser();
+
+    $this->service->addMember($this->hierarchy['space'], $user, 'member', $this->owner);
+
+    expect($this->hierarchy['space']->members()->where('user_id', $user->id)->exists())->toBeTrue();
+});
+
+test('removeMember removes user from space', function () {
+    $user = $this->createUser();
+    $this->hierarchy['space']->members()->attach($user->id, ['role' => 'member']);
+
+    $this->service->removeMember($this->hierarchy['space'], $user, $this->owner);
+
+    expect($this->hierarchy['space']->members()->where('user_id', $user->id)->exists())->toBeFalse();
+});
+
+test('updateMemberRole changes space member role', function () {
+    $user = $this->createUser();
+    $this->hierarchy['space']->members()->attach($user->id, ['role' => 'member']);
+
+    $this->service->updateMemberRole($this->hierarchy['space'], $user, 'admin', $this->owner);
+
+    $role = $this->hierarchy['space']->members()->where('user_id', $user->id)->first()->pivot->role;
+    expect($role)->toBe('admin');
+});

@@ -28,10 +28,10 @@ class CpmController extends Controller
     public function analyze(Request $request,
         Workspace $workspace,
         Space $space,
-        Project $list,
+        Project $project,
         Task $task): \Illuminate\Http\JsonResponse|\Illuminate\Http\RedirectResponse {
-        abort_unless($this->accessService->canViewProject($request->user(), $list), 403);
-        if ($task->project_id !== $list->id) {
+        abort_unless($this->accessService->canViewProject($request->user(), $project), 403);
+        if ($task->project_id !== $project->id) {
             abort(404);
         }
 
@@ -50,10 +50,10 @@ class CpmController extends Controller
     public function gantt(Request $request,
         Workspace $workspace,
         Space $space,
-        Project $list,
+        Project $project,
         Task $task): Response {
-        abort_unless($this->accessService->canViewProject($request->user(), $list), 403);
-        if ($task->project_id !== $list->id) {
+        abort_unless($this->accessService->canViewProject($request->user(), $project), 403);
+        if ($task->project_id !== $project->id) {
             abort(404);
         }
 
@@ -87,7 +87,7 @@ class CpmController extends Controller
         return Inertia::render('Tasks/Gantt', [
             'workspace' => $workspace,
             'space' => $space,
-            'list' => $list,
+            'list' => $project,
             'task' => $task->load(['status', 'assignees']),
             'statuses' => $statuses,
             'cpm' => $cpmResult,
@@ -100,9 +100,9 @@ class CpmController extends Controller
     public function addDependency(AddDependencyRequest $request,
         Workspace $workspace,
         Space $space,
-        Project $list,
+        Project $project,
         Task $task): \Illuminate\Http\JsonResponse|\Illuminate\Http\RedirectResponse {
-        abort_unless($this->accessService->canManageDependencies($request->user(), $list), 403);
+        abort_unless($this->accessService->canManageDependencies($request->user(), $project), 403);
         $validated = $request->validated();
 
         $subtask = Subtask::findOrFail($validated['subtask_id']);
@@ -138,9 +138,9 @@ class CpmController extends Controller
     public function removeDependency(RemoveDependencyRequest $request,
         Workspace $workspace,
         Space $space,
-        Project $list,
+        Project $project,
         Task $task): \Illuminate\Http\JsonResponse|\Illuminate\Http\RedirectResponse {
-        abort_unless($this->accessService->canManageDependencies($request->user(), $list), 403);
+        abort_unless($this->accessService->canManageDependencies($request->user(), $project), 403);
         $validated = $request->validated();
 
         $subtask = Subtask::findOrFail($validated['subtask_id']);

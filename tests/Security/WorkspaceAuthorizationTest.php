@@ -28,6 +28,8 @@ test('member cannot update workspace', function () {
     actingAs($this->member)
         ->patch(route('workspaces.update', $this->workspace->id), ['name' => 'Hacked'])
         ->assertForbidden();
+
+    expect($this->workspace->fresh()->name)->toBe('Test Workspace');
 });
 
 test('admin can update workspace', function () {
@@ -55,6 +57,8 @@ test('member cannot add workspace members', function () {
             'role' => 'member',
         ])
         ->assertForbidden();
+
+    expect($this->workspace->members()->where('user_id', $newUser->id)->exists())->toBeFalse();
 });
 
 test('admin can add workspace members', function () {
@@ -76,6 +80,8 @@ test('member cannot remove workspace members', function () {
             'user_id' => $this->admin->id,
         ])
         ->assertForbidden();
+
+    expect($this->workspace->members()->where('user_id', $this->admin->id)->exists())->toBeTrue();
 });
 
 test('admin cannot remove themselves', function () {
@@ -95,6 +101,9 @@ test('member cannot update member roles', function () {
             'role' => 'admin',
         ])
         ->assertForbidden();
+
+    $role = $this->workspace->members()->where('user_id', $this->member->id)->first()->pivot->role;
+    expect($role)->toBe('member');
 });
 
 test('admin can update member roles', function () {
@@ -166,4 +175,18 @@ test('non-member cannot switch to workspace', function () {
     actingAs($stranger)
         ->post(route('workspaces.switch', $this->workspace->id))
         ->assertForbidden();
+});
+
+// Privilege Escalation
+
+test('member cannot self-promote to admin via role update', function () {
+    actingAs($this->member)
+        ->patch(route('workspaces.members.role', $this->workspace->id), [
+            'user_id' => $this->member->id,
+            'role' => 'admin',
+        ])
+        ->assertForbidden();
+
+    $role = $this->workspace->members()->where('user_id', $this->member->id)->first()->pivot->role;
+    expect($role)->toBe('member');
 });

@@ -6,7 +6,7 @@ use App\Services\ChecklistItemService;
 use Illuminate\Validation\ValidationException;
 use Tests\Traits\CreatesWorkspaceHierarchy;
 
-uses(CreatesWorkspaceHierarchy::class);
+uses(Tests\Traits\CreatesWorkspaceHierarchy::class);
 
 beforeEach(function () {
     $this->service = new ChecklistItemService();

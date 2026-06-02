@@ -135,3 +135,40 @@ test('extractMentions returns empty for no mentions', function () {
 
     expect($ids)->toBeEmpty();
 });
+
+// ============================================================
+// Merged from Unit/Services/CommentServiceTest.php
+// ============================================================
+
+test('create comment with mentions and attachments', function () {
+    $task = $this->hierarchy['task'];
+
+    $comment = $this->service->create($task, $this->owner, [
+        'content' => 'Hey @john',
+        'mentions' => ['john'],
+        'attachments' => ['file.pdf'],
+    ]);
+
+    expect($comment->mentions)->toBe(['john']);
+    expect($comment->attachments)->toBe(['file.pdf']);
+});
+
+test('extractMentions regex extracts single username', function () {
+    preg_match_all('/@(\w+)/', 'Hello @john please review', $matches);
+    expect($matches[1])->toBe(['john']);
+});
+
+test('extractMentions regex extracts multiple usernames', function () {
+    preg_match_all('/@(\w+)/', '@alice and @bob cc @charlie', $matches);
+    expect($matches[1])->toBe(['alice', 'bob', 'charlie']);
+});
+
+test('extractMentions regex returns empty for no mentions', function () {
+    preg_match_all('/@(\w+)/', 'No mentions here', $matches);
+    expect($matches[1])->toBe([]);
+});
+
+test('extractMentions regex handles underscore in usernames', function () {
+    preg_match_all('/@(\w+)/', 'Hey @john_doe', $matches);
+    expect($matches[1])->toBe(['john_doe']);
+});

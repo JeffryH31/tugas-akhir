@@ -30,15 +30,15 @@ class TaskController extends Controller
     /**
      * Store a newly created task.
      */
-    public function store(StoreTaskRequest $request, Workspace $workspace, Space $space, Project $list): RedirectResponse
+    public function store(StoreTaskRequest $request, Workspace $workspace, Space $space, Project $project): RedirectResponse
     {
         abort_unless((int) $space->workspace_id === (int) $workspace->id, 404);
-        abort_unless((int) $list->space_id === (int) $space->id, 404);
-        abort_unless($this->accessService->canManageTaskStructure($request->user(), $list), 403);
+        abort_unless((int) $project->space_id === (int) $space->id, 404);
+        abort_unless($this->accessService->canManageTaskStructure($request->user(), $project), 403);
         try {
             $task = $this->taskService->create(
                 $request->validated(),
-                $list,
+                $project,
                 $request->user()
             );
 
@@ -54,12 +54,12 @@ class TaskController extends Controller
     /**
      * Update the specified task.
      */
-    public function update(UpdateTaskRequest $request, Workspace $workspace, Space $space, Project $list, Task $task): RedirectResponse
+    public function update(UpdateTaskRequest $request, Workspace $workspace, Space $space, Project $project, Task $task): RedirectResponse
     {
         abort_unless((int) $space->workspace_id === (int) $workspace->id, 404);
-        abort_unless((int) $list->space_id === (int) $space->id, 404);
-        abort_unless((int) $task->project_id === (int) $list->id, 404);
-        abort_unless($this->accessService->canManageTaskStructure($request->user(), $list), 403);
+        abort_unless((int) $project->space_id === (int) $space->id, 404);
+        abort_unless((int) $task->project_id === (int) $project->id, 404);
+        abort_unless($this->accessService->canManageTaskStructure($request->user(), $project), 403);
         try {
             $updatedTask = $this->taskService->update($task, $request->validated(), $request->user());
 
@@ -75,16 +75,16 @@ class TaskController extends Controller
     /**
      * Remove the specified task.
      */
-    public function destroy(Request $request, Workspace $workspace, Space $space, Project $list, Task $task): RedirectResponse
+    public function destroy(Request $request, Workspace $workspace, Space $space, Project $project, Task $task): RedirectResponse
     {
         abort_unless((int) $space->workspace_id === (int) $workspace->id, 404);
-        abort_unless((int) $list->space_id === (int) $space->id, 404);
-        abort_unless((int) $task->project_id === (int) $list->id, 404);
-        abort_unless($this->accessService->canManageTaskStructure($request->user(), $list), 403);
+        abort_unless((int) $project->space_id === (int) $space->id, 404);
+        abort_unless((int) $task->project_id === (int) $project->id, 404);
+        abort_unless($this->accessService->canManageTaskStructure($request->user(), $project), 403);
         try {
             $this->taskService->delete($task, $request->user());
 
-            return redirect()->route('projects.show', [$workspace->id, $space->id, $list->id])
+            return redirect()->route('projects.show', [$workspace->id, $space->id, $project->id])
                 ->with('success', 'Task deleted successfully.');
         } catch (\Exception $e) {
             return redirect()->back()->withErrors(['error' => 'Failed to delete task: ' . $e->getMessage()]);
@@ -96,12 +96,12 @@ class TaskController extends Controller
     /**
      * Change task status.
      */
-    public function changeStatus(Request $request, Workspace $workspace, Space $space, Project $list, Task $task): RedirectResponse
+    public function changeStatus(Request $request, Workspace $workspace, Space $space, Project $project, Task $task): RedirectResponse
     {
         abort_unless((int) $space->workspace_id === (int) $workspace->id, 404);
-        abort_unless((int) $list->space_id === (int) $space->id, 404);
-        abort_unless((int) $task->project_id === (int) $list->id, 404);
-        abort_unless($this->accessService->canOperateTasks($request->user(), $list), 403);
+        abort_unless((int) $project->space_id === (int) $space->id, 404);
+        abort_unless((int) $task->project_id === (int) $project->id, 404);
+        abort_unless($this->accessService->canOperateTasks($request->user(), $project), 403);
         $validated = $request->validate([
             'status_id' => [
                 'required',
@@ -128,12 +128,12 @@ class TaskController extends Controller
     /**
      * Change task priority.
      */
-    public function changePriority(Request $request, Workspace $workspace, Space $space, Project $list, Task $task): RedirectResponse
+    public function changePriority(Request $request, Workspace $workspace, Space $space, Project $project, Task $task): RedirectResponse
     {
         abort_unless((int) $space->workspace_id === (int) $workspace->id, 404);
-        abort_unless((int) $list->space_id === (int) $space->id, 404);
-        abort_unless((int) $task->project_id === (int) $list->id, 404);
-        abort_unless($this->accessService->canOperateTasks($request->user(), $list), 403);
+        abort_unless((int) $project->space_id === (int) $space->id, 404);
+        abort_unless((int) $task->project_id === (int) $project->id, 404);
+        abort_unless($this->accessService->canOperateTasks($request->user(), $project), 403);
         $validated = $request->validate([
             'priority_level' => 'nullable|integer|in:1,2,3,4',
         ]);
@@ -157,11 +157,12 @@ class TaskController extends Controller
      * subtask level. This endpoint exists to return a helpful error message
      * if the route is ever hit.
      */
-    public function assign(Request $request, Workspace $workspace, Space $space, Project $list, Task $task): RedirectResponse
+    public function assign(Request $request, Workspace $workspace, Space $space, Project $project, Task $task): RedirectResponse
     {
         abort_unless((int) $space->workspace_id === (int) $workspace->id, 404);
-        abort_unless((int) $list->space_id === (int) $space->id, 404);
-        abort_unless((int) $task->project_id === (int) $list->id, 404);
+        abort_unless((int) $project->space_id === (int) $space->id, 404);
+        abort_unless((int) $task->project_id === (int) $project->id, 404);
+        abort_unless($this->accessService->canAssignTasks($request->user(), $project), 403);
 
         return redirect()->back()->withErrors([
             'error' => 'Task assignees are managed through subtasks and cannot be assigned directly.',
@@ -171,12 +172,12 @@ class TaskController extends Controller
     /**
      * Unassign user from task.
      */
-    public function unassign(Request $request, Workspace $workspace, Space $space, Project $list, Task $task): RedirectResponse
+    public function unassign(Request $request, Workspace $workspace, Space $space, Project $project, Task $task): RedirectResponse
     {
         abort_unless((int) $space->workspace_id === (int) $workspace->id, 404);
-        abort_unless((int) $list->space_id === (int) $space->id, 404);
-        abort_unless((int) $task->project_id === (int) $list->id, 404);
-        abort_unless($this->accessService->canAssignTasks($request->user(), $list), 403);
+        abort_unless((int) $project->space_id === (int) $space->id, 404);
+        abort_unless((int) $task->project_id === (int) $project->id, 404);
+        abort_unless($this->accessService->canAssignTasks($request->user(), $project), 403);
 
         return redirect()->back()->withErrors([
             'error' => 'Task assignees are managed through subtasks and cannot be removed directly.',
@@ -186,12 +187,12 @@ class TaskController extends Controller
     /**
      * Move task to different list.
      */
-    public function move(Request $request, Workspace $workspace, Space $space, Project $list, Task $task): RedirectResponse
+    public function move(Request $request, Workspace $workspace, Space $space, Project $project, Task $task): RedirectResponse
     {
         abort_unless((int) $space->workspace_id === (int) $workspace->id, 404);
-        abort_unless((int) $list->space_id === (int) $space->id, 404);
-        abort_unless((int) $task->project_id === (int) $list->id, 404);
-        abort_unless($this->accessService->canManageTaskStructure($request->user(), $list), 403);
+        abort_unless((int) $project->space_id === (int) $space->id, 404);
+        abort_unless((int) $task->project_id === (int) $project->id, 404);
+        abort_unless($this->accessService->canManageTaskStructure($request->user(), $project), 403);
         $validated = $request->validate([
             'list_id' => [
                 'required',
@@ -217,13 +218,13 @@ class TaskController extends Controller
     /**
      * Reorder tasks.
      */
-    public function reorder(ReorderRequest $request, Workspace $workspace, Space $space, Project $list): RedirectResponse
+    public function reorder(ReorderRequest $request, Workspace $workspace, Space $space, Project $project): RedirectResponse
     {
         abort_unless((int) $space->workspace_id === (int) $workspace->id, 404);
-        abort_unless((int) $list->space_id === (int) $space->id, 404);
-        abort_unless($this->accessService->canManageTaskStructure($request->user(), $list), 403);
+        abort_unless((int) $project->space_id === (int) $space->id, 404);
+        abort_unless($this->accessService->canManageTaskStructure($request->user(), $project), 403);
         try {
-            $this->taskService->reorder($list, $request->validated('order'));
+            $this->taskService->reorder($project, $request->validated('order'));
 
             return redirect()->back()->with('success', 'Tasks reordered successfully.');
         } catch (\Exception $e) {
@@ -234,12 +235,12 @@ class TaskController extends Controller
     /**
      * Add label to task.
      */
-    public function addLabel(Request $request, Workspace $workspace, Space $space, Project $list, Task $task): RedirectResponse
+    public function addLabel(Request $request, Workspace $workspace, Space $space, Project $project, Task $task): RedirectResponse
     {
         abort_unless((int) $space->workspace_id === (int) $workspace->id, 404);
-        abort_unless((int) $list->space_id === (int) $space->id, 404);
-        abort_unless((int) $task->project_id === (int) $list->id, 404);
-        abort_unless($this->accessService->canManageLabels($request->user(), $list), 403);
+        abort_unless((int) $project->space_id === (int) $space->id, 404);
+        abort_unless((int) $task->project_id === (int) $project->id, 404);
+        abort_unless($this->accessService->canManageLabels($request->user(), $project), 403);
         $validated = $request->validate([
             'label_id' => [
                 'required',
@@ -263,12 +264,12 @@ class TaskController extends Controller
     /**
      * Remove label from task.
      */
-    public function removeLabel(Request $request, Workspace $workspace, Space $space, Project $list, Task $task): RedirectResponse
+    public function removeLabel(Request $request, Workspace $workspace, Space $space, Project $project, Task $task): RedirectResponse
     {
         abort_unless((int) $space->workspace_id === (int) $workspace->id, 404);
-        abort_unless((int) $list->space_id === (int) $space->id, 404);
-        abort_unless((int) $task->project_id === (int) $list->id, 404);
-        abort_unless($this->accessService->canManageLabels($request->user(), $list), 403);
+        abort_unless((int) $project->space_id === (int) $space->id, 404);
+        abort_unless((int) $task->project_id === (int) $project->id, 404);
+        abort_unless($this->accessService->canManageLabels($request->user(), $project), 403);
         $validated = $request->validate([
             'label_id' => [
                 'required',
@@ -292,12 +293,12 @@ class TaskController extends Controller
     /**
      * Duplicate the task.
      */
-    public function duplicate(Request $request, Workspace $workspace, Space $space, Project $list, Task $task): RedirectResponse
+    public function duplicate(Request $request, Workspace $workspace, Space $space, Project $project, Task $task): RedirectResponse
     {
         abort_unless((int) $space->workspace_id === (int) $workspace->id, 404);
-        abort_unless((int) $list->space_id === (int) $space->id, 404);
-        abort_unless((int) $task->project_id === (int) $list->id, 404);
-        abort_unless($this->accessService->canManageTaskStructure($request->user(), $list), 403);
+        abort_unless((int) $project->space_id === (int) $space->id, 404);
+        abort_unless((int) $task->project_id === (int) $project->id, 404);
+        abort_unless($this->accessService->canManageTaskStructure($request->user(), $project), 403);
         try {
             $newTask = $this->taskService->duplicate($task, $request->user());
 
