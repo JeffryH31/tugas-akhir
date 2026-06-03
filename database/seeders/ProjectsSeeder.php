@@ -12,35 +12,195 @@ class ProjectsSeeder extends Seeder
 
     public function run(): void
     {
-        $sasya = $this->demoUser('admin@example.com');
-        $andi = $this->demoUser('kevin@example.com');
-        $dian = $this->demoUser('christopher@example.com');
-        $budi = $this->demoUser('marvel@example.com');
-        $rina = $this->demoUser('devin@example.com');
+        $jeff        = $this->demoUser('admin@example.com');
+        $kevin       = $this->demoUser('kevin@example.com');
+        $christopher = $this->demoUser('christopher@example.com');
+        $marvel      = $this->demoUser('marvel@example.com');
+        $devin       = $this->demoUser('devin@example.com');
 
         $lists = [
-            ['name' => 'Inventory Module', 'space' => 'Manufacturing', 'folder' => 'ERP System', 'position' => 0, 'created_by' => $budi->id, 'status' => ['Manufacturing', 'In Progress'], 'members' => [[$budi, 'project_owner'], [$sasya, 'project_manager'], [$dian, 'development_team'], [$rina, 'development_team']]],
-            ['name' => 'Production Tracking', 'space' => 'Manufacturing', 'folder' => 'ERP System', 'position' => 1, 'created_by' => $budi->id, 'status' => ['Manufacturing', 'In Progress'], 'members' => [[$budi, 'project_owner'], [$andi, 'project_manager'], [$dian, 'development_team']]],
-            ['name' => 'Sensor Dashboard', 'space' => 'Manufacturing', 'folder' => 'IoT & Monitoring', 'position' => 0, 'created_by' => $andi->id, 'status' => ['Manufacturing', 'To Do'], 'members' => [[$andi, 'project_owner'], [$sasya, 'project_manager'], [$dian, 'development_team']]],
-            ['name' => 'Reporting', 'space' => 'Manufacturing', 'folder' => null, 'position' => 2, 'created_by' => $sasya->id, 'status' => ['Manufacturing', 'Backlog'], 'members' => [[$sasya, 'project_owner'], [$budi, 'development_team'], [$rina, 'development_team']]],
-            ['name' => 'Authentication & Access', 'space' => 'B2B', 'folder' => 'Client Portal', 'position' => 0, 'created_by' => $budi->id, 'status' => ['B2B', 'Done'], 'members' => [[$budi, 'project_owner'], [$sasya, 'project_manager'], [$dian, 'development_team']]],
-            ['name' => 'Order Management', 'space' => 'B2B', 'folder' => 'Client Portal', 'position' => 1, 'created_by' => $budi->id, 'status' => ['B2B', 'In Progress'], 'members' => [[$budi, 'project_owner'], [$sasya, 'project_manager'], [$dian, 'development_team']]],
-            ['name' => 'API Integrations', 'space' => 'B2B', 'folder' => null, 'position' => 1, 'created_by' => $andi->id, 'status' => ['B2B', 'In Progress'], 'members' => [[$andi, 'project_owner'], [$sasya, 'project_manager']]],
-            ['name' => 'Invoice System', 'space' => 'B2B', 'folder' => null, 'position' => 2, 'created_by' => $budi->id, 'status' => ['B2B', 'To Do'], 'members' => [[$budi, 'project_owner'], [$sasya, 'project_manager'], [$dian, 'development_team']]],
-            ['name' => 'Product Catalog', 'space' => 'B2C', 'folder' => 'E-Commerce', 'position' => 0, 'created_by' => $dian->id, 'status' => ['B2C', 'In Progress'], 'members' => [[$dian, 'project_owner'], [$sasya, 'project_manager'], [$budi, 'development_team']]],
-            ['name' => 'Checkout & Payment', 'space' => 'B2C', 'folder' => 'E-Commerce', 'position' => 1, 'created_by' => $budi->id, 'status' => ['B2C', 'In Progress'], 'members' => [[$budi, 'project_owner'], [$sasya, 'project_manager'], [$dian, 'development_team']]],
-            ['name' => 'Android App', 'space' => 'B2C', 'folder' => 'Mobile App', 'position' => 0, 'created_by' => $dian->id, 'status' => ['B2C', 'To Do'], 'members' => [[$dian, 'project_owner'], [$sasya, 'project_manager']]],
-            ['name' => 'Customer Support System', 'space' => 'B2C', 'folder' => null, 'position' => 2, 'created_by' => $andi->id, 'status' => ['B2C', 'To Do'], 'members' => [[$andi, 'project_owner'], [$sasya, 'project_manager'], [$dian, 'development_team']]],
+            // ── Manufacturing / ERP System ──────────────────────────────
+            [
+                'name'       => 'Inventory Management',
+                'space'      => 'Manufacturing',
+                'folder'     => 'ERP System',
+                'position'   => 0,
+                'created_by' => $jeff->id,
+                'status'     => ['Manufacturing', 'In Progress'],
+                'members'    => [
+                    [$jeff,        'project_owner'],
+                    [$kevin,       'project_manager'],
+                    [$christopher, 'development_team'],
+                    [$marvel,      'development_team'],
+                    [$devin,       'development_team'],
+                ],
+            ],
+            [
+                'name'       => 'Production Planning',
+                'space'      => 'Manufacturing',
+                'folder'     => 'ERP System',
+                'position'   => 1,
+                'created_by' => $jeff->id,
+                'status'     => ['Manufacturing', 'To Do'],
+                'members'    => [
+                    [$jeff,        'project_owner'],
+                    [$kevin,       'project_manager'],
+                    [$christopher, 'development_team'],
+                    [$marvel,      'development_team'],
+                ],
+            ],
+            [
+                'name'       => 'Quality Control',
+                'space'      => 'Manufacturing',
+                'folder'     => 'ERP System',
+                'position'   => 2,
+                'created_by' => $jeff->id,
+                'status'     => ['Manufacturing', 'Backlog'],
+                'members'    => [
+                    [$jeff,        'project_owner'],
+                    [$kevin,       'project_manager'],
+                    [$devin,       'development_team'],
+                ],
+            ],
+            // ── Manufacturing / IoT & Monitoring ────────────────────────
+            [
+                'name'       => 'Sensor Dashboard',
+                'space'      => 'Manufacturing',
+                'folder'     => 'IoT & Monitoring',
+                'position'   => 0,
+                'created_by' => $kevin->id,
+                'status'     => ['Manufacturing', 'In Progress'],
+                'members'    => [
+                    [$jeff,        'project_owner'],
+                    [$kevin,       'project_manager'],
+                    [$christopher, 'development_team'],
+                    [$marvel,      'development_team'],
+                ],
+            ],
+            // ── B2B / Client Portal ─────────────────────────────────────
+            [
+                'name'       => 'Client Portal',
+                'space'      => 'B2B',
+                'folder'     => 'Client Portal',
+                'position'   => 0,
+                'created_by' => $jeff->id,
+                'status'     => ['B2B', 'In Progress'],
+                'members'    => [
+                    [$jeff,        'project_owner'],
+                    [$kevin,       'project_manager'],
+                    [$christopher, 'development_team'],
+                    [$marvel,      'development_team'],
+                    [$devin,       'development_team'],
+                ],
+            ],
+            [
+                'name'       => 'API Integration',
+                'space'      => 'B2B',
+                'folder'     => 'Client Portal',
+                'position'   => 1,
+                'created_by' => $kevin->id,
+                'status'     => ['B2B', 'To Do'],
+                'members'    => [
+                    [$jeff,        'project_owner'],
+                    [$kevin,       'project_manager'],
+                    [$christopher, 'development_team'],
+                    [$devin,       'development_team'],
+                ],
+            ],
+            // ── B2C / E-Commerce ────────────────────────────────────────
+            [
+                'name'       => 'Product Catalog',
+                'space'      => 'B2C',
+                'folder'     => 'E-Commerce',
+                'position'   => 0,
+                'created_by' => $jeff->id,
+                'status'     => ['B2C', 'In Progress'],
+                'members'    => [
+                    [$jeff,        'project_owner'],
+                    [$kevin,       'project_manager'],
+                    [$christopher, 'development_team'],
+                    [$marvel,      'development_team'],
+                    [$devin,       'development_team'],
+                ],
+            ],
+            [
+                'name'       => 'Checkout & Payment',
+                'space'      => 'B2C',
+                'folder'     => 'E-Commerce',
+                'position'   => 1,
+                'created_by' => $kevin->id,
+                'status'     => ['B2C', 'In Progress'],
+                'members'    => [
+                    [$jeff,        'project_owner'],
+                    [$kevin,       'project_manager'],
+                    [$christopher, 'development_team'],
+                    [$marvel,      'development_team'],
+                ],
+            ],
+            // ── B2C / Mobile App ────────────────────────────────────────
+            [
+                'name'       => 'Android App',
+                'space'      => 'B2C',
+                'folder'     => 'Mobile App',
+                'position'   => 0,
+                'created_by' => $jeff->id,
+                'status'     => ['B2C', 'To Do'],
+                'members'    => [
+                    [$jeff,        'project_owner'],
+                    [$kevin,       'project_manager'],
+                    [$marvel,      'development_team'],
+                    [$devin,       'development_team'],
+                ],
+            ],
+            [
+                'name'       => 'iOS App',
+                'space'      => 'B2C',
+                'folder'     => 'Mobile App',
+                'position'   => 1,
+                'created_by' => $jeff->id,
+                'status'     => ['B2C', 'Backlog'],
+                'members'    => [
+                    [$jeff,        'project_owner'],
+                    [$kevin,       'project_manager'],
+                    [$marvel,      'development_team'],
+                    [$devin,       'development_team'],
+                ],
+            ],
+            [
+                'name'       => 'Customer Support',
+                'space'      => 'B2C',
+                'folder'     => 'Mobile App',
+                'position'   => 2,
+                'created_by' => $jeff->id,
+                'status'     => ['B2C', 'Backlog'],
+                'members'    => [
+                    [$jeff,        'project_owner'],
+                    [$kevin,       'project_manager'],
+                    [$christopher, 'development_team'],
+                ],
+            ],
+            [
+                'name'       => 'Loyalty Program',
+                'space'      => 'B2C',
+                'folder'     => 'Mobile App',
+                'position'   => 3,
+                'created_by' => $jeff->id,
+                'status'     => ['B2C', 'Backlog'],
+                'members'    => [
+                    [$jeff,        'project_owner'],
+                    [$devin,       'development_team'],
+                ],
+            ],
         ];
 
         foreach ($lists as $definition) {
             $list = Project::create([
-                'name' => $definition['name'],
-                'space_id' => $this->demoSpace($definition['space'])->id,
-                'folder_id' => $definition['folder'] ? $this->demoFolder($definition['folder'])->id : null,
-                'position' => $definition['position'],
+                'name'       => $definition['name'],
+                'space_id'   => $this->demoSpace($definition['space'])->id,
+                'folder_id'  => $this->demoFolder($definition['folder'])->id,
+                'position'   => $definition['position'],
                 'created_by' => $definition['created_by'],
-                'status_id' => $this->demoStatus($definition['status'][0], $definition['status'][1])->id,
+                'status_id'  => $this->demoStatus($definition['status'][0], $definition['status'][1])->id,
             ]);
 
             foreach ($definition['members'] as [$user, $role]) {

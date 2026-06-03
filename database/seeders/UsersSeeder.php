@@ -13,20 +13,21 @@ class UsersSeeder extends Seeder
         $password = Hash::make('password');
 
         $users = [
-            ['name' => 'Jeff',        'email' => 'admin@example.com', 'hourly_rate' => 100000],
-            ['name' => 'Kevin',       'email' => 'kevin@example.com',  'hourly_rate' => 44000],
-            ['name' => 'Christopher', 'email' => 'christopher@example.com',  'hourly_rate' => 50000],
-            ['name' => 'Marvel',      'email' => 'marvel@example.com',  'hourly_rate' => 50000],
-            ['name' => 'Devin',       'email' => 'devin@example.com',  'hourly_rate' => 40000],
+            ['name' => 'Jeff',        'email' => 'admin@example.com',        'hourly_rate' => 100000],
+            ['name' => 'Kevin',       'email' => 'kevin@example.com',        'hourly_rate' => 75000],
+            ['name' => 'Christopher', 'email' => 'christopher@example.com',  'hourly_rate' => 75000],
+            ['name' => 'Marvel',      'email' => 'marvel@example.com',       'hourly_rate' => 75000],
+            ['name' => 'Devin',       'email' => 'devin@example.com',        'hourly_rate' => 75000],
         ];
 
         foreach ($users as $data) {
             User::updateOrCreate(
                 ['email' => $data['email']],
                 [
-                    'name'        => $data['name'],
-                    'password'    => $password,
-                    'hourly_rate' => $data['hourly_rate'],
+                    'name'              => $data['name'],
+                    'password'          => $password,
+                    'hourly_rate'       => $data['hourly_rate'],
+                    'email_verified_at' => now(),
                 ]
             );
         }

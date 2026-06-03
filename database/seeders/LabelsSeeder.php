@@ -15,19 +15,19 @@ class LabelsSeeder extends Seeder
         $workspace = $this->demoWorkspace();
 
         foreach ([
-            ['name' => 'Bug', 'color' => '#FF6B6B'],
-            ['name' => 'Feature', 'color' => '#6BC950'],
-            ['name' => 'Enhancement', 'color' => '#49CCF9'],
-            ['name' => 'Documentation', 'color' => '#8B5CF6'],
-            ['name' => 'UI/UX', 'color' => '#EC4899'],
-            ['name' => 'Refactor', 'color' => '#F59E0B'],
-            ['name' => 'Security', 'color' => '#EF4444'],
-            ['name' => 'Performance', 'color' => '#14B8A6'],
+            ['name' => 'Bug',           'color' => '#EF4444'],
+            ['name' => 'Feature',       'color' => '#3B82F6'],
+            ['name' => 'Enhancement',   'color' => '#10B981'],
+            ['name' => 'Documentation', 'color' => '#6B7280'],
+            ['name' => 'UI/UX',         'color' => '#8B5CF6'],
+            ['name' => 'Refactor',      'color' => '#F59E0B'],
+            ['name' => 'Security',      'color' => '#DC2626'],
+            ['name' => 'Performance',   'color' => '#0EA5E9'],
         ] as $label) {
             Label::create([
                 'workspace_id' => $workspace->id,
-                'name' => $label['name'],
-                'color' => $label['color'],
+                'name'         => $label['name'],
+                'color'        => $label['color'],
             ]);
         }
     }

@@ -12,26 +12,124 @@ class SprintsSeeder extends Seeder
 
     public function run(): void
     {
-        foreach (
+        $sprints = [
+            // ── Manufacturing sprints ────────────────────────────────────────
             [
-                ['space' => 'Manufacturing', 'list' => 'Inventory Module', 'name' => 'MFG Sprint 1 — ERP Foundation', 'goal' => 'Setup modul dasar ERP: master data, inventory core', 'start_date' => now()->subWeeks(4), 'end_date' => now()->subWeeks(2), 'is_active' => false, 'position' => 0],
-                ['space' => 'Manufacturing', 'list' => 'Production Tracking', 'name' => 'MFG Sprint 2 — Production Tracking', 'goal' => 'Build real-time production monitoring dan dashboard IoT', 'start_date' => now()->subWeeks(2), 'end_date' => now()->addWeek(), 'is_active' => true, 'position' => 1],
-                ['space' => 'Manufacturing', 'list' => 'Reporting', 'name' => 'MFG Sprint 3 — Reporting & Analytics', 'goal' => 'Laporan produksi, analisis efisiensi, export PDF/Excel', 'start_date' => now()->addWeek(), 'end_date' => now()->addWeeks(3), 'is_active' => false, 'position' => 2],
-                ['space' => 'B2B', 'list' => 'Authentication & Access', 'name' => 'B2B Sprint 1 — Client Portal', 'goal' => 'Portal login, order history, dan invoice management', 'start_date' => now()->subWeeks(3), 'end_date' => now()->subWeek(), 'is_active' => false, 'position' => 0],
-                ['space' => 'B2B', 'list' => 'API Integrations', 'name' => 'B2B Sprint 2 — API Integration', 'goal' => 'REST API untuk partner, webhook notifikasi, API docs', 'start_date' => now()->subWeek(), 'end_date' => now()->addWeek(), 'is_active' => true, 'position' => 1],
-                ['space' => 'B2C', 'list' => 'Product Catalog', 'name' => 'B2C Sprint 1 — E-Commerce Core', 'goal' => 'Product catalog, keranjang belanja, checkout flow', 'start_date' => now()->subWeeks(3), 'end_date' => now()->subWeek(), 'is_active' => false, 'position' => 0],
-                ['space' => 'B2C', 'list' => 'Checkout & Payment', 'name' => 'B2C Sprint 2 — Payment & Shipping', 'goal' => 'Integrasi Midtrans, ongkir RajaOngkir, notif email', 'start_date' => now()->subWeek(), 'end_date' => now()->addWeek(), 'is_active' => true, 'position' => 1],
-            ] as $sprint
-        ) {
+                'space'      => 'Manufacturing',
+                'list'       => 'Inventory Management',
+                'name'       => 'Sprint 1 - Inventory Foundation',
+                'goal'       => 'Setup database schema dan CRUD dasar modul inventory',
+                'start_date' => now()->subWeeks(6)->startOfWeek()->toDateString(),
+                'end_date'   => now()->subWeeks(6)->endOfWeek()->toDateString(),
+                'is_active'  => false,
+                'position'   => 0,
+            ],
+            [
+                'space'      => 'Manufacturing',
+                'list'       => 'Inventory Management',
+                'name'       => 'Sprint 2 - Stock Management',
+                'goal'       => 'Fitur stok masuk, keluar, dan stock opname',
+                'start_date' => now()->subWeeks(5)->startOfWeek()->toDateString(),
+                'end_date'   => now()->subWeeks(5)->endOfWeek()->toDateString(),
+                'is_active'  => false,
+                'position'   => 1,
+            ],
+            [
+                'space'      => 'Manufacturing',
+                'list'       => 'Inventory Management',
+                'name'       => 'Sprint 3 - Reporting & Integration',
+                'goal'       => 'Laporan stok dan integrasi barcode scanner',
+                'start_date' => now()->subWeeks(4)->startOfWeek()->toDateString(),
+                'end_date'   => now()->subWeeks(4)->endOfWeek()->toDateString(),
+                'is_active'  => false,
+                'position'   => 2,
+            ],
+            [
+                'space'      => 'Manufacturing',
+                'list'       => 'Sensor Dashboard',
+                'name'       => 'Sprint 1 - IoT Dashboard',
+                'goal'       => 'Dashboard sensor real-time dan alert sistem',
+                'start_date' => now()->subWeeks(3)->startOfWeek()->toDateString(),
+                'end_date'   => now()->subWeeks(3)->endOfWeek()->toDateString(),
+                'is_active'  => false,
+                'position'   => 0,
+            ],
+
+            // ── B2B sprints ──────────────────────────────────────────────────
+            [
+                'space'      => 'B2B',
+                'list'       => 'Client Portal',
+                'name'       => 'Sprint 1 - Auth & Portal',
+                'goal'       => 'Autentikasi dan portal utama client B2B',
+                'start_date' => now()->subWeeks(6)->startOfWeek()->toDateString(),
+                'end_date'   => now()->subWeeks(6)->endOfWeek()->toDateString(),
+                'is_active'  => false,
+                'position'   => 0,
+            ],
+            [
+                'space'      => 'B2B',
+                'list'       => 'Client Portal',
+                'name'       => 'Sprint 2 - Order Management',
+                'goal'       => 'Manajemen order dan tracking pengiriman',
+                'start_date' => now()->subWeeks(4)->startOfWeek()->toDateString(),
+                'end_date'   => now()->subWeeks(4)->endOfWeek()->toDateString(),
+                'is_active'  => false,
+                'position'   => 1,
+            ],
+            [
+                'space'      => 'B2B',
+                'list'       => 'Client Portal',
+                'name'       => 'Sprint 3 - Current Sprint',
+                'goal'       => 'Invoice sistem dan notifikasi',
+                'start_date' => now()->subWeeks(2)->startOfWeek()->toDateString(),
+                'end_date'   => now()->subWeeks(2)->endOfWeek()->toDateString(),
+                'is_active'  => true,
+                'position'   => 2,
+            ],
+
+            // ── B2C sprints ──────────────────────────────────────────────────
+            [
+                'space'      => 'B2C',
+                'list'       => 'Product Catalog',
+                'name'       => 'Sprint 1 - Catalog Core',
+                'goal'       => 'API produk, halaman listing, dan filter',
+                'start_date' => now()->subWeeks(5)->startOfWeek()->toDateString(),
+                'end_date'   => now()->subWeeks(5)->endOfWeek()->toDateString(),
+                'is_active'  => false,
+                'position'   => 0,
+            ],
+            [
+                'space'      => 'B2C',
+                'list'       => 'Checkout & Payment',
+                'name'       => 'Sprint 1 - Checkout Flow',
+                'goal'       => 'Keranjang belanja dan integrasi payment gateway',
+                'start_date' => now()->subWeeks(3)->startOfWeek()->toDateString(),
+                'end_date'   => now()->subWeeks(3)->endOfWeek()->toDateString(),
+                'is_active'  => false,
+                'position'   => 0,
+            ],
+            [
+                'space'      => 'B2C',
+                'list'       => 'Checkout & Payment',
+                'name'       => 'Sprint 2 - Current Sprint',
+                'goal'       => 'Order management dan notifikasi konsumen',
+                'start_date' => now()->subWeeks(1)->startOfWeek()->toDateString(),
+                'end_date'   => now()->subWeeks(1)->endOfWeek()->toDateString(),
+                'is_active'  => true,
+                'position'   => 1,
+            ],
+        ];
+
+        foreach ($sprints as $s) {
             Sprint::create([
-                'space_id' => $this->demoSpace($sprint['space'])->id,
-                'project_id' => $this->demoProject($sprint['list'])->id,
-                'name' => $sprint['name'],
-                'goal' => $sprint['goal'],
-                'start_date' => $sprint['start_date'],
-                'end_date' => $sprint['end_date'],
-                'is_active' => $sprint['is_active'],
-                'position' => $sprint['position'],
+                'space_id'   => $this->demoSpace($s['space'])->id,
+                'project_id' => $this->demoProject($s['list'])->id,
+                'name'       => $s['name'],
+                'goal'       => $s['goal'],
+                'start_date' => $s['start_date'],
+                'end_date'   => $s['end_date'],
+                'is_active'  => $s['is_active'],
+                'position'   => $s['position'],
             ]);
         }
     }

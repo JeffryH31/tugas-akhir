@@ -12,34 +12,139 @@ class CommentsSeeder extends Seeder
 
     public function run(): void
     {
-        $sasya = $this->demoUser('admin@example.com');
-        $andi = $this->demoUser('kevin@example.com');
-        $dian = $this->demoUser('christopher@example.com');
-        $budi = $this->demoUser('marvel@example.com');
-        $rina = $this->demoUser('devin@example.com');
+        $jeff        = $this->demoUser('admin@example.com');
+        $kevin       = $this->demoUser('kevin@example.com');
+        $christopher = $this->demoUser('christopher@example.com');
+        $marvel      = $this->demoUser('marvel@example.com');
+        $devin       = $this->demoUser('devin@example.com');
 
-        $invTask = $this->demoTask('Sistem Manajemen Inventory');
-        $prodTask = $this->demoTask('Real-time Production Monitoring');
-        $apiIntTask = $this->demoTask('REST API untuk Partner');
-        $checkoutTask = $this->demoTask('Checkout & Payment Gateway');
+        $invTask   = $this->demoTask('Sistem Manajemen Inventory');
+        $authTask  = $this->demoTask('Portal Login & Autentikasi');
         $orderTask = $this->demoTask('Order Management Portal');
-        $catalogTask = $this->demoTask('Product Catalog Website');
+        $catTask   = $this->demoTask('Product Catalog & Listing');
+        $checkTask = $this->demoTask('Checkout & Payment Gateway');
 
-        $c1 = Comment::create(['task_id' => $invTask->id, 'user_id' => $sasya->id, 'content' => 'Modul inventory ini prioritas utama ya. Tim gudang sudah nanya kapan bisa pakai sistem baru.', 'created_at' => now()->subDays(7), 'updated_at' => now()->subDays(7)]);
-        Comment::create(['task_id' => $invTask->id, 'user_id' => $budi->id, 'parent_id' => $c1->id, 'content' => 'Siap, API master barang sudah selesai. Sekarang lagi kerjain stok masuk/keluar.', 'created_at' => now()->subDays(7)->addHours(2), 'updated_at' => now()->subDays(7)->addHours(2)]);
-        Comment::create(['task_id' => $invTask->id, 'user_id' => $dian->id, 'parent_id' => $c1->id, 'content' => 'UI master barang sudah live di staging. Minta tolong review ya Kak Sasya.', 'created_at' => now()->subDays(7)->addHours(4), 'updated_at' => now()->subDays(7)->addHours(4)]);
-        Comment::create(['task_id' => $invTask->id, 'user_id' => $rina->id, 'content' => 'Untuk stock opname, pastikan ada audit trail siapa yang adjust stoknya ya.', 'created_at' => now()->subDays(3), 'updated_at' => now()->subDays(3)]);
+        // ── Inventory comments ──────────────────────────────────────────
+        $c1 = Comment::create([
+            'task_id'    => $invTask->id,
+            'user_id'    => $jeff->id,
+            'content'    => 'Modul inventory ini prioritas utama sprint ini. Pastikan ER diagram sudah final sebelum mulai coding.',
+            'created_at' => now()->subWeeks(6)->startOfWeek()->setTime(8, 15),
+            'updated_at' => now()->subWeeks(6)->startOfWeek()->setTime(8, 15),
+        ]);
 
-        $c2 = Comment::create(['task_id' => $prodTask->id, 'user_id' => $andi->id, 'content' => 'Dashboard chart pakai Chart.js atau ApexCharts? Mau yang support real-time update.', 'created_at' => now()->subDays(4), 'updated_at' => now()->subDays(4)]);
-        Comment::create(['task_id' => $prodTask->id, 'user_id' => $dian->id, 'parent_id' => $c2->id, 'content' => 'Mendingan ApexCharts, lebih enak buat real-time streaming dan confignya lebih simpel.', 'created_at' => now()->subDays(4)->addHours(1), 'updated_at' => now()->subDays(4)->addHours(1)]);
+        Comment::create([
+            'task_id'    => $invTask->id,
+            'user_id'    => $christopher->id,
+            'parent_id'  => $c1->id,
+            'content'    => 'Siap Jeff. ER diagram sudah aku finalisasi tadi pagi. Ada 6 tabel utama. Bisa dicek di dokumentasi.',
+            'created_at' => now()->subWeeks(6)->startOfWeek()->setTime(10, 30),
+            'updated_at' => now()->subWeeks(6)->startOfWeek()->setTime(10, 30),
+        ]);
 
-        Comment::create(['task_id' => $apiIntTask->id, 'user_id' => $sasya->id, 'content' => 'API docs harus ready sebelum demo ke client PT Maju Bersama minggu depan.', 'created_at' => now()->subDays(3), 'updated_at' => now()->subDays(3)]);
-        Comment::create(['task_id' => $apiIntTask->id, 'user_id' => $andi->id, 'content' => 'Swagger sudah auto-generate dari annotation. Tinggal polish contoh request/response-nya.', 'created_at' => now()->subDays(3)->addHours(2), 'updated_at' => now()->subDays(3)->addHours(2)]);
+        Comment::create([
+            'task_id'    => $invTask->id,
+            'user_id'    => $marvel->id,
+            'parent_id'  => $c1->id,
+            'content'    => 'Aku mulai UI master barang setelah migration-nya jadi ya.',
+            'created_at' => now()->subWeeks(6)->startOfWeek()->setTime(11, 0),
+            'updated_at' => now()->subWeeks(6)->startOfWeek()->setTime(11, 0),
+        ]);
 
-        $c3 = Comment::create(['task_id' => $checkoutTask->id, 'user_id' => $budi->id, 'content' => 'Midtrans sandbox sudah bisa test. Perlu API key production dari tim finance.', 'created_at' => now()->subDays(2), 'updated_at' => now()->subDays(2)]);
-        Comment::create(['task_id' => $checkoutTask->id, 'user_id' => $sasya->id, 'parent_id' => $c3->id, 'content' => 'Sudah minta ke Finance, estimasi dapet key-nya besok. Sementara pakai sandbox dulu.', 'created_at' => now()->subDays(2)->addHours(3), 'updated_at' => now()->subDays(2)->addHours(3)]);
+        $c2 = Comment::create([
+            'task_id'    => $invTask->id,
+            'user_id'    => $kevin->id,
+            'content'    => 'Untuk stock opname pastikan ada audit trail siapa yang melakukan penyesuaian stok dan alasannya.',
+            'created_at' => now()->subWeeks(5)->startOfWeek()->setTime(9, 0),
+            'updated_at' => now()->subWeeks(5)->startOfWeek()->setTime(9, 0),
+        ]);
 
-        Comment::create(['task_id' => $orderTask->id, 'user_id' => $dian->id, 'content' => 'Order detail page sudah include timeline status perubahan. Cek di staging ya.', 'created_at' => now()->subDays(5), 'updated_at' => now()->subDays(5)]);
-        Comment::create(['task_id' => $catalogTask->id, 'user_id' => $dian->id, 'content' => 'Search component pakai debounce 300ms supaya nggak spam API. Sudah smooth.', 'created_at' => now()->subDays(2), 'updated_at' => now()->subDays(2)]);
+        Comment::create([
+            'task_id'    => $invTask->id,
+            'user_id'    => $christopher->id,
+            'parent_id'  => $c2->id,
+            'content'    => 'Sudah, ada field adjusted_by dan reason di tabel stock_adjustments.',
+            'created_at' => now()->subWeeks(5)->startOfWeek()->setTime(10, 0),
+            'updated_at' => now()->subWeeks(5)->startOfWeek()->setTime(10, 0),
+        ]);
+
+        // ── Auth comments ───────────────────────────────────────────────
+        $c3 = Comment::create([
+            'task_id'    => $authTask->id,
+            'user_id'    => $jeff->id,
+            'content'    => 'Sprint 1 B2B sudah selesai semua. Good job Christopher & Devin! Semua fitur auth sudah pass testing.',
+            'created_at' => now()->subWeeks(5)->endOfWeek()->setTime(16, 30),
+            'updated_at' => now()->subWeeks(5)->endOfWeek()->setTime(16, 30),
+        ]);
+
+        Comment::create([
+            'task_id'    => $authTask->id,
+            'user_id'    => $christopher->id,
+            'parent_id'  => $c3->id,
+            'content'    => 'Terima kasih Jeff. Untuk 2FA, bisa tambah opsi email OTP selain TOTP di sprint berikutnya.',
+            'created_at' => now()->subWeeks(5)->endOfWeek()->setTime(17, 0),
+            'updated_at' => now()->subWeeks(5)->endOfWeek()->setTime(17, 0),
+        ]);
+
+        // ── Order Management comments ───────────────────────────────────
+        Comment::create([
+            'task_id'    => $orderTask->id,
+            'user_id'    => $christopher->id,
+            'content'    => 'API order list sudah include pagination, filter status, dan sort by tanggal. Ready untuk di-consume frontend.',
+            'created_at' => now()->subWeeks(4)->startOfWeek()->setTime(9, 0),
+            'updated_at' => now()->subWeeks(4)->startOfWeek()->setTime(9, 0),
+        ]);
+
+        Comment::create([
+            'task_id'    => $orderTask->id,
+            'user_id'    => $devin->id,
+            'content'    => 'Halaman list order sudah live di staging. Bisa dicek di staging/orders.',
+            'created_at' => now()->subWeeks(4)->startOfWeek()->addDays(2)->setTime(16, 45),
+            'updated_at' => now()->subWeeks(4)->startOfWeek()->addDays(2)->setTime(16, 45),
+        ]);
+
+        // ── Catalog comments ────────────────────────────────────────────
+        $c4 = Comment::create([
+            'task_id'    => $catTask->id,
+            'user_id'    => $kevin->id,
+            'content'    => 'Search pakai debounce berapa ms? Jangan terlalu agresif nge-hit API.',
+            'created_at' => now()->subWeeks(4)->startOfWeek()->setTime(10, 0),
+            'updated_at' => now()->subWeeks(4)->startOfWeek()->setTime(10, 0),
+        ]);
+
+        Comment::create([
+            'task_id'    => $catTask->id,
+            'user_id'    => $devin->id,
+            'parent_id'  => $c4->id,
+            'content'    => '300ms, Kevin. Sudah test dengan Lighthouse, score performance 94.',
+            'created_at' => now()->subWeeks(4)->startOfWeek()->setTime(10, 45),
+            'updated_at' => now()->subWeeks(4)->startOfWeek()->setTime(10, 45),
+        ]);
+
+        // ── Checkout comments ───────────────────────────────────────────
+        $c5 = Comment::create([
+            'task_id'    => $checkTask->id,
+            'user_id'    => $christopher->id,
+            'content'    => 'Midtrans sandbox sudah bisa test semua payment method. Butuh API key production dari Finance untuk go-live.',
+            'created_at' => now()->subWeeks(3)->startOfWeek()->setTime(14, 0),
+            'updated_at' => now()->subWeeks(3)->startOfWeek()->setTime(14, 0),
+        ]);
+
+        Comment::create([
+            'task_id'    => $checkTask->id,
+            'user_id'    => $jeff->id,
+            'parent_id'  => $c5->id,
+            'content'    => 'Sudah aku minta ke Finance tadi pagi. Key production akan dikirim besok via email.',
+            'created_at' => now()->subWeeks(3)->startOfWeek()->setTime(15, 30),
+            'updated_at' => now()->subWeeks(3)->startOfWeek()->setTime(15, 30),
+        ]);
+
+        Comment::create([
+            'task_id'    => $checkTask->id,
+            'user_id'    => $marvel->id,
+            'content'    => 'Multi-step form sudah progress 50%. Step 1 (alamat) dan Step 2 (pengiriman) sudah jalan.',
+            'created_at' => now()->subWeeks(2)->startOfWeek()->setTime(16, 0),
+            'updated_at' => now()->subWeeks(2)->startOfWeek()->setTime(16, 0),
+        ]);
     }
 }

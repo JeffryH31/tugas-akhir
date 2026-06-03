@@ -14,25 +14,25 @@ class StatusesSeeder extends Seeder
     {
         $definitions = [
             'Manufacturing' => [
-                ['name' => 'Backlog', 'type' => 'open', 'color' => '#6B7280', 'position' => 0, 'applies_to' => 'both'],
-                ['name' => 'To Do', 'type' => 'open', 'color' => '#3B82F6', 'position' => 1, 'applies_to' => 'both', 'is_default' => true],
+                ['name' => 'Backlog',     'type' => 'open',        'color' => '#6B7280', 'position' => 0, 'applies_to' => 'both'],
+                ['name' => 'To Do',       'type' => 'open',        'color' => '#3B82F6', 'position' => 1, 'applies_to' => 'both', 'is_default' => true],
                 ['name' => 'In Progress', 'type' => 'in_progress', 'color' => '#F59E0B', 'position' => 2, 'applies_to' => 'both'],
-                ['name' => 'Review', 'type' => 'review', 'color' => '#8B5CF6', 'position' => 3, 'applies_to' => 'both'],
-                ['name' => 'Done', 'type' => 'closed', 'color' => '#10B981', 'position' => 4, 'applies_to' => 'both', 'is_closed' => true],
+                ['name' => 'Review',      'type' => 'review',      'color' => '#8B5CF6', 'position' => 3, 'applies_to' => 'both'],
+                ['name' => 'Done',        'type' => 'closed',      'color' => '#10B981', 'position' => 4, 'applies_to' => 'both', 'is_closed' => true],
             ],
             'B2B' => [
-                ['name' => 'Backlog', 'type' => 'open', 'color' => '#6B7280', 'position' => 0, 'applies_to' => 'both'],
-                ['name' => 'To Do', 'type' => 'open', 'color' => '#3B82F6', 'position' => 1, 'applies_to' => 'both', 'is_default' => true],
+                ['name' => 'Backlog',     'type' => 'open',        'color' => '#6B7280', 'position' => 0, 'applies_to' => 'both'],
+                ['name' => 'To Do',       'type' => 'open',        'color' => '#3B82F6', 'position' => 1, 'applies_to' => 'both', 'is_default' => true],
                 ['name' => 'In Progress', 'type' => 'in_progress', 'color' => '#F59E0B', 'position' => 2, 'applies_to' => 'both'],
-                ['name' => 'UAT', 'type' => 'review', 'color' => '#8B5CF6', 'position' => 3, 'applies_to' => 'both'],
-                ['name' => 'Done', 'type' => 'closed', 'color' => '#10B981', 'position' => 4, 'applies_to' => 'both', 'is_closed' => true],
+                ['name' => 'Review',      'type' => 'review',      'color' => '#8B5CF6', 'position' => 3, 'applies_to' => 'both'],
+                ['name' => 'Done',        'type' => 'closed',      'color' => '#10B981', 'position' => 4, 'applies_to' => 'both', 'is_closed' => true],
             ],
             'B2C' => [
-                ['name' => 'Backlog', 'type' => 'open', 'color' => '#6B7280', 'position' => 0, 'applies_to' => 'both'],
-                ['name' => 'To Do', 'type' => 'open', 'color' => '#3B82F6', 'position' => 1, 'applies_to' => 'both', 'is_default' => true],
+                ['name' => 'Backlog',     'type' => 'open',        'color' => '#6B7280', 'position' => 0, 'applies_to' => 'both'],
+                ['name' => 'To Do',       'type' => 'open',        'color' => '#3B82F6', 'position' => 1, 'applies_to' => 'both', 'is_default' => true],
                 ['name' => 'In Progress', 'type' => 'in_progress', 'color' => '#F59E0B', 'position' => 2, 'applies_to' => 'both'],
-                ['name' => 'Staging', 'type' => 'review', 'color' => '#8B5CF6', 'position' => 3, 'applies_to' => 'both'],
-                ['name' => 'Live', 'type' => 'closed', 'color' => '#10B981', 'position' => 4, 'applies_to' => 'both', 'is_closed' => true],
+                ['name' => 'Review',      'type' => 'review',      'color' => '#8B5CF6', 'position' => 3, 'applies_to' => 'both'],
+                ['name' => 'Done',        'type' => 'closed',      'color' => '#10B981', 'position' => 4, 'applies_to' => 'both', 'is_closed' => true],
             ],
         ];
 
@@ -41,7 +41,10 @@ class StatusesSeeder extends Seeder
             $space->statuses()->delete();
 
             foreach ($statuses as $status) {
-                Status::create(array_merge($status, ['space_id' => $space->id]));
+                Status::create(array_merge([
+                    'is_default' => false,
+                    'is_closed'  => false,
+                ], $status, ['space_id' => $space->id]));
             }
         }
     }
