@@ -2,20 +2,16 @@
 
 namespace Database\Seeders;
 
-use App\Models\Comment;
-use App\Models\Folder;
-use App\Models\Project;
-use App\Models\Sprint;
-use App\Models\Subtask;
-use App\Models\Task;
-use App\Models\TimeEntry;
-use App\Models\User;
-use App\Models\View;
-use App\Models\Activity;
 use Illuminate\Database\Seeder;
 
 class DatabaseSeeder extends Seeder
 {
+    /**
+     * Seed the application's database.
+     *
+     * Default: dummy data for development.
+     * For realistic demo data, run: php artisan db:seed --class=RealisticDemoSeeder
+     */
     public function run(): void
     {
         $this->call([
