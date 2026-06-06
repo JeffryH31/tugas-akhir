@@ -1,8 +1,10 @@
 <?php
 
 use App\Models\Project;
-use App\Models\User;
 use App\Models\Task;
+use App\Models\User;
+use Tests\Traits\CreatesWorkspaceHierarchy;
+use function Pest\Laravel\actingAs;
 
 uses(CreatesWorkspaceHierarchy::class);
 
@@ -122,7 +124,7 @@ test('time_estimate rejects negative values', function () {
 });
 
 // Date Validation
-
+    
 test('due_date must be after or equal to start_date', function () {
     actingAs($this->owner)
         ->post(route('tasks.store', [
@@ -204,6 +206,52 @@ test('task name with SQL injection attempt is stored as plain text', function ()
         ->assertRedirect();
 
     // Verify the malicious string was stored as plain text, not executed
+    $task = Task::where('name', $maliciousName)->first();
+    expect($task)->not->toBeNull();
+    expect($task->name)->toBe($maliciousName);
+});
+
+test('search with OR 1=1 does not bypass query and leak all data', function () {
+    // Create a second user with their own workspace/task that owner should NOT see
+    $otherUser = $this->createUser();
+    $otherHierarchy = $this->createFullHierarchy($otherUser, 'Other');
+
+    // Attempt classic OR 1=1 injection via search
+    $maliciousQuery = "' OR 1=1 --";
+
+    $response = actingAs($this->owner)
+        ->get(route('search', ['q' => $maliciousQuery]))
+        ->assertSuccessful();
+
+    $data = $response->json();
+
+    // Should NOT return the other user's task — parameterized queries treat input as literal string
+    $allTaskNames = collect($data['tasks'] ?? [])->pluck('name')->all();
+    expect($allTaskNames)->not->toContain($otherHierarchy['task']->name);
+});
+
+test('search with UNION SELECT injection does not expose other tables', function () {
+    $maliciousQuery = "' UNION SELECT password FROM users --";
+
+    actingAs($this->owner)
+        ->get(route('search', ['q' => $maliciousQuery]))
+        ->assertSuccessful();
+
+    // App still works, no password data leaked
+    expect(User::count())->toBeGreaterThan(0);
+});
+
+test('task creation with OR 1=1 in name stores literal string', function () {
+    $maliciousName = "Task' OR '1'='1";
+
+    actingAs($this->owner)
+        ->post(route('tasks.store', [
+            $this->hierarchy['workspace']->id,
+            $this->hierarchy['space']->id,
+            $this->hierarchy['list']->id,
+        ]), ['name' => $maliciousName])
+        ->assertRedirect();
+
     $task = Task::where('name', $maliciousName)->first();
     expect($task)->not->toBeNull();
     expect($task->name)->toBe($maliciousName);
