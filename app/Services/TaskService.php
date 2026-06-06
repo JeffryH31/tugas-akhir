@@ -8,6 +8,8 @@ use App\Models\Label;
 use App\Models\Status;
 use App\Models\Task;
 use App\Models\Project;
+use App\Models\Space;
+use App\Models\Subtask;
 use App\Models\User;
 use Illuminate\Pagination\LengthAwarePaginator;
 use Illuminate\Support\Collection;
@@ -500,7 +502,7 @@ class TaskService
      */
     public function getMySubtasks(User $user, array $filters = []): Collection
     {
-        $query = \App\Models\Subtask::query()
+        $query = Subtask::query()
             ->whereHas('assignees', fn($q) => $q->where('users.id', $user->id))
             ->whereNull('completed_at')
             ->with([
@@ -559,7 +561,7 @@ class TaskService
 
         $tasks = $type === 'all' || $type === 'tasks' ? $tasksQuery->get() : collect();
 
-        $projectsQuery = \App\Models\Project::whereHas('space.workspace', function ($q) use ($user) {
+        $projectsQuery = Project::whereHas('space.workspace', function ($q) use ($user) {
             $q->where('created_by', $user->id)
                 ->orWhereHas('members', fn($q2) => $q2->where('users.id', $user->id));
         })
@@ -570,7 +572,7 @@ class TaskService
 
         $projects = $type === 'all' || $type === 'projects' ? $projectsQuery->get() : collect();
 
-        $spacesQuery = \App\Models\Space::whereHas('workspace', function ($q) use ($user, $workspaceId) {
+        $spacesQuery = Space::whereHas('workspace', function ($q) use ($user, $workspaceId) {
             $q->where('created_by', $user->id)
                 ->orWhereHas('members', fn($q2) => $q2->where('users.id', $user->id));
         })

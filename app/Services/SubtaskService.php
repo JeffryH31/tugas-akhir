@@ -6,6 +6,7 @@ use App\Enums\PriorityLevel;
 use App\Models\Activity;
 use App\Models\Sprint;
 use App\Models\Status;
+use App\Models\Label;
 use App\Models\Subtask;
 use App\Models\Task;
 use App\Models\User;
@@ -382,7 +383,7 @@ class SubtaskService
     /**
      * Add a label to a subtask.
      */
-    public function addLabel(Subtask $subtask, \App\Models\Label $label, User $user): void
+    public function addLabel(Subtask $subtask, Label $label, User $user): void
     {
         $alreadyAttached = $subtask->labels()->whereKey($label->id)->exists();
         if (!$alreadyAttached) {
@@ -404,7 +405,7 @@ class SubtaskService
     /**
      * Remove a label from a subtask.
      */
-    public function removeLabel(Subtask $subtask, \App\Models\Label $label, User $user): void
+    public function removeLabel(Subtask $subtask, Label $label, User $user): void
     {
         $detached = $subtask->labels()->detach($label->id);
         if ($detached > 0) {
