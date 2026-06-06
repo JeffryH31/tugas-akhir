@@ -1,5 +1,6 @@
 <?php
 
+use App\Models\Project;
 use App\Models\Subtask;
 use App\Services\CpmService;
 use Tests\Traits\CreatesWorkspaceHierarchy;
@@ -149,7 +150,7 @@ test('analyze single subtask is critical with correct duration', function () {
 });
 
 test('addDependency rejects cross-task dependency', function () {
-    $otherTask = \App\Models\Task::create([
+    $otherTask = Task::create([
         'project_id' => $this->hierarchy['list']->id,
         'name' => 'Other Task',
         'created_by' => $this->owner->id,

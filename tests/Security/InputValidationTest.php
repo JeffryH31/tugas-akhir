@@ -1,7 +1,8 @@
 <?php
 
-use Tests\Traits\CreatesWorkspaceHierarchy;
-use function Pest\Laravel\actingAs;
+use App\Models\Project;
+use App\Models\User;
+use App\Models\Task;
 
 uses(CreatesWorkspaceHierarchy::class);
 
@@ -188,7 +189,7 @@ test('search query with SQL injection attempt is safely escaped', function () {
         ->assertSuccessful();
 
     // Verify users table still exists by querying it
-    expect(\App\Models\User::count())->toBeGreaterThan(0);
+    expect(User::count())->toBeGreaterThan(0);
 });
 
 test('task name with SQL injection attempt is stored as plain text', function () {
@@ -203,7 +204,7 @@ test('task name with SQL injection attempt is stored as plain text', function ()
         ->assertRedirect();
 
     // Verify the malicious string was stored as plain text, not executed
-    $task = \App\Models\Task::where('name', $maliciousName)->first();
+    $task = Task::where('name', $maliciousName)->first();
     expect($task)->not->toBeNull();
     expect($task->name)->toBe($maliciousName);
 });

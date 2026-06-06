@@ -1,5 +1,6 @@
 <?php
 
+use App\Models\Task;
 use App\Models\Sprint;
 use App\Models\Subtask;
 use App\Models\Project;
@@ -75,7 +76,7 @@ test('addSubtaskToSprint rejects subtask from different product', function () {
         'created_by' => $this->owner->id,
     ]);
 
-    $otherTask = \App\Models\Task::create([
+    $otherTask = Task::create([
         'project_id' => $otherList->id,
         'name' => 'Other Task',
         'created_by' => $this->owner->id,

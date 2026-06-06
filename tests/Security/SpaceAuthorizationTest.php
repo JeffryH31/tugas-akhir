@@ -1,6 +1,7 @@
-<?php
+﻿<?php
 
 use App\Models\Space;
+use App\Models\Status;
 use App\Models\Workspace;
 use Tests\Traits\CreatesWorkspaceHierarchy;
 use function Pest\Laravel\actingAs;
@@ -86,7 +87,7 @@ test('space member cannot delete space', function () {
         ->delete(route('spaces.destroy', [$this->workspace->id, $this->space->id]))
         ->assertForbidden();
 
-    expect(\App\Models\Space::find($this->space->id))->not->toBeNull();
+    expect(Space::find($this->space->id))->not->toBeNull();
 });
 
 test('space admin cannot delete space (workspace admin only)', function () {
@@ -94,7 +95,7 @@ test('space admin cannot delete space (workspace admin only)', function () {
         ->delete(route('spaces.destroy', [$this->workspace->id, $this->space->id]))
         ->assertForbidden();
 
-    expect(\App\Models\Space::find($this->space->id))->not->toBeNull();
+    expect(Space::find($this->space->id))->not->toBeNull();
 });
 
 // Status Management
@@ -106,7 +107,7 @@ test('space member cannot add status', function () {
         ])
         ->assertForbidden();
 
-    expect(\App\Models\Status::where('space_id', $this->space->id)->where('name', 'Custom Status')->exists())->toBeFalse();
+    expect(Status::where('space_id', $this->space->id)->where('name', 'Custom Status')->exists())->toBeFalse();
 });
 
 test('space admin can add status', function () {

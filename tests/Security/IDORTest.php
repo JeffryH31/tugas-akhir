@@ -1,7 +1,9 @@
-<?php
+﻿<?php
 
 use App\Models\Comment;
+use App\Models\Space;
 use App\Models\Subtask;
+use App\Models\Task;
 use App\Models\Project;
 use App\Models\TimeEntry;
 use App\Models\Workspace;
@@ -164,7 +166,7 @@ test('cannot move task to a list in another space', function () {
     $hierarchy = $this->createFullHierarchy($this->userA);
 
     // Create a different space + list in same workspace
-    $otherSpace = \App\Models\Space::create([
+    $otherSpace = Space::create([
         'workspace_id' => $hierarchy['workspace']->id,
         'name' => 'Other Space',
         'created_by' => $this->userA->id,
@@ -194,7 +196,7 @@ test('cannot update subtask using wrong parent task ID in URL', function () {
     $subtask = $this->createSubtask($hierarchy['task'], ['name' => 'Real Subtask']);
 
     // Create another task in same list
-    $otherTask = \App\Models\Task::create([
+    $otherTask = Task::create([
         'project_id' => $hierarchy['list']->id,
         'name' => 'Other Task',
         'created_by' => $this->userA->id,

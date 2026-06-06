@@ -164,7 +164,7 @@ test('update priority change logs priority_changed with labels', function () {
 });
 
 test('update sprint_id rejects sprint from different product', function () {
-    $otherList = \App\Models\Project::create([
+    $otherList = Project::create([
         'space_id' => $this->hierarchy['space']->id,
         'name' => 'Other List',
         'created_by' => $this->owner->id,
@@ -189,7 +189,7 @@ test('delete soft-deletes subtask and logs deleted_subtask activity', function (
     expect(Subtask::withTrashed()->find($subtask->id))->not->toBeNull();
 
     $activity = Activity::where('action', 'deleted_subtask')
-        ->where('subject_type', \App\Models\Task::class)
+        ->where('subject_type', Task::class)
         ->where('subject_id', $this->hierarchy['task']->id)
         ->first();
 

@@ -2,7 +2,8 @@
 
 use App\Models\Comment;
 use App\Models\Space;
-use App\Models\Project;
+use App\Models\Task;
+use App\Models\TimeEntry;
 use App\Models\User;
 use App\Models\Workspace;
 use App\Services\AccessService;
@@ -194,7 +195,7 @@ test('guest cannot view analytics', function () {
 test('comment author can manage own comment', function () {
     $other = $this->createUser();
 
-    $comment = \App\Models\Comment::create([
+    $comment = Comment::create([
         'task_id' => $this->hierarchy['task']->id,
         'user_id' => $this->owner->id,
         'content' => 'Test comment',
@@ -350,7 +351,7 @@ test('user can manage own time entry', function () {
     $this->hierarchy['list']->addMember($dev, 'development_team');
 
     $subtask = $this->createSubtask($this->hierarchy['task']);
-    $entry = \App\Models\TimeEntry::create([
+    $entry = TimeEntry::create([
         'subtask_id' => $subtask->id,
         'user_id' => $dev->id,
         'duration' => 30,
@@ -433,7 +434,7 @@ test('workspace admin CAN still manage products and members (oversight)', functi
 // canResolveComment
 
 test('comment author can resolve own comment', function () {
-    $comment = \App\Models\Comment::create([
+    $comment = Comment::create([
         'task_id' => $this->hierarchy['task']->id,
         'user_id' => $this->owner->id,
         'content' => 'Test comment',
@@ -450,7 +451,7 @@ test('project manager can resolve any comment in their product', function () {
     $this->hierarchy['list']->addMember($author, 'development_team');
     $this->hierarchy['list']->addMember($pm, 'project_manager');
 
-    $comment = \App\Models\Comment::create([
+    $comment = Comment::create([
         'task_id' => $this->hierarchy['task']->id,
         'user_id' => $author->id,
         'content' => 'Test comment',
@@ -467,7 +468,7 @@ test('developer cannot resolve others comments', function () {
     $this->hierarchy['list']->addMember($author, 'development_team');
     $this->hierarchy['list']->addMember($dev, 'development_team');
 
-    $comment = \App\Models\Comment::create([
+    $comment = Comment::create([
         'task_id' => $this->hierarchy['task']->id,
         'user_id' => $author->id,
         'content' => 'Test comment',
@@ -483,7 +484,7 @@ test('workspace owner can moderate any comment', function () {
     $this->hierarchy['workspace']->addMember($author, 'member');
     $this->hierarchy['list']->addMember($author, 'development_team');
 
-    $comment = \App\Models\Comment::create([
+    $comment = Comment::create([
         'task_id' => $this->hierarchy['task']->id,
         'user_id' => $author->id,
         'content' => 'Test comment',

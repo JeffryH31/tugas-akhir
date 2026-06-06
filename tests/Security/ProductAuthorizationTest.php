@@ -1,6 +1,8 @@
 <?php
 
+use App\Models\Label;
 use App\Models\Space;
+use App\Models\Task;
 use App\Models\Project;
 use App\Models\Workspace;
 use Tests\Traits\CreatesWorkspaceHierarchy;
@@ -46,7 +48,7 @@ beforeEach(function () {
     $this->list->addMember($this->developer, 'development_team');
     $this->list->addMember($this->guest, 'guest');
 
-    $this->task = \App\Models\Task::create([
+    $this->task = Task::create([
         'project_id' => $this->list->id,
         'name' => 'Test Task',
         'created_by' => $this->wsOwner->id,
@@ -166,7 +168,7 @@ test('developer cannot assign tasks', function () {
 // Manage Labels (canManageLabels = canManageTaskStructure)
 
 test('developer cannot add label to task', function () {
-    $label = \App\Models\Label::create([
+    $label = Label::create([
         'workspace_id' => $this->workspace->id,
         'name' => 'Bug',
         'color' => '#EF4444',
@@ -183,7 +185,7 @@ test('developer cannot add label to task', function () {
 });
 
 test('project_manager can add label to task', function () {
-    $label = \App\Models\Label::create([
+    $label = Label::create([
         'workspace_id' => $this->workspace->id,
         'name' => 'Feature',
         'color' => '#10B981',
