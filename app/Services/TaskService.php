@@ -190,6 +190,12 @@ class TaskService
             // Log status change with readable names
             if (isset($data['status_id']) && (int) $data['status_id'] !== (int) $oldStatusId) {
                 $newStatus = Status::find($data['status_id']);
+
+                // Record who closed the task (completed_at itself is set by the model hook).
+                if ($newStatus && $newStatus->is_closed && $task->completed_at && !$task->completed_by) {
+                    $task->forceFill(['completed_by' => $user->id])->saveQuietly();
+                }
+
                 Activity::log($task->project->space->workspace, $user, $task, 'status_changed', [
                     'name' => $task->name,
                 ], [
@@ -234,7 +240,13 @@ class TaskService
     public function changeStatus(Task $task, Status $status, User $user): Task
     {
         $oldStatus = $task->status;
-        $task->changeStatus($status);
+
+        $task->status_id = $status->id;
+        // completed_at is handled by the model's saving hook; capture who closed it.
+        if ($status->is_closed) {
+            $task->completed_by = $user->id;
+        }
+        $task->save();
 
         Activity::log($task->project->space->workspace, $user, $task, 'status_changed', [
             'name' => $task->name,

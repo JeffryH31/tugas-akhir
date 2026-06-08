@@ -2,6 +2,7 @@
 
 use App\Models\Project;
 use App\Models\Subtask;
+use App\Models\Task;
 use App\Services\CpmService;
 use Tests\Traits\CreatesWorkspaceHierarchy;
 

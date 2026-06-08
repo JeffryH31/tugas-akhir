@@ -2,6 +2,7 @@
 
 use App\Enums\PriorityLevel;
 use App\Models\Activity;
+use App\Models\Project;
 use App\Models\Status;
 use App\Models\Subtask;
 use App\Models\Task;
