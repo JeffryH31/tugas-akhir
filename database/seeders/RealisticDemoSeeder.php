@@ -42,10 +42,33 @@ class RealisticDemoSeeder extends Seeder
     private array $labelMap = [];
     private array $folderMap = [];
     private array $projectMap = [];
+    private array $projectPlan = [];
     private array $sprintMap = [];
     private array $taskMap = [];
     private array $taskMeta = [];
     private ?Workspace $workspace = null;
+    private int $folderMaxAt = 0;
+
+    /** Today's reference date for the snapshot — everything is finished before this. */
+    private string $today = '2026-06-07';
+
+    /**
+     * National holidays inside the testing window that are NOT worked.
+     * (Cuti bersama 15 May is intentionally treated as a normal working day.)
+     */
+    private array $holidays = ['2026-05-01', '2026-05-14'];
+
+    /** Names of the "less diligent" employees who don't fill a full 8h day. */
+    private array $lazyUsers = ['Mario', 'Charlie', 'Danny', 'Audi', 'Justin'];
+
+    /** Capacity ledger: remaining work minutes per user per date. */
+    private array $capRemaining = [];
+
+    /** Next available start time ('H:i:s') per user per date, to avoid overlaps. */
+    private array $dayCursor = [];
+
+    /** Memoised post-lunch resume timestamp (unix) per user per date. */
+    private array $lunchResume = [];
 
     public function run(): void
     {
@@ -130,6 +153,8 @@ class RealisticDemoSeeder extends Seeder
                 ['email' => $u['email']],
                 ['name' => $u['name'], 'password' => $password, 'hourly_rate' => $u['hourly_rate'], 'email_verified_at' => now()]
             );
+            // Accounts exist before the workspace is set up.
+            $this->stamp($user, $this->workTime('2026-04-21', 8, 16));
             $this->userMap[$u['name']] = $user;
         }
     }
@@ -141,7 +166,7 @@ class RealisticDemoSeeder extends Seeder
             'slug' => 'mis-department',
             'color' => '#6366F1',
         ]);
-        $this->stamp($this->workspace, '2026-04-23 08:30:00');
+        $this->stamp($this->workspace, '2026-04-23 08:37:51');
 
         $wsRoles = [
             'Leo' => 'owner', 'Gilbert' => 'owner',
@@ -162,7 +187,10 @@ class RealisticDemoSeeder extends Seeder
             ['name' => 'Data',        'color' => '#8B5CF6', 'members' => ['Leo', 'Gilbert', 'Mira', 'Clarissa', 'Stanley', 'Danny', 'Nicko', 'Amel']],
         ];
 
+        $cursor = $this->cursorOf($this->workspace);
+
         foreach ($spaces as $pos => $s) {
+            $cursor = $this->nextCursor($cursor, 4, 13);
             $space = Space::create([
                 'workspace_id' => $this->workspace->id,
                 'name' => $s['name'],
@@ -170,7 +198,7 @@ class RealisticDemoSeeder extends Seeder
                 'position' => $pos,
                 'created_by' => $this->userMap['Leo']->id,
             ]);
-            $this->stamp($space, $this->offsetTime('2026-04-23 09:00:00', $pos * 20));
+            $this->stamp($space, date('Y-m-d H:i:s', $cursor));
             $this->spaceMap[$s['name']] = $space;
 
             $memberData = [];
@@ -194,7 +222,9 @@ class RealisticDemoSeeder extends Seeder
 
         foreach ($this->spaceMap as $spaceName => $space) {
             $space->statuses()->delete();
+            $cursor = $this->cursorOf($space);
             foreach ($defs as $pos => $st) {
+                $cursor = $this->nextCursor($cursor, 1, 4);
                 $status = Status::create([
                     'space_id' => $space->id,
                     'name' => $st['name'],
@@ -205,7 +235,7 @@ class RealisticDemoSeeder extends Seeder
                     'is_default' => $st['is_default'],
                     'is_closed' => $st['is_closed'],
                 ]);
-                $this->stamp($status, $space->created_at->copy()->addMinutes($pos + 1)->format('Y-m-d H:i:s'));
+                $this->stamp($status, date('Y-m-d H:i:s', $cursor));
                 $this->statusMap[$spaceName . ':' . $st['name']] = $status;
             }
         }
@@ -226,9 +256,12 @@ class RealisticDemoSeeder extends Seeder
             ['name' => 'AI/ML',         'color' => '#A855F7'],
         ];
 
+        $cursor = strtotime('2026-04-23 10:' . str_pad((string) rand(2, 24), 2, '0', STR_PAD_LEFT) . ':' . str_pad((string) rand(0, 59), 2, '0', STR_PAD_LEFT));
+
         foreach ($labels as $i => $l) {
+            $cursor = $this->nextCursor($cursor, 1, 5);
             $label = Label::create(['workspace_id' => $this->workspace->id, 'name' => $l['name'], 'color' => $l['color']]);
-            $this->stamp($label, $this->offsetTime('2026-04-23 10:30:00', $i * 2));
+            $this->stamp($label, date('Y-m-d H:i:s', $cursor));
             $this->labelMap[$l['name']] = $label;
         }
     }
@@ -242,9 +275,12 @@ class RealisticDemoSeeder extends Seeder
             'Data' => [['name' => 'AI & ML', 'color' => '#A855F7'], ['name' => 'Catalog Intelligence', 'color' => '#6366F1']],
         ];
 
+        $cursor = strtotime('2026-04-24 08:' . str_pad((string) rand(18, 40), 2, '0', STR_PAD_LEFT) . ':' . str_pad((string) rand(0, 59), 2, '0', STR_PAD_LEFT));
+
         $folderIndex = 0;
         foreach ($folders as $spaceName => $list) {
             foreach ($list as $pos => $f) {
+                $cursor = $this->nextCursor($cursor, 2, 8);
                 $folder = Folder::create([
                     'space_id' => $this->spaceMap[$spaceName]->id,
                     'name' => $f['name'],
@@ -252,22 +288,52 @@ class RealisticDemoSeeder extends Seeder
                     'position' => $pos,
                     'created_by' => $this->userMap['Leo']->id,
                 ]);
-                $this->stamp($folder, $this->offsetTime('2026-04-24 08:30:00', $folderIndex * 8));
+                $this->stamp($folder, date('Y-m-d H:i:s', $cursor));
                 $this->folderMap[$f['name']] = $folder;
                 $folderIndex++;
             }
         }
+
+        // Remember when folder setup finished so projects start afterwards.
+        $this->folderMaxAt = $cursor;
     }
 
     private function seedProjects(): void
     {
         $projects = $this->getProjectDefinitions();
+        $weeks = $this->sprintWeeks();
+
+        // Kickoff plan: which sprint each project starts in, and how many tasks
+        // it carries. Totals to 149 tasks (23 late => exactly 15.4%). Projects
+        // are staggered: most start at Sprint 1, others are kicked off later in
+        // the month (and were created during the preceding sprint).
+        $plan = [];
+        for ($i = 0; $i < 12; $i++) $plan[] = ['k' => 0, 'count' => 7];
+        for ($i = 0; $i < 6; $i++)  $plan[] = ['k' => 1, 'count' => 6];
+        for ($i = 0; $i < 4; $i++)  $plan[] = ['k' => 2, 'count' => 6];
+        $plan[] = ['k' => 3, 'count' => 5];
+        shuffle($plan);
+
+        // Running cursor for the Sprint-1 cohort so they spread across 24 Apr.
+        $k0cursor = max($this->folderMaxAt, strtotime('2026-04-24 10:30:00'));
 
         foreach ($projects as $i => $p) {
             $space = $this->spaceMap[$p['space']];
             $folder = $this->folderMap[$p['folder']] ?? null;
             $statuses = ['In Progress', 'In Progress', 'To Do', 'Review', 'Backlog'];
             $statusName = $statuses[array_rand($statuses)];
+
+            $k = $plan[$i]['k'];
+            if ($k === 0) {
+                // Kicked off on the planning day, after all folders exist.
+                $k0cursor = $this->nextCursor($k0cursor, 8, 28);
+                $createdTs = $k0cursor;
+            } else {
+                // Decided/created during the previous sprint week.
+                $prev = $weeks[$k - 1];
+                $days = $this->getWorkingDays($prev['start'], $prev['end']);
+                $createdTs = strtotime($this->workTime($days[array_rand($days)], 9, 15));
+            }
 
             $project = Project::create([
                 'space_id' => $space->id,
@@ -276,8 +342,9 @@ class RealisticDemoSeeder extends Seeder
                 'status_id' => $this->statusMap[$p['space'] . ':' . $statusName]->id,
                 'created_by' => $this->userMap['Leo']->id,
             ]);
-            $this->stamp($project, $this->kickoffTime($i));
+            $this->stamp($project, date('Y-m-d H:i:s', $createdTs));
             $this->projectMap[$p['name']] = $project;
+            $this->projectPlan[$p['name']] = $plan[$i];
 
             // Assign members
             $devs = $this->getSpaceDevs($p['space']);
@@ -311,7 +378,13 @@ class RealisticDemoSeeder extends Seeder
         ];
 
         foreach ($this->projectMap as $projectName => $project) {
+            $cursor = $this->cursorOf($project);
+            $k = $this->projectPlan[$projectName]['k'] ?? 0;
             foreach ($weeks as $pos => $w) {
+                if ($pos < $k) {
+                    continue; // project didn't exist yet for earlier sprints
+                }
+                $cursor = $this->nextCursor($cursor, 1, 5);
                 $sprint = Sprint::create([
                     'space_id' => $project->space_id,
                     'project_id' => $project->id,
@@ -319,10 +392,10 @@ class RealisticDemoSeeder extends Seeder
                     'goal' => $goals[$pos],
                     'start_date' => $w['start'],
                     'end_date' => $w['end'],
-                    'is_active' => $pos === 2,
+                    'is_active' => false,
                     'position' => $pos,
                 ]);
-                $this->stamp($sprint, $project->created_at->copy()->addMinutes($pos + 1)->format('Y-m-d H:i:s'));
+                $this->stamp($sprint, date('Y-m-d H:i:s', $cursor));
                 $this->sprintMap[$projectName . ':' . $w['label']] = $sprint;
             }
         }
@@ -334,24 +407,24 @@ class RealisticDemoSeeder extends Seeder
         $supplementary = $this->getSupplementaryTasks();
         $weeks = $this->sprintWeeks();
 
-        // Build the full task list per project: domain-specific tasks topped up
-        // with realistic SDLC phase tasks so each project has at least 5 tasks.
+        // Task counts come from the kickoff plan (sums to 149 => 23 late = 15.4%).
         $projectTasks = [];
         $grandTotal = 0;
         foreach ($templates as $projectName => $curated) {
-            $target = rand(5, 7);
+            $target = $this->projectPlan[$projectName]['count'];
             $tasks = $curated;
             if (count($tasks) < $target) {
                 $pool = $supplementary;
                 shuffle($pool);
                 $tasks = array_merge($tasks, array_slice($pool, 0, $target - count($tasks)));
             }
+            $tasks = array_slice($tasks, 0, $target);
             $projectTasks[$projectName] = $tasks;
             $grandTotal += count($tasks);
         }
 
-        // Apply the 16% overdue quota across ALL tasks of ALL projects.
-        $lateQuota = (int) floor($grandTotal * 0.16);
+        // Exactly 15.4% of all tasks finish after their due date.
+        $lateQuota = (int) round($grandTotal * 0.154);
         $indices = range(0, $grandTotal - 1);
         shuffle($indices);
         $lateKeys = array_fill_keys(array_slice($indices, 0, $lateQuota), true);
@@ -359,37 +432,53 @@ class RealisticDemoSeeder extends Seeder
         $globalIdx = 0;
         foreach ($projectTasks as $projectName => $tasks) {
             $project = $this->projectMap[$projectName];
-            $spaceName = $project->space->name;
-            $devs = $this->getSpaceDevs($spaceName);
             $count = count($tasks);
+            $k = $this->projectPlan[$projectName]['k'];
+            $span = 4 - $k; // sprints available from kickoff to the end
 
             foreach ($tasks as $pos => $tDef) {
                 $isLate = isset($lateKeys[$globalIdx]);
                 $globalIdx++;
 
-                // Spread tasks across the 4 sprints by their order in the project.
-                $s0 = min((int) floor($pos / $count * 4), 3);
-                $s1 = min($s0 + rand(1, 2) - 1, 3);
+                // Spread tasks across the project's own active sprints (k..3).
+                $s0 = min($k + (int) floor($pos / max(1, $count) * $span), 3);
+                $s1 = min($s0 + rand(0, 1), 3);
 
-                // Period already passed: every task is completed (Done).
+                // Period already passed: every task ended up Done.
                 $statusName = 'Done';
                 $priority = [1, 2, 2, 3, 3, 3][array_rand([1, 2, 2, 3, 3, 3])];
                 $createdBy = $this->userMap[['Leo', 'Gilbert'][rand(0, 1)]];
 
+                $startDate = $weeks[$s0]['start'];
+                $dueDate = $weeks[$s1]['end'];
+
                 $task = Task::create([
                     'project_id' => $project->id,
-                    'status_id' => $this->statusMap[$spaceName . ':' . $statusName]->id,
+                    'status_id' => $this->statusMap[$project->space->name . ':' . $statusName]->id,
                     'priority_level' => $priority,
                     'name' => $tDef['name'],
                     'description' => $tDef['desc'],
-                    'start_date' => $weeks[$s0]['start'],
-                    'due_date' => $weeks[$s1]['end'],
+                    'start_date' => $startDate,
+                    'due_date' => $dueDate,
                     'time_estimate' => [960, 1200, 1440, 1920, 2400][array_rand([960, 1200, 1440, 1920, 2400])],
                     'position' => $pos,
                     'created_by' => $createdBy->id,
                 ]);
 
-                $createdAt = $weeks[$s0]['start'] . ' 08:' . str_pad((string) (($pos * 5) % 50), 2, '0', STR_PAD_LEFT) . ':00';
+                // Tasks are created during sprint planning — the working day
+                // before the sprint starts — so they predate all their subtasks
+                // while still coming after the project itself.
+                $planningDay = $this->previousWorkingDay($startDate);
+                $plannedTs = strtotime($this->workTime($planningDay, 13, 16));
+                $dayEnd = strtotime($planningDay . ' 16:55:00');
+                if ($plannedTs > $dayEnd) {
+                    $plannedTs = $dayEnd - rand(0, 3600);
+                }
+                $minTs = $this->cursorOf($project) + rand(600, 2400);
+                if ($plannedTs < $minTs) {
+                    $plannedTs = $minTs;
+                }
+                $createdAt = date('Y-m-d H:i:s', $plannedTs);
                 $this->stamp($task, $createdAt);
 
                 $this->taskMap[$projectName . ':' . $pos] = $task;
@@ -398,14 +487,12 @@ class RealisticDemoSeeder extends Seeder
                     's0' => $s0,
                     's1' => $s1,
                     'createdAt' => $createdAt,
+                    'start' => $startDate,
+                    'due' => $dueDate,
                 ];
 
-                // Assignees
-                $assignees = $devs;
-                shuffle($assignees);
-                foreach (array_slice($assignees, 0, min(rand(1, 3), count($devs))) as $a) {
-                    $task->assignees()->attach($this->userMap[$a]->id, ['assigned_by' => $createdBy->id]);
-                }
+                // NOTE: task-level assignees are intentionally NOT seeded — in this
+                // workflow assignees live on subtasks and are derived upward.
 
                 // Labels
                 foreach ($tDef['labels'] ?? [] as $lName) {
@@ -426,111 +513,160 @@ class RealisticDemoSeeder extends Seeder
             'Deployment & monitoring setup', 'Dokumentasi teknis & user guide', 'Performance testing & tuning',
             'Security audit & hardening', 'UAT preparation & support',
         ];
-        $weeks = $this->sprintWeeks();
 
-        foreach ($this->taskMap as $taskKey => $task) {
+        // Process tasks in chronological order (by sprint start) so the team's
+        // daily capacity fills up naturally from the first sprint onward.
+        $taskKeys = array_keys($this->taskMap);
+        usort($taskKeys, fn($a, $b) => strcmp($this->taskMeta[$a]['start'], $this->taskMeta[$b]['start']));
+
+        foreach ($taskKeys as $taskKey) {
+            $task = $this->taskMap[$taskKey];
             $projectName = explode(':', $taskKey)[0];
             $meta = $this->taskMeta[$taskKey];
             $project = $this->projectMap[$projectName];
             $spaceName = $project->space->name;
             $devs = $this->getSpaceDevs($spaceName);
 
-            $s0 = $meta['s0'];
-            $s1 = $meta['s1'];
-            $spanSprints = range($s0, $s1);
-            $isLate = $meta['isLate'];
+            $taskDays = $this->getWorkingDays($meta['start'], $meta['due']);
+            if (empty($taskDays)) {
+                $taskDays = [$meta['start']];
+            }
+            $L = count($taskDays);
 
             $numSubtasks = rand(3, 6);
-            $shuffled = $subtaskNames;
-            shuffle($shuffled);
-            $prevSubtask = null;
-            $maxUpdated = $meta['createdAt'];
+            $names = $subtaskNames;
+            shuffle($names);
 
-            // For late tasks, the trailing subtask(s) are completed AFTER their
-            // due date (schedule slippage). The rest finish on time.
-            $lateFrom = $isLate ? $numSubtasks - rand(1, 2) : $numSubtasks;
+            $maxCompleted = null;
+            $maxUpdated = $meta['createdAt'];
+            $lastCompleter = $task->created_by;
+            $prevSubtask = null;
+            $doneStatusId = $this->statusMap[$spaceName . ':Done']->id;
 
             for ($i = 0; $i < $numSubtasks; $i++) {
-                $sprintIdx = $spanSprints[(int) floor($i / max(1, $numSubtasks) * count($spanSprints))] ?? $s1;
-                $sprintIdx = min($sprintIdx, 3);
-                $sprint = $this->sprintMap[$projectName . ':Sprint ' . ($sprintIdx + 1)] ?? null;
-
-                $sprintDays = $this->getWorkingDays($weeks[$sprintIdx]['start'], $weeks[$sprintIdx]['end']);
-                $dayCount = count($sprintDays);
-                $startIdx = $i % $dayCount;
-                $startDay = $sprintDays[$startIdx];
-                $endDay = $sprintDays[min($startIdx + rand(1, 2), $dayCount - 1)];
-
-                $isCompletedLate = $i >= $lateFrom;
-
-                // Completion: on-time finishes on/before due date, late finishes
-                // 1-6 working days after it.
-                if ($isCompletedLate) {
-                    $completedDay = $this->addWorkingDays($endDay, rand(1, 6));
-                } else {
-                    $completedDay = $endDay;
-                }
-                $completedAt = $completedDay . ' ' . rand(14, 16) . ':' . str_pad((string) rand(0, 59), 2, '0', STR_PAD_LEFT) . ':00';
-
-                $timeEstimate = [120, 180, 240, 300, 360, 480][array_rand([120, 180, 240, 300, 360, 480])];
-                $optimistic = (int) ($timeEstimate * 0.7);
-                $pessimistic = (int) ($timeEstimate * 1.5);
-                // Late subtasks tend to consume more time than estimated.
-                $timeSpent = $isCompletedLate ? rand($timeEstimate, (int) ($timeEstimate * 1.8)) : rand($optimistic, $pessimistic);
-
                 $assignee = $devs[array_rand($devs)];
-                $createdAt = $startDay . ' 09:' . str_pad((string) (($i * 7) % 50), 2, '0', STR_PAD_LEFT) . ':00';
-                $updatedAt = $completedAt;
-                if ($updatedAt > $maxUpdated) {
-                    $maxUpdated = $updatedAt;
+                $isTailLate = $meta['isLate'] && $i === $numSubtasks - 1;
+
+                // Working-day segment of the task window for this subtask.
+                $segStart = (int) floor($i * $L / $numSubtasks);
+                $segEnd = min($L - 1, max($segStart, (int) floor(($i + 1) * $L / $numSubtasks)));
+                $workDays = array_slice($taskDays, $segStart, $segEnd - $segStart + 1);
+                if (empty($workDays)) {
+                    $workDays = [$taskDays[min($segStart, $L - 1)]];
+                }
+                $dueDate = end($workDays) . ' 17:00:00';
+                $startDay = $workDays[0];
+
+                // Effort target (minutes) + PERT estimates.
+                $estimate = [150, 210, 270, 330, 420, 480][array_rand([150, 210, 270, 330, 420, 480])];
+                $factor = in_array($assignee, $this->lazyUsers, true) ? rand(70, 105) : rand(90, 130);
+                $target = (int) round($estimate * $factor / 100);
+                if ($isTailLate) {
+                    $target = (int) round($target * rand(110, 160) / 100);
+                }
+                $optimistic = (int) round($estimate * 0.7);
+                $pessimistic = (int) round($estimate * 1.5);
+
+                // Schedule work across the allowed days, respecting daily capacity.
+                $remaining = $target;
+                $logged = 0;
+                $firstStart = null;
+                $lastEnd = null;
+                $sessions = [];
+                foreach ($workDays as $day) {
+                    if ($remaining <= 0) {
+                        break;
+                    }
+                    $chunk = min($remaining, rand(120, 300));
+                    foreach ($this->placeBlock($assignee, $day, $chunk) as $b) {
+                        $sessions[] = $b;
+                        $firstStart ??= $b[0];
+                        $lastEnd = $b[1];
+                        $logged += $b[2];
+                        $remaining -= $b[2];
+                    }
+                }
+
+                // Late tasks: their final subtask does a closing session AFTER the
+                // deadline, so the parent task's completion slips past its due date.
+                if ($isTailLate) {
+                    $postDay = $this->addWorkingDays($meta['due'], rand(1, 4));
+                    $blocks = [];
+                    for ($k = 0; $k < 6 && empty($blocks); $k++) {
+                        $blocks = $this->placeBlock($assignee, $postDay, rand(60, 180));
+                        if (empty($blocks)) {
+                            $postDay = $this->addWorkingDays($postDay, 1);
+                        }
+                    }
+                    foreach ($blocks as $b) {
+                        $sessions[] = $b;
+                        $firstStart ??= $b[0];
+                        $lastEnd = $b[1];
+                        $logged += $b[2];
+                    }
+                }
+
+                // Fallbacks if every candidate day happened to be full.
+                $createdAtSub = $firstStart ?? $this->workTime($startDay, 8, 9);
+                $completedAt = $lastEnd ?? sprintf('%s %02d:%02d:%02d', end($workDays), rand(15, 16), rand(0, 59), rand(0, 59));
+
+                if ($completedAt > $maxUpdated) {
+                    $maxUpdated = $completedAt;
+                }
+                if ($maxCompleted === null || $completedAt > $maxCompleted) {
+                    $maxCompleted = $completedAt;
+                    $lastCompleter = $this->userMap[$assignee]->id;
                 }
 
                 $subtask = Subtask::create([
                     'task_id' => $task->id,
-                    'sprint_id' => $sprint?->id,
-                    'status_id' => $this->statusMap[$spaceName . ':Done']->id,
+                    'sprint_id' => $this->sprintForDate($projectName, $startDay)?->id,
+                    'status_id' => $doneStatusId,
                     'priority_level' => [1, 2, 2, 3, 3, 4][array_rand([1, 2, 2, 3, 3, 4])],
-                    'name' => $shuffled[$i % count($shuffled)],
+                    'name' => $names[$i % count($names)],
                     'start_date' => $startDay . ' 08:00:00',
-                    'due_date' => $endDay . ' 17:00:00',
+                    'due_date' => $dueDate,
                     'baseline_start_date' => $startDay . ' 08:00:00',
-                    'baseline_due_date' => $endDay . ' 17:00:00',
+                    'baseline_due_date' => $dueDate,
                     'completed_at' => $completedAt,
-                    'time_estimate' => $timeEstimate,
+                    'time_estimate' => $estimate,
                     'optimistic_estimate' => $optimistic,
-                    'most_likely_estimate' => $timeEstimate,
+                    'most_likely_estimate' => $estimate,
                     'pessimistic_estimate' => $pessimistic,
-                    'time_spent' => $timeSpent,
+                    'time_spent' => $logged,
                     'progress' => 100,
                     'position' => $i,
                     'created_by' => $this->userMap[$assignee]->id,
                     'completed_by' => $this->userMap[$assignee]->id,
                 ]);
-                $this->stamp($subtask, $createdAt, $updatedAt);
+                $this->stamp($subtask, $createdAtSub, $completedAt);
 
+                // Exactly one assignee per subtask (PT XYZ workflow).
                 $subtask->assignees()->attach($this->userMap[$assignee]->id, ['assigned_by' => $this->userMap['Leo']->id]);
 
-                // Dependency chain
-                if ($prevSubtask) {
-                    $subtask->dependencies()->attach($prevSubtask->id, ['dependency_type' => 'blocks']);
-                }
-                $prevSubtask = $subtask;
-
-                // Time entry
-                if ($timeSpent > 0) {
-                    $startedAt = $startDay . ' ' . str_pad((string) rand(10, 11), 2, '0', STR_PAD_LEFT) . ':' . str_pad((string) rand(0, 30), 2, '0', STR_PAD_LEFT) . ':00';
-                    $endedAt = $startDay . ' ' . str_pad((string) rand(14, 16), 2, '0', STR_PAD_LEFT) . ':' . str_pad((string) rand(0, 59), 2, '0', STR_PAD_LEFT) . ':00';
+                // One time entry per work block.
+                foreach ($sessions as $b) {
                     $entry = TimeEntry::create([
                         'subtask_id' => $subtask->id,
                         'user_id' => $this->userMap[$assignee]->id,
-                        'duration' => $timeSpent,
-                        'started_at' => $startedAt,
-                        'ended_at' => $endedAt,
+                        'duration' => $b[2],
+                        'started_at' => $b[0],
+                        'ended_at' => $b[1],
                         'is_billable' => (bool) rand(0, 1),
                         'is_running' => false,
                     ]);
-                    $this->stamp($entry, $startedAt);
+                    $this->stamp($entry, $b[0]);
                 }
+
+                // Selective dependency chain (~45% of consecutive subtasks).
+                if ($prevSubtask && rand(1, 100) <= 45) {
+                    $subtask->dependencies()->attach($prevSubtask->id, ['dependency_type' => 'blocks']);
+                    DB::table('subtask_dependencies')
+                        ->where('subtask_id', $subtask->id)
+                        ->where('depends_on_subtask_id', $prevSubtask->id)
+                        ->update(['created_at' => $createdAtSub, 'updated_at' => $createdAtSub]);
+                }
+                $prevSubtask = $subtask;
 
                 // Checklist (30% of subtasks) — all checked since the subtask is done.
                 if (rand(1, 10) <= 3) {
@@ -544,14 +680,32 @@ class RealisticDemoSeeder extends Seeder
                             'position' => $cPos,
                             'created_by' => $this->userMap[$assignee]->id,
                         ]);
-                        $this->stamp($checklist, $createdAt);
+                        $this->stamp($checklist, $createdAtSub);
                     }
                 }
             }
 
-            // Parent task reflects the last activity on its subtasks.
-            $this->stamp($task, $meta['createdAt'], $maxUpdated);
+            // Parent task: completed at the latest subtask completion, by whoever
+            // finished last.
+            $task->forceFill([
+                'created_at' => $meta['createdAt'],
+                'updated_at' => $maxUpdated,
+                'completed_at' => $maxCompleted,
+                'completed_by' => $lastCompleter,
+            ])->saveQuietly();
         }
+    }
+
+    /** Find the sprint of a project that contains the given date. */
+    private function sprintForDate(string $projectName, string $date): ?Sprint
+    {
+        foreach ($this->sprintWeeks() as $idx => $w) {
+            if ($date >= $w['start'] && $date <= $w['end']) {
+                return $this->sprintMap[$projectName . ':Sprint ' . ($idx + 1)] ?? null;
+            }
+        }
+        // Dates after the planned window (late slippage) belong to the last sprint.
+        return $this->sprintMap[$projectName . ':Sprint 4'] ?? null;
     }
 
     private function seedComments(): void
@@ -590,12 +744,17 @@ class RealisticDemoSeeder extends Seeder
             $numComments = rand(2, 4);
             for ($i = 0; $i < $numComments; $i++) {
                 $day = $validDays[array_rand($validDays)];
+                $ts = $this->randomWorkTime($day);
+                // A comment can never predate the task it belongs to.
+                if ($ts <= $task->created_at->format('Y-m-d H:i:s')) {
+                    $ts = date('Y-m-d H:i:s', $this->nextCursor($this->cursorOf($task), 30, 180));
+                }
                 $comment = Comment::create([
                     'task_id' => $task->id,
                     'user_id' => $this->userMap[$members[array_rand($members)]]->id,
                     'content' => sprintf($templates[array_rand($templates)], rand(30, 90)),
                 ]);
-                $this->stamp($comment, $this->randomWorkTime($day));
+                $this->stamp($comment, $ts);
             }
         }
     }
@@ -604,11 +763,15 @@ class RealisticDemoSeeder extends Seeder
     {
         foreach ($this->taskMap as $taskKey => $task) {
             $meta = $this->taskMeta[$taskKey];
+            $userId = $task->created_by;
 
-            // "created" activity at the moment the task was created.
+            $createdTs = strtotime($meta['createdAt']);
+            $doneTs = strtotime($task->completed_at->format('Y-m-d H:i:s'));
+
+            // "created" — logged at sprint planning.
             $created = Activity::create([
                 'workspace_id' => $this->workspace->id,
-                'user_id' => $task->created_by,
+                'user_id' => $userId,
                 'subject_type' => Task::class,
                 'subject_id' => $task->id,
                 'action' => 'created',
@@ -616,25 +779,45 @@ class RealisticDemoSeeder extends Seeder
             ]);
             $this->stamp($created, $meta['createdAt']);
 
-            // Every task is completed — log the status change to Done.
-            $completedActivity = Activity::create([
-                'workspace_id' => $this->workspace->id,
-                'user_id' => $task->created_by,
-                'subject_type' => Task::class,
-                'subject_id' => $task->id,
-                'action' => 'status_changed',
-                'properties' => ['name' => $task->name],
-                'changes' => ['status' => ['old' => 'In Progress', 'new' => 'Done']],
-            ]);
-            $this->stamp($completedActivity, $task->updated_at->format('Y-m-d H:i:s'));
+            // Build the status journey: To Do -> In Progress -> Review -> Done,
+            // keeping only the transitions that fit strictly between create & done.
+            $points = [];
+            $ipTs = strtotime($this->workTime($meta['start'], 9, 11)); // work begins
+            if ($ipTs > $createdTs && $ipTs < $doneTs) {
+                $points[] = [$ipTs, 'In Progress'];
+            }
+            $rvTs = $doneTs - rand(2, 5) * 3600; // moved to review a few hours before done
+            $lastTs = empty($points) ? $createdTs : end($points)[0];
+            if ($rvTs > $lastTs && $rvTs < $doneTs) {
+                $points[] = [$rvTs, 'Review'];
+            }
+            $points[] = [$doneTs, 'Done'];
+
+            $prevStatus = 'To Do';
+            foreach ($points as [$ts, $newStatus]) {
+                $activity = Activity::create([
+                    'workspace_id' => $this->workspace->id,
+                    'user_id' => $userId,
+                    'subject_type' => Task::class,
+                    'subject_id' => $task->id,
+                    'action' => 'status_changed',
+                    'properties' => ['name' => $task->name],
+                    'changes' => ['status' => ['old' => $prevStatus, 'new' => $newStatus]],
+                ]);
+                $this->stamp($activity, date('Y-m-d H:i:s', $ts));
+                $prevStatus = $newStatus;
+            }
         }
     }
 
     private function seedViews(): void
     {
         foreach ($this->spaceMap as $space) {
-            View::create(['space_id' => $space->id, 'user_id' => $this->userMap['Leo']->id, 'name' => 'All Tasks', 'type' => 'list', 'is_default' => true, 'is_private' => false, 'position' => 0]);
-            View::create(['space_id' => $space->id, 'user_id' => $this->userMap['Gilbert']->id, 'name' => 'Board View', 'type' => 'board', 'is_default' => false, 'is_private' => false, 'position' => 1]);
+            $base = $this->cursorOf($space);
+            $v1 = View::create(['space_id' => $space->id, 'user_id' => $this->userMap['Leo']->id, 'name' => 'All Tasks', 'type' => 'list', 'is_default' => true, 'is_private' => false, 'position' => 0]);
+            $this->stamp($v1, date('Y-m-d H:i:s', $this->nextCursor($base, 1, 6)));
+            $v2 = View::create(['space_id' => $space->id, 'user_id' => $this->userMap['Gilbert']->id, 'name' => 'Board View', 'type' => 'board', 'is_default' => false, 'is_private' => false, 'position' => 1]);
+            $this->stamp($v2, date('Y-m-d H:i:s', $this->nextCursor($base, 7, 25)));
         }
     }
 
@@ -662,10 +845,20 @@ class RealisticDemoSeeder extends Seeder
         $current = new \DateTime($start);
         $endDt = new \DateTime($end);
         while ($current <= $endDt) {
-            if ((int)$current->format('N') <= 5) $days[] = $current->format('Y-m-d');
+            $d = $current->format('Y-m-d');
+            if ((int) $current->format('N') <= 5 && !in_array($d, $this->holidays, true)) {
+                $days[] = $d;
+            }
             $current->modify('+1 day');
         }
         return $days;
+    }
+
+    /** Whether a date is an actual working day (weekday and not a holiday). */
+    private function isWorkingDay(string $date): bool
+    {
+        return (int) (new \DateTime($date))->format('N') <= 5
+            && !in_array($date, $this->holidays, true);
     }
 
     private function sprintWeeks(): array
@@ -679,7 +872,7 @@ class RealisticDemoSeeder extends Seeder
     }
 
     /**
-     * Add N working days (Mon-Fri) to a date and return the resulting date.
+     * Add N working days (Mon-Fri, skipping holidays) to a date and return it.
      */
     private function addWorkingDays(string $date, int $days): string
     {
@@ -687,10 +880,20 @@ class RealisticDemoSeeder extends Seeder
         $added = 0;
         while ($added < $days) {
             $current->modify('+1 day');
-            if ((int) $current->format('N') <= 5) {
+            if ((int) $current->format('N') <= 5 && !in_array($current->format('Y-m-d'), $this->holidays, true)) {
                 $added++;
             }
         }
+        return $current->format('Y-m-d');
+    }
+
+    /** Step back to the nearest working day strictly before $date. */
+    private function previousWorkingDay(string $date): string
+    {
+        $current = new \DateTime($date);
+        do {
+            $current->modify('-1 day');
+        } while ((int) $current->format('N') > 5 || in_array($current->format('Y-m-d'), $this->holidays, true));
         return $current->format('Y-m-d');
     }
 
@@ -699,6 +902,131 @@ class RealisticDemoSeeder extends Seeder
         $slots = array_merge(range(8, 11), range(13, 16));
         $hour = $slots[array_rand($slots)];
         return sprintf('%s %02d:%02d:%02d', $date, $hour, rand(0, 59), rand(0, 59));
+    }
+
+    /**
+     * Pick a realistic time on a given date within working hours, with
+     * non-rounded minutes and seconds (so timestamps rarely land on :00).
+     * The 12:00 lunch hour is skipped.
+     */
+    private function workTime(string $date, int $minHour = 8, int $maxHour = 16): string
+    {
+        $hour = rand($minHour, $maxHour);
+        if ($hour === 12) {
+            $hour = 13; // skip lunch
+        }
+        return sprintf('%s %02d:%02d:%02d', $date, $hour, rand(0, 59), rand(0, 59));
+    }
+
+    /**
+     * Advance a unix-time cursor by an irregular human gap (a random number of
+     * minutes within [$minMin, $maxMin] plus random seconds), then keep it
+     * inside working hours — rolling over the lunch hour, the end of the day,
+     * and weekends as needed. Produces organic, non-uniform spacing.
+     */
+    private function nextCursor(int $cursor, int $minMin, int $maxMin): int
+    {
+        $cursor += rand($minMin * 60, $maxMin * 60);
+
+        if ((int) date('H', $cursor) === 12) {
+            $cursor += 3600; // skip the lunch hour
+        }
+
+        if ((int) date('H', $cursor) >= 17) {
+            // Roll over to the next working morning at a random-ish start time.
+            $cursor = strtotime(date('Y-m-d', strtotime('+1 day', $cursor)) . ' 08:00:00')
+                + rand(0, 55 * 60) + rand(0, 59);
+            while ((int) date('N', $cursor) > 5) {
+                $cursor = strtotime('+1 day', $cursor);
+            }
+        }
+
+        return $cursor;
+    }
+
+    /** Convert a model's stored created_at into a unix timestamp cursor. */
+    private function cursorOf($model): int
+    {
+        return strtotime($model->created_at->format('Y-m-d H:i:s'));
+    }
+
+    /**
+     * Lazily initialise (and return) a user's remaining work-minute budget for a
+     * given working day. Diligent staff have a full 8h (480m); the "lazy" few
+     * have a lighter, variable day (~6-7h).
+     */
+    private function capacityFor(string $userName, string $date): int
+    {
+        if (!isset($this->capRemaining[$userName][$date])) {
+            if (in_array($userName, $this->lazyUsers, true)) {
+                $this->capRemaining[$userName][$date] = rand(360, 430); // ~6-7h
+                $this->dayCursor[$userName][$date] = sprintf('08:%02d:%02d', rand(3, 28), rand(0, 59));
+            } else {
+                $this->capRemaining[$userName][$date] = 480; // full 8h
+                $this->dayCursor[$userName][$date] = sprintf('08:00:%02d', rand(0, 45));
+            }
+        }
+        return $this->capRemaining[$userName][$date];
+    }
+
+    /**
+     * Place one work block of up to $minutes for a user on a date, splitting
+     * around the 12:00-13:00 lunch break and never crossing 17:30. Returns a
+     * list of [startedAt, endedAt, minutes] entries (1 or 2), or [] if the day
+     * is already full. Updates the capacity ledger and day cursor.
+     *
+     * @return array<int, array{0:string,1:string,2:int}>
+     */
+    private function placeBlock(string $userName, string $date, int $minutes): array
+    {
+        $remaining = $this->capacityFor($userName, $date);
+        if ($remaining <= 0 || $minutes <= 0) {
+            return [];
+        }
+        $minutes = min($minutes, $remaining);
+
+        $cursor = strtotime($date . ' ' . $this->dayCursor[$userName][$date]);
+        $noon = strtotime($date . ' 12:00:00');
+        if (!isset($this->lunchResume[$userName][$date])) {
+            // People drift back from lunch a few minutes after 13:00.
+            $this->lunchResume[$userName][$date] = strtotime($date . ' 13:00:00') + rand(60, 600);
+        }
+        $afternoon = $this->lunchResume[$userName][$date];
+        $hardStop = strtotime($date . ' 17:40:00');
+
+        // If sitting inside the lunch hour, jump to the afternoon.
+        if ($cursor >= $noon && $cursor < $afternoon) {
+            $cursor = $afternoon;
+        }
+
+        $entries = [];
+        $secs = $minutes * 60;
+
+        if ($cursor < $noon) {
+            $morningAvail = $noon - $cursor;
+            if ($secs <= $morningAvail) {
+                $end = $cursor + $secs;
+                $entries[] = [date('Y-m-d H:i:s', $cursor), date('Y-m-d H:i:s', $end), $minutes];
+                $cursor = ($end >= $noon) ? $afternoon : $end;
+            } else {
+                // Split across lunch: morning part, then continue after 13:00.
+                $entries[] = [date('Y-m-d H:i:s', $cursor), date('Y-m-d H:i:s', $noon), (int) ($morningAvail / 60)];
+                $rest = $secs - $morningAvail;
+                $end = min($afternoon + $rest, $hardStop);
+                $entries[] = [date('Y-m-d H:i:s', $afternoon), date('Y-m-d H:i:s', $end), (int) (($end - $afternoon) / 60)];
+                $cursor = $end;
+            }
+        } else {
+            $end = min($cursor + $secs, $hardStop);
+            $entries[] = [date('Y-m-d H:i:s', $cursor), date('Y-m-d H:i:s', $end), (int) (($end - $cursor) / 60)];
+            $cursor = $end;
+        }
+
+        $logged = array_sum(array_column($entries, 2));
+        $this->capRemaining[$userName][$date] = max(0, $remaining - $logged);
+        $this->dayCursor[$userName][$date] = date('H:i:s', $cursor);
+
+        return $entries;
     }
 
     /**
@@ -714,45 +1042,39 @@ class RealisticDemoSeeder extends Seeder
     }
 
     /**
-     * Add minutes to a base datetime string (simple, same-day offsets).
-     */
-    private function offsetTime(string $base, int $minutes): string
-    {
-        return date('Y-m-d H:i:s', strtotime($base) + $minutes * 60);
-    }
-
-    /**
-     * Staggered kickoff timestamps on 24 April 2026 (planning day),
-     * skipping the 12:00-13:00 lunch break.
-     */
-    private function kickoffTime(int $index, int $stepMin = 10): string
-    {
-        $t = strtotime('2026-04-24 09:00:00') + $index * $stepMin * 60;
-        if ((int) date('H', $t) === 12) {
-            $t += 3600; // skip lunch
-        }
-        if ((int) date('H', $t) >= 17) {
-            $t = strtotime('2026-04-24 16:30:00');
-        }
-        return date('Y-m-d H:i:s', $t);
-    }
-
-    /**
-     * Align pivot table timestamps (which Eloquent sets to now() on attach)
-     * to the planning window so they stay within the project timeline.
+     * Align pivot table timestamps (Eloquent sets them to now() on attach) to
+     * the project timeline, with per-row jitter anchored to the related entity
+     * so memberships/labels never predate what they belong to.
      */
     private function backfillPivotTimestamps(): void
     {
-        $setup = '2026-04-23 09:00:00';
-        $kickoff = '2026-04-24 09:00:00';
-        $sprintStart = '2026-04-27 08:00:00';
+        // Workspace & space memberships happen during the setup morning.
+        foreach (DB::table('workspace_members')->pluck('id') as $id) {
+            $ts = $this->workTime('2026-04-23', 8, 11);
+            DB::table('workspace_members')->where('id', $id)->update(['created_at' => $ts, 'updated_at' => $ts]);
+        }
+        foreach (DB::table('space_members')->pluck('id') as $id) {
+            $ts = $this->workTime('2026-04-23', 8, 11);
+            DB::table('space_members')->where('id', $id)->update(['created_at' => $ts, 'updated_at' => $ts]);
+        }
 
-        DB::table('workspace_members')->update(['created_at' => $setup, 'updated_at' => $setup]);
-        DB::table('space_members')->update(['created_at' => $setup, 'updated_at' => $setup]);
-        DB::table('project_members')->update(['created_at' => $kickoff, 'updated_at' => $kickoff]);
-        DB::table('task_labels')->update(['created_at' => $kickoff, 'updated_at' => $kickoff]);
-        DB::table('subtask_labels')->update(['created_at' => $sprintStart, 'updated_at' => $sprintStart]);
-        DB::table('subtask_dependencies')->update(['created_at' => $sprintStart, 'updated_at' => $sprintStart]);
+        // Project members are added shortly after each project is created.
+        foreach ($this->projectMap as $project) {
+            $base = $this->cursorOf($project);
+            foreach (DB::table('project_members')->where('project_id', $project->id)->pluck('id') as $id) {
+                $ts = date('Y-m-d H:i:s', $this->nextCursor($base, 1, 40));
+                DB::table('project_members')->where('id', $id)->update(['created_at' => $ts, 'updated_at' => $ts]);
+            }
+        }
+
+        // Task labels are attached when the task itself is created.
+        foreach ($this->taskMap as $task) {
+            $base = $this->cursorOf($task);
+            foreach (DB::table('task_labels')->where('task_id', $task->id)->pluck('id') as $id) {
+                $ts = date('Y-m-d H:i:s', $base + rand(20, 600));
+                DB::table('task_labels')->where('id', $id)->update(['created_at' => $ts, 'updated_at' => $ts]);
+            }
+        }
     }
 
     private function getProjectDefinitions(): array
