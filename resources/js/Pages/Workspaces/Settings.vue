@@ -550,7 +550,7 @@ const deleteWorkspace = () => {
                         <div v-if="isAdmin" class="member-actions">
                             <v-btn icon variant="text" size="x-small" color="info"
                                 :href="route('workspaces.members.report', [workspace.id, member.id])"
-                                title="Lihat Report">
+                                title="View Report">
                                 <v-icon size="15">mdi-chart-box-outline</v-icon>
                             </v-btn>
                             <v-btn icon variant="text" size="x-small" color="grey" @click="openEditUserDialog(member)">

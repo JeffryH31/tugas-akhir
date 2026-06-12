@@ -275,13 +275,13 @@ useIdleDetector({
     onIdle: () => {
         const timerRunning = !!runningTimer.value;
         const message = timerRunning
-            ? 'Kamu idle tapi timer masih berjalan! Harap hentikan jika tidak bekerja.'
-            : 'Kamu sudah tidak aktif selama 5 menit.';
+            ? 'You are idle but a timer is still running! Please stop it if you are not working.'
+            : 'You have been inactive for 5 minutes.';
         const color = timerRunning ? 'warning' : 'info';
 
-        // Browser notification (jika izin sudah diberikan)
+        // Browser notification (if permission has been granted)
         if ('Notification' in window && Notification.permission === 'granted') {
-            new Notification(timerRunning ? '⚠️ Timer Masih Berjalan' : 'Kamu Idle', {
+            new Notification(timerRunning ? '⚠️ Timer Still Running' : 'You Are Idle', {
                 body: message,
                 icon: '/favicon.ico',
             });
@@ -290,7 +290,7 @@ useIdleDetector({
         }
     },
     onActive: () => {
-        showSnackbar('Kamu kembali aktif.', 'success');
+        showSnackbar('You are back.', 'success');
     },
 });
 
@@ -298,7 +298,7 @@ useIdleDetector({
 onMounted(() => {
     startGlobalTimerInterval();
 
-    // Minta izin browser notification (untuk idle alert)
+    // Request browser notification permission (for idle alerts)
     if ('Notification' in window && Notification.permission === 'default') {
         Notification.requestPermission();
     }

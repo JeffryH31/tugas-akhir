@@ -1023,11 +1023,11 @@ const removeSuccessor = (suc) =>
             </span>
             <v-chip v-if="localTask.is_completed_late" color="error" size="x-small" variant="flat">
               <v-icon start size="12">mdi-clock-alert-outline</v-icon>
-              Terlambat
+              Late
             </v-chip>
             <v-chip v-else color="success" size="x-small" variant="flat">
               <v-icon start size="12">mdi-check</v-icon>
-              Tepat waktu
+              On time
             </v-chip>
           </div>
         </div>
