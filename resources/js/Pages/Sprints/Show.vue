@@ -60,7 +60,7 @@ const goToSprintIndex = () => {
     router.visit(route('projects.show', {
         workspace: props.workspace.id,
         space: props.space.id,
-        list: activeListId.value,
+        project: activeListId.value,
         view: 'sprint',
         sprint_id: props.sprint.id,
     }));

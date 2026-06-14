@@ -339,6 +339,7 @@ class RealisticDemoSeeder extends Seeder
                 'space_id' => $space->id,
                 'folder_id' => $folder?->id,
                 'name' => $p['name'],
+                'description' => $this->getProjectDescription($p['name']),
                 'status_id' => $this->statusMap[$p['space'] . ':' . $statusName]->id,
                 'created_by' => $this->userMap['Leo']->id,
             ]);
@@ -373,8 +374,8 @@ class RealisticDemoSeeder extends Seeder
         $goals = [
             'Setup fondasi dan analisis kebutuhan proyek',
             'Implementasi fitur core dan integrasi API',
-            'Pengembangan UI/UX dan testing',
-            'Finalisasi, review, dan deployment preparation',
+            'Development UI/UX and testing',
+            'Finalisasi, review, dan deployment prep',
         ];
 
         foreach ($this->projectMap as $projectName => $project) {
@@ -507,7 +508,7 @@ class RealisticDemoSeeder extends Seeder
     {
         $subtaskNames = [
             'Analisis kebutuhan & dokumentasi', 'Desain database schema & ERD', 'Setup project & boilerplate',
-            'Implementasi API endpoint', 'Integrasi external service', 'Pengembangan UI komponen',
+            'Implementasi API endpoint', 'Integrasi external service', 'Development UI komponen',
             'Unit testing & integration test', 'Code review & refactoring', 'Bug fixing & optimization',
             'Deployment & monitoring setup', 'Dokumentasi teknis & user guide', 'Performance testing & tuning',
             'Security audit & hardening', 'UAT preparation & support',
@@ -540,6 +541,7 @@ class RealisticDemoSeeder extends Seeder
             $maxUpdated = $meta['createdAt'];
             $lastCompleter = $task->created_by;
             $prevSubtask = null;
+            $createdSubtasks = [];
             $doneStatusId = $this->statusMap[$spaceName . ':Done']->id;
 
             for ($i = 0; $i < $numSubtasks; $i++) {
@@ -558,7 +560,15 @@ class RealisticDemoSeeder extends Seeder
 
                 // Effort target (minutes) + PERT estimates.
                 $estimate = [150, 210, 270, 330, 420, 480][array_rand([150, 210, 270, 330, 420, 480])];
-                $factor = in_array($assignee, $this->lazyUsers, true) ? rand(70, 105) : rand(90, 130);
+                // Spent time clusters tightly around the estimate so the data looks
+                // like real tracked work. ~25% of subtasks land exactly on 100%;
+                // the rest sit slightly under/over (diligent staff a touch over,
+                // the "lazy" few a touch under).
+                if (rand(1, 100) <= 25) {
+                    $factor = 100;
+                } else {
+                    $factor = in_array($assignee, $this->lazyUsers, true) ? rand(88, 100) : rand(95, 112);
+                }
                 $target = (int) round($estimate * $factor / 100);
                 if ($isTailLate) {
                     $target = (int) round($target * rand(110, 160) / 100);
@@ -567,22 +577,39 @@ class RealisticDemoSeeder extends Seeder
                 $pessimistic = (int) round($estimate * 1.5);
 
                 // Schedule work across the allowed days, respecting daily capacity.
+                // Pack each day fully (multiple blocks) before moving to the next so
+                // the entire target gets logged even when a subtask only spans one
+                // or two working days. If the segment days fill up, spill forward
+                // into the remaining task-window days (an overloaded assignee simply
+                // finishes a little later) so no completed subtask ends up with 0
+                // logged time.
+                $placementDays = $workDays;
+                for ($d = $segEnd + 1; $d < $L; $d++) {
+                    $placementDays[] = $taskDays[$d];
+                }
+
                 $remaining = $target;
                 $logged = 0;
                 $firstStart = null;
                 $lastEnd = null;
                 $sessions = [];
-                foreach ($workDays as $day) {
+                foreach ($placementDays as $day) {
+                    while ($remaining > 0) {
+                        $chunk = min($remaining, rand(120, 300));
+                        $blocks = $this->placeBlock($assignee, $day, $chunk);
+                        if (empty($blocks)) {
+                            break; // this day is full — move to the next
+                        }
+                        foreach ($blocks as $b) {
+                            $sessions[] = $b;
+                            $firstStart ??= $b[0];
+                            $lastEnd = $b[1];
+                            $logged += $b[2];
+                            $remaining -= $b[2];
+                        }
+                    }
                     if ($remaining <= 0) {
                         break;
-                    }
-                    $chunk = min($remaining, rand(120, 300));
-                    foreach ($this->placeBlock($assignee, $day, $chunk) as $b) {
-                        $sessions[] = $b;
-                        $firstStart ??= $b[0];
-                        $lastEnd = $b[1];
-                        $logged += $b[2];
-                        $remaining -= $b[2];
                     }
                 }
 
@@ -603,6 +630,22 @@ class RealisticDemoSeeder extends Seeder
                         $lastEnd = $b[1];
                         $logged += $b[2];
                     }
+                }
+
+                // Safety net: if the assignee's entire window happened to be full,
+                // still log the work as a single overtime-style session so a
+                // completed (100%) subtask never shows zero tracked time.
+                if ($logged === 0) {
+                    $startTs = strtotime($startDay . ' 09:00:00');
+                    $endTs = $startTs + $target * 60;
+                    $sessions[] = [
+                        date('Y-m-d H:i:s', $startTs),
+                        date('Y-m-d H:i:s', $endTs),
+                        $target,
+                    ];
+                    $firstStart = date('Y-m-d H:i:s', $startTs);
+                    $lastEnd = date('Y-m-d H:i:s', $endTs);
+                    $logged = $target;
                 }
 
                 // Fallbacks if every candidate day happened to be full.
@@ -657,15 +700,40 @@ class RealisticDemoSeeder extends Seeder
                     $this->stamp($entry, $b[0]);
                 }
 
-                // Selective dependency chain (~45% of consecutive subtasks).
-                if ($prevSubtask && rand(1, 100) <= 45) {
+                // Dependency chain — realistic project flow:
+                // - Subtask ke-2 dst selalu depends on predecessor (tidak boleh mengambang)
+                // - ~30% subtask depends on DUA predecessor sebelumnya (merge/join pattern)
+                //   untuk mensimulasikan paralel-work yang di-merge
+                // - Subtask pertama (i==0) tidak punya predecessor — itu normal (kick-off)
+                if ($prevSubtask) {
                     $subtask->dependencies()->attach($prevSubtask->id, ['dependency_type' => 'blocks']);
                     DB::table('subtask_dependencies')
                         ->where('subtask_id', $subtask->id)
                         ->where('depends_on_subtask_id', $prevSubtask->id)
                         ->update(['created_at' => $createdAtSub, 'updated_at' => $createdAtSub]);
+
+                    // Fork-join: ~30% subtask juga depends on subtask 2 level sebelumnya
+                    // (mensimulasikan dua jalur paralel yang di-join)
+                    if ($i >= 2 && rand(1, 100) <= 30) {
+                        $twoBack = $createdSubtasks[count($createdSubtasks) - 2] ?? null;
+                        if ($twoBack && $twoBack->id !== $prevSubtask->id) {
+                            // Cek tidak duplikat
+                            $alreadyLinked = DB::table('subtask_dependencies')
+                                ->where('subtask_id', $subtask->id)
+                                ->where('depends_on_subtask_id', $twoBack->id)
+                                ->exists();
+                            if (! $alreadyLinked) {
+                                $subtask->dependencies()->attach($twoBack->id, ['dependency_type' => 'relates_to']);
+                                DB::table('subtask_dependencies')
+                                    ->where('subtask_id', $subtask->id)
+                                    ->where('depends_on_subtask_id', $twoBack->id)
+                                    ->update(['created_at' => $createdAtSub, 'updated_at' => $createdAtSub]);
+                            }
+                        }
+                    }
                 }
                 $prevSubtask = $subtask;
+                $createdSubtasks[] = $subtask;
 
                 // Checklist (30% of subtasks) — all checked since the subtask is done.
                 if (rand(1, 10) <= 3) {
@@ -724,6 +792,24 @@ class RealisticDemoSeeder extends Seeder
             'Bug minor ditemukan di edge case. Sedang diperbaiki.',
         ];
 
+        $mentionTemplates = [
+            '@%s tolong cek bagian ini ya, ada yang perlu di-review.',
+            'cc @%s untuk awareness dan reviewnya.',
+            '@%s sudah aku update sesuai hasil diskusi kemarin.',
+            'Sependapat dengan @%s, kita lanjut implementasi.',
+            '@%s bisa bantu pair sebentar untuk bagian ini?',
+        ];
+
+        $replyTemplates = [
+            'Noted, terima kasih updatenya.',
+            'Oke sudah aku cek, lanjut aja.',
+            'Siap, aku handle bagian itu.',
+            'Sudah aku resolve di commit terakhir.',
+            'Setuju, kita proceed ke step berikutnya.',
+            'Baik, nanti aku follow up sore ini.',
+            'Good catch, langsung aku perbaiki.',
+        ];
+
         $weeks = $this->sprintWeeks();
 
         foreach ($this->taskMap as $taskKey => $task) {
@@ -733,27 +819,111 @@ class RealisticDemoSeeder extends Seeder
             $spaceName = $project->space->name;
             $members = $this->getSpaceMembers($spaceName);
 
-            // Comments only happen on/after the task was created.
+            // Comments only happen on/after the task was created and before today.
             $minDay = $weeks[$meta['s0']]['start'];
-            $validDays = array_values(array_filter($this->workingDays, fn($d) => $d >= $minDay));
+            $validDays = array_values(array_filter(
+                $this->workingDays,
+                fn($d) => $d >= $minDay && $d <= $this->today
+            ));
             if (empty($validDays)) {
                 $validDays = [$minDay];
             }
 
-            $numComments = rand(2, 4);
+            $taskCreatedAt = $task->created_at->format('Y-m-d H:i:s');
+
+            // Comments are rare — only ~25% of tasks get any discussion at all,
+            // and those usually just have one or two notes.
+            if (rand(1, 100) > 25) {
+                continue;
+            }
+
+            $numComments = rand(1, 2);
             for ($i = 0; $i < $numComments; $i++) {
                 $day = $validDays[array_rand($validDays)];
                 $ts = $this->randomWorkTime($day);
                 // A comment can never predate the task it belongs to.
-                if ($ts <= $task->created_at->format('Y-m-d H:i:s')) {
+                if ($ts <= $taskCreatedAt) {
                     $ts = date('Y-m-d H:i:s', $this->nextCursor($this->cursorOf($task), 30, 180));
                 }
+
+                $author = $members[array_rand($members)];
+
+                // ~30% of comments @mention another team member.
+                $mentions = null;
+                if (rand(1, 100) <= 30) {
+                    $mentioned = $members[array_rand($members)];
+                    $content = sprintf($mentionTemplates[array_rand($mentionTemplates)], $mentioned);
+                    $mentions = [$mentioned];
+                } else {
+                    $content = sprintf($templates[array_rand($templates)], rand(30, 90));
+                }
+
+                // ~15% were edited shortly after posting.
+                $editedAt = null;
+                if (rand(1, 100) <= 15) {
+                    $editedAt = date('Y-m-d H:i:s', strtotime($ts) + rand(300, 3600));
+                }
+
                 $comment = Comment::create([
                     'task_id' => $task->id,
-                    'user_id' => $this->userMap[$members[array_rand($members)]]->id,
-                    'content' => sprintf($templates[array_rand($templates)], rand(30, 90)),
+                    'user_id' => $this->userMap[$author]->id,
+                    'content' => $content,
+                    'mentions' => $mentions,
+                    'is_resolved' => rand(1, 100) <= 20, // ~20% resolved
+                    'edited_at' => $editedAt,
                 ]);
-                $this->stamp($comment, $ts);
+                $this->stamp($comment, $ts, $editedAt ?? $ts);
+
+                // Log the comment in the activity feed.
+                $commented = Activity::create([
+                    'workspace_id' => $this->workspace->id,
+                    'user_id' => $this->userMap[$author]->id,
+                    'subject_type' => Task::class,
+                    'subject_id' => $task->id,
+                    'action' => 'commented',
+                    'properties' => [
+                        'name' => $task->name,
+                        'comment_preview' => mb_substr($content, 0, 60),
+                    ],
+                ]);
+                $this->stamp($commented, $ts);
+
+                // ~35% of comments get a reply from another member.
+                if (rand(1, 100) <= 35) {
+                    $replier = $members[array_rand($members)];
+                    $replyTs = date('Y-m-d H:i:s', min(
+                        strtotime($ts) + rand(600, 7200),
+                        strtotime($this->today . ' 17:00:00')
+                    ));
+                    $reply = Comment::create([
+                        'task_id' => $task->id,
+                        'parent_id' => $comment->id,
+                        'user_id' => $this->userMap[$replier]->id,
+                        'content' => $replyTemplates[array_rand($replyTemplates)],
+                    ]);
+                    $this->stamp($reply, $replyTs);
+                }
+            }
+
+            // Subtask-level discussion: rare — only ~10% of subtasks get a comment.
+            foreach ($task->subtasks()->get() as $subtask) {
+                if (rand(1, 100) > 10) {
+                    continue;
+                }
+                $stCreated = $subtask->created_at->format('Y-m-d H:i:s');
+                $stCompleted = $subtask->completed_at?->format('Y-m-d H:i:s') ?? $stCreated;
+                $lo = strtotime($stCreated);
+                $hi = max($lo + 600, strtotime($stCompleted));
+                $cts = date('Y-m-d H:i:s', rand($lo, $hi));
+                $author = $members[array_rand($members)];
+
+                $comment = Comment::create([
+                    'subtask_id' => $subtask->id,
+                    'user_id' => $this->userMap[$author]->id,
+                    'content' => sprintf($templates[array_rand($templates)], rand(30, 90)),
+                    'is_resolved' => rand(1, 100) <= 25,
+                ]);
+                $this->stamp($comment, $cts);
             }
         }
     }
@@ -806,6 +976,54 @@ class RealisticDemoSeeder extends Seeder
                 $this->stamp($activity, date('Y-m-d H:i:s', $ts));
                 $prevStatus = $newStatus;
             }
+
+            // Label-added activities — logged just after task creation.
+            foreach ($task->labels()->get() as $label) {
+                $labelTs = date('Y-m-d H:i:s', $createdTs + rand(60, 900));
+                $labelActivity = Activity::create([
+                    'workspace_id' => $this->workspace->id,
+                    'user_id' => $userId,
+                    'subject_type' => Task::class,
+                    'subject_id' => $task->id,
+                    'action' => 'label_added',
+                    'properties' => ['name' => $task->name, 'label_name' => $label->name],
+                ]);
+                $this->stamp($labelActivity, $labelTs);
+            }
+
+            // Assignment activities — one per distinct subtask assignee, logged
+            // around the time each subtask started. Leo/Gilbert (task creator)
+            // did the assigning.
+            $seenAssignees = [];
+            foreach ($task->subtasks()->with('assignees')->get() as $subtask) {
+                foreach ($subtask->assignees as $assignee) {
+                    if (isset($seenAssignees[$assignee->id])) {
+                        continue;
+                    }
+                    $seenAssignees[$assignee->id] = true;
+                    $assignTs = $subtask->created_at->format('Y-m-d H:i:s');
+                    $assignActivity = Activity::create([
+                        'workspace_id' => $this->workspace->id,
+                        'user_id' => $userId,
+                        'subject_type' => Task::class,
+                        'subject_id' => $task->id,
+                        'action' => 'assigned',
+                        'properties' => ['name' => $task->name, 'assignee_name' => $assignee->name],
+                    ]);
+                    $this->stamp($assignActivity, $assignTs);
+                }
+            }
+
+            // Completion activity — logged by whoever finished the task last.
+            $completedActivity = Activity::create([
+                'workspace_id' => $this->workspace->id,
+                'user_id' => $task->completed_by ?? $userId,
+                'subject_type' => Task::class,
+                'subject_id' => $task->id,
+                'action' => 'completed',
+                'properties' => ['name' => $task->name],
+            ]);
+            $this->stamp($completedActivity, $task->completed_at->format('Y-m-d H:i:s'));
         }
     }
 
@@ -1073,6 +1291,38 @@ class RealisticDemoSeeder extends Seeder
                 DB::table('task_labels')->where('id', $id)->update(['created_at' => $ts, 'updated_at' => $ts]);
             }
         }
+    }
+
+    /** Realistic one-paragraph brief for each project (shown on the project page). */
+    private function getProjectDescription(string $name): string
+    {
+        $map = [
+            'MRP Forecast Simulation' => 'Simulasi Material Requirements Planning untuk memproyeksikan kebutuhan produksi sepeda berbasis data penjualan historis dan tren musiman.',
+            'Product Monitor - Frame Number Management' => 'Manajemen dan pelacakan nomor rangka setiap unit sepeda dari lini produksi hingga distribusi untuk keperluan audit dan garansi.',
+            'Product Monitor - Scan Bike Part Serial Number' => 'Pemindaian dan validasi serial number komponen sepeda di lini perakitan untuk menjamin traceability tiap part.',
+            'Promotion Stock Management' => 'Pengelolaan alokasi stok khusus promo lintas channel agar tidak bentrok dengan stok reguler dan otomatis rilis saat promo berakhir.',
+            'Vendor Invoicing and Automatic MIRO' => 'Otomatisasi posting invoice vendor ke SAP dengan 3-way match (PO/GR/Invoice) untuk mempercepat proses pembayaran.',
+            'Booking & Bidding Shipment for Vendor Freight Forwarder' => 'Platform bidding pengiriman bagi vendor freight forwarder dengan auto-award berdasarkan rate dan kualifikasi.',
+            'Invoice Process Automation' => 'Otomatisasi ekstraksi data invoice via OCR dan alur approval hingga sinkronisasi ke sistem akuntansi.',
+            'Sales Reps Dashboard' => 'Dashboard performa sales representative dengan KPI, target vs actual, dan pipeline funnel secara real-time.',
+            'Applicant Recruitment Agentic AI' => 'Agentic AI untuk screening CV, ranking kandidat, dan otomatisasi penjadwalan interview di proses rekrutmen.',
+            'Bike & PAA Catalog Journey Revamp' => 'Perombakan pengalaman katalog sepeda dan Parts-Apparel-Accessories dengan navigasi, filter, dan perbandingan produk yang baru.',
+            'AI E-Commerce Product Recommendation' => 'Engine rekomendasi produk berbasis collaborative & content-based filtering untuk meningkatkan konversi e-commerce.',
+            'AI Up-selling, Cross-selling, Re-selling' => 'Engine rekomendasi upsell/cross-sell hybrid (rule-based + ML) pada halaman produk dan checkout.',
+            'B2C x POS x Marketplace - Realtime Stock Integration' => 'Integrasi stok real-time lintas channel B2C, POS, dan marketplace dengan strategi resolusi konflik.',
+            'Bike Fitting Integration' => 'Kalkulator bike fitting berbasis pengukuran tubuh untuk merekomendasikan ukuran frame yang tepat.',
+            'Bike Service Booking' => 'Sistem booking servis sepeda dengan manajemen slot, penugasan mekanik, dan notifikasi reminder.',
+            'Click & Collect' => 'Alur click & collect: cek ketersediaan toko, booking slot pickup, dan verifikasi via QR code.',
+            'E-commerce Product Description Generation' => 'Generasi deskripsi produk e-commerce berbasis AI dengan dukungan template, multi-bahasa, dan optimasi SEO.',
+            'Membership - Referral Program & Remake' => 'Perombakan program membership & referral dengan reward bertingkat, tracking, dan deteksi fraud.',
+            'Net Promoter Score' => 'Platform survey NPS pasca-transaksi dengan kalkulasi skor promoter/passive/detractor dan analisis tren.',
+            'Test Ride Booking' => 'Platform booking test ride dengan ketersediaan unit per lokasi, konfirmasi slot, dan feedback pasca-ride.',
+            'AI Customer Service' => 'Chatbot customer service berbasis NLP dengan intent recognition dan eskalasi ke live agent.',
+            'Catalog Search Correction & Suggestion' => 'Peningkatan pencarian katalog dengan koreksi typo, "did you mean", dan autocomplete berperingkat.',
+            'Catalog Bike Recommendation based on Dealer' => 'Rekomendasi sepeda berbasis profil dealer dan prediksi penjualan per wilayah.',
+        ];
+
+        return $map[$name] ?? 'Proyek pengembangan internal MIS Department PT XYZ.';
     }
 
     private function getProjectDefinitions(): array

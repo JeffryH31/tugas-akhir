@@ -83,6 +83,27 @@ const getSpentPercentage = (spentMinutes, estimateMinutes) => {
   return Math.round(((spentMinutes || 0) / estimateMinutes) * 100);
 };
 
+// PERT breakdown for the subtask details row.
+const formatHoursValue = (minutes) => {
+  if (minutes == null) return "—";
+  const h = minutes / 60;
+  return (h % 1 === 0 ? h : h.toFixed(1)) + "h";
+};
+const pertDisplay = computed(() => {
+  const t = props.localTask;
+  if (!t?.pert_expected_estimate) return null;
+  // Standard deviation (√variance) is in the same unit as the estimates and
+  // is far more intuitive than the raw variance (minutes²).
+  const sd = t.pert_variance != null ? Math.sqrt(t.pert_variance) / 60 : null;
+  return {
+    optimistic: formatHoursValue(t.optimistic_estimate),
+    mostLikely: formatHoursValue(t.most_likely_estimate),
+    pessimistic: formatHoursValue(t.pessimistic_estimate),
+    expected: formatHoursValue(t.pert_expected_estimate),
+    stdDev: sd != null ? (sd % 1 === 0 ? sd : sd.toFixed(1)) + "h" : null,
+  };
+});
+
 // Priority
 const currentPriority = computed(() => {
   if (!props.localTask?.priority_level) return null;
@@ -1149,7 +1170,11 @@ const removeSuccessor = (suc) =>
             <template v-slot:activator="{ props: menuProps }">
               <v-btn v-bind="menuProps" variant="text" size="small" class="text-none"
                 :color="localTask.pert_expected_estimate ? 'primary' : 'grey'">
-                {{ formatTimeEstimate(localTask.pert_expected_estimate) }}
+                <template v-if="pertDisplay">
+                  {{ pertDisplay.expected }}
+                  <span v-if="pertDisplay.stdDev" class="pert-sd">± {{ pertDisplay.stdDev }}</span>
+                </template>
+                <template v-else>Not set</template>
               </v-btn>
             </template>
             <v-card color="surface" min-width="320">
@@ -1160,6 +1185,10 @@ const removeSuccessor = (suc) =>
                   density="compact" hide-details step="0.5" min="0" />
                 <v-text-field v-model="tempPessimistic" type="number" label="Pessimistic (hours)" variant="outlined"
                   density="compact" hide-details step="0.5" min="0" />
+                <p v-if="pertDisplay" class="text-caption text-medium-emphasis mb-0">
+                  Expected = (O + 4M + P) / 6 = <strong>{{ pertDisplay.expected }}</strong>
+                  <span v-if="pertDisplay.stdDev"> &middot; uncertainty ± {{ pertDisplay.stdDev }}</span>
+                </p>
               </v-card-text>
               <v-card-actions>
                 <v-spacer />
@@ -1168,6 +1197,9 @@ const removeSuccessor = (suc) =>
               </v-card-actions>
             </v-card>
           </v-menu>
+          <div v-if="pertDisplay" class="pert-breakdown">
+            O {{ pertDisplay.optimistic }} &middot; M {{ pertDisplay.mostLikely }} &middot; P {{ pertDisplay.pessimistic }}
+          </div>
         </div>
       </div>
 
@@ -1460,6 +1492,21 @@ const removeSuccessor = (suc) =>
 .prop-value {
   flex: 1;
   min-width: 0;
+}
+
+.pert-sd {
+  margin-left: 4px;
+  font-size: 11px;
+  font-weight: 500;
+  opacity: 0.7;
+}
+
+.pert-breakdown {
+  font-size: 11px;
+  color: rgba(255, 255, 255, 0.45);
+  margin-top: 2px;
+  padding-left: 12px;
+  white-space: nowrap;
 }
 
 .automation-preview-dot {

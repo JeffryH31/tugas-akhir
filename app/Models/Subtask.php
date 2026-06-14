@@ -64,7 +64,7 @@ class Subtask extends Model
      * Appended so these fields appear in toArray() (used by ProjectService).
      * Without $appends, they are only present in SubtaskResource responses.
      */
-    protected $appends = ['can_add_children', 'has_kanban_view', 'checklist_total', 'checklist_checked'];
+    protected $appends = ['can_add_children', 'has_kanban_view', 'checklist_total', 'checklist_checked', 'pert_expected_estimate', 'pert_variance'];
 
     protected static function boot(): void
     {
