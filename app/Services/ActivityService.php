@@ -243,8 +243,8 @@ class ActivityService
      */
     public function getActivitiesForSpace(Space $space, int $perPage = 20): LengthAwarePaginator
     {
-        $listIds = $space->lists()->pluck('id')->toArray();
-        $taskIds = Task::whereIn('list_id', $listIds)->pluck('id')->toArray();
+        $listIds = $space->projects()->pluck('id')->toArray();
+        $taskIds = Task::whereIn('project_id', $listIds)->pluck('id')->toArray();
 
         return Activity::with('user')
             ->where(function ($query) use ($space, $listIds, $taskIds) {

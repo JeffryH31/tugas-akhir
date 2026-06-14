@@ -125,8 +125,8 @@ class RealisticDemoSeeder extends Seeder
         $password = Hash::make('password');
 
         $users = [
-            ['name' => 'Leo',       'email' => 'leo@example.com',       'hourly_rate' => 150000],
-            ['name' => 'Gilbert',   'email' => 'gilbert@example.com',   'hourly_rate' => 150000],
+            ['name' => 'Leo',       'email' => 'leo@example.com',       'hourly_rate' => 75000],
+            ['name' => 'Gilbert',   'email' => 'gilbert@example.com',   'hourly_rate' => 75000],
             ['name' => 'Aji',       'email' => 'aji@example.com',       'hourly_rate' => 75000],
             ['name' => 'Mario',     'email' => 'mario@example.com',     'hourly_rate' => 75000],
             ['name' => 'Grace',     'email' => 'grace@example.com',     'hourly_rate' => 75000],

@@ -126,7 +126,7 @@ class SpaceController extends Controller
                 'id' => $space->id,
                 'name' => $space->name,
             ],
-            'projects' => $space->lists
+            'projects' => $space->projects
                 ->map(fn ($list) => [
                     'id' => $list->id,
                     'name' => $list->name,
