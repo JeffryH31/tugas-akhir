@@ -1,12 +1,14 @@
 <script setup>
-import { ref } from 'vue';
-import { Head, router } from '@inertiajs/vue3';
+import { ref, computed } from 'vue';
+import { Head, router, usePage } from '@inertiajs/vue3';
 import MainLayout from '@/Layouts/MainLayout.vue';
 import ColorPicker from '@/Components/ColorPicker.vue';
 import { normalizeHexColor } from '@/utils/color';
 import { useSnackbar } from '@/composables/useSnackbar';
 
 const { showSnackbar } = useSnackbar();
+const page = usePage();
+const isSuperAdmin = computed(() => page.props.isSuperAdmin || false);
 
 const props = defineProps({
     workspaces: { type: Array, default: () => [] },
@@ -56,7 +58,7 @@ const createWorkspace = () => {
             <template v-if="workspaces && workspaces.length > 0">
                 <div class="page-header mb-6">
                     <h1 class="text-2xl font-bold">Your Workspaces</h1>
-                    <v-btn color="primary" @click="openDialog">
+                    <v-btn v-if="isSuperAdmin" color="primary" @click="openDialog">
                         <v-icon start>mdi-plus</v-icon>
                         New Workspace
                     </v-btn>

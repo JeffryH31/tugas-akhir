@@ -43,6 +43,7 @@ class User extends Authenticatable
         'email',
         'password',
         'hourly_rate',
+        'is_super_admin',
         'last_notifications_read_at',
     ];
 
@@ -64,6 +65,7 @@ class User extends Authenticatable
         return [
             'email_verified_at' => 'datetime',
             'hourly_rate' => 'decimal:2',
+            'is_super_admin' => 'boolean',
             'last_notifications_read_at' => 'datetime',
             'password' => 'hashed',
         ];
@@ -184,5 +186,10 @@ class User extends Authenticatable
         $this->forceFill([
             'last_notifications_read_at' => now(),
         ])->save();
+    }
+
+    public function isSuperAdmin(): bool
+    {
+        return (bool) $this->is_super_admin;
     }
 }

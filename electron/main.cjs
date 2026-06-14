@@ -2,7 +2,8 @@ const { app, BrowserWindow, powerMonitor } = require("electron");
 const path = require("path");
 
 let mainWindow = null;
-const IDLE_THRESHOLD_SECONDS = 5 * 60; // 5 mins
+const IDLE_THRESHOLD_SECONDS = 10; // dianggap idle setelah 10 detik tidak ada aktivitas
+const IDLE_POLL_INTERVAL_MS = 1_000; // cek status idle tiap 1 detik
 
 function createWindow() {
     mainWindow = new BrowserWindow({
@@ -43,7 +44,7 @@ app.whenReady().then(() => {
         });
 
         wasIdle = isNowIdle;
-    }, 30_000);
+    }, IDLE_POLL_INTERVAL_MS);
 
     app.on("window-all-closed", () => {
         clearInterval(idleInterval);

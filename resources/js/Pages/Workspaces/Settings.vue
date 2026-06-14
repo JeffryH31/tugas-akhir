@@ -24,13 +24,22 @@ const isAdmin = computed(() => {
     const currentMember = props.members?.find((member) => member.id === currentUserId);
     const role = currentMember?.pivot?.role || currentMember?.role;
 
-    return role === 'admin';
+    return role === 'admin' || role === 'owner';
+});
+
+const isOwner = computed(() => {
+    const currentUserId = page.props?.auth?.user?.id;
+    const currentMember = props.members?.find((member) => member.id === currentUserId);
+    const role = currentMember?.pivot?.role || currentMember?.role;
+
+    return role === 'owner';
 });
 
 // Add member dialog
 const showAddMember = ref(false);
 const selectedUser = ref(null);
 const selectedRole = ref('member');
+const inviteEmail = ref('');
 const showCreateUser = ref(false);
 const showEditUser = ref(false);
 const editingUser = ref(null);
@@ -52,19 +61,22 @@ const editUserForm = ref({
 });
 
 const addMember = () => {
-    if (!selectedUser.value) return;
+    // Support both: pick from dropdown (user_id) OR type an email directly
+    const payload = selectedUser.value
+        ? { user_id: selectedUser.value, role: selectedRole.value }
+        : { email: inviteEmail.value.trim(), role: selectedRole.value };
+
+    if (!payload.user_id && !payload.email) return;
 
     router.post(
         route('workspaces.members.add', props.workspace.id),
-        {
-            user_id: selectedUser.value,
-            role: selectedRole.value,
-        },
+        payload,
         {
             preserveScroll: true,
             onSuccess: () => {
                 showAddMember.value = false;
                 selectedUser.value = null;
+                inviteEmail.value = '';
                 selectedRole.value = 'member';
             },
         }
@@ -617,7 +629,7 @@ const deleteWorkspace = () => {
             </div>
 
             <!-- Danger Zone -->
-            <div v-if="isAdmin" class="danger-zone">
+            <div v-if="isOwner" class="danger-zone">
                 <div class="danger-zone-header">
                     <v-icon size="16" color="error" class="mr-1">mdi-alert-circle-outline</v-icon>
                     <span>Danger Zone</span>
@@ -648,7 +660,7 @@ const deleteWorkspace = () => {
                     </div>
                     <div>
                         <div class="text-subtitle-2 font-weight-bold">Add Member</div>
-                        <div class="text-caption text-medium-emphasis">Add existing user to this workspace</div>
+                        <div class="text-caption text-medium-emphasis">Add user by email or select from list</div>
                     </div>
                     <v-spacer />
                     <v-btn icon variant="text" size="x-small" @click="showAddMember = false">
@@ -657,8 +669,19 @@ const deleteWorkspace = () => {
                 </div>
                 <v-divider />
                 <v-card-text class="pt-4">
-                    <v-select v-model="selectedUser" :items="availableUsers" item-title="name" item-value="id"
-                        label="Select User" variant="outlined" density="comfortable" class="mb-3">
+                    <!-- Autocomplete from known users (including already-members for role update) -->
+                    <v-autocomplete
+                        v-model="selectedUser"
+                        :items="availableUsers"
+                        item-title="name"
+                        item-value="id"
+                        label="Search by name"
+                        variant="outlined"
+                        density="comfortable"
+                        clearable
+                        class="mb-3"
+                        placeholder="Start typing a name…"
+                    >
                         <template #item="{ props: itemProps, item }">
                             <v-list-item v-bind="itemProps">
                                 <template #prepend>
@@ -669,7 +692,27 @@ const deleteWorkspace = () => {
                                 <v-list-item-subtitle>{{ item.raw.email }}</v-list-item-subtitle>
                             </v-list-item>
                         </template>
-                    </v-select>
+                    </v-autocomplete>
+
+                    <div class="d-flex align-center ga-2 mb-3">
+                        <v-divider />
+                        <span class="text-caption text-medium-emphasis px-1">or by email</span>
+                        <v-divider />
+                    </div>
+
+                    <!-- Direct email input as fallback -->
+                    <v-text-field
+                        v-model="inviteEmail"
+                        :disabled="!!selectedUser"
+                        label="Email address"
+                        type="email"
+                        variant="outlined"
+                        density="comfortable"
+                        placeholder="user@example.com"
+                        class="mb-3"
+                        hide-details
+                    />
+
                     <v-select v-model="selectedRole"
                         :items="[{ title: 'Admin', value: 'admin' }, { title: 'Member', value: 'member' }]"
                         label="Role" variant="outlined" density="comfortable" />
@@ -677,8 +720,11 @@ const deleteWorkspace = () => {
                 <v-card-actions class="px-4 pb-4">
                     <v-spacer />
                     <v-btn variant="text" rounded="lg" @click="showAddMember = false">Cancel</v-btn>
-                    <v-btn color="primary" variant="flat" rounded="lg" :disabled="!selectedUser" @click="addMember">Add
-                        Member</v-btn>
+                    <v-btn color="primary" variant="flat" rounded="lg"
+                        :disabled="!selectedUser && !inviteEmail.trim()"
+                        @click="addMember">
+                        Add Member
+                    </v-btn>
                 </v-card-actions>
             </v-card>
         </v-dialog>

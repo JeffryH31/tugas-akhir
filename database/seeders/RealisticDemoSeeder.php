@@ -125,33 +125,33 @@ class RealisticDemoSeeder extends Seeder
         $password = Hash::make('password');
 
         $users = [
-            ['name' => 'Leo',       'email' => 'leo@example.com',       'hourly_rate' => 75000],
-            ['name' => 'Gilbert',   'email' => 'gilbert@example.com',   'hourly_rate' => 75000],
-            ['name' => 'Aji',       'email' => 'aji@example.com',       'hourly_rate' => 75000],
-            ['name' => 'Mario',     'email' => 'mario@example.com',     'hourly_rate' => 75000],
-            ['name' => 'Grace',     'email' => 'grace@example.com',     'hourly_rate' => 75000],
-            ['name' => 'Alief',     'email' => 'alief@example.com',     'hourly_rate' => 75000],
-            ['name' => 'Vincent',   'email' => 'vincent@example.com',   'hourly_rate' => 75000],
-            ['name' => 'Stanley',   'email' => 'stanley@example.com',   'hourly_rate' => 75000],
-            ['name' => 'Moses',     'email' => 'moses@example.com',     'hourly_rate' => 75000],
-            ['name' => 'Stefanie',  'email' => 'stefanie@example.com',  'hourly_rate' => 75000],
-            ['name' => 'Andry',     'email' => 'andry@example.com',     'hourly_rate' => 75000],
-            ['name' => 'Gita',      'email' => 'gita@example.com',      'hourly_rate' => 75000],
-            ['name' => 'Justin',    'email' => 'justin@example.com',    'hourly_rate' => 75000],
-            ['name' => 'Charlie',   'email' => 'charlie@example.com',   'hourly_rate' => 75000],
-            ['name' => 'Frans',     'email' => 'frans@example.com',     'hourly_rate' => 75000],
-            ['name' => 'Audi',      'email' => 'audi@example.com',      'hourly_rate' => 75000],
-            ['name' => 'Mira',      'email' => 'mira@example.com',      'hourly_rate' => 75000],
-            ['name' => 'Clarissa',  'email' => 'clarissa@example.com',  'hourly_rate' => 75000],
-            ['name' => 'Danny',     'email' => 'danny@example.com',     'hourly_rate' => 75000],
-            ['name' => 'Nicko',     'email' => 'nicko@example.com',     'hourly_rate' => 75000],
-            ['name' => 'Amel',      'email' => 'amel@example.com',      'hourly_rate' => 75000],
+            ['name' => 'Leo',       'email' => 'leo@example.com',       'hourly_rate' => 75000, 'is_super_admin' => true],
+            ['name' => 'Gilbert',   'email' => 'gilbert@example.com',   'hourly_rate' => 75000, 'is_super_admin' => false],
+            ['name' => 'Aji',       'email' => 'aji@example.com',       'hourly_rate' => 75000, 'is_super_admin' => false],
+            ['name' => 'Mario',     'email' => 'mario@example.com',     'hourly_rate' => 75000, 'is_super_admin' => false],
+            ['name' => 'Grace',     'email' => 'grace@example.com',     'hourly_rate' => 75000, 'is_super_admin' => false],
+            ['name' => 'Alief',     'email' => 'alief@example.com',     'hourly_rate' => 75000, 'is_super_admin' => false],
+            ['name' => 'Vincent',   'email' => 'vincent@example.com',   'hourly_rate' => 75000, 'is_super_admin' => false],
+            ['name' => 'Stanley',   'email' => 'stanley@example.com',   'hourly_rate' => 75000, 'is_super_admin' => false],
+            ['name' => 'Moses',     'email' => 'moses@example.com',     'hourly_rate' => 75000, 'is_super_admin' => false],
+            ['name' => 'Stefanie',  'email' => 'stefanie@example.com',  'hourly_rate' => 75000, 'is_super_admin' => false],
+            ['name' => 'Andry',     'email' => 'andry@example.com',     'hourly_rate' => 75000, 'is_super_admin' => false],
+            ['name' => 'Gita',      'email' => 'gita@example.com',      'hourly_rate' => 75000, 'is_super_admin' => false],
+            ['name' => 'Justin',    'email' => 'justin@example.com',    'hourly_rate' => 75000, 'is_super_admin' => false],
+            ['name' => 'Charlie',   'email' => 'charlie@example.com',   'hourly_rate' => 75000, 'is_super_admin' => false],
+            ['name' => 'Frans',     'email' => 'frans@example.com',     'hourly_rate' => 75000, 'is_super_admin' => false],
+            ['name' => 'Audi',      'email' => 'audi@example.com',      'hourly_rate' => 75000, 'is_super_admin' => false],
+            ['name' => 'Mira',      'email' => 'mira@example.com',      'hourly_rate' => 75000, 'is_super_admin' => false],
+            ['name' => 'Clarissa',  'email' => 'clarissa@example.com',  'hourly_rate' => 75000, 'is_super_admin' => false],
+            ['name' => 'Danny',     'email' => 'danny@example.com',     'hourly_rate' => 75000, 'is_super_admin' => false],
+            ['name' => 'Nicko',     'email' => 'nicko@example.com',     'hourly_rate' => 75000, 'is_super_admin' => false],
+            ['name' => 'Amel',      'email' => 'amel@example.com',      'hourly_rate' => 75000, 'is_super_admin' => false],
         ];
 
         foreach ($users as $u) {
             $user = User::updateOrCreate(
                 ['email' => $u['email']],
-                ['name' => $u['name'], 'password' => $password, 'hourly_rate' => $u['hourly_rate'], 'email_verified_at' => now()]
+                ['name' => $u['name'], 'password' => $password, 'hourly_rate' => $u['hourly_rate'], 'is_super_admin' => $u['is_super_admin'], 'email_verified_at' => now()]
             );
             // Accounts exist before the workspace is set up.
             $this->stamp($user, $this->workTime('2026-04-21', 8, 16));

@@ -109,10 +109,34 @@ class AccessService
     }
 
     /**
+     * Determine whether a user is a super admin (application-level).
+     * Super admins can create workspaces and access all workspaces.
+     */
+    public function isSuperAdmin(User $user): bool
+    {
+        return $user->isSuperAdmin();
+    }
+
+    /**
+     * Determine whether a user can create a new workspace.
+     * Only super admins are allowed; regular users are restricted to
+     * the workspaces they are invited to.
+     */
+    public function canCreateWorkspace(User $user): bool
+    {
+        return $user->isSuperAdmin();
+    }
+
+    /**
      * Determine whether a user can manage workspace settings and members.
      */
     public function canManageWorkspace(User $user, Workspace $workspace): bool
     {
+        // Super admins can manage any workspace.
+        if ($user->isSuperAdmin()) {
+            return true;
+        }
+
         return in_array($this->getWorkspaceRole($user, $workspace), [
             self::WORKSPACE_OWNER,
             self::WORKSPACE_ADMIN,
@@ -193,9 +217,6 @@ class AccessService
     /**
      * Determine whether a user can view a project.
      *
-     * Workspace admin can view all projects (oversight).
-     * Otherwise, requires a project role or inherits from space
-     * when no project members have been configured yet.
      */
     public function canViewProject(User $user, Project $list): bool
     {
@@ -305,9 +326,6 @@ class AccessService
     /**
      * Determine whether a user can manage task structure
      * (create/delete tasks, manage sprints).
-     *
-     * Workspace owner → always allowed.
-     * Others → must have project_owner or project_manager role.
      */
     public function canManageTaskStructure(User $user, Project $list): bool
     {
@@ -337,8 +355,6 @@ class AccessService
     /**
      * Determine whether a user can assign tasks to users.
      *
-     * Workspace owner → always allowed.
-     * Others → must have project_owner or project_manager role.
      */
     public function canAssignTasks(User $user, Project $list): bool
     {

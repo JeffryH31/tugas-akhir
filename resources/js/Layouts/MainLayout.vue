@@ -38,6 +38,7 @@ const notificationMenuOpen = ref(false);
 const user = computed(() => page.props.auth?.user);
 const workspaces = computed(() => page.props.workspaces || []);
 const activeWorkspace = computed(() => page.props.activeWorkspace);
+const isSuperAdmin = computed(() => page.props.isSuperAdmin || false);
 const notifications = computed(() => page.props.notifications || []);
 const unreadNotificationsCount = computed(() => page.props.unreadNotificationsCount || 0);
 const notificationsLastReadAt = computed(() => page.props.notificationsLastReadAt || null);
@@ -375,7 +376,7 @@ watch(searchDialog, (open) => {
                     <v-list density="compact" nav>
                         <v-list-item prepend-icon="mdi-layers-plus" title="New Space" subtitle="Create a new space"
                             @click="showCreateSpace = true" rounded="lg" />
-                        <v-list-item prepend-icon="mdi-briefcase-plus-outline" title="New Workspace"
+                        <v-list-item v-if="isSuperAdmin" prepend-icon="mdi-briefcase-plus-outline" title="New Workspace"
                             subtitle="Start a new workspace" @click="openCreateWorkspaceDialog" rounded="lg" />
                     </v-list>
                 </v-card>

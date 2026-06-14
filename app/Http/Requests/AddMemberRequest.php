@@ -14,8 +14,10 @@ class AddMemberRequest extends FormRequest
     public function rules(): array
     {
         return [
-            'user_id' => ['required', 'exists:users,id'],
-            'role' => ['required', 'string'],
+            // Accept either user_id (existing user) or email (invite flow)
+            'user_id' => ['required_without:email', 'nullable', 'exists:users,id'],
+            'email'   => ['required_without:user_id', 'nullable', 'email'],
+            'role'    => ['nullable', 'string', 'in:admin,member'],
         ];
     }
 }

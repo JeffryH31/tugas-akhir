@@ -130,7 +130,6 @@ test('topologicalSort respects dependency order', function () {
 
 // forwardPass
 test('forwardPass sets ES=0 EF=duration for isolated node', function () {
-    $subtasks = collect([makeCpmSubtask(1, 120)]); // 2h
 
     $service = new CpmService;
     $graphMethod = new ReflectionMethod($service, 'buildDependencyGraph');
@@ -145,7 +144,6 @@ test('forwardPass sets ES=0 EF=duration for isolated node', function () {
 });
 
 test('forwardPass calculates sequential chain correctly', function () {
-    // 1(2h) → 2(3h) → 3(1h)
     $subtasks = collect([makeCpmSubtask(1, 120), makeCpmSubtask(2, 180, [1]), makeCpmSubtask(3, 60, [2])]);
 
     $service = new CpmService;
@@ -163,7 +161,6 @@ test('forwardPass calculates sequential chain correctly', function () {
 });
 
 test('forwardPass takes max EF of predecessors for merge node', function () {
-    // 1(2h)→3, 2(4h)→3, 3(1h)
     $subtasks = collect([makeCpmSubtask(1, 120), makeCpmSubtask(2, 240), makeCpmSubtask(3, 60, [1, 2])]);
 
     $service = new CpmService;
@@ -180,7 +177,6 @@ test('forwardPass takes max EF of predecessors for merge node', function () {
 
 // calculateSlackAndCriticalPath
 test('calculateSlackAndCriticalPath identifies critical and non-critical nodes', function () {
-    // 1(2h)→3, 2(4h)→3, 3(1h) — node 1 has slack=2h
     $subtasks = collect([makeCpmSubtask(1, 120), makeCpmSubtask(2, 240), makeCpmSubtask(3, 60, [1, 2])]);
 
     $service = new CpmService;
