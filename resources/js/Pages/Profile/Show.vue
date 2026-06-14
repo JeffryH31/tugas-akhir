@@ -56,12 +56,12 @@ defineProps({
 
                 <UpdatePasswordForm v-if="$page.props.jetstream.canUpdatePassword" />
 
-                <TwoFactorAuthenticationForm
+                <!-- <TwoFactorAuthenticationForm
                     v-if="$page.props.jetstream.canManageTwoFactorAuthentication"
                     :requires-confirmation="confirmsTwoFactorAuthentication"
-                />
+                /> -->
 
-                <LogoutOtherBrowserSessionsForm :sessions="sessions" />
+                <!-- <LogoutOtherBrowserSessionsForm :sessions="sessions" /> -->
 
                 <DeleteUserForm v-if="$page.props.jetstream.hasAccountDeletionFeatures" />
             </div>

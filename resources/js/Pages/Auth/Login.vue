@@ -67,19 +67,8 @@ const handleSubmit = () => {
                                     {{ status }}
                                 </v-alert>
 
-                                <!-- Error Alert -->
-                                <v-alert v-if="form.errors.email" type="error" variant="tonal" class="mb-6" rounded="lg"
-                                    closable>
-                                    {{ form.errors.email }}
-                                </v-alert>
-
                                 <!-- Login Form -->
                                 <v-form @submit.prevent="handleSubmit" validate-on="blur">
-                                    <!-- Error Alert -->
-                                    <v-alert v-if="form.errors.email" type="error" variant="tonal" class="mb-4" rounded="lg" closable>
-                                        {{ form.errors.email }}
-                                    </v-alert>
-
                                     <!-- Email Field -->
                                     <v-text-field v-model="form.email" label="Email Address" type="email" name="email"
                                         autocomplete="email" prepend-inner-icon="mdi-email-outline"

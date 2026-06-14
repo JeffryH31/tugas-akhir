@@ -1202,8 +1202,8 @@ class RealisticDemoSeeder extends Seeder
                 ['name' => 'Click & Collect Flow', 'desc' => "Alur click & collect:\n- Store availability check\n- Pickup slot booking\n- QR code for pickup verification", 'labels' => ['Feature', 'UI/UX']],
                 ['name' => 'Store Availability & Pickup Slot', 'desc' => null, 'labels' => ['Feature']],
             ],
-            'E-commerce Project Description Generation' => [
-                ['name' => 'AI Description Generator', 'desc' => "AI-generated project descriptions:\n- GPT integration via API\n- Template & tone management\n- Bulk generate support", 'labels' => ['Feature', 'AI/ML']],
+            'E-commerce Product Description Generation' => [
+                ['name' => 'AI Description Generator', 'desc' => "AI-generated product descriptions:\n- GPT integration via API\n- Template & tone management\n- Bulk generate support", 'labels' => ['Feature', 'AI/ML']],
                 ['name' => 'Template & Multi-language Support', 'desc' => null, 'labels' => ['Feature']],
                 ['name' => 'SEO Optimization Module', 'desc' => "SEO-ready content generation:\n- Keyword injection\n- Meta description generator\n- Readability score check", 'labels' => ['Feature', 'Performance']],
             ],
