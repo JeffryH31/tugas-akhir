@@ -47,7 +47,7 @@ class CalendarController extends Controller
                     }
                 });
 
-                // Workspace admin can see all; others only see products they belong to
+                // Workspace admin can see all; others only see projects they belong to
                 if (! in_array($workspaceRole, [AccessService::WORKSPACE_OWNER, AccessService::WORKSPACE_ADMIN], true)) {
                     $query->whereHas('members', fn ($m) => $m->where('user_id', $user->id));
                 }

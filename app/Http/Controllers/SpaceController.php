@@ -65,7 +65,7 @@ class SpaceController extends Controller
         $space->is_starred = $space->starredBy()->where('user_id', $request->user()->id)->exists();
 
         // Products (Projects) grouped by status for kanban
-        $productsByStatus = $this->spaceService->getProductsByStatus($space, $request->user());
+        $projectsByStatus = $this->spaceService->getProjectsByStatus($space, $request->user());
 
         $user = $request->user();
         $isWsAdmin = $this->accessService->canManageWorkspace($user, $workspace);
@@ -91,7 +91,7 @@ class SpaceController extends Controller
             'workspace' => $workspace,
             'space' => $space,
             'statistics' => $statistics,
-            'productsByStatus' => $productsByStatus,
+            'productsByStatus' => $projectsByStatus,
             'canManageSpace' => $this->accessService->canManageSpace($request->user(), $space),
             'canManageWorkspace' => $this->accessService->canManageWorkspace($request->user(), $workspace),
         ]);
@@ -126,7 +126,7 @@ class SpaceController extends Controller
                 'id' => $space->id,
                 'name' => $space->name,
             ],
-            'products' => $space->lists
+            'projects' => $space->lists
                 ->map(fn ($list) => [
                     'id' => $list->id,
                     'name' => $list->name,

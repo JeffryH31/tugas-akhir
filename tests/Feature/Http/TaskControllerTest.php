@@ -47,7 +47,7 @@ test('unauthenticated user is redirected when creating a task', function () {
 test('non-member gets 403 when creating a task', function () {
     $stranger = $this->createUser();
 
-    // Give workspace membership but no product role — list has an owner, so open-by-default does not apply
+    // Give workspace membership but no project role — list has an owner, so open-by-default does not apply
     $this->h['workspace']->addMember($stranger, 'member');
     $this->h['list']->addMember($this->owner, 'project_owner'); // lock the list
 

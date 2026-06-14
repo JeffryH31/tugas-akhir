@@ -109,7 +109,7 @@ class ProjectsSeeder extends Seeder
             ],
             //  B2C / E-Commerce
             [
-                'name' => 'Product Catalog',
+                'name' => 'Project Catalog',
                 'space' => 'B2C',
                 'folder' => 'E-Commerce',
                 'position' => 0,

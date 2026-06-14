@@ -215,14 +215,14 @@ test('getStatistics returns space metrics', function () {
     expect($stats['projects_count'])->toBeGreaterThanOrEqual(1);
 });
 
-test('getProductsByStatus groups lists by status', function () {
+test('getProjectsByStatus groups lists by status', function () {
     $statuses = $this->hierarchy['statuses'];
     $firstStatus = $statuses->first();
 
     // Assign a status to our list
     $this->hierarchy['list']->update(['status_id' => $firstStatus->id]);
 
-    $grouped = $this->service->getProductsByStatus($this->hierarchy['space']);
+    $grouped = $this->service->getProjectsByStatus($this->hierarchy['space']);
 
     // Result should be keyed by status id
     expect($grouped)->toBeArray();

@@ -695,7 +695,7 @@ watch(searchDialog, (open) => {
             <v-card rounded="xl">
                 <div class="search-header">
                     <v-icon size="18" color="grey">mdi-magnify</v-icon>
-                    <input v-model="searchQuery" class="search-input" placeholder="Search tasks, products, spaces..."
+                    <input v-model="searchQuery" class="search-input" placeholder="Search tasks, projects, spaces..."
                         autofocus />
                     <v-progress-circular v-if="isSearching" size="16" width="2" indeterminate color="primary" />
                     <kbd class="search-kbd" v-if="!isSearching">ESC</kbd>
@@ -826,7 +826,7 @@ watch(searchDialog, (open) => {
                 <v-divider />
                 <v-card-text class="pt-4 d-flex flex-column ga-3">
                     <v-text-field v-model="newWorkspaceName" label="Workspace Name"
-                        placeholder="e.g., Product Team, Acme Client" variant="outlined" density="comfortable"
+                        placeholder="e.g., Project Team, Acme Client" variant="outlined" density="comfortable"
                         hide-details autofocus @keydown.enter="createWorkspace" />
                     <ColorPicker v-model="newWorkspaceColor" />
                 </v-card-text>

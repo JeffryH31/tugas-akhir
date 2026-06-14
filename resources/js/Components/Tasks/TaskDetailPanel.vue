@@ -1,16 +1,15 @@
 <script setup>
 import { ref, computed, watch, nextTick, onMounted, onUnmounted } from "vue";
 import { router } from "@inertiajs/vue3";
-import { useConfirmDialog } from "@/composables/useConfirmDialog";
 import { useSnackbar } from "@/composables/useSnackbar";
 import { useTaskTimer } from "@/composables/useTaskTimer";
 import { getStoredSubtaskCompletionTarget } from "@/utils/subtaskCompletionAutomation";
+import DeleteConfirmDialog from "@/Components/DeleteConfirmDialog.vue";
 import DetailsTab from "./DetailsTab.vue";
 import CommentsTab from "./CommentsTab.vue";
 import TimeTab from "./TimeTab.vue";
 import ActivityTab from "./ActivityTab.vue";
 
-const { confirm: confirmDialog } = useConfirmDialog();
 const { showSnackbar } = useSnackbar();
 
 const props = defineProps({
@@ -197,38 +196,39 @@ const toggleComplete = () => {
 };
 
 // Delete task
-const deleteTask = async () => {
-  if (
-    await confirmDialog(
-      `Are you sure you want to delete this ${isSubtask.value ? 'subtask' : 'task'}?`,
-      `Delete ${isSubtask.value ? 'Subtask' : 'Task'}`
-    )
-  ) {
-    const deleteUrl = isSubtask.value
-      ? route("tasks.subtasks.destroy", [
-        props.workspace.id,
-        props.space.id,
-        props.list.id,
-        props.parentTask.id,
-        props.task.id,
-      ])
-      : route("tasks.destroy", [
-        props.workspace.id,
-        props.space.id,
-        props.list.id,
-        props.task.id,
-      ]);
-    router.delete(
-      deleteUrl,
-      {
-        preserveScroll: true,
-        onSuccess: () => {
-          showSnackbar("Task deleted!", "success");
-          close();
-        },
-      }
-    );
-  }
+const showDeleteDialog = ref(false);
+const isDeleting = ref(false);
+
+const performDelete = () => {
+  const deleteUrl = isSubtask.value
+    ? route("tasks.subtasks.destroy", [
+      props.workspace.id,
+      props.space.id,
+      props.list.id,
+      props.parentTask.id,
+      props.task.id,
+    ])
+    : route("tasks.destroy", [
+      props.workspace.id,
+      props.space.id,
+      props.list.id,
+      props.task.id,
+    ]);
+  isDeleting.value = true;
+  router.delete(
+    deleteUrl,
+    {
+      preserveScroll: true,
+      onSuccess: () => {
+        showSnackbar("Task deleted!", "success");
+        showDeleteDialog.value = false;
+        close();
+      },
+      onFinish: () => {
+        isDeleting.value = false;
+      },
+    }
+  );
 };
 
 // Duplicate task / subtask
@@ -324,7 +324,7 @@ onUnmounted(() => stopTimerInterval());
               <v-list density="compact">
                 <v-list-item prepend-icon="mdi-content-copy" title="Duplicate" @click="duplicateTask" />
                 <v-divider />
-                <v-list-item prepend-icon="mdi-delete-outline" title="Delete" class="text-error" @click="deleteTask" />
+                <v-list-item prepend-icon="mdi-delete-outline" title="Delete" class="text-error" @click="showDeleteDialog = true" />
               </v-list>
             </v-card>
           </v-menu>
@@ -399,6 +399,14 @@ onUnmounted(() => stopTimerInterval());
       </div>
     </div>
   </v-navigation-drawer>
+
+  <DeleteConfirmDialog
+    v-model="showDeleteDialog"
+    :item-type="isSubtask ? 'subtask' : 'task'"
+    :item-name="localTask?.name"
+    :loading="isDeleting"
+    @confirm="performDelete"
+  />
 </template>
 
 <style scoped>

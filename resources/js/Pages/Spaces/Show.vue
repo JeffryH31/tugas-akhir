@@ -3,6 +3,7 @@ import { ref, computed, watch } from 'vue';
 import { router } from '@inertiajs/vue3';
 import MainLayout from '@/Layouts/MainLayout.vue';
 import ColorPicker from '@/Components/ColorPicker.vue';
+import DeleteConfirmDialog from '@/Components/DeleteConfirmDialog.vue';
 import { useSnackbar } from '@/composables/useSnackbar';
 import { normalizeHexColor } from '@/utils/color';
 
@@ -21,7 +22,7 @@ const props = defineProps({
 const showCreateFolder = ref(false);
 const newFolderName = ref('');
 
-// Create product dialog
+// Create project dialog
 const showCreateList = ref(false);
 const newListName = ref('');
 const selectedFolderId = ref(null);
@@ -248,7 +249,7 @@ const duplicateList = (list) => {
     );
 };
 
-// Hierarchy drag-and-drop (move product between folder/root)
+// Hierarchy drag-and-drop (move project between folder/root)
 const draggedList = ref(null);
 const dragOverFolder = ref(null);
 
@@ -300,7 +301,7 @@ const handleDrop = (event, targetFolderId = null) => {
             onSuccess: () => {
             },
             onError: () => {
-                showSnackbar('Failed to move product', 'error');
+                showSnackbar('Failed to move project', 'error');
             },
             onFinish: () => {
                 resetDragState();
@@ -317,7 +318,7 @@ const availableFolders = computed(() => {
     ];
 });
 
-// View mode: 'hierarchy' (folders + products) or 'board' (kanban by status)
+// View mode: 'hierarchy' (folders + projects) or 'board' (kanban by status)
 const viewMode = ref('hierarchy');
 
 // Hierarchy search
@@ -338,7 +339,7 @@ const filteredListsWithoutFolder = computed(() => {
     return (props.space?.projects_without_folder || []).filter(l => l.name.toLowerCase().includes(q));
 });
 
-// Product kanban board state
+// Project kanban board state
 const localProductsByStatus = ref({});
 
 const initProductsByStatus = () => {
@@ -522,12 +523,12 @@ const boardDrop = (event, toStatusId) => {
 
                 <!-- Hierarchy Search -->
                 <v-text-field v-if="viewMode === 'hierarchy'" v-model="hierarchySearch"
-                    placeholder="Search products..." prepend-inner-icon="mdi-magnify" variant="outlined"
+                    placeholder="Search projects..." prepend-inner-icon="mdi-magnify" variant="outlined"
                     density="compact" hide-details clearable style="max-width: 320px;" />
 
                 <v-btn v-if="canManageSpace" color="primary" @click="showCreateList = true">
                     <v-icon start>mdi-plus</v-icon>
-                    New Product
+                    New Project
                 </v-btn>
                 <v-btn v-if="canManageSpace" variant="outlined" @click="showCreateFolder = true">
                     <v-icon start>mdi-folder-plus-outline</v-icon>
@@ -535,8 +536,8 @@ const boardDrop = (event, toStatusId) => {
                 </v-btn>
             </div>
 
-            <!-- Board View (Product Kanban) -->
-            <div v-if="viewMode === 'board'" class="product-board">
+            <!-- Board View (Project Kanban) -->
+            <div v-if="viewMode === 'board'" class="project-board">
                 <div class="board-columns">
                     <div v-for="status in space?.statuses" :key="status.id" class="board-column"
                         :class="{ 'board-column--drag-over': boardDragOverStatus === status.id }"
@@ -557,20 +558,20 @@ const boardDrop = (event, toStatusId) => {
                         <div class="board-column__content">
                             <div class="board-column__list">
                                 <div v-for="element in (localProductsByStatus[status.id] || [])" :key="element.id"
-                                    class="product-card"
-                                    :class="{ 'product-card--dragging': boardDraggedItem?.element?.id === element.id }"
+                                    class="project-card"
+                                    :class="{ 'project-card--dragging': boardDraggedItem?.element?.id === element.id }"
                                     :draggable="canManageSpace" @dragstart="boardDragStart($event, element, status.id)"
                                     @dragend="boardDraggedItem = null"
                                     @click="router.visit(route('projects.show', [workspace.id, space.id, element.id]))">
-                                    <div class="product-card__status-bar" :style="{ backgroundColor: status.color }" />
-                                    <div class="product-card__body">
-                                        <div class="product-card__name">{{ element.name }}</div>
-                                        <div class="product-card__meta">
-                                            <span v-if="element.folder" class="product-card__folder">
+                                    <div class="project-card__status-bar" :style="{ backgroundColor: status.color }" />
+                                    <div class="project-card__body">
+                                        <div class="project-card__name">{{ element.name }}</div>
+                                        <div class="project-card__meta">
+                                            <span v-if="element.folder" class="project-card__folder">
                                                 <v-icon size="12">mdi-folder-outline</v-icon>
                                                 {{ element.folder.name }}
                                             </span>
-                                            <span class="product-card__tasks">
+                                            <span class="project-card__tasks">
                                                 <v-icon size="12">mdi-checkbox-marked-outline</v-icon>
                                                 {{ element.tasks_count || 0 }} tasks
                                             </span>
@@ -580,7 +581,7 @@ const boardDrop = (event, toStatusId) => {
 
                                 <div v-if="!(localProductsByStatus[status.id] || []).length"
                                     class="board-column__empty">
-                                    No products
+                                    No projects
                                 </div>
                             </div>
                         </div>
@@ -599,7 +600,7 @@ const boardDrop = (event, toStatusId) => {
                             </v-icon>
                             <v-icon size="20" color="warning">mdi-folder</v-icon>
                             <span class="font-medium">{{ folder.name }}</span>
-                            <span class="text-gray-500 text-sm">({{ folder.projects?.length || 0 }} products)</span>
+                            <span class="text-gray-500 text-sm">({{ folder.projects?.length || 0 }} projects)</span>
                         </div>
                         <div class="folder-actions">
                             <v-btn v-if="canManageSpace" icon variant="text" size="x-small"
@@ -710,7 +711,7 @@ const boardDrop = (event, toStatusId) => {
                 <div v-if="!filteredFolders.length && !filteredListsWithoutFolder.length" class="empty-state">
                     <v-icon size="80" color="grey-darken-1" class="mb-4">mdi-folder-open-outline</v-icon>
                     <h2 class="text-xl font-semibold mb-2">This space is empty</h2>
-                    <p class="text-gray-500">Get started by creating a product or folder</p>
+                    <p class="text-gray-500">Get started by creating a project or folder</p>
                 </div>
             </div>
         </div>
@@ -731,12 +732,12 @@ const boardDrop = (event, toStatusId) => {
             </v-card>
         </v-dialog>
 
-        <!-- Create Product Dialog -->
+        <!-- Create Project Dialog -->
         <v-dialog v-model="showCreateList" max-width="400">
             <v-card>
-                <v-card-title>Create Product</v-card-title>
+                <v-card-title>Create Project</v-card-title>
                 <v-card-text>
-                    <v-text-field v-model="newListName" label="Product Name" placeholder="e.g., Product A"
+                    <v-text-field v-model="newListName" label="Project Name" placeholder="e.g., Project A"
                         variant="outlined" autofocus class="mb-3" @keydown.enter="createList" />
                     <v-select v-model="selectedFolderId" :items="space?.folders || []" item-title="name" item-value="id"
                         label="Folder (optional)" variant="outlined" clearable bg-color="#1e1e1e" />
@@ -767,22 +768,12 @@ const boardDrop = (event, toStatusId) => {
         </v-dialog>
 
         <!-- Delete Space Dialog -->
-        <v-dialog v-model="showDeleteSpace" max-width="400">
-            <v-card>
-                <v-card-title class="text-error">Delete Space?</v-card-title>
-                <v-card-text>
-                    Are you sure you want to delete "{{ space?.name }}"? This will also delete all folders, products,
-                    and
-                    tasks
-                    within this space. This action cannot be undone.
-                </v-card-text>
-                <v-card-actions>
-                    <v-spacer />
-                    <v-btn variant="text" @click="showDeleteSpace = false">Cancel</v-btn>
-                    <v-btn color="error" @click="confirmDeleteSpace">Delete</v-btn>
-                </v-card-actions>
-            </v-card>
-        </v-dialog>
+        <DeleteConfirmDialog
+            v-model="showDeleteSpace"
+            item-type="space"
+            :item-name="space?.name"
+            @confirm="confirmDeleteSpace"
+        />
 
         <!-- Edit Folder Dialog -->
         <v-dialog v-model="showEditFolder" max-width="400">
@@ -804,7 +795,7 @@ const boardDrop = (event, toStatusId) => {
             <v-card>
                 <v-card-title class="text-error">Delete Folder?</v-card-title>
                 <v-card-text>
-                    Are you sure you want to delete "{{ deletingFolder?.name }}"? This will also delete all products
+                    Are you sure you want to delete "{{ deletingFolder?.name }}"? This will also delete all projects
                     within
                     this
                     folder. This action cannot be undone.
@@ -817,12 +808,12 @@ const boardDrop = (event, toStatusId) => {
             </v-card>
         </v-dialog>
 
-        <!-- Edit Product Dialog -->
+        <!-- Edit Project Dialog -->
         <v-dialog v-model="showEditList" max-width="400">
             <v-card>
-                <v-card-title>Edit Product</v-card-title>
+                <v-card-title>Edit Project</v-card-title>
                 <v-card-text>
-                    <v-text-field v-model="editListName" label="Product Name" variant="outlined" autofocus
+                    <v-text-field v-model="editListName" label="Project Name" variant="outlined" autofocus
                         @keydown.enter="updateList" />
                 </v-card-text>
                 <v-card-actions>
@@ -833,26 +824,19 @@ const boardDrop = (event, toStatusId) => {
             </v-card>
         </v-dialog>
 
-        <!-- Delete Product Dialog -->
-        <v-dialog v-model="showDeleteList" max-width="400">
-            <v-card>
-                <v-card-title class="text-error">Delete Product?</v-card-title>
-                <v-card-text>
-                    Are you sure you want to delete "{{ deletingList?.name }}"? This will also delete all tasks within
-                    this product. This action cannot be undone.
-                </v-card-text>
-                <v-card-actions>
-                    <v-spacer />
-                    <v-btn variant="text" @click="showDeleteList = false">Cancel</v-btn>
-                    <v-btn color="error" @click="confirmDeleteList">Delete</v-btn>
-                </v-card-actions>
-            </v-card>
-        </v-dialog>
+        <!-- Delete Project Dialog -->
+        <DeleteConfirmDialog
+            v-model="showDeleteList"
+            item-type="project"
+            :item-name="deletingList?.name"
+            warning-message="This will permanently delete the project along with all its tasks and subtasks."
+            @confirm="confirmDeleteList"
+        />
 
-        <!-- Move Product to Folder Dialog -->
+        <!-- Move Project to Folder Dialog -->
         <v-dialog v-model="showMoveList" max-width="400">
             <v-card>
-                <v-card-title>Move Product to Folder</v-card-title>
+                <v-card-title>Move Project to Folder</v-card-title>
                 <v-card-text>
                     <div class="text-sm text-gray-400 mb-4">Moving: <span class="font-medium text-white">{{
                         movingList?.name
@@ -1049,8 +1033,8 @@ const boardDrop = (event, toStatusId) => {
     justify-content: center;
 }
 
-/*  Product Kanban Board  */
-.product-board {
+/*  Project Kanban Board  */
+.project-board {
     overflow-x: auto;
     padding-bottom: 16px;
 }
@@ -1093,7 +1077,7 @@ const boardDrop = (event, toStatusId) => {
     min-height: 50px;
 }
 
-.product-card {
+.project-card {
     display: flex;
     background-color: #1e1e2e;
     border: 1px solid #2e2e3e;
@@ -1103,29 +1087,29 @@ const boardDrop = (event, toStatusId) => {
     transition: background-color 0.15s, border-color 0.15s, opacity 0.15s;
 }
 
-.product-card:hover {
+.project-card:hover {
     background-color: #242438;
     border-color: #3e3e5e;
 }
 
-.product-card--dragging {
+.project-card--dragging {
     opacity: 0.4;
     cursor: grabbing;
 }
 
-.product-card__status-bar {
+.project-card__status-bar {
     width: 4px;
     min-height: 100%;
     flex-shrink: 0;
 }
 
-.product-card__body {
+.project-card__body {
     padding: 12px;
     flex: 1;
     min-width: 0;
 }
 
-.product-card__name {
+.project-card__name {
     font-weight: 600;
     font-size: 14px;
     margin-bottom: 8px;
@@ -1134,7 +1118,7 @@ const boardDrop = (event, toStatusId) => {
     text-overflow: ellipsis;
 }
 
-.product-card__meta {
+.project-card__meta {
     display: flex;
     align-items: center;
     gap: 12px;
@@ -1142,8 +1126,8 @@ const boardDrop = (event, toStatusId) => {
     color: #9ca3af;
 }
 
-.product-card__folder,
-.product-card__tasks {
+.project-card__folder,
+.project-card__tasks {
     display: flex;
     align-items: center;
     gap: 4px;

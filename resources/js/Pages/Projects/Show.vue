@@ -9,6 +9,7 @@ import GanttChart from '@/Components/Cpm/GanttChart.vue';
 import CpmSummary from '@/Components/Cpm/CpmSummary.vue';
 import CalendarView from '@/Components/Lists/CalendarView.vue';
 import SprintView from '@/Components/Lists/SprintView.vue';
+import DeleteConfirmDialog from '@/Components/DeleteConfirmDialog.vue';
 import { useSnackbar } from '@/composables/useSnackbar';
 import { useCpm } from '@/composables/useCpm';
 import { PRIORITIES, getPriority } from '@/constants/priorities';
@@ -23,8 +24,8 @@ const props = defineProps({
     statuses: { type: Array, default: () => [] },
     sprints: { type: Array, default: () => [] },
     parentTask: { type: Object, default: null },
-    canManageProduct: { type: Boolean, default: false },
-    canDeleteProduct: { type: Boolean, default: false },
+    canManageProject: { type: Boolean, default: false },
+    canDeleteProject: { type: Boolean, default: false },
     canManageTaskStructure: { type: Boolean, default: false },
     canOperateTasks: { type: Boolean, default: false },
     canManageSpace: { type: Boolean, default: false },
@@ -622,7 +623,7 @@ onMounted(() => {
 </script>
 
 <template>
-    <MainLayout :title="list?.name || 'Product'">
+    <MainLayout :title="list?.name || 'Project'">
         <div class="list-page">
             <!-- Breadcrumb -->
             <div class="breadcrumb-header">
@@ -780,17 +781,17 @@ onMounted(() => {
                         </template>
                         <v-card color="surface">
                             <v-list density="compact">
-                                <v-list-item prepend-icon="mdi-account-lock-outline" title="Product Access"
+                                <v-list-item prepend-icon="mdi-account-lock-outline" title="Project Access"
                                     @click="router.visit(route('projects.settings', [workspace.id, space.id, list.id]))" />
                                 <v-list-item v-if="canManageProduct" prepend-icon="mdi-pencil-outline"
-                                    title="Edit Product" @click="openEditList" />
+                                    title="Edit Project" @click="openEditList" />
                                 <v-list-item v-if="canManageSpace" prepend-icon="mdi-folder-move-outline"
                                     title="Move to Folder" @click="openMoveToFolder" />
                                 <v-list-item v-if="canManageProduct" prepend-icon="mdi-content-copy"
-                                    title="Duplicate Product" @click="duplicateList" />
+                                    title="Duplicate Project" @click="duplicateList" />
                                 <template v-if="canDeleteProduct">
                                     <v-divider />
-                                    <v-list-item prepend-icon="mdi-delete-outline" title="Delete Product"
+                                    <v-list-item prepend-icon="mdi-delete-outline" title="Delete Project"
                                         class="text-error" @click="showDeleteList = true" />
                                 </template>
                             </v-list>
@@ -943,12 +944,12 @@ onMounted(() => {
             :can-operate-tasks="canOperateTasks" :can-manage-task-structure="canManageTaskStructure"
             @view-subtasks="viewSubtasks" @updated="refreshTasks" @open-subtask="openSubtaskInPanel" />
 
-        <!-- Edit Product Dialog -->
+        <!-- Edit Project Dialog -->
         <v-dialog v-model="showEditList" max-width="400">
             <v-card>
-                <v-card-title>Edit Product</v-card-title>
+                <v-card-title>Edit Project</v-card-title>
                 <v-card-text>
-                    <v-text-field v-model="editListName" label="Product Name" variant="outlined" autofocus />
+                    <v-text-field v-model="editListName" label="Project Name" variant="outlined" autofocus />
                 </v-card-text>
                 <v-card-actions>
                     <v-spacer />
@@ -958,26 +959,20 @@ onMounted(() => {
             </v-card>
         </v-dialog>
 
-        <!-- Delete Product Dialog -->
-        <v-dialog v-model="showDeleteList" max-width="400">
-            <v-card>
-                <v-card-title class="text-error">Delete Product?</v-card-title>
-                <v-card-text>
-                    Are you sure you want to delete "{{ list?.name }}"? This will also delete all tasks within this
-                    product. This action cannot be undone.
-                </v-card-text>
-                <v-card-actions>
-                    <v-spacer />
-                    <v-btn variant="text" @click="showDeleteList = false">Cancel</v-btn>
-                    <v-btn color="error" :loading="isDeleting" @click="confirmDeleteList">Delete</v-btn>
-                </v-card-actions>
-            </v-card>
-        </v-dialog>
+        <!-- Delete Project Dialog -->
+        <DeleteConfirmDialog
+            v-model="showDeleteList"
+            item-type="project"
+            :item-name="list?.name"
+            :loading="isDeleting"
+            warning-message="This will permanently delete the project along with all its tasks and subtasks."
+            @confirm="confirmDeleteList"
+        />
 
         <!-- Move to Folder Dialog -->
         <v-dialog v-model="showMoveToFolder" max-width="400">
             <v-card>
-                <v-card-title>Move Product to Folder</v-card-title>
+                <v-card-title>Move Project to Folder</v-card-title>
                 <v-card-text>
                     <v-select v-model="selectedFolder" :items="availableFolders" item-title="name" item-value="id"
                         label="Select Folder" variant="outlined" hide-details bg-color="#1e1e1e" />

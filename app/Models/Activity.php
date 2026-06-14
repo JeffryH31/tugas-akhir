@@ -195,7 +195,7 @@ class Activity extends Model
             'pessimistic_estimate' => 'pessimistic estimate',
             'progress' => 'progress',
             'sprint_id' => 'sprint',
-            'project_id' => 'product',
+            'project_id' => 'project',
             'is_archived' => 'archived status',
             'hourly_rate' => 'hourly rate',
         ];

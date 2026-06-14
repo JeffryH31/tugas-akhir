@@ -202,7 +202,7 @@ const onDropToBacklog = () => {
                                 <v-chip v-else-if="isSprintCompleted" color="default" size="small">Completed</v-chip>
                                 <v-chip v-else color="info" size="small">Planned</v-chip>
                             </div>
-                            <p v-if="list?.name" class="text-gray-500 text-xs mt-1">Product: {{ list.name }}</p>
+                            <p v-if="list?.name" class="text-gray-500 text-xs mt-1">Project: {{ list.name }}</p>
                             <p v-if="sprint.goal" class="text-gray-400 text-sm mt-1">{{ sprint.goal }}</p>
                         </div>
                     </div>

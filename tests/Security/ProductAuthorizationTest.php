@@ -39,11 +39,11 @@ beforeEach(function () {
 
     $this->list = Project::create([
         'space_id' => $this->space->id,
-        'name' => 'Product',
+        'name' => 'Project',
         'created_by' => $this->wsOwner->id,
     ]);
 
-    // Assign product-level roles
+    // Assign project-level roles
     $this->list->addMember($this->projectOwner, 'project_owner');
     $this->list->addMember($this->projectManager, 'project_manager');
     $this->list->addMember($this->developer, 'development_team');
@@ -89,7 +89,7 @@ test('project_owner can create task', function () {
         ->assertRedirect();
 });
 
-test('workspace owner can create task without product role', function () {
+test('workspace owner can create task without project role', function () {
     actingAs($this->wsOwner)
         ->post(route('tasks.store', [$this->workspace->id, $this->space->id, $this->list->id]), [
             'name' => 'WS Owner Task',

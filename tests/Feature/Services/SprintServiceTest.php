@@ -321,10 +321,10 @@ test('addSubtaskToSprint links subtask to sprint', function () {
     expect($subtask->fresh()->sprint_id)->toBe($sprint->id);
 });
 
-test('addSubtaskToSprint throws for subtask not in product', function () {
+test('addSubtaskToSprint throws for subtask not in project', function () {
     $sprint = $this->createSprint($this->hierarchy['list']);
 
-    // Create subtask in different product
+    // Create subtask in different project
     $otherHierarchy = $this->createFullHierarchy($this->owner, 'B');
     $otherSubtask = $this->createSubtask($otherHierarchy['task']);
 

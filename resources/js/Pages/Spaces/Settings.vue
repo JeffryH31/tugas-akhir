@@ -11,7 +11,7 @@ const { showSnackbar } = useSnackbar();
 const props = defineProps({
     workspace: { type: Object, default: null },
     space: { type: Object, default: null },
-    products: { type: Array, default: () => [] },
+    projects: { type: Array, default: () => [] },
     members: { type: Array, default: () => [] },
     availableUsers: { type: Array, default: () => [] },
     canManageMembers: { type: Boolean, default: false },
@@ -130,7 +130,7 @@ const removeMember = async (member) => {
                     <span class="text-gray-600">·</span>
                     <div class="d-flex align-center ga-1 text-medium-emphasis">
                         <v-icon size="15">mdi-view-grid-outline</v-icon>
-                        <span class="text-sm">{{ products?.length || 0 }} products</span>
+                        <span class="text-sm">{{ projects?.length || 0 }} projects</span>
                     </div>
                 </div>
             </div>
@@ -202,17 +202,17 @@ const removeMember = async (member) => {
             </v-card>
 
             <v-card variant="outlined" rounded="lg" class="mt-6">
-                <v-card-title>Product Access Shortcuts</v-card-title>
+                <v-card-title>Project Access Shortcuts</v-card-title>
                 <v-divider />
                 <v-list>
-                    <v-list-item v-for="product in products" :key="product.id" :title="product.name"
-                        subtitle="Active product" prepend-icon="mdi-view-grid-outline"
-                        @click="router.visit(route('projects.settings', [workspace.id, space.id, product.id]))">
+                    <v-list-item v-for="project in projects" :key="project.id" :title="project.name"
+                        subtitle="Active project" prepend-icon="mdi-view-grid-outline"
+                        @click="router.visit(route('projects.settings', [workspace.id, space.id, project.id]))">
                         <template #append>
                             <v-icon>mdi-chevron-right</v-icon>
                         </template>
                     </v-list-item>
-                    <v-list-item v-if="!products?.length" title="No products in this space yet"
+                    <v-list-item v-if="!projects?.length" title="No projects in this space yet"
                         prepend-icon="mdi-information-outline" />
                 </v-list>
             </v-card>

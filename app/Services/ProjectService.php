@@ -122,7 +122,7 @@ class ProjectService
     }
 
     /**
-     * Create a new list/product inside a space.
+     * Create a new project inside a space.
      *
      * @param  array<string, mixed>  $data  Validated list payload.
      */

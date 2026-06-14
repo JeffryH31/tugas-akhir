@@ -35,10 +35,10 @@ class TimeEntriesSeeder extends Seeder
             ['subtask' => 'Halaman list order dengan badge status',     'user' => 'devin@example.com',        'dur' => 160, 'offset_weeks' => 4, 'offset_days' => 2, 'hour' => 8,  'bill' => true],
             ['subtask' => 'API detail order & timeline status',         'user' => 'marvel@example.com',       'dur' => 120, 'offset_weeks' => 2, 'offset_days' => 0, 'hour' => 8,  'bill' => true],
 
-            //  B2C: Product Catalog
+            //  B2C: Project Catalog
             ['subtask' => 'API produk & kategori',                      'user' => 'devin@example.com',        'dur' => 315, 'offset_weeks' => 5, 'offset_days' => 0, 'hour' => 8,  'bill' => false],
-            ['subtask' => 'Halaman product listing (grid + lazy load)', 'user' => 'marvel@example.com',       'dur' => 210, 'offset_weeks' => 5, 'offset_days' => 1, 'hour' => 8,  'bill' => false],
-            ['subtask' => 'Halaman product listing (grid + lazy load)', 'user' => 'marvel@example.com',       'dur' => 150, 'offset_weeks' => 5, 'offset_days' => 2, 'hour' => 8,  'bill' => false],
+            ['subtask' => 'Halaman project listing (grid + lazy load)', 'user' => 'marvel@example.com',       'dur' => 210, 'offset_weeks' => 5, 'offset_days' => 1, 'hour' => 8,  'bill' => false],
+            ['subtask' => 'Halaman project listing (grid + lazy load)', 'user' => 'marvel@example.com',       'dur' => 150, 'offset_weeks' => 5, 'offset_days' => 2, 'hour' => 8,  'bill' => false],
             ['subtask' => 'Komponen filter multi-parameter',            'user' => 'marvel@example.com',       'dur' => 120, 'offset_weeks' => 4, 'offset_days' => 0, 'hour' => 8,  'bill' => false],
 
             //  B2C: Checkout & Payment

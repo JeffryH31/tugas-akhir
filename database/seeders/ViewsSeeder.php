@@ -41,9 +41,9 @@ class ViewsSeeder extends Seeder
             ['space' => 'B2C',  'project' => null,                        'user' => $kevin,       'name' => 'B2C Board',        'type' => 'board',    'is_default' => false, 'position' => 1],
             ['space' => 'B2C',  'project' => null,                        'user' => $kevin,       'name' => 'B2C Calendar',     'type' => 'calendar', 'is_default' => false, 'position' => 2],
 
-            //  Product Catalog project views
-            ['space' => null, 'project' => 'Product Catalog',             'user' => $jeff,        'name' => 'Board',            'type' => 'board',    'is_default' => true,  'position' => 0],
-            ['space' => null, 'project' => 'Product Catalog',             'user' => $marvel,      'name' => 'My Tasks',         'type' => 'list',     'is_default' => false, 'position' => 1],
+            //  Project Catalog project views
+            ['space' => null, 'project' => 'Project Catalog',             'user' => $jeff,        'name' => 'Board',            'type' => 'board',    'is_default' => true,  'position' => 0],
+            ['space' => null, 'project' => 'Project Catalog',             'user' => $marvel,      'name' => 'My Tasks',         'type' => 'list',     'is_default' => false, 'position' => 1],
 
             //  Checkout & Payment project views
             ['space' => null, 'project' => 'Checkout & Payment',          'user' => $jeff,        'name' => 'Board',            'type' => 'board',    'is_default' => true,  'position' => 0],

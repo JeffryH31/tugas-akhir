@@ -35,7 +35,7 @@ class Sprint extends Model
     }
 
     /**
-     * Get the product/list that owns the sprint.
+     * Get the project that owns the sprint.
      */
     public function project()
     {

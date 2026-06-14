@@ -124,14 +124,14 @@ const removeMember = async (member) => {
                         Space Access
                     </v-btn>
                 </div>
-                <h1 class="text-2xl font-bold">Product Access Settings</h1>
+                <h1 class="text-2xl font-bold">Project Access Settings</h1>
                 <p class="text-gray-500 mt-1">Manage membership and roles for {{ list?.name }}</p>
             </div>
 
             <v-card variant="outlined" rounded="lg" class="mt-6">
                 <v-card-text class="d-flex flex-wrap align-center ga-2">
                     <v-chip color="success" variant="tonal" size="small">
-                        Active Product
+                        Active Project
                     </v-chip>
                     <v-chip color="primary" variant="tonal" size="small">
                         {{ members?.length || 0 }} members
@@ -144,7 +144,7 @@ const removeMember = async (member) => {
 
             <v-card variant="outlined" rounded="lg" class="mt-6">
                 <v-card-title class="d-flex align-center justify-space-between">
-                    <span>Product Members</span>
+                    <span>Project Members</span>
                     <v-btn
                         v-if="canManageMembers"
                         color="primary"
@@ -154,7 +154,7 @@ const removeMember = async (member) => {
                         @click="openAddMemberDialog"
                     >
                         <v-icon start size="16">mdi-account-plus</v-icon>
-                        Add Product Member
+                        Add Project Member
                     </v-btn>
                 </v-card-title>
                 <v-divider />
@@ -222,7 +222,7 @@ const removeMember = async (member) => {
                         </tr>
                         <tr v-if="!members?.length">
                             <td colspan="4" class="text-center py-8 text-gray-500">
-                                No product members yet
+                                No project members yet
                             </td>
                         </tr>
                     </tbody>
@@ -232,10 +232,10 @@ const removeMember = async (member) => {
 
         <v-dialog v-model="showAddMemberDialog" max-width="520">
             <v-card>
-                <v-card-title>Add Product Member</v-card-title>
+                <v-card-title>Add Project Member</v-card-title>
                 <v-card-text>
                     <v-alert v-if="!availableUsers?.length" type="warning" variant="tonal" class="mb-4">
-                        All workspace members are already assigned to this product.
+                        All workspace members are already assigned to this project.
                     </v-alert>
 
                     <v-select
@@ -265,7 +265,7 @@ const removeMember = async (member) => {
                         :items="projectRoleItems"
                         item-title="title"
                         item-value="value"
-                        label="Product Role"
+                        label="Project Role"
                         variant="outlined"
                     />
                 </v-card-text>

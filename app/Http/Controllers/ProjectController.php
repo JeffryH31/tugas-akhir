@@ -108,8 +108,8 @@ class ProjectController extends Controller
             'sprints' => $project->sprints()->withCount('subtasks')->orderBy('position')->get(),
             'parentTask' => $parentTask,
             'projectMembers' => $project->members()->get(['users.id', 'users.name', 'users.email']),
-            'canManageProduct' => $this->accessService->canManageProduct($request->user(), $project),
-            'canDeleteProduct' => $this->accessService->canDeleteProduct($request->user(), $project),
+            'canManageProject' => $this->accessService->canManageProject($request->user(), $project),
+            'canDeleteProject' => $this->accessService->canDeleteProject($request->user(), $project),
             'canManageTaskStructure' => $this->accessService->canManageTaskStructure($request->user(), $project),
             'canOperateTasks' => $this->accessService->canOperateTasks($request->user(), $project),
             'canManageSpace' => $this->accessService->canManageSpace($request->user(), $space),
@@ -117,7 +117,7 @@ class ProjectController extends Controller
     }
 
     /**
-     * Display product access settings.
+     * Display project access settings.
      */
     public function settings(Request $request, Workspace $workspace, Space $space, Project $project): Response
     {
@@ -241,7 +241,7 @@ class ProjectController extends Controller
     }
 
     /**
-     * Change product status (for kanban board drag-and-drop).
+     * Change project status (for kanban board drag-and-drop).
      */
     public function changeStatus(Request $request, Workspace $workspace, Space $space, Project $project): RedirectResponse
     {
@@ -257,7 +257,7 @@ class ProjectController extends Controller
 
         $project->update(['status_id' => $request->status_id]);
 
-        return back()->with('success', 'Product status updated.');
+        return back()->with('success', 'Project status updated.');
     }
 
     public function addMember(AddMemberRequest $request, Workspace $workspace, Space $space, Project $project): RedirectResponse

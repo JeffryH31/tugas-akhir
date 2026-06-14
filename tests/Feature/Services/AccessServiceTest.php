@@ -115,37 +115,37 @@ test('space member cannot manage space', function () {
     expect($this->access->canManageSpace($member, $this->hierarchy['space']))->toBeFalse();
 });
 
-// Product/Project-level
-test('product member can view product', function () {
+// Project-level
+test('project member can view project', function () {
     $dev = $this->createUser();
     $this->hierarchy['workspace']->addMember($dev, 'member');
     $this->hierarchy['list']->addMember($dev, 'development_team');
 
-    expect($this->access->canViewProduct($dev, $this->hierarchy['list']))->toBeTrue();
+    expect($this->access->canViewProject($dev, $this->hierarchy['list']))->toBeTrue();
 });
 
-test('inherits view access from space when no product members configured', function () {
+test('inherits view access from space when no project members configured', function () {
     $member = $this->createUser();
     $this->hierarchy['workspace']->addMember($member, 'member');
 
     // No list members configured — should inherit from space
-    expect($this->access->canViewProduct($member, $this->hierarchy['list']))->toBeTrue();
+    expect($this->access->canViewProject($member, $this->hierarchy['list']))->toBeTrue();
 });
 
-test('project_owner can manage product', function () {
+test('project_owner can manage project', function () {
     $pm = $this->createUser();
     $this->hierarchy['workspace']->addMember($pm, 'member');
     $this->hierarchy['list']->addMember($pm, 'project_owner');
 
-    expect($this->access->canManageProduct($pm, $this->hierarchy['list']))->toBeTrue();
+    expect($this->access->canManageProject($pm, $this->hierarchy['list']))->toBeTrue();
 });
 
-test('developer cannot manage product', function () {
+test('developer cannot manage project', function () {
     $dev = $this->createUser();
     $this->hierarchy['workspace']->addMember($dev, 'member');
     $this->hierarchy['list']->addMember($dev, 'development_team');
 
-    expect($this->access->canManageProduct($dev, $this->hierarchy['list']))->toBeFalse();
+    expect($this->access->canManageProject($dev, $this->hierarchy['list']))->toBeFalse();
 });
 
 // Task operations
@@ -234,11 +234,11 @@ test('getProjectRole returns correct role', function () {
     $this->hierarchy['list']->addMember($dev, 'development_team');
 
     expect($this->access->getProjectRole($dev, $this->hierarchy['list']))->toBe('development_team');
-    expect($this->access->getProductRole($dev, $this->hierarchy['list']))->toBe('development_team');
+    expect($this->access->getProjectRole($dev, $this->hierarchy['list']))->toBe('development_team');
 });
 
-// canDeleteProduct
-test('project_owner can delete product', function () {
+// canDeleteProject
+test('project_owner can delete project', function () {
     $pm = $this->createUser();
     $dev = $this->createUser();
     $this->hierarchy['workspace']->addMember($pm, 'member');
@@ -246,12 +246,12 @@ test('project_owner can delete product', function () {
     $this->hierarchy['list']->addMember($pm, 'project_owner');
     $this->hierarchy['list']->addMember($dev, 'development_team');
 
-    expect($this->access->canDeleteProduct($pm, $this->hierarchy['list']))->toBeTrue();
-    expect($this->access->canDeleteProduct($dev, $this->hierarchy['list']))->toBeFalse();
+    expect($this->access->canDeleteProject($pm, $this->hierarchy['list']))->toBeTrue();
+    expect($this->access->canDeleteProject($dev, $this->hierarchy['list']))->toBeFalse();
 });
 
-// canManageProductMembers
-test('project_owner can manage product members', function () {
+// canManageProjectMembers
+test('project_owner can manage project members', function () {
     $pm = $this->createUser();
     $dev = $this->createUser();
     $this->hierarchy['workspace']->addMember($pm, 'member');
@@ -259,8 +259,8 @@ test('project_owner can manage product members', function () {
     $this->hierarchy['list']->addMember($pm, 'project_owner');
     $this->hierarchy['list']->addMember($dev, 'development_team');
 
-    expect($this->access->canManageProductMembers($pm, $this->hierarchy['list']))->toBeTrue();
-    expect($this->access->canManageProductMembers($dev, $this->hierarchy['list']))->toBeFalse();
+    expect($this->access->canManageProjectMembers($pm, $this->hierarchy['list']))->toBeTrue();
+    expect($this->access->canManageProjectMembers($dev, $this->hierarchy['list']))->toBeFalse();
 });
 
 // canOperateTasks
@@ -354,10 +354,10 @@ test('project member can view activity', function () {
 
 // CRITICAL: Workspace admin vs workspace owner on task operations
 //
-test('workspace admin CANNOT edit tasks on products without a product role', function () {
+test('workspace admin CANNOT edit tasks on projects without a project role', function () {
     $admin = $this->createUser();
     $this->hierarchy['workspace']->addMember($admin, 'admin');
-    // Admin has NO product-level role on this list
+    // Admin has NO project-level role on this list
     expect($this->access->canOperateTasks($admin, $this->hierarchy['list']))->toBeFalse();
     expect($this->access->canManageTaskStructure($admin, $this->hierarchy['list']))->toBeFalse();
     expect($this->access->canAssignTasks($admin, $this->hierarchy['list']))->toBeFalse();
@@ -366,7 +366,7 @@ test('workspace admin CANNOT edit tasks on products without a product role', fun
     expect($this->access->canManageDependencies($admin, $this->hierarchy['list']))->toBeFalse();
 });
 
-test('workspace admin CAN edit tasks when given a product role', function () {
+test('workspace admin CAN edit tasks when given a project role', function () {
     $admin = $this->createUser();
     $this->hierarchy['workspace']->addMember($admin, 'admin');
     $this->hierarchy['list']->addMember($admin, 'development_team');
@@ -388,8 +388,8 @@ test('workspace admin with project_manager role CAN manage task structure', func
     expect($this->access->canOperateTasks($admin, $this->hierarchy['list']))->toBeTrue();
 });
 
-test('workspace owner CAN do everything on any product without a product role', function () {
-    // Owner has NO explicit product role
+test('workspace owner CAN do everything on any project without a project role', function () {
+    // Owner has NO explicit project role
     expect($this->access->canOperateTasks($this->owner, $this->hierarchy['list']))->toBeTrue();
     expect($this->access->canManageTaskStructure($this->owner, $this->hierarchy['list']))->toBeTrue();
     expect($this->access->canAssignTasks($this->owner, $this->hierarchy['list']))->toBeTrue();
@@ -398,14 +398,14 @@ test('workspace owner CAN do everything on any product without a product role', 
     expect($this->access->canManageDependencies($this->owner, $this->hierarchy['list']))->toBeTrue();
 });
 
-test('workspace admin CAN still manage products and members (oversight)', function () {
+test('workspace admin CAN still manage projects and members (oversight)', function () {
     $admin = $this->createUser();
     $this->hierarchy['workspace']->addMember($admin, 'admin');
-    // Admin has NO product role — but should still manage product settings & members
-    expect($this->access->canViewProduct($admin, $this->hierarchy['list']))->toBeTrue();
-    expect($this->access->canManageProduct($admin, $this->hierarchy['list']))->toBeTrue();
-    expect($this->access->canDeleteProduct($admin, $this->hierarchy['list']))->toBeTrue();
-    expect($this->access->canManageProductMembers($admin, $this->hierarchy['list']))->toBeTrue();
+    // Admin has NO project role — but should still manage project settings & members
+    expect($this->access->canViewProject($admin, $this->hierarchy['list']))->toBeTrue();
+    expect($this->access->canManageProject($admin, $this->hierarchy['list']))->toBeTrue();
+    expect($this->access->canDeleteProject($admin, $this->hierarchy['list']))->toBeTrue();
+    expect($this->access->canManageProjectMembers($admin, $this->hierarchy['list']))->toBeTrue();
 });
 
 // canResolveComment
@@ -419,7 +419,7 @@ test('comment author can resolve own comment', function () {
     expect($this->access->canResolveComment($this->owner, $comment))->toBeTrue();
 });
 
-test('project manager can resolve any comment in their product', function () {
+test('project manager can resolve any comment in their project', function () {
     $author = $this->createUser();
     $pm = $this->createUser();
     $this->hierarchy['workspace']->addMember($author, 'member');

@@ -110,7 +110,7 @@ test('owner can update a subtask name and description', function () {
     ]);
 });
 
-test('developer (product member) can update a subtask', function () {
+test('developer (project member) can update a subtask', function () {
     $dev = $this->createUser();
     $this->h['workspace']->addMember($dev, 'member');
     $this->h['list']->addMember($dev, 'development_team');

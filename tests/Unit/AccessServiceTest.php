@@ -66,7 +66,7 @@ test('only space admin can manage space', function () {
     expect(in_array('guest', $allowedRoles, true))->toBeFalse();
 });
 
-test('project_owner and project_manager can manage product', function () {
+test('project_owner and project_manager can manage project', function () {
     $allowedRoles = [AccessService::PROJECT_OWNER, AccessService::PROJECT_MANAGER];
 
     expect(in_array('project_owner', $allowedRoles, true))->toBeTrue();
@@ -111,13 +111,13 @@ test('project_owner project_manager and development_team can track time', functi
     expect(in_array('guest', $allowedRoles, true))->toBeFalse();
 });
 
-test('only project_owner can manage product members', function () {
+test('only project_owner can manage project members', function () {
     expect(AccessService::PROJECT_OWNER)->toBe('project_owner');
     expect('project_owner' === AccessService::PROJECT_OWNER)->toBeTrue();
     expect('project_manager' === AccessService::PROJECT_OWNER)->toBeFalse();
 });
 
-test('only project_owner can delete product', function () {
+test('only project_owner can delete project', function () {
     expect('project_owner' === AccessService::PROJECT_OWNER)->toBeTrue();
     expect('project_manager' === AccessService::PROJECT_OWNER)->toBeFalse();
     expect('development_team' === AccessService::PROJECT_OWNER)->toBeFalse();
@@ -163,7 +163,7 @@ test('canEditTasks follows canOperateTasks rules', function () {
 });
 
 test('canComment follows canViewProject rules - anyone who can view can comment', function () {
-    // canViewProduct allows: workspace_owner, workspace_admin, or anyone with product role, or no members configured
+    // canViewProject allows: workspace_owner, workspace_admin, or anyone with project role, or no members configured
     // This means the rule is permissive for view access
     $wsAdminRoles = [AccessService::WORKSPACE_OWNER, AccessService::WORKSPACE_ADMIN];
     expect(in_array('owner', $wsAdminRoles, true))->toBeTrue();

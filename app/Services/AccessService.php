@@ -82,7 +82,7 @@ class AccessService
     }
 
     /**
-     * Get product/project membership role for a user.
+     * Get project membership role for a user.
      */
     public function getProjectRole(User $user, Project $list): ?string
     {
@@ -97,13 +97,7 @@ class AccessService
         return $this->roleCache[$key];
     }
 
-    /**
-     * Alias of getProjectRole for product terminology.
-     */
-    public function getProductRole(User $user, Project $list): ?string
-    {
-        return $this->getProjectRole($user, $list);
-    }
+
 
     // Workspace-level
     /**
@@ -195,15 +189,15 @@ class AccessService
         ], true);
     }
 
-    // Product-level: viewing & management
+    // Project-level: viewing & management
     /**
-     * Determine whether a user can view a product.
+     * Determine whether a user can view a project.
      *
-     * Workspace admin can view all products (oversight).
-     * Otherwise, requires a product role or inherits from space
-     * when no product members have been configured yet.
+     * Workspace admin can view all projects (oversight).
+     * Otherwise, requires a project role or inherits from space
+     * when no project members have been configured yet.
      */
-    public function canViewProduct(User $user, Project $list): bool
+    public function canViewProject(User $user, Project $list): bool
     {
         $workspaceRole = $this->getWorkspaceRole($user, $list->space->workspace);
 
@@ -215,51 +209,37 @@ class AccessService
             return true;
         }
 
-        if (! is_null($this->getProductRole($user, $list))) {
+        if (! is_null($this->getProjectRole($user, $list))) {
             return true;
         }
 
-        // No product members configured → open by default for workspace members
+        // No project members configured → open by default for workspace members
         return ! $list->members()->exists();
     }
 
-    /** Alias of canViewProduct for project terminology.
-     */
-    public function canViewProject(User $user, Project $list): bool
-    {
-        return $this->canViewProduct($user, $list);
-    }
-
     /**
-     * Determine whether a user can manage a product (settings, etc.).
+     * Determine whether a user can manage a project (settings, etc.).
      *
-     * Workspace admin can always manage products.
-     */
-    public function canManageProduct(User $user, Project $list): bool
-    {
-        if (in_array($this->getWorkspaceRole($user, $list->space->workspace), [
-            self::WORKSPACE_OWNER,
-            self::WORKSPACE_ADMIN,
-        ], true)) {
-            return true;
-        }
-
-        return in_array($this->getProductRole($user, $list), [self::PROJECT_OWNER, self::PROJECT_MANAGER], true);
-    }
-
-    /** Alias of canManageProduct for project terminology.
+     * Workspace admin can always manage projects.
      */
     public function canManageProject(User $user, Project $list): bool
     {
-        return $this->canManageProduct($user, $list);
+        if (in_array($this->getWorkspaceRole($user, $list->space->workspace), [
+            self::WORKSPACE_OWNER,
+            self::WORKSPACE_ADMIN,
+        ], true)) {
+            return true;
+        }
+
+        return in_array($this->getProjectRole($user, $list), [self::PROJECT_OWNER, self::PROJECT_MANAGER], true);
     }
 
     /**
-     * Determine whether a user can delete a product.
+     * Determine whether a user can delete a project.
      *
      * Workspace admin can always delete.
      */
-    public function canDeleteProduct(User $user, Project $list): bool
+    public function canDeleteProject(User $user, Project $list): bool
     {
         if (in_array($this->getWorkspaceRole($user, $list->space->workspace), [
             self::WORKSPACE_OWNER,
@@ -268,48 +248,34 @@ class AccessService
             return true;
         }
 
-        return $this->getProductRole($user, $list) === self::PROJECT_OWNER;
-    }
-
-    /** Alias of canDeleteProduct for project terminology.
-     */
-    public function canDeleteProject(User $user, Project $list): bool
-    {
-        return $this->canDeleteProduct($user, $list);
+        return $this->getProjectRole($user, $list) === self::PROJECT_OWNER;
     }
 
     /**
-     * Determine whether a user can manage product members.
+     * Determine whether a user can manage project members.
      *
-     * Workspace admin can always manage product membership
-     * (to assign people to products).
-     */
-    public function canManageProductMembers(User $user, Project $list): bool
-    {
-        if (in_array($this->getWorkspaceRole($user, $list->space->workspace), [
-            self::WORKSPACE_OWNER,
-            self::WORKSPACE_ADMIN,
-        ], true)) {
-            return true;
-        }
-
-        return $this->getProductRole($user, $list) === self::PROJECT_OWNER;
-    }
-
-    /** Alias of canManageProductMembers for project terminology.
+     * Workspace admin can always manage project membership
+     * (to assign people to projects).
      */
     public function canManageProjectMembers(User $user, Project $list): bool
     {
-        return $this->canManageProductMembers($user, $list);
+        if (in_array($this->getWorkspaceRole($user, $list->space->workspace), [
+            self::WORKSPACE_OWNER,
+            self::WORKSPACE_ADMIN,
+        ], true)) {
+            return true;
+        }
+
+        return $this->getProjectRole($user, $list) === self::PROJECT_OWNER;
     }
 
-    // Product-level: task operations
+    // Project-level: task operations
     //
     // These methods check PRODUCT-LEVEL roles.
     // Only the workspace OWNER gets automatic bypass.
-    // Workspace admins must have an explicit product role.
+    // Workspace admins must have an explicit project role.
     /**
-     * Determine whether a user can edit tasks in a product.
+     * Determine whether a user can edit tasks in a project.
      */
     public function canEditTasks(User $user, Project $list): bool
     {
@@ -404,9 +370,9 @@ class AccessService
 
     // Comment & time-entry ownership
     /**
-     * Determine whether a user can comment on a product.
+     * Determine whether a user can comment on a project.
      *
-     * Anyone who can view the product can comment.
+     * Anyone who can view the project can comment.
      */
     public function canComment(User $user, Project $list): bool
     {
@@ -436,7 +402,7 @@ class AccessService
     /**
      * Determine whether a user can resolve/unresolve a comment.
      *
-     * Comment author, or project_owner/project_manager on the product.
+     * Comment author, or project_owner/project_manager on the project.
      */
     public function canResolveComment(User $user, Comment $comment): bool
     {

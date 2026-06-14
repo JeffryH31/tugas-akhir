@@ -133,12 +133,12 @@ class TasksSeeder extends Seeder
         ]);
 
         // ═══════════════════════════════════════════════════════════════════
-        // B2C – Product Catalog
+        // B2C – Project Catalog
         // ═══════════════════════════════════════════════════════════════════
         $this->createTask([
-            'name' => 'Product Catalog & Listing',
+            'name' => 'Project Catalog & Listing',
             'description' => "Halaman katalog produk:\n- Grid & list view\n- Filter multi-parameter\n- Sorting produk\n- Breadcrumb navigasi",
-            'list' => 'Product Catalog',
+            'list' => 'Project Catalog',
             'status' => ['B2C', 'In Progress'],
             'priority_level' => 1,
             'created_by' => $jeff->id,
@@ -151,9 +151,9 @@ class TasksSeeder extends Seeder
         ]);
 
         $this->createTask([
-            'name' => 'Product Detail & Search',
+            'name' => 'Project Detail & Search',
             'description' => "Halaman detail produk dan pencarian:\n- Galeri foto produk\n- Spesifikasi produk\n- Review & rating\n- Search auto-suggest",
-            'list' => 'Product Catalog',
+            'list' => 'Project Catalog',
             'status' => ['B2C', 'In Progress'],
             'priority_level' => 2,
             'created_by' => $kevin->id,
