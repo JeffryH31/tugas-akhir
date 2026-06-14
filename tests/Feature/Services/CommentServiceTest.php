@@ -137,7 +137,6 @@ test('extractMentions returns empty for no mentions', function () {
 // ============================================================
 // Merged from Unit/Services/CommentServiceTest.php
 // ============================================================
-
 test('create comment with mentions and attachments', function () {
     $task = $this->hierarchy['task'];
 

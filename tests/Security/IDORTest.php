@@ -19,7 +19,6 @@ beforeEach(function () {
 });
 
 // Cross-User Comment Manipulation
-
 test('user cannot update another users comment', function () {
     $hierarchy = $this->createFullHierarchy($this->userA);
     $hierarchy['workspace']->addMember($this->userB, 'member');
@@ -88,7 +87,6 @@ test('workspace admin can moderate any comment', function () {
 });
 
 // Cross-User Time Entry Manipulation
-
 test('user cannot update another users time entry', function () {
     $hierarchy = $this->createFullHierarchy($this->userA);
     $hierarchy['workspace']->addMember($this->userB, 'member');
@@ -130,7 +128,6 @@ test('user can update their own time entry', function () {
 });
 
 // Cross-Workspace Resource Access
-
 test('user cannot update task in workspace they have no access to', function () {
     $hierarchyA = $this->createFullHierarchy($this->userA, 'A');
     $hierarchyB = $this->createFullHierarchy($this->userB, 'B');
@@ -162,7 +159,6 @@ test('user cannot use task ID from another workspace through their own workspace
 });
 
 // Cross-Space Resource Access
-
 test('cannot move task to a list in another space', function () {
     $hierarchy = $this->createFullHierarchy($this->userA);
 
@@ -189,7 +185,6 @@ test('cannot move task to a list in another space', function () {
 });
 
 // Subtask Cross-Task Manipulation
-
 test('cannot update subtask using wrong parent task ID in URL', function () {
     $hierarchy = $this->createFullHierarchy($this->userA);
 
@@ -216,7 +211,6 @@ test('cannot update subtask using wrong parent task ID in URL', function () {
 });
 
 // Status Cross-Space Manipulation
-
 test('cannot use status from different space when changing task status', function () {
     $hierarchyA = $this->createFullHierarchy($this->userA, 'A');
     $hierarchyB = $this->createFullHierarchy($this->userA, 'B');

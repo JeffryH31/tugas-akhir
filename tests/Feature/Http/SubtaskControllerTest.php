@@ -8,7 +8,6 @@ use function Pest\Laravel\actingAs;
 uses(CreatesWorkspaceHierarchy::class);
 
 // Shared setup
-
 beforeEach(function () {
     $this->owner = $this->createUser();
     $this->h = $this->createFullHierarchy($this->owner);
@@ -22,7 +21,6 @@ beforeEach(function () {
 });
 
 // store
-
 test('owner can create a subtask', function () {
     actingAs($this->owner)
         ->from(route('projects.show', [$this->h['workspace'], $this->h['space'], $this->h['list']]))
@@ -96,7 +94,6 @@ test('creating subtask with due date before start date fails validation', functi
 });
 
 // update
-
 test('owner can update a subtask name and description', function () {
     actingAs($this->owner)
         ->from(route('projects.show', [$this->h['workspace'], $this->h['space'], $this->h['list']]))
@@ -141,7 +138,6 @@ test('non-member gets 403 when updating a subtask', function () {
 });
 
 // complete
-
 test('owner can complete a subtask', function () {
     actingAs($this->owner)
         ->from(route('projects.show', [$this->h['workspace'], $this->h['space'], $this->h['list']]))
@@ -169,7 +165,6 @@ test('completing a subtask sets its status to the provided closed status', funct
 });
 
 // reopen
-
 test('owner can reopen a completed subtask', function () {
     $this->subtask->update(['completed_at' => now()]);
 
@@ -185,7 +180,6 @@ test('owner can reopen a completed subtask', function () {
 });
 
 // destroy
-
 test('owner can delete a subtask', function () {
     actingAs($this->owner)
         ->delete(route('tasks.subtasks.destroy', [$this->h['workspace'], $this->h['space'], $this->h['list'], $this->h['task'], $this->subtask]))
@@ -205,7 +199,6 @@ test('developer cannot delete a subtask (requires canManageTaskStructure)', func
 });
 
 // duplicate
-
 test('owner can duplicate a subtask', function () {
     actingAs($this->owner)
         ->from(route('projects.show', [$this->h['workspace'], $this->h['space'], $this->h['list']]))

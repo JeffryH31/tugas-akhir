@@ -38,7 +38,6 @@ class ActivityService
     // ==========================================
     // Task Activity Logs
     // ==========================================
-
     /**
      * Log task created activity.
      */
@@ -136,7 +135,6 @@ class ActivityService
     // ==========================================
     // Timer Activity Logs
     // ==========================================
-
     /**
      * Log timer started activity.
      */
@@ -174,7 +172,6 @@ class ActivityService
     // ==========================================
     // Space Activity Logs
     // ==========================================
-
     /**
      * Log space created activity.
      */
@@ -200,7 +197,6 @@ class ActivityService
     // ==========================================
     // List Activity Logs
     // ==========================================
-
     /**
      * Log list created activity.
      */
@@ -227,7 +223,6 @@ class ActivityService
     // ==========================================
     // Workspace Activity Logs
     // ==========================================
-
     /**
      * Log member added to workspace activity.
      */
@@ -243,7 +238,6 @@ class ActivityService
     // ==========================================
     // Retrieval Methods
     // ==========================================
-
     /**
      * Get activities for a specific space.
      */
@@ -353,7 +347,6 @@ class ActivityService
     // ==========================================
     // Helper Methods
     // ==========================================
-
     /**
      * Format duration in minutes to human readable string.
      */

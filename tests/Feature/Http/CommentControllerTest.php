@@ -8,7 +8,6 @@ use function Pest\Laravel\actingAs;
 uses(CreatesWorkspaceHierarchy::class);
 
 // Shared setup
-
 beforeEach(function () {
     $this->owner = $this->createUser();
     $this->h = $this->createFullHierarchy($this->owner);
@@ -26,7 +25,6 @@ function commentRoute(array $h, string $name, ?Comment $comment = null): string
 }
 
 // store
-
 test('owner can create a comment on a task', function () {
     actingAs($this->owner)
         ->from(commentRoute($this->h, 'projects.show'))
@@ -98,7 +96,6 @@ test('developer (product member) can comment', function () {
 });
 
 // update
-
 test('comment author can update their own comment', function () {
     $comment = Comment::create([
         'task_id' => $this->h['task']->id,
@@ -140,7 +137,6 @@ test('another user cannot update someone else comment', function () {
 });
 
 // destroy
-
 test('comment author can delete their own comment', function () {
     $comment = Comment::create([
         'task_id' => $this->h['task']->id,
@@ -192,7 +188,6 @@ test('workspace admin (owner) can delete any comment', function () {
 });
 
 // resolve / unresolve
-
 test('comment author can resolve their own comment', function () {
     $comment = Comment::create([
         'task_id' => $this->h['task']->id,

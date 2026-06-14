@@ -493,7 +493,6 @@ class RealisticDemoSeeder extends Seeder
 
                 // NOTE: task-level assignees are intentionally NOT seeded — in this
                 // workflow assignees live on subtasks and are derived upward.
-
                 // Labels
                 foreach ($tDef['labels'] ?? [] as $lName) {
                     if (isset($this->labelMap[$lName])) {
@@ -822,7 +821,6 @@ class RealisticDemoSeeder extends Seeder
     }
 
     // Helpers
-
     private function getSpaceDevs(string $spaceName): array
     {
         $map = [

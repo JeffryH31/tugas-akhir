@@ -174,7 +174,6 @@ test('getWithTasksByStatus groups items by status', function () {
 // ============================================================
 // Merged from Unit/Services/ProjectServiceTest.php
 // ============================================================
-
 test('create list adds creator as project_owner', function () {
     $list = $this->service->create(
         ['name' => 'My List'],

@@ -8,7 +8,6 @@ use function Pest\Laravel\actingAs;
 uses(CreatesWorkspaceHierarchy::class);
 
 // Shared setup
-
 beforeEach(function () {
     $this->owner = $this->createUser();
     $this->h = $this->createFullHierarchy($this->owner);
@@ -16,7 +15,6 @@ beforeEach(function () {
 });
 
 // store (log time)
-
 test('owner can log time to a subtask', function () {
     actingAs($this->owner)
         ->from(route('projects.show', [$this->h['workspace'], $this->h['space'], $this->h['list']]))
@@ -105,7 +103,6 @@ test('non-member gets 403 when logging time', function () {
 });
 
 // startTimer
-
 test('owner can start a timer', function () {
     actingAs($this->owner)
         ->from(route('projects.show', [$this->h['workspace'], $this->h['space'], $this->h['list']]))
@@ -162,7 +159,6 @@ test('starting a second timer stops the first', function () {
 });
 
 // stopTimer
-
 test('owner can stop their own running timer', function () {
     $entry = TimeEntry::create([
         'subtask_id' => $this->subtask->id,

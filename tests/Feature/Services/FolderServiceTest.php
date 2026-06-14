@@ -124,7 +124,6 @@ test('getFoldersForSpace returns folders with children and lists', function () {
 // ============================================================
 // Merged from Unit/Services/FolderServiceTest.php
 // ============================================================
-
 test('create folder with name', function () {
     $folder = $this->service->create(
         ['name' => 'New Folder'],

@@ -41,7 +41,6 @@ class AccessService
     }
 
     // Role getters
-
     /**
      * Determine whether the user can access the application.
      */
@@ -107,7 +106,6 @@ class AccessService
     }
 
     // Workspace-level
-
     /**
      * Determine whether a user can view a workspace.
      */
@@ -148,7 +146,6 @@ class AccessService
     }
 
     // Space-level
-
     /**
      * Determine whether a user can view a space.
      *
@@ -199,7 +196,6 @@ class AccessService
     }
 
     // Product-level: viewing & management
-
     /**
      * Determine whether a user can view a product.
      *
@@ -312,7 +308,6 @@ class AccessService
     // These methods check PRODUCT-LEVEL roles.
     // Only the workspace OWNER gets automatic bypass.
     // Workspace admins must have an explicit product role.
-
     /**
      * Determine whether a user can edit tasks in a product.
      */
@@ -408,7 +403,6 @@ class AccessService
     }
 
     // Comment & time-entry ownership
-
     /**
      * Determine whether a user can comment on a product.
      *
@@ -478,7 +472,6 @@ class AccessService
     }
 
     // Activity & analytics
-
     /**
      * Determine whether a user can view project activity logs.
      */

@@ -236,7 +236,6 @@ test('getProductsByStatus groups lists by status', function () {
 // ============================================================
 // Merged from Unit/Services/SpaceServiceTest.php
 // ============================================================
-
 test('create space with name', function () {
     $space = $this->service->create(
         ['name' => 'Backend'],

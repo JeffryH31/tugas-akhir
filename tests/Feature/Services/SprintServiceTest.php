@@ -250,7 +250,6 @@ test('getBurndownData returns empty for sprint with no subtasks', function () {
 // ============================================================
 // Merged from Unit/Services/SprintServiceTest.php
 // ============================================================
-
 test('createSprint creates sprint for list', function () {
     $sprint = $this->service->createSprint($this->hierarchy['list'], [
         'name' => 'Sprint 1',

@@ -14,7 +14,6 @@ beforeEach(function () {
 });
 
 // Required Field Validation
-
 test('task name is required', function () {
     actingAs($this->owner)
         ->post(route('tasks.store', [
@@ -38,7 +37,6 @@ test('space name is required', function () {
 });
 
 // Length Validation
-
 test('task name cannot exceed 255 characters', function () {
     $longName = str_repeat('a', 256);
 
@@ -72,7 +70,6 @@ test('search query cannot exceed 200 characters', function () {
 });
 
 // Type Validation
-
 test('priority_level must be in range 1-4', function () {
     actingAs($this->owner)
         ->post(route('tasks.store', [
@@ -124,7 +121,6 @@ test('time_estimate rejects negative values', function () {
 });
 
 // Date Validation
-
 test('due_date must be after or equal to start_date', function () {
     actingAs($this->owner)
         ->post(route('tasks.store', [
@@ -153,7 +149,6 @@ test('start_date must be a valid date', function () {
 });
 
 // Foreign Key Validation
-
 test('assignee_ids must reference existing users', function () {
     actingAs($this->owner)
         ->post(route('tasks.store', [
@@ -181,7 +176,6 @@ test('label_ids must reference existing labels', function () {
 });
 
 // SQL Injection Resistance (Eloquent handles this, but we verify)
-
 test('search query with SQL injection attempt is safely escaped', function () {
     // Eloquent uses parameterized queries — this should not break or expose data
     $maliciousQuery = "'; DROP TABLE users; --";

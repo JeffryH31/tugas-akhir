@@ -217,7 +217,6 @@ test('getWorkspaceTimeReport returns by user and by space breakdown', function (
 // ============================================================
 // Merged from Unit/Services/TimeTrackingServiceTest.php
 // ============================================================
-
 test('logTime calculates duration from start and end times', function () {
     $entry = $this->service->logTime($this->subtask, $this->owner, [
         'started_at' => '2026-06-01 10:00:00',

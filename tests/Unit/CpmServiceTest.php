@@ -38,7 +38,6 @@ function makeCpmSubtask(int $id, int $timeEstimateMinutes = 60, array $deps = []
 }
 
 // isSchedulingDependency
-
 test('isSchedulingDependency returns true for blocks type', function () {
     $service = new CpmService;
     $method = new ReflectionMethod($service, 'isSchedulingDependency');
@@ -56,7 +55,6 @@ test('isSchedulingDependency returns false for non-blocks types', function () {
 });
 
 // buildDependencyGraph
-
 test('buildDependencyGraph creates empty adjacency lists for isolated nodes', function () {
     $subtasks = collect([makeCpmSubtask(1), makeCpmSubtask(2)]);
 
@@ -82,7 +80,6 @@ test('buildDependencyGraph maps a single dependency edge', function () {
 });
 
 // hasCycle
-
 test('hasCycle returns false for acyclic linear chain', function () {
     $subtasks = collect([makeCpmSubtask(1), makeCpmSubtask(2, 60, [1]), makeCpmSubtask(3, 60, [2])]);
 
@@ -104,7 +101,6 @@ test('hasCycle returns true for direct cycle', function () {
 });
 
 // topologicalSort
-
 test('topologicalSort returns all nodes', function () {
     $subtasks = collect([makeCpmSubtask(1), makeCpmSubtask(2), makeCpmSubtask(3)]);
 
@@ -133,7 +129,6 @@ test('topologicalSort respects dependency order', function () {
 });
 
 // forwardPass
-
 test('forwardPass sets ES=0 EF=duration for isolated node', function () {
     $subtasks = collect([makeCpmSubtask(1, 120)]); // 2h
 
@@ -184,7 +179,6 @@ test('forwardPass takes max EF of predecessors for merge node', function () {
 });
 
 // calculateSlackAndCriticalPath
-
 test('calculateSlackAndCriticalPath identifies critical and non-critical nodes', function () {
     // 1(2h)→3, 2(4h)→3, 3(1h) — node 1 has slack=2h
     $subtasks = collect([makeCpmSubtask(1, 120), makeCpmSubtask(2, 240), makeCpmSubtask(3, 60, [1, 2])]);
@@ -209,7 +203,6 @@ test('calculateSlackAndCriticalPath identifies critical and non-critical nodes',
 });
 
 // getCriticalPathSubtasks
-
 test('getCriticalPathSubtasks returns only critical nodes sorted by earlyStart', function () {
     $cpmData = [
         1 => ['earlyStart' => 0, 'isCritical' => true, 'name' => 'A'],

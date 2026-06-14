@@ -159,7 +159,6 @@ class ChecklistItemController extends Controller
     }
 
     //  Private
-
     private function authorizeScope(
         Workspace $workspace,
         Space $space,

@@ -23,7 +23,6 @@ beforeEach(function () {
 });
 
 // Update Workspace
-
 test('member cannot update workspace', function () {
     actingAs($this->member)
         ->patch(route('workspaces.update', $this->workspace->id), ['name' => 'Hacked'])
@@ -47,7 +46,6 @@ test('owner can update workspace', function () {
 });
 
 // Add/Remove Members
-
 test('member cannot add workspace members', function () {
     $newUser = $this->createUser();
 
@@ -93,7 +91,6 @@ test('admin cannot remove themselves', function () {
 });
 
 // Update Member Role
-
 test('member cannot update member roles', function () {
     actingAs($this->member)
         ->patch(route('workspaces.members.role', $this->workspace->id), [
@@ -119,7 +116,6 @@ test('admin can update member roles', function () {
 });
 
 // Delete Workspace
-
 test('admin cannot delete workspace, only owner can', function () {
     actingAs($this->admin)
         ->delete(route('workspaces.destroy', $this->workspace->id))
@@ -133,7 +129,6 @@ test('owner can delete workspace', function () {
 });
 
 // View Workspace Settings
-
 test('non-member cannot view workspace settings', function () {
     $stranger = $this->createUser();
 
@@ -149,7 +144,6 @@ test('member can view workspace settings (read-only)', function () {
 });
 
 // Recycle Bin
-
 test('non-member cannot access recycle bin', function () {
     $stranger = $this->createUser();
 
@@ -165,7 +159,6 @@ test('member can access recycle bin', function () {
 });
 
 // Switch Workspace
-
 test('non-member cannot switch to workspace', function () {
     $stranger = $this->createUser();
     // Stranger needs to be in another workspace to be authenticated context
@@ -178,7 +171,6 @@ test('non-member cannot switch to workspace', function () {
 });
 
 // Privilege Escalation
-
 test('member cannot self-promote to admin via role update', function () {
     actingAs($this->member)
         ->patch(route('workspaces.members.role', $this->workspace->id), [

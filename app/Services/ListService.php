@@ -175,7 +175,6 @@ class ListService
             }
 
             // Tasks copying would go here (simplified)
-
             return $newList;
         });
     }
