@@ -6,7 +6,7 @@ import { useConfirmDialog } from "@/composables/useConfirmDialog";
 import { useSnackbar } from "@/composables/useSnackbar";
 import ColorPicker from "@/Components/ColorPicker.vue";
 import { formatSeconds as formatDuration } from "@/utils/duration";
-import { formatDate as formatDateUtil } from "@/utils/date";
+import { formatDate as formatDateUtil, toLocalDateInput } from "@/utils/date";
 import { normalizeHexColor } from "@/utils/color";
 import {
   getFallbackCompletionTarget,
@@ -214,14 +214,10 @@ const tempDueDate = ref(null);
 
 watch(showStartDatePicker, (isOpen) => {
   if (isOpen)
-    tempStartDate.value = props.task.start_date
-      ? String(props.task.start_date).substring(0, 10)
-      : null;
+    tempStartDate.value = toLocalDateInput(props.task.start_date);
 });
 const updateStartDate = () => {
-  const dueDay = props.task.due_date
-    ? String(props.task.due_date).substring(0, 10)
-    : null;
+  const dueDay = toLocalDateInput(props.task.due_date);
   if (tempStartDate.value && dueDay && tempStartDate.value > dueDay) {
     showSnackbar("Start date cannot be after due date.", "error");
     return;
@@ -246,14 +242,10 @@ const updateStartDate = () => {
 };
 watch(showDueDatePicker, (isOpen) => {
   if (isOpen)
-    tempDueDate.value = props.task.due_date
-      ? String(props.task.due_date).substring(0, 10)
-      : null;
+    tempDueDate.value = toLocalDateInput(props.task.due_date);
 });
 const updateDueDate = () => {
-  const startDay = props.task.start_date
-    ? String(props.task.start_date).substring(0, 10)
-    : null;
+  const startDay = toLocalDateInput(props.task.start_date);
   if (tempDueDate.value && startDay && tempDueDate.value < startDay) {
     showSnackbar("Due date cannot be before start date.", "error");
     return;
@@ -399,11 +391,14 @@ const setBaselineFromCurrent = () => {
     );
     return;
   }
+  // props.task.start_date is a UTC ISO string. Convert to the browser-local
+  // YYYY-MM-DD so the baseline matches the displayed/actual dates (mirrors
+  // exactly what the date picker sends).
   router.patch(
     getUpdateRoute(),
     {
-      baseline_start_date: props.task.start_date || null,
-      baseline_due_date: props.task.due_date || null,
+      baseline_start_date: toLocalDateInput(props.task.start_date),
+      baseline_due_date: toLocalDateInput(props.task.due_date),
     },
     {
       preserveScroll: true,
