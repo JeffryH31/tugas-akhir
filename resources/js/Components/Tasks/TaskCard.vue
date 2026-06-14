@@ -49,6 +49,17 @@ const statusColor = computed(() => props.task.status?.color || '#6b7280');
 const dueDate = computed(() => {
     if (!props.task.due_date) return null;
     const date = new Date(props.task.due_date);
+
+    // For completed tasks measuring against when it was completed
+    if (props.task.completed_at) {
+        const completed = new Date(props.task.completed_at);
+        const lateDays = Math.ceil((completed - date) / (1000 * 60 * 60 * 24));
+        if (lateDays > 0) {
+            return { text: `${lateDays}d late`, color: '#f87171', overdue: true };
+        }
+        return { text: 'On time', color: '#4ade80', overdue: false };
+    }
+
     const now = new Date();
     const diffDays = Math.ceil((date - now) / (1000 * 60 * 60 * 24));
 
