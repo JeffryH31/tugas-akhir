@@ -18,19 +18,13 @@ class Space extends Model
         'workspace_id',
         'name',
         'slug',
-        'description',
         'color',
-        'icon',
-        'is_private',
-        'is_starred',
         'position',
         'settings',
         'created_by',
     ];
 
     protected $casts = [
-        'is_private' => 'boolean',
-        'is_starred' => 'boolean',
         'settings' => 'array',
     ];
 
@@ -43,7 +37,6 @@ class Space extends Model
                 $space->slug = Str::slug($space->name);
             }
             
-            // Ensure unique slug within workspace
             $originalSlug = $space->slug;
             $count = 1;
             while (static::where('workspace_id', $space->workspace_id)
@@ -51,14 +44,12 @@ class Space extends Model
                 $space->slug = $originalSlug . '-' . $count++;
             }
 
-            // Set position
             if (empty($space->position)) {
                 $space->position = static::where('workspace_id', $space->workspace_id)->max('position') + 1;
             }
         });
 
         static::created(function ($space) {
-            // Create default statuses
             $defaultStatuses = [
                 ['name' => 'Open', 'color' => '#6B7280', 'type' => 'open', 'position' => 0, 'is_default' => true],
                 ['name' => 'In Progress', 'color' => '#3B82F6', 'type' => 'in_progress', 'position' => 1],
@@ -75,7 +66,6 @@ class Space extends Model
         });
     }
 
-    // ==================== RELATIONSHIPS ====================
 
     public function workspace(): BelongsTo
     {
@@ -94,6 +84,12 @@ class Space extends Model
             ->withTimestamps();
     }
 
+    public function starredBy(): BelongsToMany
+    {
+        return $this->belongsToMany(User::class, 'starred_spaces', 'space_id', 'user_id')
+            ->withPivot('workspace_id', 'starred_at');
+    }
+
     public function folders(): HasMany
     {
         return $this->hasMany(Folder::class)->whereNull('parent_id')->orderBy('position');
@@ -104,19 +100,29 @@ class Space extends Model
         return $this->hasMany(Folder::class)->orderBy('position');
     }
 
-    public function lists(): HasMany
+    public function projects(): HasMany
     {
-        return $this->hasMany(TaskList::class)->orderBy('position');
+        return $this->hasMany(Project::class)->orderBy('position');
     }
 
-    public function listsWithoutFolder(): HasMany
+    public function projectsWithoutFolder(): HasMany
     {
-        return $this->hasMany(TaskList::class)->whereNull('folder_id')->orderBy('position');
+        return $this->hasMany(Project::class)->whereNull('folder_id')->orderBy('position');
     }
 
     public function tasks(): \Illuminate\Database\Eloquent\Relations\HasManyThrough
     {
-        return $this->hasManyThrough(Task::class, TaskList::class);
+        return $this->hasManyThrough(Task::class, Project::class);
+    }
+
+    public function sprints(): HasMany
+    {
+        return $this->hasMany(Sprint::class)->orderBy('position');
+    }
+
+    public function activeSprints(): HasMany
+    {
+        return $this->hasMany(Sprint::class)->where('is_active', true)->orderBy('position');
     }
 
     public function statuses(): HasMany
@@ -129,31 +135,12 @@ class Space extends Model
         return $this->hasMany(Label::class);
     }
 
-    // ==================== ACCESSORS ====================
 
     public function getInitialsAttribute(): string
     {
         return strtoupper(substr($this->name, 0, 1));
     }
 
-    // ==================== SCOPES ====================
-
-    public function scopeStarred($query)
-    {
-        return $query->where('is_starred', true);
-    }
-
-    public function scopePublic($query)
-    {
-        return $query->where('is_private', false);
-    }
-
-    // ==================== HELPER METHODS ====================
-
-    public function toggleStar(): void
-    {
-        $this->update(['is_starred' => !$this->is_starred]);
-    }
 
     public function getDefaultStatus(): ?Status
     {

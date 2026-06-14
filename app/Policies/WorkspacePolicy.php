@@ -23,8 +23,8 @@ class WorkspacePolicy
     public function update(User $user, Workspace $workspace): bool
     {
         return $workspace->members()
-            ->wherePivot('user_id', $user->id)
-            ->wherePivot('role', 'admin')
+            ->wherePivot('user_id', $user->id)  
+            ->wherePivotIn('role', ['admin'])
             ->exists();
     }
 
@@ -33,6 +33,9 @@ class WorkspacePolicy
      */
     public function delete(User $user, Workspace $workspace): bool
     {
-        return $workspace->created_by === $user->id;
+        return $workspace->members()
+            ->wherePivot('user_id', $user->id)
+            ->wherePivotIn('role', ['admin'])
+            ->exists();
     }
 }

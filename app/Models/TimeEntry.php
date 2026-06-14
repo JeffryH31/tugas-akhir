@@ -5,16 +5,16 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\SoftDeletes;
 
 class TimeEntry extends Model
 {
-    use HasFactory;
+    use HasFactory, SoftDeletes;
 
     protected $fillable = [
-        'task_id',
+        'subtask_id',
         'user_id',
         'duration',
-        'description',
         'started_at',
         'ended_at',
         'is_billable',
@@ -32,24 +32,23 @@ class TimeEntry extends Model
     {
         parent::boot();
 
-        static::created(function ($entry) {
-            $entry->task->updateTimeSpent();
-        });
+        $recalcTimeSpent = function ($entry) {
+            if ($entry->subtask_id) {
+                Subtask::where('id', $entry->subtask_id)->update([
+                    'time_spent' => TimeEntry::where('subtask_id', $entry->subtask_id)->sum('duration'),
+                ]);
+            }
+        };
 
-        static::updated(function ($entry) {
-            $entry->task->updateTimeSpent();
-        });
-
-        static::deleted(function ($entry) {
-            $entry->task->updateTimeSpent();
-        });
+        static::created($recalcTimeSpent);
+        static::updated($recalcTimeSpent);
+        static::deleted($recalcTimeSpent);
     }
 
-    // ==================== RELATIONSHIPS ====================
 
-    public function task(): BelongsTo
+    public function subtask(): BelongsTo
     {
-        return $this->belongsTo(Task::class);
+        return $this->belongsTo(Subtask::class);
     }
 
     public function user(): BelongsTo
@@ -57,20 +56,18 @@ class TimeEntry extends Model
         return $this->belongsTo(User::class);
     }
 
-    // ==================== ACCESSORS ====================
 
     public function getDurationFormattedAttribute(): string
     {
         $hours = floor($this->duration / 60);
         $minutes = $this->duration % 60;
-        
+
         if ($hours > 0) {
             return $hours . 'h ' . $minutes . 'm';
         }
         return $minutes . 'm';
     }
 
-    // ==================== SCOPES ====================
 
     public function scopeRunning($query)
     {
@@ -97,7 +94,6 @@ class TimeEntry extends Model
         return $query->whereBetween('started_at', [$start, $end]);
     }
 
-    // ==================== HELPER METHODS ====================
 
     public function stop(): void
     {
@@ -106,21 +102,19 @@ class TimeEntry extends Model
         $this->update([
             'is_running' => false,
             'ended_at' => now(),
-            'duration' => now()->diffInMinutes($this->started_at),
+            'duration' => max(1, (int) round($this->started_at->diffInMinutes(now()))),
         ]);
     }
 
-    public static function startTimer(Task $task, User $user, ?string $description = null): self
+    public static function startTimer(Subtask $subtask, User $user): self
     {
-        // Stop any running timer for this user
         static::where('user_id', $user->id)
             ->where('is_running', true)
             ->each(fn($entry) => $entry->stop());
 
         return static::create([
-            'task_id' => $task->id,
+            'subtask_id' => $subtask->id,
             'user_id' => $user->id,
-            'description' => $description,
             'started_at' => now(),
             'duration' => 0,
             'is_running' => true,

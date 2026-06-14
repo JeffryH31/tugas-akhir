@@ -4,7 +4,6 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
-use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\SoftDeletes;
@@ -17,17 +16,12 @@ class Workspace extends Model
     protected $fillable = [
         'name',
         'slug',
-        'description',
         'color',
-        'icon',
-        'owner_id',
         'is_personal',
-        'settings',
     ];
 
     protected $casts = [
         'is_personal' => 'boolean',
-        'settings' => 'array',
     ];
 
     protected static function boot(): void
@@ -39,31 +33,19 @@ class Workspace extends Model
                 $workspace->slug = Str::slug($workspace->name);
             }
             
-            // Ensure unique slug
             $originalSlug = $workspace->slug;
             $count = 1;
             while (static::where('slug', $workspace->slug)->exists()) {
                 $workspace->slug = $originalSlug . '-' . $count++;
             }
         });
-
-        static::created(function ($workspace) {
-            // Add owner as member
-            $workspace->members()->attach($workspace->owner_id, ['role' => 'owner']);
-        });
     }
 
-    // ==================== RELATIONSHIPS ====================
-
-    public function owner(): BelongsTo
-    {
-        return $this->belongsTo(User::class, 'owner_id');
-    }
 
     public function members(): BelongsToMany
     {
         return $this->belongsToMany(User::class, 'workspace_members')
-            ->withPivot('role', 'joined_at')
+            ->withPivot('role')
             ->withTimestamps();
     }
 
@@ -77,31 +59,23 @@ class Workspace extends Model
         return $this->hasMany(Label::class);
     }
 
-    public function priorities(): HasMany
-    {
-        return $this->hasMany(Priority::class)->orderBy('level', 'desc');
-    }
-
     public function activities(): HasMany
     {
         return $this->hasMany(Activity::class)->latest();
     }
 
-    // ==================== ACCESSORS ====================
 
     public function getInitialsAttribute(): string
     {
         return strtoupper(substr($this->name, 0, 2));
     }
 
-    // ==================== SCOPES ====================
 
     public function scopeForUser($query, User $user)
     {
         return $query->whereHas('members', fn($q) => $q->where('user_id', $user->id));
     }
 
-    // ==================== HELPER METHODS ====================
 
     public function addMember(User $user, string $role = 'member'): void
     {

@@ -2,12 +2,14 @@
 
 namespace App\Services;
 
+use App\Enums\PriorityLevel;
 use App\Models\Activity;
 use App\Models\Label;
-use App\Models\Priority;
 use App\Models\Status;
 use App\Models\Task;
-use App\Models\TaskList;
+use App\Models\Project;
+use App\Models\Space;
+use App\Models\Subtask;
 use App\Models\User;
 use Illuminate\Pagination\LengthAwarePaginator;
 use Illuminate\Support\Collection;
@@ -18,18 +20,14 @@ class TaskService
     /**
      * Get tasks for a list with filtering and pagination
      */
-    public function getTasksForList(
-        TaskList $list,
+    public function getTasksForList(Project $list,
         array $filters = [],
         ?string $sortBy = 'position',
         string $sortDirection = 'asc',
-        ?int $perPage = null
-    ): Collection|LengthAwarePaginator {
+        ?int $perPage = null): Collection|LengthAwarePaginator {
         $query = $list->tasks()
-            ->root()
             ->with([
                 'status',
-                'priority',
                 'assignees',
                 'labels',
                 'subtasks' => fn($q) => $q->with(['status', 'assignees']),
@@ -55,19 +53,15 @@ class TaskService
     public function getTaskWithRelations(Task $task): Task
     {
         return $task->load([
-            'taskList.space.workspace',
+            'project.space.workspace',
             'status',
-            'priority',
             'assignees',
             'labels',
-            'watchers',
-            'subtasks' => fn($q) => $q->with(['status', 'assignees', 'subtasks'])->orderBy('position'),
-            'parent',
+            'subtasks' => fn($q) => $q->with(['status', 'assignees', 'dependencies', 'dependents', 'timeEntries.user'])->orderBy('position'),
             'dependencies',
             'dependents',
-            'comments' => fn($q) => $q->with(['user', 'replies.user']),
-            'timeEntries' => fn($q) => $q->with('user')->latest(),
-            'attachments',
+            'comments' => fn($q) => $q->whereNull('parent_id')->with(['user', 'replies.user'])->latest(),
+            'activities' => fn($q) => $q->with('user')->latest()->limit(50),
             'creator',
         ]);
     }
@@ -75,31 +69,31 @@ class TaskService
     /**
      * Create a new task
      */
-    public function create(array $data, TaskList $list, User $user, ?Task $parent = null): Task
+    public function create(array $data, Project $list, User $user): Task
     {
-        return DB::transaction(function () use ($data, $list, $user, $parent) {
+        return DB::transaction(function () use ($data, $list, $user) {
             $task = Task::create([
-                'task_list_id' => $list->id,
-                'parent_id' => $parent?->id,
-                'name' => $data['name'],
-                'description' => $data['description'] ?? null,
-                'status_id' => $data['status_id'] ?? null,
-                'priority_id' => $data['priority_id'] ?? null,
-                'start_date' => $data['start_date'] ?? null,
-                'due_date' => $data['due_date'] ?? null,
+                'project_id'         => $list->id,
+                'name'                 => $data['name'],
+                'description'          => $data['description'] ?? null,
+                'status_id'            => $data['status_id'] ?? null,
+                'priority_level'       => $data['priority_level'] ?? null,
+                'start_date'    => $data['start_date'] ?? null,
+                'due_date'      => $data['due_date'] ?? null,
                 'time_estimate' => $data['time_estimate'] ?? null,
-                'created_by' => $user->id,
+                'created_by'    => $user->id,
             ]);
 
-            // Assign users if provided
+            // Sync assignees if provided
             if (!empty($data['assignee_ids'])) {
+                $pivotData = [];
                 foreach ($data['assignee_ids'] as $assigneeId) {
-                    $assignee = User::findOrFail($assigneeId);
-                    $task->assign($assignee, $user);
+                    $pivotData[$assigneeId] = ['assigned_by' => $user->id];
                 }
+                $task->assignees()->sync($pivotData);
             }
 
-            // Add labels if provided
+            // Sync labels if provided
             if (!empty($data['label_ids'])) {
                 $task->labels()->sync($data['label_ids']);
             }
@@ -108,7 +102,7 @@ class TaskService
                 'name' => $task->name,
             ]);
 
-            return $task->fresh(['status', 'priority', 'assignees', 'labels']);
+            return $task->fresh(['status', 'assignees', 'labels']);
         });
     }
 
@@ -119,22 +113,23 @@ class TaskService
     {
         return DB::transaction(function () use ($task, $data, $user) {
             $changes = [];
-            $oldValues = $task->only([
-                'name', 'description', 'status_id', 'priority_id',
-                'start_date', 'due_date', 'time_estimate'
-            ]);
+            // Capture before update – needed for readable activity descriptions
+            $oldStatusId     = $task->status_id;
+            $oldStatusName   = $task->status?->name;
+            $oldPriorityEnum = $task->priority_level; // PriorityLevel enum|null
+
+            $oldValues = $task->only(['name', 'description']);
 
             $task->update([
-                'name' => $data['name'] ?? $task->name,
-                'description' => $data['description'] ?? $task->description,
-                'status_id' => $data['status_id'] ?? $task->status_id,
-                'priority_id' => $data['priority_id'] ?? $task->priority_id,
-                'start_date' => $data['start_date'] ?? $task->start_date,
-                'due_date' => $data['due_date'] ?? $task->due_date,
-                'time_estimate' => $data['time_estimate'] ?? $task->time_estimate,
+                'name'                 => $data['name'] ?? $task->name,
+                'description'          => $data['description'] ?? $task->description,
+                'status_id'            => $data['status_id'] ?? $task->status_id,
+                'priority_level'       => $data['priority_level'] ?? $task->priority_level,
+                'start_date'    => array_key_exists('start_date', $data) ? ($data['start_date'] ?: null) : $task->start_date,
+                'due_date'      => array_key_exists('due_date', $data) ? ($data['due_date'] ?: null) : $task->due_date,
+                'time_estimate' => array_key_exists('time_estimate', $data) ? ($data['time_estimate'] ?: null) : $task->time_estimate,
             ]);
 
-            // Track changes
             foreach ($oldValues as $key => $oldValue) {
                 $newValue = $data[$key] ?? $task->$key;
                 if ($newValue != $oldValue) {
@@ -144,12 +139,41 @@ class TaskService
 
             // Update assignees if provided
             if (isset($data['assignee_ids'])) {
-                $oldAssignees = $task->assignees->pluck('id')->toArray();
-                $task->assignees()->sync($data['assignee_ids']);
-                
-                if ($oldAssignees != $data['assignee_ids']) {
-                    $changes['assignees'] = ['old' => $oldAssignees, 'new' => $data['assignee_ids']];
+                $oldAssigneeIds = $task->assignees->pluck('id')->toArray();
+                $newAssigneeIds  = $data['assignee_ids'];
+                $task->assignees()->sync($newAssigneeIds);
+
+                $addedIds   = array_diff($newAssigneeIds, $oldAssigneeIds);
+                $removedIds = array_diff($oldAssigneeIds, $newAssigneeIds);
+
+                // Batch load all changed assignees to avoid N+1
+                $changedIds = array_merge($addedIds, $removedIds);
+                $assignees = !empty($changedIds) 
+                    ? User::whereIn('id', $changedIds)->get()->keyBy('id')
+                    : collect();
+
+                foreach ($addedIds as $id) {
+                    $assignee = $assignees->get($id);
+                    if ($assignee) {
+                        Activity::log($task->project->space->workspace, $user, $task, 'assigned', [
+                            'name'          => $task->name,
+                            'assignee_name' => $assignee->name,
+                            'assignee_id'   => $assignee->id,
+                        ]);
+                    }
                 }
+
+                foreach ($removedIds as $id) {
+                    $assignee = $assignees->get($id);
+                    if ($assignee) {
+                        Activity::log($task->project->space->workspace, $user, $task, 'unassigned', [
+                            'name'          => $task->name,
+                            'assignee_name' => $assignee->name,
+                            'assignee_id'   => $assignee->id,
+                        ]);
+                    }
+                }
+                // Assignee changes are logged separately above – don't add to generic $changes
             }
 
             // Update labels if provided
@@ -158,9 +182,36 @@ class TaskService
             }
 
             if (!empty($changes)) {
-                Activity::log($task->taskList->space->workspace, $user, $task, 'updated', [
+                Activity::log($task->project->space->workspace, $user, $task, 'updated', [
                     'name' => $task->name,
                 ], $changes);
+            }
+
+            // Log status change with readable names
+            if (isset($data['status_id']) && (int) $data['status_id'] !== (int) $oldStatusId) {
+                $newStatus = Status::find($data['status_id']);
+
+                // Record who closed the task (completed_at itself is set by the model hook).
+                if ($newStatus && $newStatus->is_closed && $task->completed_at && !$task->completed_by) {
+                    $task->forceFill(['completed_by' => $user->id])->saveQuietly();
+                }
+
+                Activity::log($task->project->space->workspace, $user, $task, 'status_changed', [
+                    'name' => $task->name,
+                ], [
+                    'status' => ['old' => $oldStatusName, 'new' => $newStatus?->name],
+                ]);
+            }
+
+            // Log priority change with readable labels
+            if (array_key_exists('priority_level', $data) && $data['priority_level'] !== $oldPriorityEnum?->value) {
+                $oldLabel = $oldPriorityEnum?->label();
+                $newLabel = $data['priority_level'] !== null ? PriorityLevel::from((int) $data['priority_level'])->label() : null;
+                Activity::log($task->project->space->workspace, $user, $task, 'priority_changed', [
+                    'name' => $task->name,
+                ], [
+                    'priority' => ['old' => $oldLabel, 'new' => $newLabel],
+                ]);
             }
 
             return $task->fresh();
@@ -173,7 +224,7 @@ class TaskService
     public function delete(Task $task, User $user): void
     {
         DB::transaction(function () use ($task, $user) {
-            Activity::log($task->taskList->space->workspace, $user, $task, 'deleted', [
+            Activity::log($task->project->space->workspace, $user, $task, 'deleted', [
                 'name' => $task->name,
             ]);
 
@@ -181,33 +232,7 @@ class TaskService
         });
     }
 
-    /**
-     * Complete a task
-     */
-    public function complete(Task $task, User $user): Task
-    {
-        $task->complete($user);
 
-        Activity::log($task->taskList->space->workspace, $user, $task, 'completed', [
-            'name' => $task->name,
-        ]);
-
-        return $task->fresh();
-    }
-
-    /**
-     * Reopen a task
-     */
-    public function reopen(Task $task, User $user): Task
-    {
-        $task->reopen();
-
-        Activity::log($task->taskList->space->workspace, $user, $task, 'reopened', [
-            'name' => $task->name,
-        ]);
-
-        return $task->fresh();
-    }
 
     /**
      * Change task status
@@ -215,9 +240,15 @@ class TaskService
     public function changeStatus(Task $task, Status $status, User $user): Task
     {
         $oldStatus = $task->status;
-        $task->changeStatus($status);
 
-        Activity::log($task->taskList->space->workspace, $user, $task, 'status_changed', [
+        $task->status_id = $status->id;
+        // completed_at is handled by the model's saving hook; capture who closed it.
+        if ($status->is_closed) {
+            $task->completed_by = $user->id;
+        }
+        $task->save();
+
+        Activity::log($task->project->space->workspace, $user, $task, 'status_changed', [
             'name' => $task->name,
         ], [
             'status' => [
@@ -232,17 +263,17 @@ class TaskService
     /**
      * Change task priority
      */
-    public function changePriority(Task $task, ?Priority $priority, User $user): Task
+    public function changePriority(Task $task, ?int $priorityLevel, User $user): Task
     {
-        $oldPriority = $task->priority;
-        $task->update(['priority_id' => $priority?->id]);
+        $oldPriority = $task->priority_level;
+        $task->update(['priority_level' => $priorityLevel]);
 
-        Activity::log($task->taskList->space->workspace, $user, $task, 'priority_changed', [
+        Activity::log($task->project->space->workspace, $user, $task, 'priority_changed', [
             'name' => $task->name,
         ], [
             'priority' => [
-                'old' => $oldPriority?->name,
-                'new' => $priority?->name,
+                'old' => $oldPriority?->label(),
+                'new' => $priorityLevel ? PriorityLevel::from($priorityLevel)->label() : null,
             ],
         ]);
 
@@ -256,7 +287,7 @@ class TaskService
     {
         $task->assign($assignee, $assignedBy);
 
-        Activity::log($task->taskList->space->workspace, $assignedBy, $task, 'assigned', [
+        Activity::log($task->project->space->workspace, $assignedBy, $task, 'assigned', [
             'name' => $task->name,
             'assignee_name' => $assignee->name,
             'assignee_id' => $assignee->id,
@@ -272,7 +303,7 @@ class TaskService
     {
         $task->unassign($assignee);
 
-        Activity::log($task->taskList->space->workspace, $unassignedBy, $task, 'unassigned', [
+        Activity::log($task->project->space->workspace, $unassignedBy, $task, 'unassigned', [
             'name' => $task->name,
             'assignee_name' => $assignee->name,
         ]);
@@ -283,9 +314,9 @@ class TaskService
     /**
      * Move task to different list
      */
-    public function move(Task $task, TaskList $newList, User $user, ?int $position = null): Task
+    public function move(Task $task, Project $newList, User $user, ?int $position = null): Task
     {
-        $oldList = $task->taskList;
+        $oldList = $task->project;
         $task->move($newList, $position);
 
         Activity::log($newList->space->workspace, $user, $task, 'moved', [
@@ -303,11 +334,13 @@ class TaskService
     /**
      * Reorder tasks within a list
      */
-    public function reorder(TaskList $list, array $order): void
+    public function reorder(Project $list, array $order): void
     {
-        DB::transaction(function () use ($order) {
+        DB::transaction(function () use ($list, $order) {
             foreach ($order as $position => $taskId) {
-                Task::where('id', $taskId)->update(['position' => $position]);
+                Task::where('id', $taskId)
+                    ->where('project_id', $list->id)
+                    ->update(['position' => $position]);
             }
         });
     }
@@ -319,7 +352,7 @@ class TaskService
     {
         $task->addLabel($label);
 
-        Activity::log($task->taskList->space->workspace, $user, $task, 'label_added', [
+        Activity::log($task->project->space->workspace, $user, $task, 'label_added', [
             'name' => $task->name,
             'label_name' => $label->name,
         ]);
@@ -334,7 +367,7 @@ class TaskService
     {
         $task->removeLabel($label);
 
-        Activity::log($task->taskList->space->workspace, $user, $task, 'label_removed', [
+        Activity::log($task->project->space->workspace, $user, $task, 'label_removed', [
             'name' => $task->name,
             'label_name' => $label->name,
         ]);
@@ -348,31 +381,40 @@ class TaskService
     public function duplicate(Task $task, User $user): Task
     {
         return DB::transaction(function () use ($task, $user) {
-            $newTask = $task->replicate([
-                'task_id', 'completed_at', 'completed_by', 'time_spent'
-            ]);
+            $newTask = $task->replicate(['task_id']);
             $newTask->name = $task->name . ' (Copy)';
-            $newTask->position = Task::where('task_list_id', $task->task_list_id)
-                ->whereNull('parent_id')
+            // Reset operational fields — assignees and dates are not part of the template
+            $newTask->start_date = null;
+            $newTask->due_date = null;
+            $newTask->position = Task::where('project_id', $task->project_id)
                 ->max('position') + 1;
             $newTask->save();
 
-            // Copy assignees
-            $newTask->assignees()->sync($task->assignees->pluck('id'));
-
-            // Copy labels
+            // Copy labels (structural), but NOT assignees (operational)
             $newTask->labels()->sync($task->labels->pluck('id'));
 
-            // Duplicate subtasks
-            foreach ($task->subtasks as $subtask) {
+            foreach ($task->subtasks()->with(['labels'])->get() as $subtask) {
                 $newSubtask = $subtask->replicate([
-                    'task_id', 'completed_at', 'completed_by', 'time_spent'
+                    'subtask_id',
+                    'completed_at',
+                    'completed_by',
+                    'time_spent',
+                    'sprint_id',
                 ]);
-                $newSubtask->parent_id = $newTask->id;
+                $newSubtask->task_id = $newTask->id;
+                // Reset operational fields
+                $newSubtask->start_date = null;
+                $newSubtask->due_date = null;
+                $newSubtask->baseline_start_date = null;
+                $newSubtask->baseline_due_date = null;
+                $newSubtask->progress = 0;
                 $newSubtask->save();
+
+                // Copy labels (structural), but NOT assignees (operational)
+                $newSubtask->labels()->sync($subtask->labels->pluck('id'));
             }
 
-            Activity::log($task->taskList->space->workspace, $user, $newTask, 'duplicated', [
+            Activity::log($task->project->space->workspace, $user, $newTask, 'duplicated', [
                 'name' => $newTask->name,
                 'original_name' => $task->name,
             ]);
@@ -383,6 +425,8 @@ class TaskService
 
     /**
      * Apply filters to task query
+     *
+        * @param array<string, mixed> $filters
      */
     protected function applyFilters($query, array $filters)
     {
@@ -390,8 +434,8 @@ class TaskService
             $query->whereIn('status_id', $filters['status_ids']);
         }
 
-        if (!empty($filters['priority_ids'])) {
-            $query->whereIn('priority_id', $filters['priority_ids']);
+        if (!empty($filters['priority_levels'])) {
+            $query->whereIn('priority_level', $filters['priority_levels']);
         }
 
         if (!empty($filters['assignee_ids'])) {
@@ -402,22 +446,39 @@ class TaskService
             $query->whereHas('labels', fn($q) => $q->whereIn('label_id', $filters['label_ids']));
         }
 
+        // Tasks don't have completed_at - only subtasks do
+        // Filter by tasks with all subtasks completed or incomplete
         if (!empty($filters['is_completed'])) {
-            $query->whereNotNull('completed_at');
+            $query->whereDoesntHave('subtasks', fn($q) => $q->whereNull('completed_at'));
         } elseif (isset($filters['is_completed']) && $filters['is_completed'] === false) {
-            $query->whereNull('completed_at');
+            $query->whereHas('subtasks', fn($q) => $q->whereNull('completed_at'));
         }
 
+        // Tasks don't have due dates - only subtasks do
         if (!empty($filters['is_overdue'])) {
-            $query->overdue();
+            $query->whereHas(
+                'subtasks',
+                fn($q) =>
+                $q->whereNull('completed_at')
+                    ->whereNotNull('due_date')
+                    ->where('due_date', '<', now())
+            );
         }
 
         if (!empty($filters['due_date_from'])) {
-            $query->where('due_date', '>=', $filters['due_date_from']);
+            $query->whereHas(
+                'subtasks',
+                fn($q) =>
+                $q->where('due_date', '>=', $filters['due_date_from'])
+            );
         }
 
         if (!empty($filters['due_date_to'])) {
-            $query->where('due_date', '<=', $filters['due_date_to']);
+            $query->whereHas(
+                'subtasks',
+                fn($q) =>
+                $q->where('due_date', '<=', $filters['due_date_to'])
+            );
         }
 
         if (!empty($filters['search'])) {
@@ -437,11 +498,117 @@ class TaskService
      */
     public function getMyTasks(User $user, array $filters = []): Collection
     {
-        $query = $user->assignedTasks()
-            ->with(['taskList.space.workspace', 'status', 'priority', 'labels'])
-            ->whereNull('completed_at')
-            ->orderBy('due_date');
+        $query = Task::query()
+            ->whereHas('assignees', fn($assignees) => $assignees->where('users.id', $user->id))
+            ->with(['project.space.workspace', 'status', 'labels', 'assignees', 'subtasks.assignees'])
+            ->orderBy('position');
 
-        return $this->applyFilters($query, $filters)->get();
+        return $this->applyFilters($query, $filters)->distinct()->get();
+    }
+
+    /**
+     * Get subtasks assigned to a user (dashboard "Assigned to me").
+     *
+     * Returns subtasks where the user is explicitly in the subtask_assignees pivot.
+     * Eager-loads the parent task + list/space/workspace for breadcrumb display.
+     */
+    public function getMySubtasks(User $user, array $filters = []): Collection
+    {
+        $query = Subtask::query()
+            ->whereHas('assignees', fn($q) => $q->where('users.id', $user->id))
+            ->whereNull('completed_at')
+            ->with([
+                'task.project.space.workspace',
+                'status',
+                'labels',
+                'assignees',
+            ])
+            ->orderByRaw('CASE WHEN due_date IS NOT NULL THEN 0 ELSE 1 END')
+            ->orderBy('due_date')
+            ->orderBy('priority_level');
+
+        if (!empty($filters['is_overdue'])) {
+            $query->whereNotNull('due_date')
+                  ->where('due_date', '<', now());
+        }
+
+        return $query->get();
+    }
+
+    /**
+     * Global search across tasks, projects, and spaces.
+     *
+     * @param  array<string, mixed>  $params  Validated search parameters.
+     * @return array{tasks: Collection, projects: Collection, spaces: Collection, meta: array}
+     */
+    public function globalSearch(User $user, array $params): array
+    {
+        $query = $params['q'] ?? '';
+        $type = $params['type'] ?? 'all';
+        $limit = $params['limit'] ?? 20;
+        $workspaceId = $params['workspace_id'] ?? null;
+
+        if (strlen($query) < 2) {
+            return ['tasks' => collect(), 'projects' => collect(), 'spaces' => collect(), 'meta' => [
+                'query' => $query, 'type' => $type, 'workspace_id' => $workspaceId,
+                'count' => ['tasks' => 0, 'projects' => 0, 'spaces' => 0],
+            ]];
+        }
+
+        $query = str_replace(['%', '_'], ['\%', '\_'], $query);
+
+        $tasksQuery = Task::whereHas('project.space.workspace', function ($q) use ($user, $workspaceId) {
+            $q->where('created_by', $user->id)
+                ->orWhereHas('members', fn($q2) => $q2->where('users.id', $user->id));
+        })
+            ->when($workspaceId, fn($q) => $q->whereHas('project.space', fn($q2) => $q2->where('workspace_id', $workspaceId)))
+            ->where(function ($q) use ($query) {
+                $q->where('name', 'like', "%{$query}%")
+                    ->orWhere('description', 'like', "%{$query}%");
+            })
+            ->when(!empty($params['status_id']), fn($q) => $q->where('status_id', $params['status_id']))
+            ->when(!empty($params['assignee_id']), fn($q) => $q->whereHas('assignees', fn($q2) => $q2->where('users.id', $params['assignee_id'])))
+            ->with(['project.space', 'status', 'assignees'])
+            ->limit($limit);
+
+        $tasks = $type === 'all' || $type === 'tasks' ? $tasksQuery->get() : collect();
+
+        $projectsQuery = Project::whereHas('space.workspace', function ($q) use ($user) {
+            $q->where('created_by', $user->id)
+                ->orWhereHas('members', fn($q2) => $q2->where('users.id', $user->id));
+        })
+            ->when($workspaceId, fn($q) => $q->whereHas('space', fn($q2) => $q2->where('workspace_id', $workspaceId)))
+            ->where('name', 'like', "%{$query}%")
+            ->with('space')
+            ->limit(min($limit, 15));
+
+        $projects = $type === 'all' || $type === 'projects' ? $projectsQuery->get() : collect();
+
+        $spacesQuery = Space::whereHas('workspace', function ($q) use ($user, $workspaceId) {
+            $q->where('created_by', $user->id)
+                ->orWhereHas('members', fn($q2) => $q2->where('users.id', $user->id));
+        })
+            ->when($workspaceId, fn($q) => $q->where('workspace_id', $workspaceId))
+            ->where('name', 'like', "%{$query}%")
+            ->with('workspace')
+            ->limit(min($limit, 15));
+
+        $spaces = $type === 'all' || $type === 'spaces' ? $spacesQuery->get() : collect();
+
+        return [
+            'tasks' => $tasks,
+            'projects' => $projects,
+            'spaces' => $spaces,
+            'meta' => [
+                'query' => $query,
+                'type' => $type,
+                'workspace_id' => $workspaceId,
+                'count' => [
+                    'tasks' => $tasks->count(),
+                    'projects' => $projects->count(),
+                    'spaces' => $spaces->count(),
+                ],
+            ],
+        ];
     }
 }

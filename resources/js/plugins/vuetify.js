@@ -1,13 +1,7 @@
-/**
- * Vuetify Plugin Configuration
- * 
- * ClickUp-style dark theme with custom colors.
- */
 import 'vuetify/styles';
 import '@mdi/font/css/materialdesignicons.css';
 import { createVuetify } from 'vuetify';
-import * as components from 'vuetify/components';
-import * as directives from 'vuetify/directives';
+import { aliases, mdi } from 'vuetify/iconsets/mdi';
 
 // Light theme configuration
 const lightTheme = {
@@ -49,8 +43,11 @@ const darkTheme = {
 };
 
 const vuetify = createVuetify({
-    components,
-    directives,
+    icons: {
+        defaultSet: 'mdi',
+        aliases,
+        sets: { mdi },
+    },
     theme: {
         defaultTheme: 'darkTheme',
         themes: {
@@ -59,7 +56,7 @@ const vuetify = createVuetify({
         },
     },
     typography: {
-        fontFamily: "'Inter', 'Source Sans 3', sans-serif",
+        fontFamily: "'Plus Jakarta Sans', sans-serif",
     },
     defaults: {
         VBtn: {
@@ -80,7 +77,7 @@ const vuetify = createVuetify({
             color: 'primary',
         },
         VList: {
-            bgColor: 'transparent',
+            bgColor: 'surface',
         },
         VListItem: {
             rounded: 'lg',

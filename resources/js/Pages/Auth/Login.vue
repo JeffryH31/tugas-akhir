@@ -1,14 +1,7 @@
 <script setup>
-/**
- * Login Page Component
- *
- * Handles user authentication via email/password.
- * Uses Vuetify components for consistent Material Design UI.
- */
 import { Head, useForm } from '@inertiajs/vue3';
-import { ref, computed } from 'vue';
+import { ref } from 'vue';
 
-// Props definition
 defineProps({
     canResetPassword: {
         type: Boolean,
@@ -20,7 +13,6 @@ defineProps({
     },
 });
 
-// Form using Inertia useForm
 const form = useForm({
     email: '',
     password: '',
@@ -29,7 +21,6 @@ const form = useForm({
 
 const isPasswordVisible = ref(false);
 
-// Form validation rules
 const emailRules = [
     (v) => !!v || 'Email is required',
     (v) => /.+@.+\..+/.test(v) || 'Please enter a valid email',
@@ -40,7 +31,6 @@ const passwordRules = [
     (v) => v.length >= 6 || 'Password must be at least 6 characters',
 ];
 
-// Submit login form
 const handleSubmit = () => {
     form.post(route('login'), {
         onFinish: () => form.reset('password'),

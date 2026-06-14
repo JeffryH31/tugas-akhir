@@ -20,7 +20,6 @@ class CommentService
             ->with([
                 'user',
                 'replies' => fn($q) => $q->with('user')->orderBy('created_at'),
-                'reactions' => fn($q) => $q->with('user'),
             ])
             ->orderBy('created_at', 'desc')
             ->get();
@@ -34,6 +33,7 @@ class CommentService
         return DB::transaction(function () use ($task, $user, $data) {
             $comment = Comment::create([
                 'task_id' => $task->id,
+                'subtask_id' => $data['subtask_id'] ?? null,
                 'user_id' => $user->id,
                 'parent_id' => $data['parent_id'] ?? null,
                 'content' => $data['content'],
@@ -41,7 +41,7 @@ class CommentService
                 'attachments' => $data['attachments'] ?? null,
             ]);
 
-            Activity::log($task->taskList->space->workspace, $user, $task, 'commented', [
+            Activity::log($task->project->space->workspace, $user, $task, 'commented', [
                 'name' => $task->name,
                 'comment_preview' => substr($data['content'], 0, 100),
             ]);
@@ -66,7 +66,7 @@ class CommentService
     public function delete(Comment $comment, User $user): void
     {
         DB::transaction(function () use ($comment, $user) {
-            Activity::log($comment->task->taskList->space->workspace, $user, $comment->task, 'comment_deleted', [
+            Activity::log($comment->task->project->space->workspace, $user, $comment->task, 'comment_deleted', [
                 'name' => $comment->task->name,
             ]);
 
@@ -86,46 +86,13 @@ class CommentService
     }
 
     /**
-     * Add reaction to comment
-     */
-    public function addReaction(Comment $comment, User $user, string $emoji): void
-    {
-        $comment->react($user, $emoji);
-    }
-
-    /**
-     * Remove reaction from comment
-     */
-    public function removeReaction(Comment $comment, User $user, string $emoji): void
-    {
-        $comment->unreact($user, $emoji);
-    }
-
-    /**
-     * Toggle reaction on comment
-     */
-    public function toggleReaction(Comment $comment, User $user, string $emoji): void
-    {
-        $existing = $comment->reactions()
-            ->where('user_id', $user->id)
-            ->where('emoji', $emoji)
-            ->exists();
-
-        if ($existing) {
-            $this->removeReaction($comment, $user, $emoji);
-        } else {
-            $this->addReaction($comment, $user, $emoji);
-        }
-    }
-
-    /**
      * Resolve a comment
      */
     public function resolve(Comment $comment, User $user): Comment
     {
         $comment->resolve();
 
-        Activity::log($comment->task->taskList->space->workspace, $user, $comment->task, 'comment_resolved', [
+        Activity::log($comment->task->project->space->workspace, $user, $comment->task, 'comment_resolved', [
             'name' => $comment->task->name,
         ]);
 

@@ -8,8 +8,9 @@ use App\Http\Resources\CommentResource;
 use App\Models\Comment;
 use App\Models\Space;
 use App\Models\Task;
-use App\Models\TaskList;
+use App\Models\Project;
 use App\Models\Workspace;
+use App\Services\AccessService;
 use App\Services\CommentService;
 use Illuminate\Foundation\Auth\Access\AuthorizesRequests;
 use Illuminate\Http\RedirectResponse;
@@ -20,14 +21,16 @@ class CommentController extends Controller
     use AuthorizesRequests;
 
     public function __construct(
-        protected CommentService $commentService
+        protected CommentService $commentService,
+        protected AccessService $accessService,
     ) {}
 
     /**
      * Store a new comment.
      */
-    public function store(StoreCommentRequest $request, Workspace $workspace, Space $space, TaskList $list, Task $task): RedirectResponse
+    public function store(StoreCommentRequest $request, Workspace $workspace, Space $space, Project $project, Task $task): RedirectResponse
     {
+        abort_unless($this->accessService->canComment($request->user(), $project), 403);
         try {
             $comment = $this->commentService->create($task, $request->user(), $request->validated());
 
@@ -47,13 +50,14 @@ class CommentController extends Controller
     {
         try {
             $this->authorize('update', $comment);
-            
             $updatedComment = $this->commentService->update($comment, $request->validated(), $request->user());
 
             return redirect()->back()->with([
                 'success' => 'Comment updated successfully.',
                 'comment' => new CommentResource($updatedComment->load('user'))
             ]);
+        } catch (\Illuminate\Auth\Access\AuthorizationException $e) {
+            return redirect()->back()->withErrors(['error' => 'You are not authorized to update this comment.']);
         } catch (\Exception $e) {
             return redirect()->back()->withErrors(['error' => 'Failed to update comment: ' . $e->getMessage()]);
         }
@@ -66,30 +70,13 @@ class CommentController extends Controller
     {
         try {
             $this->authorize('delete', $comment);
-            
             $this->commentService->delete($comment, $request->user());
 
             return redirect()->back()->with('success', 'Comment deleted successfully.');
+        } catch (\Illuminate\Auth\Access\AuthorizationException $e) {
+            return redirect()->back()->withErrors(['error' => 'You are not authorized to delete this comment.']);
         } catch (\Exception $e) {
             return redirect()->back()->withErrors(['error' => 'Failed to delete comment: ' . $e->getMessage()]);
-        }
-    }
-
-    /**
-     * Toggle reaction.
-     */
-    public function toggleReaction(Request $request, Comment $comment): RedirectResponse
-    {
-        $validated = $request->validate([
-            'emoji' => 'required|string|max:10',
-        ]);
-
-        try {
-            $this->commentService->toggleReaction($comment, $request->user(), $validated['emoji']);
-
-            return redirect()->back()->with('success', 'Reaction updated successfully.');
-        } catch (\Exception $e) {
-            return redirect()->back()->withErrors(['error' => 'Failed to update reaction: ' . $e->getMessage()]);
         }
     }
 
@@ -98,6 +85,8 @@ class CommentController extends Controller
      */
     public function resolve(Request $request, Comment $comment): RedirectResponse
     {
+        abort_unless($this->accessService->canResolveComment($request->user(), $comment), 403);
+
         try {
             $this->commentService->resolve($comment, $request->user());
 
@@ -112,6 +101,8 @@ class CommentController extends Controller
      */
     public function unresolve(Request $request, Comment $comment): RedirectResponse
     {
+        abort_unless($this->accessService->canResolveComment($request->user(), $comment), 403);
+
         try {
             $this->commentService->unresolve($comment, $request->user());
 

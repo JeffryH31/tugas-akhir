@@ -35,10 +35,17 @@ class Folder extends Model
 
         static::creating(function ($folder) {
             if (empty($folder->slug)) {
-                $folder->slug = Str::slug($folder->name);
+                $baseSlug = Str::slug($folder->name);
+                $slug = $baseSlug;
+                $counter = 1;
+                while (static::where('space_id', $folder->space_id)
+                    ->where('slug', $slug)
+                    ->exists()) {
+                    $slug = $baseSlug . '-' . $counter++;
+                }
+                $folder->slug = $slug;
             }
 
-            // Set position
             if (empty($folder->position)) {
                 $folder->position = static::where('space_id', $folder->space_id)
                     ->where('parent_id', $folder->parent_id)
@@ -47,7 +54,6 @@ class Folder extends Model
         });
     }
 
-    // ==================== RELATIONSHIPS ====================
 
     public function space(): BelongsTo
     {
@@ -64,9 +70,9 @@ class Folder extends Model
         return $this->hasMany(Folder::class, 'parent_id')->orderBy('position');
     }
 
-    public function lists(): HasMany
+    public function projects(): HasMany
     {
-        return $this->hasMany(TaskList::class)->orderBy('position');
+        return $this->hasMany(Project::class)->orderBy('position');
     }
 
     public function creator(): BelongsTo
@@ -74,19 +80,17 @@ class Folder extends Model
         return $this->belongsTo(User::class, 'created_by');
     }
 
-    // ==================== RECURSIVE RELATIONSHIPS ====================
 
     public function allChildren(): HasMany
     {
         return $this->children()->with('allChildren');
     }
 
-    public function allLists(): HasMany
+    public function allProjects(): HasMany
     {
-        return $this->lists()->with('tasks');
+        return $this->projects()->with('tasks');
     }
 
-    // ==================== HELPER METHODS ====================
 
     public function getDepth(): int
     {

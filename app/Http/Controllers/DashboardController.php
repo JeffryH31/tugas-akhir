@@ -2,11 +2,12 @@
 
 namespace App\Http\Controllers;
 
-use App\Models\TimeEntry;
 use App\Models\Workspace;
-use App\Services\TaskService;
+use App\Services\AccessService;
+use App\Services\DashboardService;
 use App\Services\WorkspaceService;
 use Illuminate\Http\Request;
+use Illuminate\Http\RedirectResponse;
 use Inertia\Inertia;
 use Inertia\Response;
 
@@ -14,70 +15,55 @@ class DashboardController extends Controller
 {
     public function __construct(
         protected WorkspaceService $workspaceService,
-        protected TaskService $taskService
+        protected DashboardService $dashboardService,
+        protected AccessService $accessService,
     ) {}
 
     /**
      * Display the main dashboard.
      */
-    public function index(Request $request): Response
+    public function index(Request $request): Response|RedirectResponse
     {
         $user = $request->user();
 
-        // Get user's workspaces with full hierarchy
         $workspaces = $this->workspaceService->getWorkspacesForUser($user);
 
-        // Get active workspace (first one or from session)
+        if ($workspaces->isEmpty()) {
+            return redirect()->route('workspaces.index');
+        }
+
         $activeWorkspaceId = session('active_workspace_id', $workspaces->first()?->id);
         $activeWorkspace = $workspaces->firstWhere('id', $activeWorkspaceId) ?? $workspaces->first();
 
-        if ($activeWorkspace) {
-            $activeWorkspace->load([
-                'spaces' => fn($q) => $q->with([
-                    'folders' => fn($fq) => $fq->with('lists')->orderBy('position'),
-                    'listsWithoutFolder' => fn($lq) => $lq->orderBy('position'),
-                    'statuses' => fn($sq) => $sq->orderBy('position'),
-                ])->orderBy('position'),
-                'members',
-                'priorities',
-                'labels',
-            ]);
-        }
-
-        // Get user's tasks
-        $myTasks = $user->getMyTasks();
-        $overdueTasks = $user->getOverdueTasks();
-
-        // Get running timer if any
-        $runningTimer = TimeEntry::where('user_id' , $user->id)
-            ->where('is_running', true)
-            ->with('task.taskList.space')
-            ->first();
-
-        // Time stats
-        $todayTimeSpent = $user->getTodayTimeSpent();
-        $weekTimeSpent = $user->getWeekTimeSpent();
+        $dashboardData = $this->dashboardService->getDashboardData($user, $activeWorkspace);
 
         return Inertia::render('Dashboard', [
             'workspaces' => $workspaces,
             'activeWorkspace' => $activeWorkspace,
-            'myTasks' => $myTasks,
-            'overdueTasks' => $overdueTasks,
-            'runningTimer' => $runningTimer,
-            'timeStats' => [
-                'today' => $todayTimeSpent,
-                'week' => $weekTimeSpent,
-            ],
+            'mySubtasks' => $dashboardData['mySubtasks'],
+            'overdueSubtasks' => $dashboardData['overdueSubtasks'],
+            'runningTimer' => $dashboardData['runningTimer'],
+            'timeStats' => $dashboardData['timeStats'],
+            'recentActivity' => $dashboardData['recentActivity'],
         ]);
     }
 
     /**
      * Switch active workspace.
      */
-    public function switchWorkspace(Request $request, Workspace $workspace)
+    public function switchWorkspace(Request $request, Workspace $workspace): RedirectResponse
     {
+        abort_unless($this->accessService->canViewWorkspace($request->user(), $workspace), 403);
+
         session(['active_workspace_id' => $workspace->id]);
 
         return redirect()->route('dashboard');
+    }
+
+    public function markNotificationsRead(Request $request): RedirectResponse
+    {
+        $request->user()->markNotificationsRead();
+
+        return back();
     }
 }

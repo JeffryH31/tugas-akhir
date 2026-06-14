@@ -41,7 +41,8 @@ class User extends Authenticatable
         'name',
         'email',
         'password',
-        'role',
+        'hourly_rate',
+        'last_notifications_read_at',
     ];
 
     protected $hidden = [
@@ -61,21 +62,17 @@ class User extends Authenticatable
     {
         return [
             'email_verified_at' => 'datetime',
+            'hourly_rate' => 'decimal:2',
+            'last_notifications_read_at' => 'datetime',
             'password' => 'hashed',
         ];
     }
 
-    // ==================== RELATIONSHIPS ====================
-
-    public function ownedWorkspaces(): HasMany
-    {
-        return $this->hasMany(Workspace::class, 'owner_id');
-    }
 
     public function workspaces(): BelongsToMany
     {
         return $this->belongsToMany(Workspace::class, 'workspace_members')
-            ->withPivot('role', 'joined_at')
+            ->withPivot('role')
             ->withTimestamps();
     }
 
@@ -86,17 +83,23 @@ class User extends Authenticatable
             ->withTimestamps();
     }
 
-    public function assignedTasks(): BelongsToMany
+    public function starredSpaces(): BelongsToMany
     {
-        return $this->belongsToMany(Task::class, 'task_assignees')
-            ->withPivot('assigned_at', 'assigned_by')
+        return $this->belongsToMany(Space::class, 'starred_spaces', 'user_id', 'space_id')
             ->withTimestamps();
     }
 
-    public function watchingTasks(): BelongsToMany
+    public function projects(): BelongsToMany
     {
-        return $this->belongsToMany(Task::class, 'task_watchers')
+        return $this->belongsToMany(Project::class, 'project_members')
+            ->withPivot('role')
             ->withTimestamps();
+    }
+
+    public function assignedTasks(): BelongsToMany
+    {
+        return $this->belongsToMany(Task::class, 'task_assignees')
+            ->withPivot('assigned_by');
     }
 
     public function timeEntries(): HasMany
@@ -114,7 +117,6 @@ class User extends Authenticatable
         return $this->hasMany(Activity::class);
     }
 
-    // ==================== ACCESSORS ====================
 
     public function getInitialsAttribute(): string
     {
@@ -138,7 +140,6 @@ class User extends Authenticatable
         return $colors[$this->id % count($colors)];
     }
 
-    // ==================== HELPER METHODS ====================
 
     public function getActiveWorkspace(): ?Workspace
     {
@@ -148,18 +149,21 @@ class User extends Authenticatable
     public function getMyTasks()
     {
         return $this->assignedTasks()
-            ->whereNull('completed_at')
-            ->with(['taskList.space', 'status', 'priority'])
-            ->orderBy('due_date')
+            ->with(['project.space', 'status'])
+            ->orderBy('position')
             ->get();
     }
 
     public function getOverdueTasks()
     {
+        // Tasks don't have due dates - only subtasks do
+        // Return tasks that have overdue subtasks
         return $this->assignedTasks()
-            ->whereNull('completed_at')
-            ->whereNotNull('due_date')
-            ->where('due_date', '<', now())
+            ->whereHas('subtasks', function($q) {
+                $q->whereNull('completed_at')
+                  ->whereNotNull('due_date')
+                  ->where('due_date', '<', now());
+            })
             ->get();
     }
 
@@ -175,5 +179,12 @@ class User extends Authenticatable
         return $this->timeEntries()
             ->whereBetween('started_at', [now()->startOfWeek(), now()->endOfWeek()])
             ->sum('duration');
+    }
+
+    public function markNotificationsRead(): void
+    {
+        $this->forceFill([
+            'last_notifications_read_at' => now(),
+        ])->save();
     }
 }

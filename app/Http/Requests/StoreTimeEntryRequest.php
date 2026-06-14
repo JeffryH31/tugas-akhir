@@ -6,37 +6,28 @@ use Illuminate\Foundation\Http\FormRequest;
 
 class StoreTimeEntryRequest extends FormRequest
 {
-    /**
-     * Determine if the user is authorized to make this request.
-     */
     public function authorize(): bool
     {
         return true;
     }
 
-    /**
-     * Get the validation rules that apply to the request.
-     */
     public function rules(): array
     {
         return [
-            'duration' => ['required', 'integer', 'min:1', 'max:1440'], // max 24 hours in minutes
-            'description' => ['nullable', 'string', 'max:500'],
+            'duration' => ['required', 'integer', 'min:1', 'max:1440'],
             'started_at' => ['nullable', 'date'],
             'ended_at' => ['nullable', 'date', 'after:started_at'],
-            'is_billable' => ['nullable', 'boolean'],
+            'description' => ['nullable', 'string', 'max:500'],
         ];
     }
 
-    /**
-     * Get custom messages for validator errors.
-     */
     public function messages(): array
     {
         return [
             'duration.required' => 'Duration is required.',
             'duration.min' => 'Duration must be at least 1 minute.',
-            'duration.max' => 'Duration cannot exceed 24 hours.',
+            'duration.max' => 'Duration cannot exceed 1440 minutes (24 hours).',
+            'started_at.date' => 'Start time must be a valid date.',
             'ended_at.after' => 'End time must be after start time.',
         ];
     }

@@ -3,7 +3,6 @@
 namespace App\Services;
 
 use App\Models\Activity;
-use App\Models\Priority;
 use App\Models\User;
 use App\Models\Workspace;
 use Illuminate\Support\Collection;
@@ -13,7 +12,8 @@ use Illuminate\Support\Str;
 class WorkspaceService
 {
     /**
-     * Get all workspaces for a user
+     * Get all workspaces the user is a member of, with spaces eager-loaded.
+     *
      */
     public function getWorkspacesForUser(User $user): Collection
     {
@@ -25,7 +25,9 @@ class WorkspaceService
     }
 
     /**
-     * Create a new workspace
+     * Create a new workspace and assign the creator as owner.
+     *
+     * @param  array{name: string, color?: string, is_personal?: bool}  $data
      */
     public function create(array $data, User $owner): Workspace
     {
@@ -33,17 +35,13 @@ class WorkspaceService
             $workspace = Workspace::create([
                 'name' => $data['name'],
                 'slug' => Str::slug($data['name']),
-                'description' => $data['description'] ?? null,
                 'color' => $data['color'] ?? '#7C3AED',
-                'icon' => $data['icon'] ?? null,
-                'owner_id' => $owner->id,
                 'is_personal' => $data['is_personal'] ?? false,
             ]);
 
-            // Create default priorities
-            $this->createDefaultPriorities($workspace);
+            // Creator is always the first admin
+            $workspace->addMember($owner, AccessService::WORKSPACE_OWNER);
 
-            // Log activity
             Activity::log($workspace, $owner, $workspace, 'created', [
                 'name' => $workspace->name,
             ]);
@@ -53,7 +51,9 @@ class WorkspaceService
     }
 
     /**
-     * Update a workspace
+     * Update workspace name and/or color. Logs activity if name changed.
+     *
+     * @param  array{name?: string, color?: string}  $data
      */
     public function update(Workspace $workspace, array $data, User $user): Workspace
     {
@@ -61,12 +61,9 @@ class WorkspaceService
 
         $workspace->update([
             'name' => $data['name'] ?? $workspace->name,
-            'description' => $data['description'] ?? $workspace->description,
             'color' => $data['color'] ?? $workspace->color,
-            'icon' => $data['icon'] ?? $workspace->icon,
         ]);
 
-        // Log activity if name changed
         if ($oldName !== $workspace->name) {
             Activity::log($workspace, $user, $workspace, 'updated', [
                 'name' => $workspace->name,
@@ -79,7 +76,8 @@ class WorkspaceService
     }
 
     /**
-     * Delete a workspace
+     * Permanently delete a workspace and all its nested data.
+     *
      */
     public function delete(Workspace $workspace, User $user): void
     {
@@ -94,9 +92,10 @@ class WorkspaceService
     }
 
     /**
-     * Add a member to the workspace
+     * Add a user as a member of the workspace with the given role.
+     *
      */
-    public function addMember(Workspace $workspace, User $user, string $role = 'member', ?User $addedBy = null): void
+    public function addMember(Workspace $workspace, User $user, string $role = AccessService::WORKSPACE_MEMBER, ?User $addedBy = null): void
     {
         $workspace->addMember($user, $role);
 
@@ -111,7 +110,8 @@ class WorkspaceService
     }
 
     /**
-     * Remove a member from the workspace
+     * Remove a user from the workspace membership.
+     *
      */
     public function removeMember(Workspace $workspace, User $user, ?User $removedBy = null): void
     {
@@ -127,7 +127,8 @@ class WorkspaceService
     }
 
     /**
-     * Update member role
+     * Change a workspace member's role.
+     *
      */
     public function updateMemberRole(Workspace $workspace, User $user, string $role, ?User $updatedBy = null): void
     {
@@ -143,53 +144,47 @@ class WorkspaceService
     }
 
     /**
-     * Get workspace statistics
+     * Get aggregate statistics for a workspace (spaces, tasks, completion, overdue).
+     *
+     * @return array{spaces_count: int, projects_count: int, tasks_count: int, completed_subtasks_count: int, overdue_subtasks_count: int, members_count: int}
      */
     public function getStatistics(Workspace $workspace): array
     {
         $spaces = $workspace->spaces()->withCount([
-            'lists',
+            'projects',
         ])->get();
 
-        $totalLists = $spaces->sum('lists_count');
-        
+        $totalLists = $spaces->sum('projects_count');
+
         // Get task counts through relationships
         $taskCounts = DB::table('tasks')
-            ->join('task_lists', 'tasks.task_list_id', '=', 'task_lists.id')
-            ->join('spaces', 'task_lists.space_id', '=', 'spaces.id')
+            ->join('projects', 'tasks.project_id', '=', 'projects.id')
+            ->join('spaces', 'projects.space_id', '=', 'spaces.id')
             ->where('spaces.workspace_id', $workspace->id)
             ->whereNull('tasks.deleted_at')
+            ->selectRaw('COUNT(*) as total')
+            ->first();
+
+        // Get subtask counts for completion and overdue metrics
+        $subtaskCounts = DB::table('subtasks')
+            ->join('tasks', 'subtasks.task_id', '=', 'tasks.id')
+            ->join('projects', 'tasks.project_id', '=', 'projects.id')
+            ->join('spaces', 'projects.space_id', '=', 'spaces.id')
+            ->where('spaces.workspace_id', $workspace->id)
+            ->whereNull('subtasks.deleted_at')
             ->selectRaw('
-                COUNT(*) as total,
-                SUM(CASE WHEN tasks.completed_at IS NOT NULL THEN 1 ELSE 0 END) as completed,
-                SUM(CASE WHEN tasks.completed_at IS NULL AND tasks.due_date < NOW() THEN 1 ELSE 0 END) as overdue
+                SUM(CASE WHEN subtasks.completed_at IS NOT NULL THEN 1 ELSE 0 END) as completed,
+                SUM(CASE WHEN subtasks.completed_at IS NULL AND subtasks.due_date < CURRENT_TIMESTAMP THEN 1 ELSE 0 END) as overdue
             ')
             ->first();
 
         return [
             'spaces_count' => $spaces->count(),
-            'lists_count' => $totalLists,
+            'projects_count' => $totalLists,
             'tasks_count' => $taskCounts->total ?? 0,
-            'completed_tasks_count' => $taskCounts->completed ?? 0,
-            'overdue_tasks_count' => $taskCounts->overdue ?? 0,
+            'completed_subtasks_count' => $subtaskCounts->completed ?? 0,
+            'overdue_subtasks_count' => $subtaskCounts->overdue ?? 0,
             'members_count' => $workspace->members()->count(),
         ];
-    }
-
-    /**
-     * Create default priorities for workspace
-     */
-    protected function createDefaultPriorities(Workspace $workspace): void
-    {
-        $priorities = [
-            ['name' => 'Urgent', 'color' => '#EF4444', 'level' => 4, 'icon' => 'mdi-flag'],
-            ['name' => 'High', 'color' => '#F59E0B', 'level' => 3, 'icon' => 'mdi-flag'],
-            ['name' => 'Normal', 'color' => '#3B82F6', 'level' => 2, 'icon' => 'mdi-flag', 'is_default' => true],
-            ['name' => 'Low', 'color' => '#6B7280', 'level' => 1, 'icon' => 'mdi-flag'],
-        ];
-
-        foreach ($priorities as $priority) {
-            $workspace->priorities()->create($priority);
-        }
     }
 }

@@ -14,57 +14,42 @@ return new class extends Migration
         Schema::create('tasks', function (Blueprint $table) {
             $table->id();
             $table->string('task_id')->unique(); // Human-readable ID like "PROJ-123"
-            $table->foreignId('task_list_id')->constrained()->cascadeOnDelete();
-            $table->foreignId('parent_id')->nullable()->constrained('tasks')->cascadeOnDelete();
+            $table->foreignId('project_id')->constrained()->cascadeOnDelete();
             $table->foreignId('status_id')->nullable()->constrained()->nullOnDelete();
-            $table->foreignId('priority_id')->nullable()->constrained()->nullOnDelete();
-            
+            $table->tinyInteger('priority_level')->nullable();
+
             $table->string('name');
             $table->text('description')->nullable();
-            
-            // Dates
-            $table->timestamp('start_date')->nullable();
-            $table->timestamp('due_date')->nullable();
-            $table->timestamp('completed_at')->nullable();
-            
-            // Time tracking
-            $table->integer('time_estimate')->nullable(); // in minutes
-            $table->integer('time_spent')->default(0); // in minutes (denormalized for performance)
-            
-            // Position for ordering
+            $table->date('start_date')->nullable();
+            $table->date('due_date')->nullable();
+            $table->unsignedInteger('time_estimate')->nullable()->comment('Estimated duration in minutes');
+
             $table->integer('position')->default(0);
-            
-            // Flags
+
             $table->boolean('is_archived')->default(false);
-            $table->boolean('is_template')->default(false);
-            
-            // Metadata
-            $table->json('custom_fields')->nullable();
+
             $table->foreignId('created_by')->nullable()->constrained('users')->nullOnDelete();
-            $table->foreignId('completed_by')->nullable()->constrained('users')->nullOnDelete();
-            
+
             $table->timestamps();
             $table->softDeletes();
 
-            $table->index(['task_list_id', 'status_id', 'position']);
-            $table->index(['parent_id']);
-            $table->index(['due_date', 'completed_at']);
+            $table->index(['project_id', 'status_id', 'position']);
             $table->index(['created_by']);
+            $table->index('is_archived');
+            $table->index('start_date');
+            $table->index('due_date');
         });
 
-        // Pivot table for task assignees
         Schema::create('task_assignees', function (Blueprint $table) {
             $table->id();
             $table->foreignId('task_id')->constrained()->cascadeOnDelete();
             $table->foreignId('user_id')->constrained()->cascadeOnDelete();
-            $table->timestamp('assigned_at')->useCurrent();
             $table->foreignId('assigned_by')->nullable()->constrained('users')->nullOnDelete();
-            $table->timestamps();
 
             $table->unique(['task_id', 'user_id']);
+            $table->index('user_id');
         });
 
-        // Pivot table for task labels
         Schema::create('task_labels', function (Blueprint $table) {
             $table->id();
             $table->foreignId('task_id')->constrained()->cascadeOnDelete();
@@ -72,24 +57,14 @@ return new class extends Migration
             $table->timestamps();
 
             $table->unique(['task_id', 'label_id']);
+            $table->index('label_id');
         });
 
-        // Task watchers
-        Schema::create('task_watchers', function (Blueprint $table) {
-            $table->id();
-            $table->foreignId('task_id')->constrained()->cascadeOnDelete();
-            $table->foreignId('user_id')->constrained()->cascadeOnDelete();
-            $table->timestamps();
-
-            $table->unique(['task_id', 'user_id']);
-        });
-
-        // Task dependencies
         Schema::create('task_dependencies', function (Blueprint $table) {
             $table->id();
             $table->foreignId('task_id')->constrained()->cascadeOnDelete();
             $table->foreignId('depends_on_task_id')->constrained('tasks')->cascadeOnDelete();
-            $table->string('type')->default('blocking'); // blocking, waiting_on
+            $table->enum('dependency_type', ['blocks', 'relates_to'])->default('blocks');
             $table->timestamps();
 
             $table->unique(['task_id', 'depends_on_task_id']);
@@ -102,7 +77,6 @@ return new class extends Migration
     public function down(): void
     {
         Schema::dropIfExists('task_dependencies');
-        Schema::dropIfExists('task_watchers');
         Schema::dropIfExists('task_labels');
         Schema::dropIfExists('task_assignees');
         Schema::dropIfExists('tasks');

@@ -19,7 +19,6 @@ class Label extends Model
         'description',
     ];
 
-    // ==================== RELATIONSHIPS ====================
 
     public function workspace(): BelongsTo
     {

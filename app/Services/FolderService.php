@@ -14,10 +14,10 @@ class FolderService
     /**
      * Get folders for a space
      */
-    public function getFoldersForSpace(Space $space)
+    public function getFoldersForSpace(Space $space): \Illuminate\Database\Eloquent\Collection
     {
         return $space->folders()
-            ->with(['children', 'lists'])
+            ->with(['children', 'projects'])
             ->orderBy('position')
             ->get();
     }
@@ -35,6 +35,7 @@ class FolderService
                 'slug' => Str::slug($data['name']),
                 'description' => $data['description'] ?? null,
                 'color' => $data['color'] ?? null,
+                'is_hidden' => $data['is_hidden'] ?? false,
                 'created_by' => $user->id,
             ]);
 
@@ -113,11 +114,13 @@ class FolderService
     /**
      * Reorder folders
      */
-    public function reorder(array $order): void
+    public function reorder(Space $space, array $order): void
     {
-        DB::transaction(function () use ($order) {
+        DB::transaction(function () use ($space, $order) {
             foreach ($order as $position => $folderId) {
-                Folder::where('id', $folderId)->update(['position' => $position]);
+                Folder::where('id', $folderId)
+                    ->where('space_id', $space->id)
+                    ->update(['position' => $position]);
             }
         });
     }

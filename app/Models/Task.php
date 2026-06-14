@@ -2,11 +2,14 @@
 
 namespace App\Models;
 
+use App\Enums\PriorityLevel;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Database\Eloquent\Relations\HasManyThrough;
+use Illuminate\Database\Eloquent\Relations\MorphMany;
 use Illuminate\Database\Eloquent\SoftDeletes;
 
 class Task extends Model
@@ -15,38 +18,32 @@ class Task extends Model
 
     protected $fillable = [
         'task_id',
-        'task_list_id',
-        'parent_id',
+        'project_id',
         'status_id',
-        'priority_id',
+        'priority_level',
         'name',
         'description',
         'start_date',
         'due_date',
         'completed_at',
         'time_estimate',
-        'time_spent',
         'position',
         'is_archived',
-        'is_template',
-        'custom_fields',
         'created_by',
         'completed_by',
     ];
 
     protected $casts = [
-        'start_date' => 'datetime',
-        'due_date' => 'datetime',
+        'is_archived'           => 'boolean',
+        'priority_level'        => PriorityLevel::class,
+        'start_date' => 'date:Y-m-d',
+        'due_date'   => 'date:Y-m-d',
         'completed_at' => 'datetime',
-        'is_archived' => 'boolean',
-        'is_template' => 'boolean',
-        'custom_fields' => 'array',
     ];
 
     protected $appends = [
-        'is_completed',
-        'is_overdue',
         'progress',
+        'time_spent',
     ];
 
     /**
@@ -59,57 +56,73 @@ class Task extends Model
         parent::boot();
 
         static::creating(function ($task) {
-            // Generate human-readable task ID
             if (empty($task->task_id)) {
-                $list = TaskList::with('space.workspace')->find($task->task_list_id);
+                $list = Project::with('space.workspace')->find($task->project_id);
                 $prefix = strtoupper(substr($list->space->workspace->name, 0, 3));
-                $count = Task::whereHas('taskList.space', function ($q) use ($list) {
+                $count = Task::withTrashed()->whereHas('project.space', function ($q) use ($list) {
                     $q->where('workspace_id', $list->space->workspace_id);
                 })->count() + 1;
                 $task->task_id = $prefix . '-' . $count;
+
+                // Ensure uniqueness
+                while (Task::withTrashed()->where('task_id', $task->task_id)->exists()) {
+                    $count++;
+                    $task->task_id = $prefix . '-' . $count;
+                }
             }
 
-            // Set position
             if (empty($task->position)) {
-                $task->position = static::where('task_list_id', $task->task_list_id)
-                    ->where('parent_id', $task->parent_id)
+                $task->position = static::where('project_id', $task->project_id)
                     ->max('position') + 1;
             }
 
-            // Set default status
             if (empty($task->status_id)) {
-                $list = TaskList::with('space')->find($task->task_list_id);
+                $list = Project::with('space')->find($task->project_id);
                 $defaultStatus = $list->space->getDefaultStatus();
                 $task->status_id = $defaultStatus?->id;
             }
         });
 
-        // Update time_spent when time entries change
         static::saved(function ($task) {
-            if ($task->wasChanged('completed_at') && $task->completed_at) {
-                // Update parent progress if this is a subtask
-                if ($task->parent) {
-                    $task->parent->updateProgress();
+        });
+
+        // Keep completed_at in sync with the task's status: set it when the task
+        // moves into a closed status, clear it when it moves back to an open one.
+        static::saving(function ($task) {
+            if ($task->isDirty('status_id') && $task->status_id) {
+                $status = Status::find($task->status_id);
+                if ($status) {
+                    if ($status->is_closed) {
+                        if (is_null($task->completed_at)) {
+                            $task->completed_at = now();
+                        }
+                    } else {
+                        $task->completed_at = null;
+                        $task->completed_by = null;
+                    }
                 }
             }
         });
+
+        static::deleting(function ($task) {
+            if ($task->isForceDeleting()) return;
+            $task->subtasks()->each(fn($subtask) => $subtask->delete());
+        });
+
+        static::restoring(function ($task) {
+            $task->subtasks()->onlyTrashed()->each(fn($subtask) => $subtask->restore());
+        });
     }
 
-    // ==================== RELATIONSHIPS ====================
 
-    public function taskList(): BelongsTo
+    public function project(): BelongsTo
     {
-        return $this->belongsTo(TaskList::class);
-    }
-
-    public function parent(): BelongsTo
-    {
-        return $this->belongsTo(Task::class, 'parent_id');
+        return $this->belongsTo(Project::class);
     }
 
     public function subtasks(): HasMany
     {
-        return $this->hasMany(Task::class, 'parent_id')->orderBy('position');
+        return $this->hasMany(Subtask::class)->orderBy('position');
     }
 
     public function status(): BelongsTo
@@ -117,9 +130,9 @@ class Task extends Model
         return $this->belongsTo(Status::class);
     }
 
-    public function priority(): BelongsTo
+    public function getPriorityAttribute(): ?array
     {
-        return $this->belongsTo(Priority::class);
+        return $this->priority_level?->toArray();
     }
 
     public function creator(): BelongsTo
@@ -127,16 +140,17 @@ class Task extends Model
         return $this->belongsTo(User::class, 'created_by');
     }
 
-    public function completedBy(): BelongsTo
+    public function completer(): BelongsTo
     {
         return $this->belongsTo(User::class, 'completed_by');
     }
 
+
+
     public function assignees(): BelongsToMany
     {
         return $this->belongsToMany(User::class, 'task_assignees')
-            ->withPivot('assigned_at', 'assigned_by')
-            ->withTimestamps();
+            ->withPivot('assigned_by');
     }
 
     public function labels(): BelongsToMany
@@ -144,28 +158,23 @@ class Task extends Model
         return $this->belongsToMany(Label::class, 'task_labels')->withTimestamps();
     }
 
-    public function watchers(): BelongsToMany
-    {
-        return $this->belongsToMany(User::class, 'task_watchers')->withTimestamps();
-    }
-
     public function dependencies(): BelongsToMany
     {
         return $this->belongsToMany(Task::class, 'task_dependencies', 'task_id', 'depends_on_task_id')
-            ->withPivot('type')
+            ->withPivot('dependency_type')
             ->withTimestamps();
     }
 
     public function dependents(): BelongsToMany
     {
         return $this->belongsToMany(Task::class, 'task_dependencies', 'depends_on_task_id', 'task_id')
-            ->withPivot('type')
+            ->withPivot('dependency_type')
             ->withTimestamps();
     }
 
-    public function timeEntries(): HasMany
+    public function timeEntries(): HasManyThrough
     {
-        return $this->hasMany(TimeEntry::class);
+        return $this->hasManyThrough(TimeEntry::class, Subtask::class);
     }
 
     public function comments(): HasMany
@@ -178,78 +187,55 @@ class Task extends Model
         return $this->hasMany(Comment::class)->latest();
     }
 
-    public function attachments(): HasMany
+    public function activities(): MorphMany
     {
-        return $this->hasMany(Attachment::class);
-    }
-
-    // ==================== ACCESSORS ====================
-
-    public function getIsCompletedAttribute(): bool
-    {
-        return $this->completed_at !== null;
-    }
-
-    public function getIsOverdueAttribute(): bool
-    {
-        if (!$this->due_date || $this->is_completed) {
-            return false;
-        }
-        return $this->due_date->isPast();
+        return $this->morphMany(Activity::class, 'subject');
     }
 
     public function getProgressAttribute(): float
     {
-        $subtasks = $this->subtasks;
-        if ($subtasks->isEmpty()) {
-            return $this->is_completed ? 100 : 0;
+        // Use loaded subtasks if available, otherwise use count queries to avoid N+1
+        if ($this->relationLoaded('subtasks')) {
+            $subtasks = $this->subtasks;
+            if ($subtasks->isEmpty()) return 0;
+            $completed = $subtasks->filter(fn($t) => $t->isCompleted())->count();
+            return round(($completed / $subtasks->count()) * 100, 1);
         }
 
-        $completed = $subtasks->filter(fn($t) => $t->is_completed)->count();
-        return round(($completed / $subtasks->count()) * 100, 1);
+        $total = $this->subtasks()->count();
+        if ($total === 0) return 0;
+        $completed = $this->subtasks()->whereNotNull('completed_at')->count();
+        return round(($completed / $total) * 100, 1);
     }
 
-    public function getTimeSpentFormattedAttribute(): string
+
+    public function scopeActive($query)
     {
-        $hours = floor($this->time_spent / 60);
-        $minutes = $this->time_spent % 60;
-        
-        if ($hours > 0) {
-            return $hours . 'h ' . $minutes . 'm';
-        }
-        return $minutes . 'm';
+        return $query->where('is_archived', false);
     }
 
-    public function getTimeEstimateFormattedAttribute(): string
-    {
-        if (!$this->time_estimate) return '-';
-        
-        $hours = floor($this->time_estimate / 60);
-        $minutes = $this->time_estimate % 60;
-        
-        if ($hours > 0) {
-            return $hours . 'h ' . $minutes . 'm';
-        }
-        return $minutes . 'm';
-    }
-
-    // ==================== SCOPES ====================
-
-    public function scopeRoot($query)
-    {
-        return $query->whereNull('parent_id');
-    }
-
+    /**
+     * Scope: tasks that have been completed (have a completion timestamp).
+     */
     public function scopeCompleted($query)
     {
         return $query->whereNotNull('completed_at');
     }
 
-    public function scopeIncomplete($query)
+    /**
+     * Scope: tasks completed after their due date (finished late).
+     * Compared by calendar date — finishing on the due day itself counts as on time.
+     */
+    public function scopeCompletedLate($query)
     {
-        return $query->whereNull('completed_at');
+        return $query->whereNotNull('completed_at')
+            ->whereNotNull('due_date')
+            ->whereRaw('DATE(completed_at) > due_date');
     }
 
+    /**
+     * Scope: tasks not yet completed and already past their due date.
+     */
     public function scopeOverdue($query)
     {
         return $query->whereNull('completed_at')
@@ -257,53 +243,42 @@ class Task extends Model
             ->where('due_date', '<', now());
     }
 
-    public function scopeDueSoon($query, int $days = 3)
+    public function isCompleted(): bool
     {
-        return $query->whereNull('completed_at')
-            ->whereNotNull('due_date')
-            ->whereBetween('due_date', [now(), now()->addDays($days)]);
+        return !is_null($this->completed_at);
     }
 
-    public function scopeActive($query)
+    /**
+     * Whether the task was finished after its due date (compared by date).
+     */
+    public function isCompletedLate(): bool
     {
-        return $query->where('is_archived', false);
+        return $this->completed_at && $this->due_date
+            && $this->completed_at->startOfDay()->gt($this->due_date->startOfDay());
     }
 
-    // ==================== HELPER METHODS ====================
-
-    public function complete(?User $user = null): void
-    {
-        $this->update([
-            'completed_at' => now(),
-            'completed_by' => $user?->id,
-        ]);
-    }
-
-    public function reopen(): void
-    {
-        $this->update([
-            'completed_at' => null,
-            'completed_by' => null,
-        ]);
-    }
-
-    public function updateTimeSpent(): void
-    {
-        $totalMinutes = $this->timeEntries()->sum('duration');
-        $this->update(['time_spent' => $totalMinutes]);
-    }
 
     public function updateProgress(): void
     {
-        // This method is called when subtask completion status changes
-        // Progress is calculated dynamically via accessor
+    }
+
+    /**
+     * Get total time spent across all subtasks (in minutes).
+     * Computed from subtask time_spent fields (which aggregate time_entries.duration).
+     */
+    public function getTimeSpentAttribute(): int
+    {
+        if ($this->relationLoaded('subtasks')) {
+            return (int) $this->subtasks->sum('time_spent');
+        }
+
+        return (int) $this->subtasks()->sum('time_spent');
     }
 
     public function assign(User $user, ?User $assignedBy = null): void
     {
         $this->assignees()->syncWithoutDetaching([
             $user->id => [
-                'assigned_at' => now(),
                 'assigned_by' => $assignedBy?->id,
             ]
         ]);
@@ -324,27 +299,17 @@ class Task extends Model
         $this->labels()->detach($label->id);
     }
 
-    public function move(TaskList $newList, ?int $position = null): void
+    public function move(Project $newList, ?int $position = null): void
     {
         $this->update([
-            'task_list_id' => $newList->id,
-            'position' => $position ?? Task::where('task_list_id', $newList->id)
-                ->whereNull('parent_id')
+            'project_id' => $newList->id,
+            'position' => $position ?? Task::where('project_id', $newList->id)
                 ->max('position') + 1,
         ]);
     }
 
     public function changeStatus(Status $status): void
     {
-        $wasCompleted = $this->is_completed;
-        
         $this->update(['status_id' => $status->id]);
-
-        // Auto-complete if status is closed
-        if ($status->is_closed && !$wasCompleted) {
-            $this->complete();
-        } elseif (!$status->is_closed && $wasCompleted) {
-            $this->reopen();
-        }
     }
 }

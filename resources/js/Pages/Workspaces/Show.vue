@@ -1,17 +1,21 @@
 <script setup>
 import { ref } from 'vue';
-import { Head, router } from '@inertiajs/vue3';
+import { router } from '@inertiajs/vue3';
 import MainLayout from '@/Layouts/MainLayout.vue';
+import ColorPicker from '@/Components/ColorPicker.vue';
+import { normalizeHexColor } from '@/utils/color';
+import { useSnackbar } from '@/composables/useSnackbar';
+
+const { showSnackbar } = useSnackbar();
 
 const props = defineProps({
-    workspace: Object,
-    statistics: Object,
+    workspace: { type: Object, default: null },
+    canManageWorkspace: { type: Boolean, default: false },
 });
 
 // Create Space dialog
 const showCreateSpace = ref(false);
 const newSpaceName = ref('');
-const newSpaceDescription = ref('');
 const newSpaceColor = ref('#6366F1');
 
 const createSpace = () => {
@@ -21,20 +25,16 @@ const createSpace = () => {
         route('spaces.store', props.workspace.id),
         {
             name: newSpaceName.value.trim(),
-            description: newSpaceDescription.value.trim() || null,
-            color: newSpaceColor.value,
+            color: normalizeHexColor(newSpaceColor.value),
         },
         {
             preserveScroll: true,
             onSuccess: () => {
                 newSpaceName.value = '';
-                newSpaceDescription.value = '';
                 newSpaceColor.value = '#6366F1';
                 showCreateSpace.value = false;
-                if (window.showSnackbar) {
-                    window.showSnackbar('Space created successfully!', 'success');
-                }
             },
+            onError: () => showSnackbar('Failed to create space', 'error'),
         }
     );
 };
@@ -49,7 +49,7 @@ const createSpace = () => {
                     <h1 class="text-2xl font-bold mb-1">{{ workspace?.name }}</h1>
                     <p class="text-gray-500">Manage your spaces and projects</p>
                 </div>
-                <v-btn color="primary" @click="showCreateSpace = true">
+                <v-btn v-if="canManageWorkspace" color="primary" @click="showCreateSpace = true">
                     <v-icon start>mdi-plus</v-icon>
                     Create Space
                 </v-btn>
@@ -57,32 +57,20 @@ const createSpace = () => {
 
             <!-- Spaces Grid -->
             <div v-if="workspace?.spaces?.length" class="spaces-grid">
-                <v-card
-                    v-for="space in workspace.spaces"
-                    :key="space.id"
-                    variant="outlined"
-                    rounded="lg"
-                    class="space-card"
-                    hover
-                    @click="router.visit(route('spaces.show', [workspace.id, space.id]))"
-                >
+                <v-card v-for="space in workspace.spaces" :key="space.id" variant="outlined" rounded="lg"
+                    class="space-card" hover @click="router.visit(route('spaces.show', [workspace.id, space.id]))">
                     <v-card-text class="pa-4">
                         <div class="flex items-start gap-3">
-                            <div
-                                class="w-12 h-12 rounded-lg flex items-center justify-center text-white flex-shrink-0"
-                                :style="{ backgroundColor: space.color || '#6366F1' }"
-                            >
-                                <v-icon color="white" size="24">{{ space.icon || 'mdi-folder' }}</v-icon>
+                            <div class="w-12 h-12 rounded-lg flex items-center justify-center text-white flex-shrink-0"
+                                :style="{ backgroundColor: space.color || '#6366F1' }">
+                                <v-icon color="white" size="24">mdi-folder</v-icon>
                             </div>
                             <div class="flex-1 min-w-0">
                                 <div class="font-semibold text-lg mb-1">{{ space.name }}</div>
-                                <p v-if="space.description" class="text-sm text-gray-500 line-clamp-2">
-                                    {{ space.description }}
-                                </p>
                                 <div class="flex items-center gap-4 mt-3 text-sm text-gray-400">
                                     <div class="flex items-center gap-1">
-                                        <v-icon size="16">mdi-format-list-bulleted</v-icon>
-                                        <span>{{ space.lists_count || 0 }} lists</span>
+                                        <v-icon size="16">mdi-package-variant-closed</v-icon>
+                                        <span>{{ space.projects_count || 0 }} products</span>
                                     </div>
                                     <div class="flex items-center gap-1">
                                         <v-icon size="16">mdi-checkbox-marked-circle-outline</v-icon>
@@ -99,11 +87,7 @@ const createSpace = () => {
             <div v-else class="empty-state">
                 <v-icon size="80" color="grey-darken-1" class="mb-4">mdi-folder-open-outline</v-icon>
                 <h2 class="text-xl font-semibold mb-2">No spaces yet</h2>
-                <p class="text-gray-500 mb-6">Create your first space to organize your work</p>
-                <v-btn color="primary" size="large" @click="showCreateSpace = true">
-                    <v-icon start>mdi-plus</v-icon>
-                    Create Your First Space
-                </v-btn>
+                <p class="text-gray-500">Create your first space to organize your work</p>
             </div>
         </div>
 
@@ -112,40 +96,14 @@ const createSpace = () => {
             <v-card>
                 <v-card-title>Create Space</v-card-title>
                 <v-card-text>
-                    <v-text-field
-                        v-model="newSpaceName"
-                        label="Space Name"
-                        placeholder="e.g., Marketing, Development"
-                        variant="outlined"
-                        autofocus
-                        class="mb-3"
-                        @keydown.enter="createSpace"
-                    />
-                    <v-textarea
-                        v-model="newSpaceDescription"
-                        label="Description (Optional)"
-                        variant="outlined"
-                        rows="3"
-                        class="mb-3"
-                    />
-                    <div>
-                        <div class="text-sm font-medium mb-2">Space Color</div>
-                        <div class="flex gap-2">
-                            <div
-                                v-for="color in ['#6366F1', '#EF4444', '#F59E0B', '#10B981', '#3B82F6', '#8B5CF6', '#EC4899', '#6B7280']"
-                                :key="color"
-                                class="w-10 h-10 rounded-lg cursor-pointer border-2 transition-all"
-                                :class="{ 'border-white scale-110': newSpaceColor === color, 'border-transparent': newSpaceColor !== color }"
-                                :style="{ backgroundColor: color }"
-                                @click="newSpaceColor = color"
-                            />
-                        </div>
-                    </div>
+                    <v-text-field v-model="newSpaceName" label="Space Name" placeholder="e.g., Marketing, Development"
+                        variant="outlined" autofocus class="mb-3" @keydown.enter="createSpace" />
+                    <ColorPicker v-model="newSpaceColor" label="Space Color" />
                 </v-card-text>
                 <v-card-actions>
                     <v-spacer />
                     <v-btn variant="text" @click="showCreateSpace = false">Cancel</v-btn>
-                    <v-btn color="primary" @click="createSpace">Create Space</v-btn>
+                    <v-btn color="primary" @click="createSpace">Create</v-btn>
                 </v-card-actions>
             </v-card>
         </v-dialog>
@@ -188,6 +146,7 @@ const createSpace = () => {
 
 .line-clamp-2 {
     display: -webkit-box;
+    line-clamp: 2;
     -webkit-line-clamp: 2;
     -webkit-box-orient: vertical;
     overflow: hidden;

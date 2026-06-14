@@ -12,6 +12,7 @@
         "laravel/jetstream": "^5.4",
         "laravel/sanctum": "^4.0",
         "laravel/tinker": "^2.10.1",
+        "phpoffice/phpspreadsheet": "^5.7",
         "tightenco/ziggy": "^2.0"
     },
     "require-dev": {
@@ -52,6 +53,13 @@
         "test": [
             "@php artisan config:clear --ansi",
             "@php artisan test"
+        ],
+        "lint": [
+            "@php vendor/bin/pint --test"
+        ],
+        "quality": [
+            "@lint",
+            "@test"
         ],
         "post-autoload-dump": [
             "Illuminate\\Foundation\\ComposerScripts::postAutoloadDump",

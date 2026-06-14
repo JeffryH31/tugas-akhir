@@ -1,105 +1,89 @@
 <?php
 
-declare(strict_types=1);
-
 namespace App\Models;
 
-use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 
-/**
- * ChecklistItem Model 
- *
- * @property int $id
- * @property string $name
- * @property int $checklist_id
- * @property int|null $assignee_id
- * @property bool $is_completed
- * @property \Illuminate\Support\Carbon|null $completed_at
- * @property int $position
- * @property \Illuminate\Support\Carbon|null $created_at
- * @property \Illuminate\Support\Carbon|null $updated_at
- */
 class ChecklistItem extends Model
 {
-    use HasFactory;
+    public const MAX_DEPTH = 6; // 7 levels total (0–6)
 
     protected $fillable = [
+        'subtask_id',
+        'parent_id',
         'name',
-        'checklist_id',
-        'assignee_id',
-        'is_completed',
-        'completed_at',
+        'is_checked',
         'position',
+        'depth',
+        'created_by',
     ];
 
     protected $casts = [
-        'is_completed' => 'boolean',
-        'completed_at' => 'datetime',
-        'position' => 'integer',
+        'is_checked' => 'boolean',
+        'position'   => 'integer',
+        'depth'      => 'integer',
     ];
 
-    protected $attributes = [
-        'is_completed' => false,
-        'position' => 0,
-    ];
-
-    /**
-     * Get the checklist that owns the item.
-     */
-    public function checklist(): BelongsTo
+    protected static function boot(): void
     {
-        return $this->belongsTo(Checklist::class);
+        parent::boot();
+
+        static::creating(function ($item) {
+            // Resolve depth from parent
+            if ($item->parent_id) {
+                $parent    = static::find($item->parent_id);
+                $item->depth = $parent ? $parent->depth + 1 : 0;
+            } else {
+                $item->depth = 0;
+            }
+
+            // Auto-position within siblings
+            if (is_null($item->position)) {
+                $max           = static::where('subtask_id', $item->subtask_id)
+                    ->where('parent_id', $item->parent_id)
+                    ->max('position');
+                $item->position = $max !== null ? $max + 1 : 0;
+            }
+        });
+
+        // Recalculate parent subtask progress after save/delete
+        static::saved(function ($item) {
+            $item->subtask?->recalculateProgress();
+        });
+
+        static::deleted(function ($item) {
+            $item->subtask?->recalculateProgress();
+        });
     }
 
-    /**
-     * Get the task through checklist.
-     */
-    public function task()
+    // ─── Relations ────────────────────────────────────────────────────────────
+
+    public function subtask(): BelongsTo
     {
-        return $this->checklist->task;
+        return $this->belongsTo(Subtask::class);
     }
 
-    /**
-     * Get the assignee of the item.
-     */
-    public function assignee(): BelongsTo
+    public function parent(): BelongsTo
     {
-        return $this->belongsTo(User::class, 'assignee_id');
+        return $this->belongsTo(ChecklistItem::class, 'parent_id');
     }
 
-    /**
-     * Mark item as completed.
-     */
-    public function markCompleted(): void
+    public function children(): HasMany
     {
-        $this->update([
-            'is_completed' => true,
-            'completed_at' => now(),
-        ]);
+        return $this->hasMany(ChecklistItem::class, 'parent_id')->orderBy('position');
     }
 
-    /**
-     * Mark item as incomplete.
-     */
-    public function markIncomplete(): void
+    public function creator(): BelongsTo
     {
-        $this->update([
-            'is_completed' => false,
-            'completed_at' => null,
-        ]);
+        return $this->belongsTo(User::class, 'created_by');
     }
 
-    /**
-     * Toggle completion status.
-     */
-    public function toggleComplete(): void
+    // ─── Helpers ──────────────────────────────────────────────────────────────
+
+    public function canAddChildren(): bool
     {
-        if ($this->is_completed) {
-            $this->markIncomplete();
-        } else {
-            $this->markCompleted();
-        }
+        return $this->depth < self::MAX_DEPTH;
     }
 }

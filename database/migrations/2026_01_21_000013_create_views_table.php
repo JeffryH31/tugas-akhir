@@ -11,10 +11,9 @@ return new class extends Migration
      */
     public function up(): void
     {
-        // Saved views/filters for lists
         Schema::create('views', function (Blueprint $table) {
             $table->id();
-            $table->foreignId('task_list_id')->nullable()->constrained()->cascadeOnDelete();
+            $table->foreignId('project_id')->nullable()->constrained()->cascadeOnDelete();
             $table->foreignId('space_id')->nullable()->constrained()->cascadeOnDelete();
             $table->foreignId('user_id')->constrained()->cascadeOnDelete();
             
@@ -31,7 +30,7 @@ return new class extends Migration
             
             $table->timestamps();
 
-            $table->index(['task_list_id', 'user_id']);
+            $table->index(['project_id', 'user_id']);
             $table->index(['space_id', 'user_id']);
         });
     }
