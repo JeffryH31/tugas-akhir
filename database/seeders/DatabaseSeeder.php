@@ -6,6 +6,12 @@ use Illuminate\Database\Seeder;
 
 class DatabaseSeeder extends Seeder
 {
+    /**
+     * Seed the application's database.
+     *
+     * Default: dummy data for development.
+     * For realistic demo data, run: php artisan db:seed --class=RealisticDemoSeeder
+     */
     public function run(): void
     {
         $this->call([
