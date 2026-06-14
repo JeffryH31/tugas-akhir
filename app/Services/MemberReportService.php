@@ -13,19 +13,19 @@ class MemberReportService
     public function getReport(Workspace $workspace, User $member): array
     {
         $now = now();
-        $todayStart  = $now->copy()->startOfDay();
-        $weekStart   = $now->copy()->startOfWeek();
-        $monthStart  = $now->copy()->startOfMonth();
+        $todayStart = $now->copy()->startOfDay();
+        $weekStart = $now->copy()->startOfWeek();
+        $monthStart = $now->copy()->startOfMonth();
 
         // Base query factory scoped to this workspace member
-        $base = fn() => TimeEntry::where('user_id', $member->id)
-            ->whereHas('subtask.task.project.space', fn($q) => $q->where('workspace_id', $workspace->id));
+        $base = fn () => TimeEntry::where('user_id', $member->id)
+            ->whereHas('subtask.task.project.space', fn ($q) => $q->where('workspace_id', $workspace->id));
 
         // --- Summary stats ---
         $stats = [
-            'today_minutes'    => (clone $base())->where('started_at', '>=', $todayStart)->sum('duration'),
-            'week_minutes'     => (clone $base())->where('started_at', '>=', $weekStart)->sum('duration'),
-            'month_minutes'    => (clone $base())->where('started_at', '>=', $monthStart)->sum('duration'),
+            'today_minutes' => (clone $base())->where('started_at', '>=', $todayStart)->sum('duration'),
+            'week_minutes' => (clone $base())->where('started_at', '>=', $weekStart)->sum('duration'),
+            'month_minutes' => (clone $base())->where('started_at', '>=', $monthStart)->sum('duration'),
             'billable_minutes' => (clone $base())->where('is_billable', true)->where('started_at', '>=', $monthStart)->sum('duration'),
             'all_time_minutes' => (clone $base())->sum('duration'),
         ];
@@ -39,13 +39,13 @@ class MemberReportService
         $runningTimer = null;
         if ($runningEntry) {
             $runningTimer = [
-                'id'         => $runningEntry->id,
+                'id' => $runningEntry->id,
                 'started_at' => $runningEntry->started_at->toDateTimeString(),
                 'elapsed_minutes' => (int) $runningEntry->started_at->diffInMinutes(now()),
-                'subtask'    => $runningEntry->subtask->name,
-                'task'       => $runningEntry->subtask->task->name,
-                'list'       => $runningEntry->subtask->task->project->name,
-                'space'      => $runningEntry->subtask->task->project->space->name,
+                'subtask' => $runningEntry->subtask->name,
+                'task' => $runningEntry->subtask->task->name,
+                'list' => $runningEntry->subtask->task->project->name,
+                'space' => $runningEntry->subtask->task->project->space->name,
             ];
         }
 
@@ -57,10 +57,10 @@ class MemberReportService
                 ->whereDate('started_at', $day->toDateString())
                 ->sum('duration');
             $dailyData[] = [
-                'date'    => $day->format('Y-m-d'),
-                'label'   => $day->format('d/m'),
+                'date' => $day->format('Y-m-d'),
+                'label' => $day->format('d/m'),
                 'minutes' => (int) $minutes,
-                'hours'   => round($minutes / 60, 1),
+                'hours' => round($minutes / 60, 1),
             ];
         }
 
@@ -79,57 +79,57 @@ class MemberReportService
                 ->whereDate('started_at', $day->toDateString())
                 ->sum('duration');
             $weeklyData[] = [
-                'day'     => $day->format('D'),
-                'date'    => $day->format('Y-m-d'),
+                'day' => $day->format('D'),
+                'date' => $day->format('Y-m-d'),
                 'minutes' => (int) $minutes,
-                'hours'   => round($minutes / 60, 1),
+                'hours' => round($minutes / 60, 1),
             ];
         }
 
         // --- Active subtasks (assigned, not yet completed) ---
         $activeSubtasks = Subtask::whereNull('completed_at')
             ->whereNull('deleted_at')
-            ->whereHas('task.project.space', fn($q) => $q->where('workspace_id', $workspace->id))
-            ->whereHas('assignees', fn($q) => $q->where('users.id', $member->id))
+            ->whereHas('task.project.space', fn ($q) => $q->where('workspace_id', $workspace->id))
+            ->whereHas('assignees', fn ($q) => $q->where('users.id', $member->id))
             ->with(['status', 'task.project.space', 'sprint'])
             ->orderByDesc('updated_at')
             ->limit(30)
             ->get()
-            ->map(fn($s) => [
-                'id'            => $s->id,
-                'subtask_id'    => $s->subtask_id,
-                'name'          => $s->name,
-                'status'        => ['name' => $s->status?->name, 'color' => $s->status?->color],
-                'priority'      => $s->priority_level?->value,
-                'due_date'      => $s->due_date?->toDateString(),
-                'is_overdue'    => $s->due_date && $s->due_date->isPast() && !$s->completed_at,
-                'progress'      => $s->progress ?? 0,
+            ->map(fn ($s) => [
+                'id' => $s->id,
+                'subtask_id' => $s->subtask_id,
+                'name' => $s->name,
+                'status' => ['name' => $s->status?->name, 'color' => $s->status?->color],
+                'priority' => $s->priority_level?->value,
+                'due_date' => $s->due_date?->toDateString(),
+                'is_overdue' => $s->due_date && $s->due_date->isPast() && ! $s->completed_at,
+                'progress' => $s->progress ?? 0,
                 'time_estimate' => $s->time_estimate,
-                'time_spent'    => $s->time_spent,
-                'task'          => ['name' => $s->task->name, 'id' => $s->task->id],
-                'list'          => ['name' => $s->task->project->name, 'id' => $s->task->project->id],
-                'space'         => ['name' => $s->task->project->space->name, 'id' => $s->task->project->space->id],
-                'sprint'        => $s->sprint ? ['name' => $s->sprint->name] : null,
+                'time_spent' => $s->time_spent,
+                'task' => ['name' => $s->task->name, 'id' => $s->task->id],
+                'list' => ['name' => $s->task->project->name, 'id' => $s->task->project->id],
+                'space' => ['name' => $s->task->project->space->name, 'id' => $s->task->project->space->id],
+                'sprint' => $s->sprint ? ['name' => $s->sprint->name] : null,
             ])->values()->toArray();
 
         // --- Recently completed subtasks (last 30 days) ---
         $recentlyCompleted = Subtask::whereNotNull('completed_at')
             ->whereNull('deleted_at')
             ->where('completed_at', '>=', $now->copy()->subDays(30))
-            ->whereHas('task.project.space', fn($q) => $q->where('workspace_id', $workspace->id))
-            ->whereHas('assignees', fn($q) => $q->where('users.id', $member->id))
+            ->whereHas('task.project.space', fn ($q) => $q->where('workspace_id', $workspace->id))
+            ->whereHas('assignees', fn ($q) => $q->where('users.id', $member->id))
             ->with(['task.project.space'])
             ->orderByDesc('completed_at')
             ->limit(15)
             ->get()
-            ->map(fn($s) => [
-                'id'           => $s->id,
-                'subtask_id'   => $s->subtask_id,
-                'name'         => $s->name,
+            ->map(fn ($s) => [
+                'id' => $s->id,
+                'subtask_id' => $s->subtask_id,
+                'name' => $s->name,
                 'completed_at' => $s->completed_at->toDateTimeString(),
-                'task'         => $s->task->name,
-                'list'         => $s->task->project->name,
-                'space'        => $s->task->project->space->name,
+                'task' => $s->task->name,
+                'list' => $s->task->project->name,
+                'space' => $s->task->project->space->name,
             ])->values()->toArray();
 
         // --- Recent time entries (last 30 entries) ---
@@ -138,20 +138,20 @@ class MemberReportService
             ->orderByDesc('started_at')
             ->limit(30)
             ->get()
-            ->map(fn($e) => [
-                'id'          => $e->id,
-                'duration'    => $e->duration,
+            ->map(fn ($e) => [
+                'id' => $e->id,
+                'duration' => $e->duration,
                 'is_billable' => $e->is_billable,
-                'is_running'  => $e->is_running,
-                'started_at'  => $e->started_at->toDateTimeString(),
-                'ended_at'    => $e->ended_at?->toDateTimeString(),
-                'subtask'     => [
-                    'id'         => $e->subtask->id,
-                    'name'       => $e->subtask->name,
+                'is_running' => $e->is_running,
+                'started_at' => $e->started_at->toDateTimeString(),
+                'ended_at' => $e->ended_at?->toDateTimeString(),
+                'subtask' => [
+                    'id' => $e->subtask->id,
+                    'name' => $e->subtask->name,
                     'subtask_id' => $e->subtask->subtask_id,
                 ],
-                'task'  => $e->subtask->task->name,
-                'list'  => $e->subtask->task->project->name,
+                'task' => $e->subtask->task->name,
+                'list' => $e->subtask->task->project->name,
                 'space' => $e->subtask->task->project->space->name,
             ])->values()->toArray();
 
@@ -161,13 +161,13 @@ class MemberReportService
             ->orderByDesc('created_at')
             ->limit(30)
             ->get()
-            ->map(fn($a) => [
-                'id'           => $a->id,
-                'action'       => $a->action,
-                'description'  => $a->description,
-                'created_at'   => $a->created_at->toDateTimeString(),
+            ->map(fn ($a) => [
+                'id' => $a->id,
+                'action' => $a->action,
+                'description' => $a->description,
+                'created_at' => $a->created_at->toDateTimeString(),
                 'subject_type' => class_basename($a->subject_type),
-                'properties'   => $a->properties,
+                'properties' => $a->properties,
             ])->values()->toArray();
 
         return compact(

@@ -19,7 +19,6 @@ class Label extends Model
         'description',
     ];
 
-
     public function workspace(): BelongsTo
     {
         return $this->belongsTo(Workspace::class);

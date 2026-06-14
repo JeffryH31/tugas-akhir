@@ -1,4 +1,4 @@
-﻿<?php
+<?php
 
 namespace Database\Seeders;
 
@@ -12,59 +12,59 @@ class SpacesSeeder extends Seeder
 
     public function run(): void
     {
-        $workspace   = $this->demoWorkspace();
-        $jeff        = $this->demoUser('admin@example.com');
-        $kevin       = $this->demoUser('kevin@example.com');
+        $workspace = $this->demoWorkspace();
+        $jeff = $this->demoUser('admin@example.com');
+        $kevin = $this->demoUser('kevin@example.com');
         $christopher = $this->demoUser('christopher@example.com');
-        $marvel      = $this->demoUser('marvel@example.com');
-        $devin       = $this->demoUser('devin@example.com');
+        $marvel = $this->demoUser('marvel@example.com');
+        $devin = $this->demoUser('devin@example.com');
 
-        //  Space 1: Manufacturing 
+        //  Space 1: Manufacturing
         $manufacturing = Space::create([
             'workspace_id' => $workspace->id,
-            'name'         => 'Manufacturing',
-            'color'        => '#F97316',
-            'position'     => 0,
-            'created_by'   => $jeff->id,
+            'name' => 'Manufacturing',
+            'color' => '#F97316',
+            'position' => 0,
+            'created_by' => $jeff->id,
         ]);
         $manufacturing->members()->syncWithoutDetaching([
-            $jeff->id        => ['role' => 'admin'],
-            $kevin->id       => ['role' => 'admin'],
+            $jeff->id => ['role' => 'admin'],
+            $kevin->id => ['role' => 'admin'],
             $christopher->id => ['role' => 'member'],
-            $marvel->id      => ['role' => 'member'],
-            $devin->id       => ['role' => 'member'],
+            $marvel->id => ['role' => 'member'],
+            $devin->id => ['role' => 'member'],
         ]);
 
-        //  Space 2: B2B 
+        //  Space 2: B2B
         $b2b = Space::create([
             'workspace_id' => $workspace->id,
-            'name'         => 'B2B',
-            'color'        => '#3B82F6',
-            'position'     => 1,
-            'created_by'   => $jeff->id,
+            'name' => 'B2B',
+            'color' => '#3B82F6',
+            'position' => 1,
+            'created_by' => $jeff->id,
         ]);
         $b2b->members()->syncWithoutDetaching([
-            $jeff->id        => ['role' => 'admin'],
-            $kevin->id       => ['role' => 'admin'],
+            $jeff->id => ['role' => 'admin'],
+            $kevin->id => ['role' => 'admin'],
             $christopher->id => ['role' => 'member'],
-            $marvel->id      => ['role' => 'member'],
-            $devin->id       => ['role' => 'member'],
+            $marvel->id => ['role' => 'member'],
+            $devin->id => ['role' => 'member'],
         ]);
 
-        //  Space 3: B2C 
+        //  Space 3: B2C
         $b2c = Space::create([
             'workspace_id' => $workspace->id,
-            'name'         => 'B2C',
-            'color'        => '#10B981',
-            'position'     => 2,
-            'created_by'   => $jeff->id,
+            'name' => 'B2C',
+            'color' => '#10B981',
+            'position' => 2,
+            'created_by' => $jeff->id,
         ]);
         $b2c->members()->syncWithoutDetaching([
-            $jeff->id        => ['role' => 'admin'],
-            $kevin->id       => ['role' => 'admin'],
+            $jeff->id => ['role' => 'admin'],
+            $kevin->id => ['role' => 'admin'],
             $christopher->id => ['role' => 'member'],
-            $marvel->id      => ['role' => 'member'],
-            $devin->id       => ['role' => 'member'],
+            $marvel->id => ['role' => 'member'],
+            $devin->id => ['role' => 'member'],
         ]);
     }
 }

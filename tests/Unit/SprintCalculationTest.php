@@ -1,8 +1,8 @@
 <?php
 
 test('ideal burndown decreases linearly from total to 0', function () {
-    $total    = 10;
-    $days     = 5;
+    $total = 10;
+    $days = 5;
     $burndown = [];
     for ($day = 0; $day <= $days; $day++) {
         $burndown[] = $total - ($total * $day / $days);

@@ -1,16 +1,13 @@
 <?php
 
 use App\Models\Label;
+use App\Models\Project;
 use App\Models\Space;
 use App\Models\Task;
-use App\Models\Project;
-use App\Models\User;
 use App\Models\Workspace;
 use Tests\Traits\CreatesWorkspaceHierarchy;
+
 use function Pest\Laravel\actingAs;
-use function Pest\Laravel\delete;
-use function Pest\Laravel\get;
-use function Pest\Laravel\patch;
 use function Pest\Laravel\post;
 
 uses(CreatesWorkspaceHierarchy::class);
@@ -19,7 +16,7 @@ uses(CreatesWorkspaceHierarchy::class);
 
 beforeEach(function () {
     $this->owner = $this->createUser();
-    $this->h     = $this->createFullHierarchy($this->owner);
+    $this->h = $this->createFullHierarchy($this->owner);
 
     // Use one of the auto-created statuses (Space::created observer creates Open/In Progress/Review/Completed)
     $this->status = $this->h['statuses']->firstWhere('type', 'in_progress')
@@ -38,7 +35,7 @@ test('owner can create a task', function () {
 
     $this->assertDatabaseHas('tasks', [
         'project_id' => $this->h['list']->id,
-        'name'         => 'New Integration Task',
+        'name' => 'New Integration Task',
     ]);
 });
 
@@ -74,9 +71,9 @@ test('creating a task with due date before start date fails validation', functio
     actingAs($this->owner)
         ->from(route('projects.show', [$this->h['workspace'], $this->h['space'], $this->h['list']]))
         ->post(route('tasks.store', [$this->h['workspace'], $this->h['space'], $this->h['list']]), [
-            'name'       => 'Bad Dates',
+            'name' => 'Bad Dates',
             'start_date' => '2026-05-10',
-            'due_date'   => '2026-05-01',
+            'due_date' => '2026-05-01',
         ])
         ->assertSessionHasErrors(['due_date']);
 });
@@ -85,9 +82,9 @@ test('creating a task with equal start and due date passes validation', function
     actingAs($this->owner)
         ->from(route('projects.show', [$this->h['workspace'], $this->h['space'], $this->h['list']]))
         ->post(route('tasks.store', [$this->h['workspace'], $this->h['space'], $this->h['list']]), [
-            'name'       => 'Same Dates',
+            'name' => 'Same Dates',
             'start_date' => '2026-05-05',
-            'due_date'   => '2026-05-05',
+            'due_date' => '2026-05-05',
         ])
         ->assertRedirect();
 
@@ -100,28 +97,28 @@ test('owner can update a task', function () {
     actingAs($this->owner)
         ->from(route('projects.show', [$this->h['workspace'], $this->h['space'], $this->h['list']]))
         ->patch(route('tasks.update', [$this->h['workspace'], $this->h['space'], $this->h['list'], $this->h['task']]), [
-            'name'        => 'Renamed Task',
+            'name' => 'Renamed Task',
             'description' => 'Updated description',
         ])
         ->assertRedirect();
 
     $this->assertDatabaseHas('tasks', [
-        'id'          => $this->h['task']->id,
-        'name'        => 'Renamed Task',
+        'id' => $this->h['task']->id,
+        'name' => 'Renamed Task',
         'description' => 'Updated description',
     ]);
 });
 
 test('updating a task with a task from another list returns 404', function () {
     $otherList = Project::create([
-        'space_id'   => $this->h['space']->id,
-        'name'       => 'Other List',
+        'space_id' => $this->h['space']->id,
+        'name' => 'Other List',
         'created_by' => $this->owner->id,
     ]);
     $otherTask = Task::create([
         'project_id' => $otherList->id,
-        'name'         => 'Other Task',
-        'created_by'   => $this->owner->id,
+        'name' => 'Other Task',
+        'created_by' => $this->owner->id,
     ]);
 
     actingAs($this->owner)
@@ -160,7 +157,7 @@ test('owner can change task status', function () {
         ->assertRedirect();
 
     $this->assertDatabaseHas('tasks', [
-        'id'        => $this->h['task']->id,
+        'id' => $this->h['task']->id,
         'status_id' => $this->status->id,
     ]);
 });
@@ -185,7 +182,7 @@ test('owner can change task priority', function () {
         ->assertRedirect();
 
     $this->assertDatabaseHas('tasks', [
-        'id'             => $this->h['task']->id,
+        'id' => $this->h['task']->id,
         'priority_level' => 2,
     ]);
 });
@@ -212,14 +209,14 @@ test('owner can add a label to a task', function () {
         ->assertRedirect();
 
     $this->assertDatabaseHas('task_labels', [
-        'task_id'  => $this->h['task']->id,
+        'task_id' => $this->h['task']->id,
         'label_id' => $label->id,
     ]);
 });
 
 test('cannot attach a label from a different workspace', function () {
     $otherWorkspace = Workspace::create(['name' => 'Other WS', 'color' => '#000000']);
-    $foreignLabel   = Label::create(['workspace_id' => $otherWorkspace->id, 'name' => 'Foreign', 'color' => '#FF0000']);
+    $foreignLabel = Label::create(['workspace_id' => $otherWorkspace->id, 'name' => 'Foreign', 'color' => '#FF0000']);
 
     actingAs($this->owner)
         ->from(route('projects.show', [$this->h['workspace'], $this->h['space'], $this->h['list']]))
@@ -241,7 +238,7 @@ test('owner can remove a label from a task', function () {
         ->assertRedirect();
 
     $this->assertDatabaseMissing('task_labels', [
-        'task_id'  => $this->h['task']->id,
+        'task_id' => $this->h['task']->id,
         'label_id' => $label->id,
     ]);
 });

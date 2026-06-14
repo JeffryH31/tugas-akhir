@@ -2,11 +2,11 @@
 
 namespace Database\Seeders;
 
-use App\Models\TaskList;
 use App\Models\Folder;
 use App\Models\Space;
 use App\Models\Status;
 use App\Models\Task;
+use App\Models\TaskList;
 use App\Models\User;
 use App\Models\Workspace;
 use Illuminate\Database\Seeder;
@@ -22,8 +22,9 @@ class ProjectSeeder extends Seeder
         $workspace = Workspace::first();
         $user = User::first();
 
-        if (!$workspace || !$user) {
+        if (! $workspace || ! $user) {
             $this->command->warn('Please run UserSeeder first to create users and workspaces.');
+
             return;
         }
 
@@ -128,7 +129,7 @@ class ProjectSeeder extends Seeder
         $this->createSampleTasks($bugsList, $user);
 
         $this->command->info('Project structure seeded successfully!');
-        $this->command->info("Created: 2 Spaces, 2 Folders, 4 Lists with statuses and tasks");
+        $this->command->info('Created: 2 Spaces, 2 Folders, 4 Lists with statuses and tasks');
     }
 
     /**
@@ -156,7 +157,9 @@ class ProjectSeeder extends Seeder
         $todoStatus = $list->statuses()->where('type', 'open')->first();
         $inProgressStatus = $list->statuses()->where('type', 'in_progress')->first();
 
-        if (!$todoStatus) return;
+        if (! $todoStatus) {
+            return;
+        }
 
         // Create 3 sample tasks
         $tasks = [
@@ -168,14 +171,14 @@ class ProjectSeeder extends Seeder
                 'position' => 0,
             ],
             [
-                'title' => "Implement core features",
+                'title' => 'Implement core features',
                 'description' => "Implement core functionality for {$list->name}",
                 'status_id' => $inProgressStatus?->id ?? $todoStatus->id,
                 'priority' => 'normal',
                 'position' => 1,
             ],
             [
-                'title' => "Write documentation",
+                'title' => 'Write documentation',
                 'description' => "Document all features in {$list->name}",
                 'status_id' => $todoStatus->id,
                 'priority' => 'low',

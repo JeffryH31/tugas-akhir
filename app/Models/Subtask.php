@@ -9,7 +9,6 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\Relations\MorphMany;
-use App\Models\ChecklistItem;
 use Illuminate\Database\Eloquent\SoftDeletes;
 
 class Subtask extends Model
@@ -84,11 +83,11 @@ class Subtask extends Model
             if (empty($subtask->subtask_id)) {
                 $task = Task::find($subtask->task_id);
                 $count = static::withTrashed()->where('task_id', $subtask->task_id)->count() + 1;
-                $subtask->subtask_id = $task->task_id . '-' . $count;
+                $subtask->subtask_id = $task->task_id.'-'.$count;
 
                 while (static::withTrashed()->where('subtask_id', $subtask->subtask_id)->exists()) {
                     $count++;
-                    $subtask->subtask_id = $task->task_id . '-' . $count;
+                    $subtask->subtask_id = $task->task_id.'-'.$count;
                 }
             }
 
@@ -104,18 +103,19 @@ class Subtask extends Model
 
         // Cascade soft-delete to children and time entries
         static::deleting(function ($subtask) {
-            if ($subtask->isForceDeleting()) return;
-            $subtask->children()->each(fn($child) => $child->delete());
-            $subtask->timeEntries()->each(fn($entry) => $entry->delete());
+            if ($subtask->isForceDeleting()) {
+                return;
+            }
+            $subtask->children()->each(fn ($child) => $child->delete());
+            $subtask->timeEntries()->each(fn ($entry) => $entry->delete());
         });
 
         // Cascade restore to children and time entries
         static::restoring(function ($subtask) {
-            $subtask->children()->onlyTrashed()->each(fn($child) => $child->restore());
-            $subtask->timeEntries()->onlyTrashed()->each(fn($entry) => $entry->restore());
+            $subtask->children()->onlyTrashed()->each(fn ($child) => $child->restore());
+            $subtask->timeEntries()->onlyTrashed()->each(fn ($entry) => $entry->restore());
         });
     }
-
 
     public function task(): BelongsTo
     {
@@ -198,12 +198,12 @@ class Subtask extends Model
      */
     public function recalculateProgress(): void
     {
-        $total   = ChecklistItem::where('subtask_id', $this->id)->count();
+        $total = ChecklistItem::where('subtask_id', $this->id)->count();
         $checked = ChecklistItem::where('subtask_id', $this->id)->where('is_checked', true)->count();
 
         $progress = $total > 0 ? (int) round(($checked / $total) * 100) : 0;
 
-        $this->withoutEvents(fn() => $this->update(['progress' => $progress]));
+        $this->withoutEvents(fn () => $this->update(['progress' => $progress]));
     }
 
     public function sprint(): BelongsTo
@@ -292,15 +292,14 @@ class Subtask extends Model
             ->whereBetween('due_date', [now(), now()->addDays($days)]);
     }
 
-
     public function isOverdue(): bool
     {
-        return !$this->completed_at && $this->due_date && $this->due_date->isPast();
+        return ! $this->completed_at && $this->due_date && $this->due_date->isPast();
     }
 
     public function isCompleted(): bool
     {
-        return !is_null($this->completed_at);
+        return ! is_null($this->completed_at);
     }
 
     public function getPertExpectedEstimateAttribute(): ?float
@@ -387,7 +386,7 @@ class Subtask extends Model
 
     protected function resolveCompletionStatusId(?int $targetStatusId): ?int
     {
-        if (!$targetStatusId) {
+        if (! $targetStatusId) {
             return null;
         }
 
@@ -397,7 +396,7 @@ class Subtask extends Model
     protected function resolveCustomCompletionStatusId(int $targetStatusId): ?int
     {
         $spaceId = $this->task?->project?->space_id;
-        if (!$spaceId) {
+        if (! $spaceId) {
             return null;
         }
 
@@ -411,7 +410,7 @@ class Subtask extends Model
     protected function resolveDefaultOpenStatusId(): ?int
     {
         $spaceId = $this->task?->project?->space_id;
-        if (!$spaceId) {
+        if (! $spaceId) {
             return null;
         }
 

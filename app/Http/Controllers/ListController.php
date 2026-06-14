@@ -4,9 +4,9 @@ declare(strict_types=1);
 
 namespace App\Http\Controllers;
 
-use App\Models\TaskList;
 use App\Models\Folder;
 use App\Models\Space;
+use App\Models\TaskList;
 use App\Services\ListService;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;

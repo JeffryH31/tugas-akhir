@@ -5,16 +5,16 @@ declare(strict_types=1);
 namespace App\Services;
 
 use App\Models\Activity;
-use App\Models\TaskList;
 use App\Models\Space;
 use App\Models\Task;
+use App\Models\TaskList;
 use App\Models\User;
 use App\Models\Workspace;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Pagination\LengthAwarePaginator;
 
 /**
- * ActivityService 
+ * ActivityService
  *
  * Handles all business logic related to activity logging and retrieval.
  * Updated for Hierarchy: Workspace -> Space -> Folder -> List -> Task -> Subtask

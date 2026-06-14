@@ -1,18 +1,16 @@
-﻿<?php
+<?php
 
 use App\Models\Comment;
 use App\Models\Space;
 use App\Models\Task;
 use App\Models\TimeEntry;
-use App\Models\User;
 use App\Models\Workspace;
 use App\Services\AccessService;
-use Tests\Traits\CreatesWorkspaceHierarchy;
 
 uses(Tests\Traits\CreatesWorkspaceHierarchy::class);
 
 beforeEach(function () {
-    $this->access = new AccessService();
+    $this->access = new AccessService;
     $this->owner = $this->createUser();
     $this->hierarchy = $this->createFullHierarchy($this->owner);
 });
@@ -372,7 +370,7 @@ test('project member can view activity', function () {
 });
 
 // CRITICAL: Workspace admin vs workspace owner on task operations
-// 
+//
 
 test('workspace admin CANNOT edit tasks on products without a product role', function () {
     $admin = $this->createUser();

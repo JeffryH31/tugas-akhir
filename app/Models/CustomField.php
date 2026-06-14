@@ -10,7 +10,7 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 
 /**
- * CustomField Model 
+ * CustomField Model
  *
  * @property int $id
  * @property string $name
@@ -51,18 +51,31 @@ class CustomField extends Model
      * Field types.
      */
     public const TYPE_TEXT = 'text';
+
     public const TYPE_NUMBER = 'number';
+
     public const TYPE_DROPDOWN = 'dropdown';
+
     public const TYPE_DATE = 'date';
+
     public const TYPE_CHECKBOX = 'checkbox';
+
     public const TYPE_EMAIL = 'email';
+
     public const TYPE_PHONE = 'phone';
+
     public const TYPE_URL = 'url';
+
     public const TYPE_CURRENCY = 'currency';
+
     public const TYPE_EMOJI = 'emoji';
+
     public const TYPE_PEOPLE = 'people';
+
     public const TYPE_FILES = 'files';
+
     public const TYPE_FORMULA = 'formula';
+
     public const TYPE_RELATIONSHIP = 'relationship';
 
     public const TYPES = [
@@ -106,6 +119,7 @@ class CustomField extends Model
         if ($this->type !== self::TYPE_DROPDOWN) {
             return [];
         }
+
         return $this->options['options'] ?? [];
     }
 

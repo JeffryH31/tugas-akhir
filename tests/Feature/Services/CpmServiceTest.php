@@ -1,15 +1,12 @@
 <?php
 
-use App\Models\Project;
-use App\Models\Subtask;
 use App\Models\Task;
 use App\Services\CpmService;
-use Tests\Traits\CreatesWorkspaceHierarchy;
 
 uses(Tests\Traits\CreatesWorkspaceHierarchy::class);
 
 beforeEach(function () {
-    $this->service = new CpmService();
+    $this->service = new CpmService;
     $this->owner = $this->createUser();
     $this->hierarchy = $this->createFullHierarchy($this->owner);
 });

@@ -15,8 +15,6 @@ class LogTimeRequest extends FormRequest
 {
     /**
      * Determine if the user is authorized to make this request.
-     *
-     * @return bool
      */
     public function authorize(): bool
     {
@@ -41,13 +39,11 @@ class LogTimeRequest extends FormRequest
 
     /**
      * Prepare the data for validation.
-     *
-     * @return void
      */
     protected function prepareForValidation(): void
     {
         // Convert hours to duration_minutes if hours is provided
-        if ($this->has('hours') && !$this->has('duration_minutes')) {
+        if ($this->has('hours') && ! $this->has('duration_minutes')) {
             $this->merge([
                 'duration_minutes' => (int) round($this->hours * 60),
             ]);

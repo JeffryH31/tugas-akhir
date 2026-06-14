@@ -4,10 +4,10 @@ declare(strict_types=1);
 
 namespace App\Services;
 
-use App\Models\TaskList;
 use App\Models\Folder;
 use App\Models\Space;
 use App\Models\Status;
+use App\Models\TaskList;
 use App\Models\User;
 use Illuminate\Support\Facades\DB;
 
@@ -95,6 +95,7 @@ class ListService
     public function archive(TaskList $list): TaskList
     {
         $list->update(['is_archived' => true]);
+
         return $list->fresh();
     }
 
@@ -104,6 +105,7 @@ class ListService
     public function unarchive(TaskList $list): TaskList
     {
         $list->update(['is_archived' => false]);
+
         return $list->fresh();
     }
 
@@ -123,7 +125,7 @@ class ListService
                 $updates['space_id'] = $space->id;
             }
 
-            if (!empty($updates)) {
+            if (! empty($updates)) {
                 // Get new position
                 $query = TaskList::where('space_id', $updates['space_id'] ?? $list->space_id);
                 if (isset($updates['folder_id'])) {
@@ -155,11 +157,11 @@ class ListService
     /**
      * Duplicate a list with all its content.
      */
-    public function duplicate(TaskList $list, string $newName = null): TaskList
+    public function duplicate(TaskList $list, ?string $newName = null): TaskList
     {
         return DB::transaction(function () use ($list, $newName) {
             $newList = $list->replicate();
-            $newList->name = $newName ?? $list->name . ' (Copy)';
+            $newList->name = $newName ?? $list->name.' (Copy)';
             $newList->position = TaskList::where('space_id', $list->space_id)
                 ->where('folder_id', $list->folder_id)
                 ->max('position') + 1;
@@ -216,7 +218,7 @@ class ListService
             $newStatusIds = [];
 
             foreach ($statuses as $statusData) {
-                if (!empty($statusData['id'])) {
+                if (! empty($statusData['id'])) {
                     // Update existing status
                     $list->statuses()
                         ->where('id', $statusData['id'])
@@ -241,7 +243,7 @@ class ListService
 
             // Delete statuses that were not in the update
             $statusesToDelete = array_diff($existingStatusIds, $newStatusIds);
-            if (!empty($statusesToDelete)) {
+            if (! empty($statusesToDelete)) {
                 $list->statuses()->whereIn('id', $statusesToDelete)->delete();
             }
         });

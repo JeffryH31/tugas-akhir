@@ -34,7 +34,7 @@ class CpmService
         }
 
         // Check if any subtask has time estimate
-        $subtasksWithEstimate = $subtasks->filter(fn($s) => $s->time_estimate > 0);
+        $subtasksWithEstimate = $subtasks->filter(fn ($s) => $s->time_estimate > 0);
 
         if ($subtasksWithEstimate->isEmpty()) {
             return [
@@ -99,7 +99,7 @@ class CpmService
             // dependencies() returns subtasks that THIS subtask depends on
             // meaning this subtask cannot start until those are finished
             foreach ($subtask->dependencies as $dependency) {
-                if (!$this->isSchedulingDependency($dependency->pivot?->dependency_type ?? null)) {
+                if (! $this->isSchedulingDependency($dependency->pivot?->dependency_type ?? null)) {
                     continue;
                 }
                 // Only include dependencies that are part of this task's subtasks
@@ -114,7 +114,7 @@ class CpmService
 
         return [
             'forward' => $graph,      // predecessors -> successors
-            'reverse' => $reverseGraph // successors -> predecessors (for backward pass)
+            'reverse' => $reverseGraph, // successors -> predecessors (for backward pass)
         ];
     }
 
@@ -151,18 +151,18 @@ class CpmService
     /**
      * Depth-first search helper used for cycle detection.
      *
-     * @param array<int, array<int>> $graph
-     * @param array<int, bool> $visited
-     * @param array<int, bool> $recStack
+     * @param  array<int, array<int>>  $graph
+     * @param  array<int, bool>  $visited
+     * @param  array<int, bool>  $recStack
      */
     protected function hasCycleDFS(int $nodeId, array $graph, array &$visited, array &$recStack): bool
     {
-        if (!$visited[$nodeId]) {
+        if (! $visited[$nodeId]) {
             $visited[$nodeId] = true;
             $recStack[$nodeId] = true;
 
             foreach ($graph[$nodeId] ?? [] as $neighbor) {
-                if (!$visited[$neighbor] && $this->hasCycleDFS($neighbor, $graph, $visited, $recStack)) {
+                if (! $visited[$neighbor] && $this->hasCycleDFS($neighbor, $graph, $visited, $recStack)) {
                     return true;
                 } elseif ($recStack[$neighbor]) {
                     return true;
@@ -171,6 +171,7 @@ class CpmService
         }
 
         $recStack[$nodeId] = false;
+
         return false;
     }
 
@@ -193,7 +194,7 @@ class CpmService
         }
 
         $sorted = [];
-        while (!empty($queue)) {
+        while (! empty($queue)) {
             $current = array_shift($queue);
             $sorted[] = $current;
 
@@ -302,7 +303,7 @@ class CpmService
         foreach ($reverseSorted as $id) {
             $successors = $graph['forward'][$id] ?? [];
 
-            if (!empty($successors)) {
+            if (! empty($successors)) {
                 // LF = min(LS of all successors)
                 $minLS = PHP_INT_MAX;
                 foreach ($successors as $succId) {
@@ -339,10 +340,10 @@ class CpmService
      */
     protected function getCriticalPathSubtasks(array $cpmData): array
     {
-        $criticalSubtasks = array_filter($cpmData, fn($data) => $data['isCritical']);
+        $criticalSubtasks = array_filter($cpmData, fn ($data) => $data['isCritical']);
 
         // Sort by early start
-        uasort($criticalSubtasks, fn($a, $b) => $a['earlyStart'] <=> $b['earlyStart']);
+        uasort($criticalSubtasks, fn ($a, $b) => $a['earlyStart'] <=> $b['earlyStart']);
 
         return array_values($criticalSubtasks);
     }
@@ -477,13 +478,13 @@ class CpmService
             })
             ->get()
             ->groupBy('depends_on_subtask_id')
-            ->map(fn($rows) => $rows->pluck('subtask_id')->all())
+            ->map(fn ($rows) => $rows->pluck('subtask_id')->all())
             ->all();
 
         $visited = [];
         $queue = [$subtask->id];
 
-        while (!empty($queue)) {
+        while (! empty($queue)) {
             $current = array_shift($queue);
 
             if ($current === $dependsOn->id) {
@@ -497,7 +498,7 @@ class CpmService
             $visited[] = $current;
 
             foreach ($allDependents[$current] ?? [] as $dependentId) {
-                if (!in_array($dependentId, $visited)) {
+                if (! in_array($dependentId, $visited)) {
                     $queue[] = $dependentId;
                 }
             }

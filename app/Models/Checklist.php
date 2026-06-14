@@ -10,7 +10,7 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 
 /**
- * Checklist Model 
+ * Checklist Model
  *
  * @property int $id
  * @property string $name
@@ -59,6 +59,7 @@ class Checklist extends Model
             return 0;
         }
         $completed = $this->items()->where('is_completed', true)->count();
+
         return (int) round(($completed / $total) * 100);
     }
 

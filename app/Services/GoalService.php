@@ -11,11 +11,6 @@ use App\Models\Workspace;
 use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Support\Facades\DB;
 
-/**
- * GoalService
- *
- * Handles Goal-related business logic .
- */
 class GoalService
 {
     /**
@@ -35,7 +30,7 @@ class GoalService
             ]);
 
             // Create targets if provided
-            if (!empty($data['targets'])) {
+            if (! empty($data['targets'])) {
                 foreach ($data['targets'] as $targetData) {
                     $this->addTarget($goal, $targetData);
                 }
@@ -69,6 +64,7 @@ class GoalService
     {
         return DB::transaction(function () use ($goal) {
             $goal->targets()->delete();
+
             return $goal->delete();
         });
     }
@@ -114,6 +110,7 @@ class GoalService
         $goal = $target->goal;
         $result = $target->delete();
         $goal->updateProgress();
+
         return $result;
     }
 
@@ -124,6 +121,7 @@ class GoalService
     {
         $target->increment('current_value', $amount);
         $target->goal->updateProgress();
+
         return $target->fresh();
     }
 
@@ -159,6 +157,7 @@ class GoalService
     public function updateStatus(Goal $goal, string $status): Goal
     {
         $goal->update(['status' => $status]);
+
         return $goal->fresh();
     }
 
@@ -171,6 +170,7 @@ class GoalService
             'status' => Goal::STATUS_COMPLETED,
             'progress' => 100,
         ]);
+
         return $goal->fresh();
     }
 

@@ -5,10 +5,10 @@ namespace App\Http\Middleware;
 use App\Http\Resources\ActivityResource;
 use App\Models\Activity;
 use App\Models\Folder;
+use App\Models\Project;
 use App\Models\Space;
 use App\Models\Subtask;
 use App\Models\Task;
-use App\Models\Project;
 use App\Models\TimeEntry;
 use App\Models\Workspace;
 use Illuminate\Database\Eloquent\Relations\MorphTo;
@@ -77,7 +77,7 @@ class HandleInertiaRequests extends Middleware
                 $activeWorkspace = $workspaces->firstWhere('id', $activeWorkspaceId);
             }
 
-            if (!$activeWorkspace && $workspaces->isNotEmpty()) {
+            if (! $activeWorkspace && $workspaces->isNotEmpty()) {
                 $activeWorkspace = $workspaces->first();
                 session(['active_workspace_id' => $activeWorkspace->id]);
             }
@@ -93,21 +93,22 @@ class HandleInertiaRequests extends Middleware
                     if ($isWsAdmin) {
                         return $query;
                     }
-                    return $query->whereHas('members', fn($mq) => $mq->where('user_id', $user->id));
+
+                    return $query->whereHas('members', fn ($mq) => $mq->where('user_id', $user->id));
                 };
 
                 $activeWorkspace->load([
                     'spaces' => function ($query) use ($user, $isWsAdmin, $listAccessFilter) {
                         // Non-admin users only see spaces they are a member of
-                        if (!$isWsAdmin) {
-                            $query->whereHas('members', fn($mq) => $mq->where('user_id', $user->id));
+                        if (! $isWsAdmin) {
+                            $query->whereHas('members', fn ($mq) => $mq->where('user_id', $user->id));
                         }
                         $query->with([
                             'folders.projects' => $listAccessFilter,
                             'projectsWithoutFolder' => $listAccessFilter,
                         ])->orderBy('position');
                     },
-                    'labels' => fn($q) => $q->orderBy('name'),
+                    'labels' => fn ($q) => $q->orderBy('name'),
                 ]);
 
                 // Compute per-user starred spaces and annotate each space with is_starred.
@@ -133,34 +134,34 @@ class HandleInertiaRequests extends Middleware
 
         $notifications = $request->user()
             ? Activity::query()
-            ->whereIn('workspace_id', $notificationWorkspaceIds ?? [])
-            ->where('user_id', '!=', $request->user()->id)
-            ->whereNotIn('action', $notificationIgnoredActions)
-            ->with(['user', 'subject' => function (MorphTo $morphTo) {
-                $morphTo->morphWith([
-                    Task::class    => ['project.space'],
-                    Subtask::class => ['task.project.space'],
-                    Project::class => ['space'],
-                    Folder::class  => ['space'],
-                    Space::class   => [],
-                    Workspace::class => [],
-                ]);
-            }])
-            ->latest()
-            ->limit(10)
-            ->get()
+                ->whereIn('workspace_id', $notificationWorkspaceIds ?? [])
+                ->where('user_id', '!=', $request->user()->id)
+                ->whereNotIn('action', $notificationIgnoredActions)
+                ->with(['user', 'subject' => function (MorphTo $morphTo) {
+                    $morphTo->morphWith([
+                        Task::class => ['project.space'],
+                        Subtask::class => ['task.project.space'],
+                        Project::class => ['space'],
+                        Folder::class => ['space'],
+                        Space::class => [],
+                        Workspace::class => [],
+                    ]);
+                }])
+                ->latest()
+                ->limit(10)
+                ->get()
             : collect();
 
         $unreadNotificationsCount = $request->user()
             ? Activity::query()
-            ->whereIn('workspace_id', $notificationWorkspaceIds ?? [])
-            ->where('user_id', '!=', $request->user()->id)
-            ->whereNotIn('action', $notificationIgnoredActions)
-            ->when(
-                $request->user()->last_notifications_read_at,
-                fn($q) => $q->where('created_at', '>', $request->user()->last_notifications_read_at)
-            )
-            ->count()
+                ->whereIn('workspace_id', $notificationWorkspaceIds ?? [])
+                ->where('user_id', '!=', $request->user()->id)
+                ->whereNotIn('action', $notificationIgnoredActions)
+                ->when(
+                    $request->user()->last_notifications_read_at,
+                    fn ($q) => $q->where('created_at', '>', $request->user()->last_notifications_read_at)
+                )
+                ->count()
             : 0;
 
         return [
@@ -168,16 +169,16 @@ class HandleInertiaRequests extends Middleware
             'activeWorkspace' => $activeWorkspace,
             'workspaces' => $workspaces,
             'flash' => [
-                'success' => fn() => $request->session()->get('success'),
-                'error' => fn() => $request->session()->get('error'),
+                'success' => fn () => $request->session()->get('success'),
+                'error' => fn () => $request->session()->get('error'),
             ],
-            'validationErrors' => fn() => collect(($request->session()->get('errors') instanceof ViewErrorBag)
+            'validationErrors' => fn () => collect(($request->session()->get('errors') instanceof ViewErrorBag)
                 ? $request->session()->get('errors')->getBag('default')->getMessages()
-                : [])->map(fn($messages) => $messages[0] ?? null)->filter()->values(),
+                : [])->map(fn ($messages) => $messages[0] ?? null)->filter()->values(),
             'notifications' => ActivityResource::collection($notifications),
             'unreadNotificationsCount' => min($unreadNotificationsCount, 10),
             'notificationsLastReadAt' => $request->user()?->last_notifications_read_at?->toISOString(),
-            'runningTimer' => fn() => $request->user() ? TimeEntry::where('user_id', $request->user()->id)
+            'runningTimer' => fn () => $request->user() ? TimeEntry::where('user_id', $request->user()->id)
                 ->where('is_running', true)
                 ->with('subtask.task.project.space')
                 ->first() : null,

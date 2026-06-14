@@ -45,7 +45,6 @@ class TimeEntry extends Model
         static::deleted($recalcTimeSpent);
     }
 
-
     public function subtask(): BelongsTo
     {
         return $this->belongsTo(Subtask::class);
@@ -56,18 +55,17 @@ class TimeEntry extends Model
         return $this->belongsTo(User::class);
     }
 
-
     public function getDurationFormattedAttribute(): string
     {
         $hours = floor($this->duration / 60);
         $minutes = $this->duration % 60;
 
         if ($hours > 0) {
-            return $hours . 'h ' . $minutes . 'm';
+            return $hours.'h '.$minutes.'m';
         }
-        return $minutes . 'm';
-    }
 
+        return $minutes.'m';
+    }
 
     public function scopeRunning($query)
     {
@@ -94,10 +92,11 @@ class TimeEntry extends Model
         return $query->whereBetween('started_at', [$start, $end]);
     }
 
-
     public function stop(): void
     {
-        if (!$this->is_running) return;
+        if (! $this->is_running) {
+            return;
+        }
 
         $this->update([
             'is_running' => false,
@@ -110,7 +109,7 @@ class TimeEntry extends Model
     {
         static::where('user_id', $user->id)
             ->where('is_running', true)
-            ->each(fn($entry) => $entry->stop());
+            ->each(fn ($entry) => $entry->stop());
 
         return static::create([
             'subtask_id' => $subtask->id,

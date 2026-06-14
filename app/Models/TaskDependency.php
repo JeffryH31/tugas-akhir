@@ -9,7 +9,7 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 /**
- * TaskDependency Model 
+ * TaskDependency Model
  *
  * @property int $id
  * @property int $task_id
@@ -36,6 +36,7 @@ class TaskDependency extends Model
      * Dependency types.
      */
     public const TYPE_WAITING_ON = 'waiting_on';
+
     public const TYPE_BLOCKING = 'blocking';
 
     /**

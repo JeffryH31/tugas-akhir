@@ -16,18 +16,18 @@ return new class extends Migration
             $table->foreignId('project_id')->nullable()->constrained()->cascadeOnDelete();
             $table->foreignId('space_id')->nullable()->constrained()->cascadeOnDelete();
             $table->foreignId('user_id')->constrained()->cascadeOnDelete();
-            
+
             $table->string('name');
             $table->string('type')->default('list'); // list, board, calendar, gantt, timeline
             $table->json('filters')->nullable();
             $table->json('sorts')->nullable();
             $table->json('columns')->nullable();
             $table->json('settings')->nullable();
-            
+
             $table->boolean('is_default')->default(false);
             $table->boolean('is_private')->default(true);
             $table->integer('position')->default(0);
-            
+
             $table->timestamps();
 
             $table->index(['project_id', 'user_id']);

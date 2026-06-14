@@ -24,7 +24,9 @@ class UpdateTaskRequest extends FormRequest
                 'nullable',
                 'date',
                 function ($attribute, $value, $fail) use ($task) {
-                    if (!$value) return;
+                    if (! $value) {
+                        return;
+                    }
                     $dueDate = $this->input('due_date', $task?->due_date?->format('Y-m-d'));
                     if ($dueDate && $value > $dueDate) {
                         $fail('Start date must be before or equal to due date.');
@@ -35,7 +37,9 @@ class UpdateTaskRequest extends FormRequest
                 'nullable',
                 'date',
                 function ($attribute, $value, $fail) use ($task) {
-                    if (!$value) return;
+                    if (! $value) {
+                        return;
+                    }
                     $startDate = $this->input('start_date', $task?->start_date?->format('Y-m-d'));
                     if ($startDate && $value < $startDate) {
                         $fail('Due date must be after or equal to start date.');

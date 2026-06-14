@@ -42,18 +42,18 @@ class DashboardService
     {
         $isWsAdmin = $this->accessService->canManageWorkspace($user, $workspace);
         $listFilter = function ($q) use ($user, $isWsAdmin) {
-            return $isWsAdmin ? $q : $q->whereHas('members', fn($mq) => $mq->where('user_id', $user->id));
+            return $isWsAdmin ? $q : $q->whereHas('members', fn ($mq) => $mq->where('user_id', $user->id));
         };
 
         $workspace->load([
             'spaces' => function ($q) use ($user, $isWsAdmin, $listFilter) {
-                if (!$isWsAdmin) {
-                    $q->whereHas('members', fn($mq) => $mq->where('user_id', $user->id));
+                if (! $isWsAdmin) {
+                    $q->whereHas('members', fn ($mq) => $mq->where('user_id', $user->id));
                 }
                 $q->with([
-                    'folders' => fn($fq) => $fq->with(['projects' => $listFilter])->orderBy('position'),
-                    'projectsWithoutFolder' => fn($lq) => $listFilter($lq)->orderBy('position'),
-                    'statuses' => fn($sq) => $sq->orderBy('position'),
+                    'folders' => fn ($fq) => $fq->with(['projects' => $listFilter])->orderBy('position'),
+                    'projectsWithoutFolder' => fn ($lq) => $listFilter($lq)->orderBy('position'),
+                    'statuses' => fn ($sq) => $sq->orderBy('position'),
                 ])->orderBy('position');
             },
             'members',
@@ -121,7 +121,7 @@ class DashboardService
             ->latest()
             ->limit(config('business.limits.recent_activity'))
             ->get()
-            ->map(fn($a) => [
+            ->map(fn ($a) => [
                 'id' => $a->id,
                 'action' => $a->action,
                 'description' => $a->description,

@@ -6,9 +6,9 @@ use App\Http\Requests\StoreCommentRequest;
 use App\Http\Requests\UpdateCommentRequest;
 use App\Http\Resources\CommentResource;
 use App\Models\Comment;
+use App\Models\Project;
 use App\Models\Space;
 use App\Models\Task;
-use App\Models\Project;
 use App\Models\Workspace;
 use App\Services\AccessService;
 use App\Services\CommentService;
@@ -36,10 +36,10 @@ class CommentController extends Controller
 
             return redirect()->back()->with([
                 'success' => 'Comment added successfully.',
-                'comment' => new CommentResource($comment->load('user'))
+                'comment' => new CommentResource($comment->load('user')),
             ]);
         } catch (\Exception $e) {
-            return redirect()->back()->withErrors(['error' => 'Failed to add comment: ' . $e->getMessage()]);
+            return redirect()->back()->withErrors(['error' => 'Failed to add comment: '.$e->getMessage()]);
         }
     }
 
@@ -54,12 +54,12 @@ class CommentController extends Controller
 
             return redirect()->back()->with([
                 'success' => 'Comment updated successfully.',
-                'comment' => new CommentResource($updatedComment->load('user'))
+                'comment' => new CommentResource($updatedComment->load('user')),
             ]);
         } catch (\Illuminate\Auth\Access\AuthorizationException $e) {
             return redirect()->back()->withErrors(['error' => 'You are not authorized to update this comment.']);
         } catch (\Exception $e) {
-            return redirect()->back()->withErrors(['error' => 'Failed to update comment: ' . $e->getMessage()]);
+            return redirect()->back()->withErrors(['error' => 'Failed to update comment: '.$e->getMessage()]);
         }
     }
 
@@ -76,7 +76,7 @@ class CommentController extends Controller
         } catch (\Illuminate\Auth\Access\AuthorizationException $e) {
             return redirect()->back()->withErrors(['error' => 'You are not authorized to delete this comment.']);
         } catch (\Exception $e) {
-            return redirect()->back()->withErrors(['error' => 'Failed to delete comment: ' . $e->getMessage()]);
+            return redirect()->back()->withErrors(['error' => 'Failed to delete comment: '.$e->getMessage()]);
         }
     }
 
@@ -92,7 +92,7 @@ class CommentController extends Controller
 
             return redirect()->back()->with('success', 'Comment resolved successfully.');
         } catch (\Exception $e) {
-            return redirect()->back()->withErrors(['error' => 'Failed to resolve comment: ' . $e->getMessage()]);
+            return redirect()->back()->withErrors(['error' => 'Failed to resolve comment: '.$e->getMessage()]);
         }
     }
 
@@ -108,7 +108,7 @@ class CommentController extends Controller
 
             return redirect()->back()->with('success', 'Comment unresolve successfully.');
         } catch (\Exception $e) {
-            return redirect()->back()->withErrors(['error' => 'Failed to unresolve comment: ' . $e->getMessage()]);
+            return redirect()->back()->withErrors(['error' => 'Failed to unresolve comment: '.$e->getMessage()]);
         }
     }
 }

@@ -3,8 +3,8 @@
 namespace App\Services;
 
 use App\Models\Comment;
-use App\Models\Space;
 use App\Models\Project;
+use App\Models\Space;
 use App\Models\TimeEntry;
 use App\Models\User;
 use App\Models\Workspace;
@@ -12,16 +12,23 @@ use App\Models\Workspace;
 class AccessService
 {
     public const WORKSPACE_OWNER = 'owner';
+
     public const WORKSPACE_ADMIN = 'admin';
+
     public const WORKSPACE_MEMBER = 'member';
 
     public const SPACE_ADMIN = 'admin';
+
     public const SPACE_MEMBER = 'member';
+
     public const SPACE_GUEST = 'guest';
 
     public const PROJECT_OWNER = 'project_owner';
+
     public const PROJECT_MANAGER = 'project_manager';
+
     public const PROJECT_DEVELOPER = 'development_team';
+
     public const PROJECT_GUEST = 'guest';
 
     /** @var array<string, ?string> Per-request role cache to avoid repeated DB queries.
@@ -40,7 +47,7 @@ class AccessService
      */
     public function canAccessWebsite(User $user): bool
     {
-        return !is_null($user->id) && $user->workspaces()->exists();
+        return ! is_null($user->id) && $user->workspaces()->exists();
     }
 
     /**
@@ -50,7 +57,7 @@ class AccessService
     {
         $key = $this->cacheKey('ws', $user->id, $workspace->id);
 
-        if (!array_key_exists($key, $this->roleCache)) {
+        if (! array_key_exists($key, $this->roleCache)) {
             $this->roleCache[$key] = $workspace->members()
                 ->where('user_id', $user->id)
                 ->first()?->pivot?->role;
@@ -66,7 +73,7 @@ class AccessService
     {
         $key = $this->cacheKey('sp', $user->id, $space->id);
 
-        if (!array_key_exists($key, $this->roleCache)) {
+        if (! array_key_exists($key, $this->roleCache)) {
             $this->roleCache[$key] = $space->members()
                 ->where('user_id', $user->id)
                 ->first()?->pivot?->role;
@@ -82,7 +89,7 @@ class AccessService
     {
         $key = $this->cacheKey('pj', $user->id, $list->id);
 
-        if (!array_key_exists($key, $this->roleCache)) {
+        if (! array_key_exists($key, $this->roleCache)) {
             $this->roleCache[$key] = $list->members()
                 ->where('user_id', $user->id)
                 ->first()?->pivot?->role;
@@ -106,7 +113,7 @@ class AccessService
      */
     public function canViewWorkspace(User $user, Workspace $workspace): bool
     {
-        return !is_null($this->getWorkspaceRole($user, $workspace));
+        return ! is_null($this->getWorkspaceRole($user, $workspace));
     }
 
     /**
@@ -150,7 +157,7 @@ class AccessService
      */
     public function canViewSpace(User $user, Space $space): bool
     {
-        if (!$this->canViewWorkspace($user, $space->workspace)) {
+        if (! $this->canViewWorkspace($user, $space->workspace)) {
             return false;
         }
 
@@ -182,7 +189,7 @@ class AccessService
             return true;
         }
 
-        if (!$this->canViewSpace($user, $space)) {
+        if (! $this->canViewSpace($user, $space)) {
             return false;
         }
 
@@ -212,12 +219,12 @@ class AccessService
             return true;
         }
 
-        if (!is_null($this->getProductRole($user, $list))) {
+        if (! is_null($this->getProductRole($user, $list))) {
             return true;
         }
 
         // No product members configured → open by default for workspace members
-        return !$list->members()->exists();
+        return ! $list->members()->exists();
     }
 
     /** Alias of canViewProduct for project terminology.
@@ -425,6 +432,7 @@ class AccessService
 
         // Workspace owner/admin can moderate any comment
         $workspace = $comment->task->project->space->workspace;
+
         return in_array($this->getWorkspaceRole($user, $workspace), [
             self::WORKSPACE_OWNER,
             self::WORKSPACE_ADMIN,

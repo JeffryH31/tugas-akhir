@@ -1,4 +1,4 @@
-﻿<?php
+<?php
 
 namespace App\Http\Controllers;
 
@@ -6,10 +6,10 @@ use App\Http\Requests\StoreChecklistItemRequest;
 use App\Http\Requests\UpdateChecklistItemRequest;
 use App\Http\Resources\ChecklistItemResource;
 use App\Models\ChecklistItem;
+use App\Models\Project;
 use App\Models\Space;
 use App\Models\Subtask;
 use App\Models\Task;
-use App\Models\Project;
 use App\Models\Workspace;
 use App\Services\AccessService;
 use App\Services\ChecklistItemService;
@@ -31,7 +31,8 @@ class ChecklistItemController extends Controller
         Space $space,
         Project $project,
         Task $task,
-        Subtask $subtask,): RedirectResponse {
+        Subtask $subtask, ): RedirectResponse
+    {
         $this->authorizeScope($workspace, $space, $project, $task, $subtask);
         abort_unless($this->accessService->canEditTasks($request->user(), $project), 403);
 
@@ -43,7 +44,7 @@ class ChecklistItemController extends Controller
             );
 
             return redirect()->back()->with([
-                'success'       => 'Checklist item added.',
+                'success' => 'Checklist item added.',
                 'checklist_item' => new ChecklistItemResource($item),
             ]);
         } catch (\Exception $e) {
@@ -60,7 +61,8 @@ class ChecklistItemController extends Controller
         Project $project,
         Task $task,
         Subtask $subtask,
-        ChecklistItem $checklistItem,): RedirectResponse {
+        ChecklistItem $checklistItem, ): RedirectResponse
+    {
         $this->authorizeScope($workspace, $space, $project, $task, $subtask);
         abort_unless((int) $checklistItem->subtask_id === (int) $subtask->id, 404);
         abort_unless($this->accessService->canEditTasks($request->user(), $project), 403);
@@ -83,7 +85,8 @@ class ChecklistItemController extends Controller
         Project $project,
         Task $task,
         Subtask $subtask,
-        ChecklistItem $checklistItem,): RedirectResponse {
+        ChecklistItem $checklistItem, ): RedirectResponse
+    {
         $this->authorizeScope($workspace, $space, $project, $task, $subtask);
         abort_unless((int) $checklistItem->subtask_id === (int) $subtask->id, 404);
         abort_unless($this->accessService->canEditTasks($request->user(), $project), 403);
@@ -106,7 +109,8 @@ class ChecklistItemController extends Controller
         Project $project,
         Task $task,
         Subtask $subtask,
-        ChecklistItem $checklistItem,): RedirectResponse {
+        ChecklistItem $checklistItem, ): RedirectResponse
+    {
         $this->authorizeScope($workspace, $space, $project, $task, $subtask);
         abort_unless((int) $checklistItem->subtask_id === (int) $subtask->id, 404);
         abort_unless($this->accessService->canEditTasks($request->user(), $project), 403);
@@ -130,14 +134,15 @@ class ChecklistItemController extends Controller
         Space $space,
         Project $project,
         Task $task,
-        Subtask $subtask,): RedirectResponse {
+        Subtask $subtask, ): RedirectResponse
+    {
         $this->authorizeScope($workspace, $space, $project, $task, $subtask);
         abort_unless($this->accessService->canEditTasks($request->user(), $project), 403);
 
         $request->validate([
-            'item_ids'   => ['required', 'array'],
+            'item_ids' => ['required', 'array'],
             'item_ids.*' => ['integer', 'exists:checklist_items,id'],
-            'parent_id'  => ['nullable', 'exists:checklist_items,id'],
+            'parent_id' => ['nullable', 'exists:checklist_items,id'],
         ]);
 
         try {
@@ -153,7 +158,7 @@ class ChecklistItemController extends Controller
         }
     }
 
-    //  Private 
+    //  Private
 
     private function authorizeScope(
         Workspace $workspace,

@@ -11,7 +11,7 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\SoftDeletes;
 
 /**
- * Goal Model 
+ * Goal Model
  *
  * @property int $id
  * @property string $name
@@ -60,8 +60,11 @@ class Goal extends Model
      * Status constants.
      */
     public const STATUS_ON_TRACK = 'on_track';
+
     public const STATUS_AT_RISK = 'at_risk';
+
     public const STATUS_OFF_TRACK = 'off_track';
+
     public const STATUS_COMPLETED = 'completed';
 
     /**

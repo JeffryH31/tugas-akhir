@@ -15,14 +15,14 @@ return new class extends Migration
             $table->id();
             $table->foreignId('workspace_id')->constrained()->cascadeOnDelete();
             $table->foreignId('user_id')->constrained()->cascadeOnDelete();
-            
+
             $table->string('subject_type');
             $table->unsignedBigInteger('subject_id');
-            
+
             $table->string('action'); // created, updated, deleted, moved, assigned, etc.
             $table->json('properties')->nullable(); // Additional data about the change
             $table->json('changes')->nullable(); // What changed (old/new values)
-            
+
             $table->timestamps();
 
             $table->index(['workspace_id', 'created_at']);

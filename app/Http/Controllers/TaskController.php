@@ -7,10 +7,10 @@ use App\Http\Requests\StoreTaskRequest;
 use App\Http\Requests\UpdateTaskRequest;
 use App\Http\Resources\TaskResource;
 use App\Models\Label;
+use App\Models\Project;
 use App\Models\Space;
 use App\Models\Status;
 use App\Models\Task;
-use App\Models\Project;
 use App\Models\Workspace;
 use App\Services\AccessService;
 use App\Services\TaskService;
@@ -44,10 +44,10 @@ class TaskController extends Controller
 
             return redirect()->back()->with([
                 'success' => 'Task created successfully.',
-                'task' => new TaskResource($task->load(['status']))
+                'task' => new TaskResource($task->load(['status'])),
             ]);
         } catch (\Exception $e) {
-            return redirect()->back()->withErrors(['error' => 'Failed to create task: ' . $e->getMessage()]);
+            return redirect()->back()->withErrors(['error' => 'Failed to create task: '.$e->getMessage()]);
         }
     }
 
@@ -65,10 +65,10 @@ class TaskController extends Controller
 
             return redirect()->back()->with([
                 'success' => 'Task updated successfully.',
-                'task' => new TaskResource($updatedTask->load(['status', 'assignees', 'labels']))
+                'task' => new TaskResource($updatedTask->load(['status', 'assignees', 'labels'])),
             ]);
         } catch (\Exception $e) {
-            return redirect()->back()->withErrors(['error' => 'Failed to update task: ' . $e->getMessage()]);
+            return redirect()->back()->withErrors(['error' => 'Failed to update task: '.$e->getMessage()]);
         }
     }
 
@@ -87,11 +87,9 @@ class TaskController extends Controller
             return redirect()->route('projects.show', [$workspace->id, $space->id, $project->id])
                 ->with('success', 'Task deleted successfully.');
         } catch (\Exception $e) {
-            return redirect()->back()->withErrors(['error' => 'Failed to delete task: ' . $e->getMessage()]);
+            return redirect()->back()->withErrors(['error' => 'Failed to delete task: '.$e->getMessage()]);
         }
     }
-
-
 
     /**
      * Change task status.
@@ -118,10 +116,10 @@ class TaskController extends Controller
 
             return redirect()->back()->with([
                 'success' => 'Task status updated successfully.',
-                'task' => new TaskResource($updatedTask->load(['status', 'assignees', 'labels']))
+                'task' => new TaskResource($updatedTask->load(['status', 'assignees', 'labels'])),
             ]);
         } catch (\Exception $e) {
-            return redirect()->back()->withErrors(['error' => 'Failed to change status: ' . $e->getMessage()]);
+            return redirect()->back()->withErrors(['error' => 'Failed to change status: '.$e->getMessage()]);
         }
     }
 
@@ -143,10 +141,10 @@ class TaskController extends Controller
 
             return redirect()->back()->with([
                 'success' => 'Task priority updated successfully.',
-                'task' => new TaskResource($updatedTask->load(['status', 'assignees', 'labels']))
+                'task' => new TaskResource($updatedTask->load(['status', 'assignees', 'labels'])),
             ]);
         } catch (\Exception $e) {
-            return redirect()->back()->withErrors(['error' => 'Failed to change priority: ' . $e->getMessage()]);
+            return redirect()->back()->withErrors(['error' => 'Failed to change priority: '.$e->getMessage()]);
         }
     }
 
@@ -196,7 +194,7 @@ class TaskController extends Controller
         $validated = $request->validate([
             'list_id' => [
                 'required',
-                Rule::exists('projects', 'id')->where(fn($query) => $query->where('space_id', $space->id)),
+                Rule::exists('projects', 'id')->where(fn ($query) => $query->where('space_id', $space->id)),
             ],
             'position' => 'nullable|integer|min:0',
         ]);
@@ -208,10 +206,10 @@ class TaskController extends Controller
 
             return redirect()->back()->with([
                 'success' => 'Task moved successfully.',
-                'task' => new TaskResource($updatedTask->load(['status', 'assignees', 'labels']))
+                'task' => new TaskResource($updatedTask->load(['status', 'assignees', 'labels'])),
             ]);
         } catch (\Exception $e) {
-            return redirect()->back()->withErrors(['error' => 'Failed to move task: ' . $e->getMessage()]);
+            return redirect()->back()->withErrors(['error' => 'Failed to move task: '.$e->getMessage()]);
         }
     }
 
@@ -228,7 +226,7 @@ class TaskController extends Controller
 
             return redirect()->back()->with('success', 'Tasks reordered successfully.');
         } catch (\Exception $e) {
-            return redirect()->back()->withErrors(['error' => 'Failed to reorder tasks: ' . $e->getMessage()]);
+            return redirect()->back()->withErrors(['error' => 'Failed to reorder tasks: '.$e->getMessage()]);
         }
     }
 
@@ -244,7 +242,7 @@ class TaskController extends Controller
         $validated = $request->validate([
             'label_id' => [
                 'required',
-                Rule::exists('labels', 'id')->where(fn($query) => $query->where('workspace_id', $workspace->id)),
+                Rule::exists('labels', 'id')->where(fn ($query) => $query->where('workspace_id', $workspace->id)),
             ],
         ]);
 
@@ -254,10 +252,10 @@ class TaskController extends Controller
 
             return redirect()->back()->with([
                 'success' => 'Label added successfully.',
-                'task' => new TaskResource($updatedTask->load(['status', 'assignees', 'labels']))
+                'task' => new TaskResource($updatedTask->load(['status', 'assignees', 'labels'])),
             ]);
         } catch (\Exception $e) {
-            return redirect()->back()->withErrors(['error' => 'Failed to add label: ' . $e->getMessage()]);
+            return redirect()->back()->withErrors(['error' => 'Failed to add label: '.$e->getMessage()]);
         }
     }
 
@@ -273,7 +271,7 @@ class TaskController extends Controller
         $validated = $request->validate([
             'label_id' => [
                 'required',
-                Rule::exists('labels', 'id')->where(fn($query) => $query->where('workspace_id', $workspace->id)),
+                Rule::exists('labels', 'id')->where(fn ($query) => $query->where('workspace_id', $workspace->id)),
             ],
         ]);
 
@@ -283,10 +281,10 @@ class TaskController extends Controller
 
             return redirect()->back()->with([
                 'success' => 'Label removed successfully.',
-                'task' => new TaskResource($updatedTask->load(['status', 'assignees', 'labels']))
+                'task' => new TaskResource($updatedTask->load(['status', 'assignees', 'labels'])),
             ]);
         } catch (\Exception $e) {
-            return redirect()->back()->withErrors(['error' => 'Failed to remove label: ' . $e->getMessage()]);
+            return redirect()->back()->withErrors(['error' => 'Failed to remove label: '.$e->getMessage()]);
         }
     }
 
@@ -304,10 +302,10 @@ class TaskController extends Controller
 
             return redirect()->back()->with([
                 'success' => 'Task duplicated successfully.',
-                'task' => new TaskResource($newTask->load(['status', 'assignees', 'labels']))
+                'task' => new TaskResource($newTask->load(['status', 'assignees', 'labels'])),
             ]);
         } catch (\Exception $e) {
-            return redirect()->back()->withErrors(['error' => 'Failed to duplicate task: ' . $e->getMessage()]);
+            return redirect()->back()->withErrors(['error' => 'Failed to duplicate task: '.$e->getMessage()]);
         }
     }
 

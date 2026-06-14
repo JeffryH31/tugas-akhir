@@ -36,12 +36,12 @@ class Space extends Model
             if (empty($space->slug)) {
                 $space->slug = Str::slug($space->name);
             }
-            
+
             $originalSlug = $space->slug;
             $count = 1;
             while (static::where('workspace_id', $space->workspace_id)
                 ->where('slug', $space->slug)->exists()) {
-                $space->slug = $originalSlug . '-' . $count++;
+                $space->slug = $originalSlug.'-'.$count++;
             }
 
             if (empty($space->position)) {
@@ -65,7 +65,6 @@ class Space extends Model
             }
         });
     }
-
 
     public function workspace(): BelongsTo
     {
@@ -135,12 +134,10 @@ class Space extends Model
         return $this->hasMany(Label::class);
     }
 
-
     public function getInitialsAttribute(): string
     {
         return strtoupper(substr($this->name, 0, 1));
     }
-
 
     public function getDefaultStatus(): ?Status
     {

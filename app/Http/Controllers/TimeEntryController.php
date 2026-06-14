@@ -4,10 +4,10 @@ namespace App\Http\Controllers;
 
 use App\Http\Requests\StoreTimeEntryRequest;
 use App\Http\Requests\UpdateTimeEntryRequest;
+use App\Models\Project;
 use App\Models\Space;
 use App\Models\Subtask;
 use App\Models\Task;
-use App\Models\Project;
 use App\Models\TimeEntry;
 use App\Models\Workspace;
 use App\Services\AccessService;
@@ -49,10 +49,10 @@ class TimeEntryController extends Controller
 
         $workspaces = $user->workspaces()->with([
             'spaces' => function ($q) use ($user) {
-                $q->whereHas('members', fn($mq) => $mq->where('user_id', $user->id));
+                $q->whereHas('members', fn ($mq) => $mq->where('user_id', $user->id));
                 $q->with([
-                    'folders.projects' => fn($lq) => $lq->accessibleBy($user),
-                    'projectsWithoutFolder' => fn($lq) => $lq->accessibleBy($user),
+                    'folders.projects' => fn ($lq) => $lq->accessibleBy($user),
+                    'projectsWithoutFolder' => fn ($lq) => $lq->accessibleBy($user),
                 ])->orderBy('position');
             },
         ])->get();
@@ -87,10 +87,10 @@ class TimeEntryController extends Controller
 
             return redirect()->back()->with([
                 'success' => 'Time logged successfully.',
-                'timeEntry' => new \App\Http\Resources\TimeEntryResource($entry->load('user'))
+                'timeEntry' => new \App\Http\Resources\TimeEntryResource($entry->load('user')),
             ]);
         } catch (\Exception $e) {
-            return redirect()->back()->withErrors(['error' => 'Failed to log time: ' . $e->getMessage()]);
+            return redirect()->back()->withErrors(['error' => 'Failed to log time: '.$e->getMessage()]);
         }
     }
 
@@ -105,7 +105,7 @@ class TimeEntryController extends Controller
         ]);
 
         try {
-            $subtask = !empty($validated['subtask_id'])
+            $subtask = ! empty($validated['subtask_id'])
                 ? Subtask::where('id', $validated['subtask_id'])->where('task_id', $task->id)->firstOrFail()
                 : Subtask::where('task_id', $task->id)->firstOrFail();
 
@@ -124,13 +124,14 @@ class TimeEntryController extends Controller
 
             return redirect()->back()->with([
                 'success' => 'Timer started successfully.',
-                'timeEntry' => new \App\Http\Resources\TimeEntryResource($entry->load('user'))
+                'timeEntry' => new \App\Http\Resources\TimeEntryResource($entry->load('user')),
             ]);
         } catch (\Exception $e) {
             if ($request->wantsJson()) {
                 return response()->json(['success' => false, 'message' => $e->getMessage()], 422);
             }
-            return redirect()->back()->withErrors(['error' => 'Failed to start timer: ' . $e->getMessage()]);
+
+            return redirect()->back()->withErrors(['error' => 'Failed to start timer: '.$e->getMessage()]);
         }
     }
 
@@ -153,13 +154,14 @@ class TimeEntryController extends Controller
 
             return redirect()->back()->with([
                 'success' => 'Timer stopped successfully.',
-                'timeEntry' => new \App\Http\Resources\TimeEntryResource($stoppedEntry->load('user'))
+                'timeEntry' => new \App\Http\Resources\TimeEntryResource($stoppedEntry->load('user')),
             ]);
         } catch (\Exception $e) {
             if ($request->wantsJson()) {
                 return response()->json(['success' => false, 'message' => $e->getMessage()], 422);
             }
-            return redirect()->back()->withErrors(['error' => 'Failed to stop timer: ' . $e->getMessage()]);
+
+            return redirect()->back()->withErrors(['error' => 'Failed to stop timer: '.$e->getMessage()]);
         }
     }
 
@@ -186,23 +188,21 @@ class TimeEntryController extends Controller
      */
     public function update(UpdateTimeEntryRequest $request, TimeEntry $entry): RedirectResponse
     {
-        if (!$this->accessService->canManageTimeEntry($request->user(), $entry)) {
+        if (! $this->accessService->canManageTimeEntry($request->user(), $entry)) {
             return redirect()->back()->withErrors(['error' => 'You are not authorized to update this time entry.']);
         }
-        
+
         try {
             $updatedEntry = $this->timeTrackingService->updateEntry($entry, $request->validated(), $request->user());
 
             return redirect()->back()->with([
                 'success' => 'Time entry updated successfully.',
-                'timeEntry' => new \App\Http\Resources\TimeEntryResource($updatedEntry->load('user'))
+                'timeEntry' => new \App\Http\Resources\TimeEntryResource($updatedEntry->load('user')),
             ]);
         } catch (\Exception $e) {
-            return redirect()->back()->withErrors(['error' => 'Failed to update time entry: ' . $e->getMessage()]);
+            return redirect()->back()->withErrors(['error' => 'Failed to update time entry: '.$e->getMessage()]);
         }
     }
-
-
 
     /**
      * Get workspace time report.

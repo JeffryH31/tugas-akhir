@@ -12,7 +12,7 @@ use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 
 /**
- * TimeTrackingController 
+ * TimeTrackingController
  *
  * Handles time tracking using Inertia.js (monolith).
  * Updated for Hierarchy: Workspace -> Space -> Folder -> List -> Task

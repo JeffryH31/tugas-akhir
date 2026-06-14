@@ -41,7 +41,7 @@ class Folder extends Model
                 while (static::where('space_id', $folder->space_id)
                     ->where('slug', $slug)
                     ->exists()) {
-                    $slug = $baseSlug . '-' . $counter++;
+                    $slug = $baseSlug.'-'.$counter++;
                 }
                 $folder->slug = $slug;
             }
@@ -53,7 +53,6 @@ class Folder extends Model
             }
         });
     }
-
 
     public function space(): BelongsTo
     {
@@ -80,7 +79,6 @@ class Folder extends Model
         return $this->belongsTo(User::class, 'created_by');
     }
 
-
     public function allChildren(): HasMany
     {
         return $this->children()->with('allChildren');
@@ -91,17 +89,16 @@ class Folder extends Model
         return $this->projects()->with('tasks');
     }
 
-
     public function getDepth(): int
     {
         $depth = 0;
         $parent = $this->parent;
-        
+
         while ($parent) {
             $depth++;
             $parent = $parent->parent;
         }
-        
+
         return $depth;
     }
 
@@ -109,12 +106,12 @@ class Folder extends Model
     {
         $breadcrumbs = [$this];
         $parent = $this->parent;
-        
+
         while ($parent) {
             array_unshift($breadcrumbs, $parent);
             $parent = $parent->parent;
         }
-        
+
         return $breadcrumbs;
     }
 }

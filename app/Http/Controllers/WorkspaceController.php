@@ -60,11 +60,11 @@ class WorkspaceController extends Controller
         $workspace->load([
             'members',
             'labels',
-            'spaces' => fn($query) => $query
+            'spaces' => fn ($query) => $query
                 ->orderBy('position')
                 ->with([
                     'members',
-                    'projects' => fn($listQuery) => $listQuery
+                    'projects' => fn ($listQuery) => $listQuery
                         ->orderBy('position')
                         ->with(['members']),
                 ]),
@@ -142,7 +142,7 @@ class WorkspaceController extends Controller
         abort_unless($this->accessService->canViewWorkspace($request->user(), $workspace), 403);
 
         $workspace->load([
-            'spaces' => fn($q) => $q->withCount(['projects', 'tasks'])
+            'spaces' => fn ($q) => $q->withCount(['projects', 'tasks'])
                 ->orderBy('position'),
         ]);
 
@@ -168,7 +168,7 @@ class WorkspaceController extends Controller
 
             return redirect()->back()->with('success', 'Workspace updated successfully.');
         } catch (\Exception $e) {
-            return redirect()->back()->withErrors(['error' => 'Failed to update workspace: ' . $e->getMessage()]);
+            return redirect()->back()->withErrors(['error' => 'Failed to update workspace: '.$e->getMessage()]);
         }
     }
 
@@ -186,7 +186,7 @@ class WorkspaceController extends Controller
                 ->route('dashboard')
                 ->with('success', 'Workspace deleted successfully.');
         } catch (\Exception $e) {
-            return redirect()->back()->withErrors(['error' => 'Failed to delete workspace: ' . $e->getMessage()]);
+            return redirect()->back()->withErrors(['error' => 'Failed to delete workspace: '.$e->getMessage()]);
         }
     }
 
@@ -211,7 +211,7 @@ class WorkspaceController extends Controller
 
             return redirect()->back()->with('success', 'Member added successfully.');
         } catch (\Exception $e) {
-            return redirect()->back()->withErrors(['error' => 'Failed to add member: ' . $e->getMessage()]);
+            return redirect()->back()->withErrors(['error' => 'Failed to add member: '.$e->getMessage()]);
         }
     }
 
@@ -235,7 +235,7 @@ class WorkspaceController extends Controller
 
             return redirect()->back()->with('success', 'Member removed successfully.');
         } catch (\Exception $e) {
-            return redirect()->back()->withErrors(['error' => 'Failed to remove member: ' . $e->getMessage()]);
+            return redirect()->back()->withErrors(['error' => 'Failed to remove member: '.$e->getMessage()]);
         }
     }
 
@@ -261,7 +261,7 @@ class WorkspaceController extends Controller
 
             return redirect()->back()->with('success', 'Member role updated successfully.');
         } catch (\Exception $e) {
-            return redirect()->back()->withErrors(['error' => 'Failed to update member role: ' . $e->getMessage()]);
+            return redirect()->back()->withErrors(['error' => 'Failed to update member role: '.$e->getMessage()]);
         }
     }
 
@@ -297,7 +297,7 @@ class WorkspaceController extends Controller
 
             return redirect()->back()->with('success', 'User created and added to workspace successfully.');
         } catch (\Exception $e) {
-            return redirect()->back()->withErrors(['error' => 'Failed to create user: ' . $e->getMessage()]);
+            return redirect()->back()->withErrors(['error' => 'Failed to create user: '.$e->getMessage()]);
         }
     }
 
@@ -323,7 +323,7 @@ class WorkspaceController extends Controller
         try {
 
             $user = User::findOrFail($validated['user_id']);
-            if (!$workspace->isMember($user)) {
+            if (! $workspace->isMember($user)) {
                 return redirect()->back()->withErrors(['error' => 'User is not a member of this workspace.']);
             }
 
@@ -335,7 +335,7 @@ class WorkspaceController extends Controller
 
             return redirect()->back()->with('success', 'User updated successfully.');
         } catch (\Exception $e) {
-            return redirect()->back()->withErrors(['error' => 'Failed to update user: ' . $e->getMessage()]);
+            return redirect()->back()->withErrors(['error' => 'Failed to update user: '.$e->getMessage()]);
         }
     }
 }

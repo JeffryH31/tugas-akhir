@@ -42,7 +42,7 @@ class SpacePolicy
         }
 
         // If space is not private, workspace member can view
-        if (!$space->is_private && $space->workspace->hasMember($user)) {
+        if (! $space->is_private && $space->workspace->hasMember($user)) {
             return true;
         }
 
@@ -80,6 +80,7 @@ class SpacePolicy
 
         // Space admin can update
         $membership = $space->members()->where('user_id', $user->id)->first();
+
         return $membership && $membership->pivot->role === 'admin';
     }
 

@@ -3,12 +3,11 @@
 use App\Models\Activity;
 use App\Models\TimeEntry;
 use App\Services\TimeTrackingService;
-use Tests\Traits\CreatesWorkspaceHierarchy;
 
 uses(Tests\Traits\CreatesWorkspaceHierarchy::class);
 
 beforeEach(function () {
-    $this->service = new TimeTrackingService();
+    $this->service = new TimeTrackingService;
     $this->owner = $this->createUser();
     $this->hierarchy = $this->createFullHierarchy($this->owner);
     $this->subtask = $this->createSubtask($this->hierarchy['task']);

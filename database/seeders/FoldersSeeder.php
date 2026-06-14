@@ -12,8 +12,8 @@ class FoldersSeeder extends Seeder
 
     public function run(): void
     {
-        $jeff        = $this->demoUser('admin@example.com');
-        $kevin       = $this->demoUser('kevin@example.com');
+        $jeff = $this->demoUser('admin@example.com');
+        $kevin = $this->demoUser('kevin@example.com');
 
         $folders = [
             ['name' => 'ERP System',    'space' => 'Manufacturing', 'position' => 0, 'color' => '#F97316', 'created_by' => $jeff->id],
@@ -25,10 +25,10 @@ class FoldersSeeder extends Seeder
 
         foreach ($folders as $f) {
             Folder::create([
-                'name'       => $f['name'],
-                'space_id'   => $this->demoSpace($f['space'])->id,
-                'position'   => $f['position'],
-                'color'      => $f['color'],
+                'name' => $f['name'],
+                'space_id' => $this->demoSpace($f['space'])->id,
+                'position' => $f['position'],
+                'color' => $f['color'],
                 'created_by' => $f['created_by'],
             ]);
         }

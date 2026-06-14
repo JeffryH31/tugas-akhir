@@ -5,21 +5,19 @@ use App\Http\Controllers\ChecklistItemController;
 use App\Http\Controllers\CommentController;
 use App\Http\Controllers\CpmController;
 use App\Http\Controllers\DashboardController;
-use App\Http\Controllers\LabelController;
 use App\Http\Controllers\FolderController;
+use App\Http\Controllers\LabelController;
+use App\Http\Controllers\ProjectController;
+use App\Http\Controllers\RecycleBinController;
 use App\Http\Controllers\SpaceController;
 use App\Http\Controllers\SprintController;
 use App\Http\Controllers\SubtaskController;
 use App\Http\Controllers\TaskController;
-use App\Http\Controllers\ProjectController;
 use App\Http\Controllers\TimeEntryController;
-use App\Http\Controllers\RecycleBinController;
 use App\Http\Controllers\WorkspaceAnalyticsController;
 use App\Http\Controllers\WorkspaceController;
 use App\Http\Controllers\WorkspaceMemberReportController;
-use Illuminate\Foundation\Application;
 use Illuminate\Support\Facades\Route;
-use Inertia\Inertia;
 
 Route::get('/', function () {
     return redirect('/login');

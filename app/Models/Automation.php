@@ -9,7 +9,7 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 /**
- * Automation Model 
+ * Automation Model
  *
  * @property int $id
  * @property string $name
@@ -52,23 +52,36 @@ class Automation extends Model
      * Trigger types.
      */
     public const TRIGGER_TASK_CREATED = 'task_created';
+
     public const TRIGGER_TASK_STATUS_CHANGED = 'task_status_changed';
+
     public const TRIGGER_TASK_ASSIGNEE_CHANGED = 'task_assignee_changed';
+
     public const TRIGGER_TASK_DUE_DATE = 'task_due_date';
+
     public const TRIGGER_TASK_COMPLETED = 'task_completed';
+
     public const TRIGGER_SUBTASK_CREATED = 'subtask_created';
+
     public const TRIGGER_COMMENT_ADDED = 'comment_added';
 
     /**
      * Action types.
      */
     public const ACTION_CHANGE_STATUS = 'change_status';
+
     public const ACTION_ADD_ASSIGNEE = 'add_assignee';
+
     public const ACTION_REMOVE_ASSIGNEE = 'remove_assignee';
+
     public const ACTION_SET_PRIORITY = 'set_priority';
+
     public const ACTION_ADD_LABEL = 'add_label';
+
     public const ACTION_SEND_NOTIFICATION = 'send_notification';
+
     public const ACTION_CREATE_TASK = 'create_task';
+
     public const ACTION_MOVE_TASK = 'move_task';
 
     /**

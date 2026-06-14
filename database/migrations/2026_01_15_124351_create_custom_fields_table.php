@@ -25,7 +25,7 @@ return new class extends Migration
             $table->enum('type', [
                 'text', 'number', 'dropdown', 'date', 'checkbox',
                 'email', 'phone', 'url', 'currency', 'emoji',
-                'people', 'files', 'formula', 'relationship'
+                'people', 'files', 'formula', 'relationship',
             ])->default('text');
             $table->json('options')->nullable()->comment('For dropdown type, etc.');
             $table->boolean('is_required')->default(false);

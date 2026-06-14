@@ -2,16 +2,14 @@
 
 use App\Enums\PriorityLevel;
 use App\Models\Activity;
-use App\Models\Status;
-use App\Models\Task;
 use App\Models\Project;
+use App\Models\Task;
 use App\Services\TaskService;
-use Tests\Traits\CreatesWorkspaceHierarchy;
 
 uses(Tests\Traits\CreatesWorkspaceHierarchy::class);
 
 beforeEach(function () {
-    $this->service = new TaskService();
+    $this->service = new TaskService;
     $this->owner = $this->createUser();
     $this->hierarchy = $this->createFullHierarchy($this->owner);
 });
@@ -435,10 +433,10 @@ test('duplicate task creates copy with "(Copy)" suffix', function () {
 });
 
 test('applyFilters filters by status_ids', function () {
-    $open     = $this->hierarchy['statuses']->firstWhere('type', 'open');
-    $closed   = $this->hierarchy['statuses']->firstWhere('type', 'closed');
+    $open = $this->hierarchy['statuses']->firstWhere('type', 'open');
+    $closed = $this->hierarchy['statuses']->firstWhere('type', 'closed');
 
-    $this->service->create(['name' => 'Open Task',   'status_id' => $open->id],   $this->hierarchy['list'], $this->owner);
+    $this->service->create(['name' => 'Open Task',   'status_id' => $open->id], $this->hierarchy['list'], $this->owner);
     $this->service->create(['name' => 'Closed Task', 'status_id' => $closed->id], $this->hierarchy['list'], $this->owner);
 
     $results = $this->service->getTasksForList($this->hierarchy['list'], ['status_ids' => [$open->id]]);
@@ -457,8 +455,8 @@ test('applyFilters filters by priority_levels', function () {
 });
 
 test('applyFilters filters by search term', function () {
-    $this->service->create(['name' => 'Fix login bug'],    $this->hierarchy['list'], $this->owner);
-    $this->service->create(['name' => 'Add dashboard'],   $this->hierarchy['list'], $this->owner);
+    $this->service->create(['name' => 'Fix login bug'], $this->hierarchy['list'], $this->owner);
+    $this->service->create(['name' => 'Add dashboard'], $this->hierarchy['list'], $this->owner);
 
     $results = $this->service->getTasksForList($this->hierarchy['list'], ['search' => 'login']);
 

@@ -83,7 +83,7 @@ class Sprint extends Model
         $start = $this->start_date?->copy()->startOfDay();
         $end = $this->end_date?->copy()->endOfDay();
 
-        if (!$start || !$end) {
+        if (! $start || ! $end) {
             return false;
         }
 
@@ -96,7 +96,7 @@ class Sprint extends Model
     public function isCompleted(): bool
     {
         $end = $this->end_date?->copy()->endOfDay();
-        if (!$end) {
+        if (! $end) {
             return false;
         }
 
@@ -117,7 +117,7 @@ class Sprint extends Model
     public function getRemainingDays(): int
     {
         $end = $this->end_date?->copy()->startOfDay();
-        if (!$end) {
+        if (! $end) {
             return 0;
         }
 

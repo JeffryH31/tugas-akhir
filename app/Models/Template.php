@@ -9,7 +9,7 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 /**
- * Template Model 
+ * Template Model
  *
  * @property int $id
  * @property string $name
@@ -50,8 +50,11 @@ class Template extends Model
      * Template types.
      */
     public const TYPE_TASK = 'task';
+
     public const TYPE_LIST = 'list';
+
     public const TYPE_FOLDER = 'folder';
+
     public const TYPE_SPACE = 'space';
 
     /**

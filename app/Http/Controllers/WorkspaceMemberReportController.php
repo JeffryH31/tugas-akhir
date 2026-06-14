@@ -27,14 +27,14 @@ class WorkspaceMemberReportController extends Controller
         return Inertia::render('Workspaces/MemberReport', [
             'workspace' => $workspace,
             'member' => [
-                'id'                => $member->id,
-                'name'              => $member->name,
-                'email'             => $member->email,
-                'initials'          => $member->initials,
-                'avatar_color'      => $member->avatar_color,
+                'id' => $member->id,
+                'name' => $member->name,
+                'email' => $member->email,
+                'initials' => $member->initials,
+                'avatar_color' => $member->avatar_color,
                 'profile_photo_url' => $member->profile_photo_url,
-                'hourly_rate'       => $member->hourly_rate,
-                'role'              => $memberWithPivot?->pivot?->role,
+                'hourly_rate' => $member->hourly_rate,
+                'role' => $memberWithPivot?->pivot?->role,
             ],
             'report' => $this->reportService->getReport($workspace, $member),
         ]);

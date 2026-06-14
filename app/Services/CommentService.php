@@ -2,8 +2,8 @@
 
 namespace App\Services;
 
-use App\Models\Comment;
 use App\Models\Activity;
+use App\Models\Comment;
 use App\Models\Task;
 use App\Models\User;
 use Illuminate\Support\Collection;
@@ -19,7 +19,7 @@ class CommentService
         return $task->comments()
             ->with([
                 'user',
-                'replies' => fn($q) => $q->with('user')->orderBy('created_at'),
+                'replies' => fn ($q) => $q->with('user')->orderBy('created_at'),
             ])
             ->orderBy('created_at', 'desc')
             ->get();
@@ -56,7 +56,7 @@ class CommentService
     public function update(Comment $comment, array $data, User $user): Comment
     {
         $comment->edit($data['content']);
-        
+
         return $comment->fresh('user');
     }
 
@@ -115,7 +115,7 @@ class CommentService
     public function extractMentions(string $content): array
     {
         preg_match_all('/@(\w+)/', $content, $matches);
-        
+
         if (empty($matches[1])) {
             return [];
         }

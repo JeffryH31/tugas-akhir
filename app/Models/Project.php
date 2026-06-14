@@ -60,7 +60,6 @@ class Project extends Model
         });
     }
 
-
     public function space(): BelongsTo
     {
         return $this->belongsTo(Space::class);
@@ -115,7 +114,6 @@ class Project extends Model
         ]);
     }
 
-
     public function getTaskCountAttribute(): int
     {
         return $this->allTasks()->count();
@@ -124,19 +122,20 @@ class Project extends Model
     public function getCompletedTaskCountAttribute(): int
     {
         return $this->allTasks()
-            ->whereHas('subtasks', fn($q) => $q->whereNotNull('completed_at'))
-            ->whereDoesntHave('subtasks', fn($q) => $q->whereNull('completed_at'))
+            ->whereHas('subtasks', fn ($q) => $q->whereNotNull('completed_at'))
+            ->whereDoesntHave('subtasks', fn ($q) => $q->whereNull('completed_at'))
             ->count();
     }
 
     public function getProgressAttribute(): float
     {
         $total = $this->task_count;
-        if ($total === 0) return 0;
+        if ($total === 0) {
+            return 0;
+        }
 
         return round(($this->completed_task_count / $total) * 100, 1);
     }
-
 
     public function scopeActive($query)
     {
@@ -155,24 +154,22 @@ class Project extends Model
 
         return $query->where(function ($q) use ($user, $wsAdminIds) {
             // Workspace admins see everything in their workspaces
-            $q->whereHas('space', fn($sq) => $sq->whereIn('workspace_id', $wsAdminIds))
+            $q->whereHas('space', fn ($sq) => $sq->whereIn('workspace_id', $wsAdminIds))
               // Or user is an explicit product member
-              ->orWhereHas('members', fn($mq) => $mq->where('user_id', $user->id));
+                ->orWhereHas('members', fn ($mq) => $mq->where('user_id', $user->id));
         });
     }
-
-
 
     public function getBreadcrumbs(): array
     {
         $breadcrumbs = [];
-        
+
         if ($this->folder) {
             $breadcrumbs = $this->folder->getBreadcrumbs();
         }
-        
+
         $breadcrumbs[] = $this;
-        
+
         return $breadcrumbs;
     }
 }

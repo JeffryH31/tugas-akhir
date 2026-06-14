@@ -9,7 +9,7 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 /**
- * GoalTarget Model 
+ * GoalTarget Model
  *
  * @property int $id
  * @property string $name
@@ -51,8 +51,11 @@ class GoalTarget extends Model
      * Target types.
      */
     public const TYPE_NUMBER = 'number';
+
     public const TYPE_CURRENCY = 'currency';
+
     public const TYPE_BOOLEAN = 'boolean';
+
     public const TYPE_TASK_COMPLETION = 'task_completion';
 
     /**
@@ -92,12 +95,12 @@ class GoalTarget extends Model
      */
     public function updateTaskCompletionProgress(): void
     {
-        if ($this->type !== self::TYPE_TASK_COMPLETION || !$this->linked_list_id) {
+        if ($this->type !== self::TYPE_TASK_COMPLETION || ! $this->linked_list_id) {
             return;
         }
 
         $list = $this->linkedList;
-        if (!$list) {
+        if (! $list) {
             return;
         }
 
