@@ -89,11 +89,11 @@ const getSlackStyle = (subtask) => {
 
 // Get color for subtask bar
 const getBarColor = (subtask) => {
-    if (subtask.isCritical) {
-        return 'bg-red-500'; // Critical path
-    }
     if (subtask.completedAt) {
-        return 'bg-green-500'; // Completed
+        return 'bg-green-500'; // Completed takes priority over critical
+    }
+    if (subtask.isCritical) {
+        return 'bg-red-500'; // Critical path (not yet completed)
     }
     return 'bg-blue-500'; // Normal
 };
