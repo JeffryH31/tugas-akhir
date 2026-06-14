@@ -783,13 +783,13 @@ onMounted(() => {
                             <v-list density="compact">
                                 <v-list-item prepend-icon="mdi-account-lock-outline" title="Project Access"
                                     @click="router.visit(route('projects.settings', [workspace.id, space.id, list.id]))" />
-                                <v-list-item v-if="canManageProduct" prepend-icon="mdi-pencil-outline"
+                                <v-list-item v-if="canManageProject" prepend-icon="mdi-pencil-outline"
                                     title="Edit Project" @click="openEditList" />
                                 <v-list-item v-if="canManageSpace" prepend-icon="mdi-folder-move-outline"
                                     title="Move to Folder" @click="openMoveToFolder" />
-                                <v-list-item v-if="canManageProduct" prepend-icon="mdi-content-copy"
+                                <v-list-item v-if="canManageProject" prepend-icon="mdi-content-copy"
                                     title="Duplicate Project" @click="duplicateList" />
-                                <template v-if="canDeleteProduct">
+                                <template v-if="canDeleteProject">
                                     <v-divider />
                                     <v-list-item prepend-icon="mdi-delete-outline" title="Delete Project"
                                         class="text-error" @click="showDeleteList = true" />

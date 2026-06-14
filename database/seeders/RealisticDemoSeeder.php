@@ -181,9 +181,9 @@ class RealisticDemoSeeder extends Seeder
     private function seedSpaces(): void
     {
         $spaces = [
-            ['name' => 'Manufacture', 'color' => '#F97316', 'members' => ['Leo', 'Gilbert', 'Aji', 'Mario', 'Grace', 'Alief']],
+            ['name' => 'Manufacture', 'color' => '#F97316', 'members' => ['Leo', 'Gilbert', 'Aji', 'Mario', 'Grace', 'Alief', 'Audi']],
             ['name' => 'B2B',         'color' => '#3B82F6', 'members' => ['Leo', 'Gilbert', 'Vincent', 'Stanley', 'Moses', 'Stefanie']],
-            ['name' => 'B2C',         'color' => '#10B981', 'members' => ['Leo', 'Gilbert', 'Andry', 'Gita', 'Justin', 'Charlie', 'Frans', 'Audi']],
+            ['name' => 'B2C',         'color' => '#10B981', 'members' => ['Leo', 'Gilbert', 'Andry', 'Gita', 'Justin', 'Charlie', 'Frans']],
             ['name' => 'Data',        'color' => '#8B5CF6', 'members' => ['Leo', 'Gilbert', 'Mira', 'Clarissa', 'Stanley', 'Danny', 'Nicko', 'Amel']],
         ];
 
@@ -304,18 +304,28 @@ class RealisticDemoSeeder extends Seeder
         $weeks = $this->sprintWeeks();
 
         // Kickoff plan: which sprint each project starts in, and how many tasks
-        // it carries. Totals to 149 tasks (23 late => exactly 15.4%). Projects
+        // it carries. Totals to 136 tasks (21 late => exactly 15.4%). Projects
         // are staggered: most start at Sprint 1, others are kicked off later in
         // the month (and were created during the preceding sprint).
+        // Distribution: 21 projects × 6 tasks + 2 projects × 5 tasks = 136.
         $plan = [];
-        for ($i = 0; $i < 12; $i++) $plan[] = ['k' => 0, 'count' => 7];
-        for ($i = 0; $i < 6; $i++)  $plan[] = ['k' => 1, 'count' => 6];
+        for ($i = 0; $i < 12; $i++) $plan[] = ['k' => 0, 'count' => 6];
+        for ($i = 0; $i < 5; $i++)  $plan[] = ['k' => 1, 'count' => 6];
         for ($i = 0; $i < 4; $i++)  $plan[] = ['k' => 2, 'count' => 6];
         $plan[] = ['k' => 3, 'count' => 5];
+        $plan[] = ['k' => 1, 'count' => 5];
         shuffle($plan);
 
         // Running cursor for the Sprint-1 cohort so they spread across 24 Apr.
         $k0cursor = max($this->folderMaxAt, strtotime('2026-04-24 10:30:00'));
+
+        // Per-space PM rotation counters — ensures PM candidates alternate evenly
+        // so no single person ends up as PM on every project in their space.
+        $pmRotation = [];
+
+        // Gilbert rotation: he becomes project_manager on every other project
+        // across all spaces (global counter).
+        $gilbertCounter = 0;
 
         foreach ($projects as $i => $p) {
             $space = $this->spaceMap[$p['space']];
@@ -347,18 +357,26 @@ class RealisticDemoSeeder extends Seeder
             $this->projectMap[$p['name']] = $project;
             $this->projectPlan[$p['name']] = $plan[$i];
 
-            // Assign members
-            $devs = $this->getSpaceDevs($p['space']);
+            // --- Role assignment ---
+            // Leo: project_owner on every project.
             $project->addMember($this->userMap['Leo'], 'project_owner');
-            $pm = $devs[array_rand($devs)];
+
+            // Pick the space PM candidate for this project (round-robin between the 2).
+            $spacePMs = $this->getSpacePMs($p['space']);
+            $pmIdx = $pmRotation[$p['space']] ?? 0;
+            $pm = $spacePMs[$pmIdx % count($spacePMs)];
+            $pmRotation[$p['space']] = $pmIdx + 1;
             $project->addMember($this->userMap[$pm], 'project_manager');
-            foreach ($devs as $dev) {
-                if ($dev !== $pm) {
-                    $project->addMember($this->userMap[$dev], 'development_team');
-                }
-            }
-            if (rand(0, 1)) {
+
+            // Gilbert: project_manager on every other project (global alternation).
+            if ($gilbertCounter % 2 === 0) {
                 $project->addMember($this->userMap['Gilbert'], 'project_manager');
+            }
+            $gilbertCounter++;
+
+            // All regular devs become development_team (PM candidates excluded).
+            foreach ($this->getSpaceDevs($p['space']) as $dev) {
+                $project->addMember($this->userMap[$dev], 'development_team');
             }
         }
     }
@@ -408,7 +426,7 @@ class RealisticDemoSeeder extends Seeder
         $supplementary = $this->getSupplementaryTasks();
         $weeks = $this->sprintWeeks();
 
-        // Task counts come from the kickoff plan (sums to 149 => 23 late = 15.4%).
+        // Task counts come from the kickoff plan (sums to 136 => 21 late = 15.4%).
         $projectTasks = [];
         $grandTotal = 0;
         foreach ($templates as $projectName => $curated) {
@@ -424,8 +442,8 @@ class RealisticDemoSeeder extends Seeder
             $grandTotal += count($tasks);
         }
 
-        // Exactly 15.4% of all tasks finish after their due date.
-        $lateQuota = (int) round($grandTotal * 0.154);
+        // Exactly 21 of 136 tasks (15.4%) finish after their due date.
+        $lateQuota = 21;
         $indices = range(0, $grandTotal - 1);
         shuffle($indices);
         $lateKeys = array_fill_keys(array_slice($indices, 0, $lateQuota), true);
@@ -525,7 +543,8 @@ class RealisticDemoSeeder extends Seeder
             $meta = $this->taskMeta[$taskKey];
             $project = $this->projectMap[$projectName];
             $spaceName = $project->space->name;
-            $devs = $this->getSpaceDevs($spaceName);
+            // All non-Leo/Gilbert team members can be assigned to subtask work.
+            $devs = $this->getSpaceAllMembers($spaceName);
 
             $taskDays = $this->getWorkingDays($meta['start'], $meta['due']);
             if (empty($taskDays)) {
@@ -636,8 +655,10 @@ class RealisticDemoSeeder extends Seeder
                 // still log the work as a single overtime-style session so a
                 // completed (100%) subtask never shows zero tracked time.
                 if ($logged === 0) {
-                    $startTs = strtotime($startDay . ' 09:00:00');
-                    $endTs = $startTs + $target * 60;
+                    $startSec = rand(0, 59);
+                    $startMin = rand(0, 29);
+                    $startTs = strtotime(sprintf('%s %02d:%02d:%02d', $startDay, rand(8, 10), $startMin, $startSec));
+                    $endTs = $startTs + $target * 60 + rand(0, 59);
                     $sessions[] = [
                         date('Y-m-d H:i:s', $startTs),
                         date('Y-m-d H:i:s', $endTs),
@@ -1041,18 +1062,41 @@ class RealisticDemoSeeder extends Seeder
     // Helpers
     private function getSpaceDevs(string $spaceName): array
     {
+        // Returns ONLY the development_team members (never PM candidates).
         $map = [
-            'Manufacture' => ['Aji', 'Mario', 'Grace', 'Alief'],
-            'B2B' => ['Vincent', 'Stanley', 'Moses', 'Stefanie'],
-            'B2C' => ['Andry', 'Gita', 'Justin', 'Charlie', 'Frans', 'Audi'],
-            'Data' => ['Mira', 'Clarissa', 'Danny', 'Nicko', 'Amel'],
+            'Manufacture' => ['Aji', 'Mario', 'Grace'],
+            'B2B'         => ['Stanley', 'Moses'],
+            'B2C'         => ['Gita', 'Justin', 'Frans'],
+            'Data'        => ['Mira', 'Clarissa', 'Stanley', 'Amel'],
         ];
         return $map[$spaceName] ?? [];
     }
 
+    /**
+     * PM candidates for each space — these people can only be project_manager,
+     * never development_team. Each space has exactly 2 candidates so projects
+     * can be distributed evenly between them.
+     */
+    private function getSpacePMs(string $spaceName): array
+    {
+        $map = [
+            'Manufacture' => ['Audi', 'Alief'],
+            'B2B'         => ['Vincent', 'Stefanie'],
+            'B2C'         => ['Andry', 'Charlie'],
+            'Data'        => ['Nicko', 'Danny'],
+        ];
+        return $map[$spaceName] ?? [];
+    }
+
+    /** All members of a space (PM candidates + devs, excluding Leo & Gilbert). */
+    private function getSpaceAllMembers(string $spaceName): array
+    {
+        return array_merge($this->getSpacePMs($spaceName), $this->getSpaceDevs($spaceName));
+    }
+
     private function getSpaceMembers(string $spaceName): array
     {
-        return array_merge(['Leo', 'Gilbert'], $this->getSpaceDevs($spaceName));
+        return array_merge(['Leo', 'Gilbert'], $this->getSpaceAllMembers($spaceName));
     }
 
     private function getWorkingDays(string $start, string $end): array
@@ -1170,16 +1214,35 @@ class RealisticDemoSeeder extends Seeder
      * Lazily initialise (and return) a user's remaining work-minute budget for a
      * given working day. Diligent staff have a full 8h (480m); the "lazy" few
      * have a lighter, variable day (~6-7h).
+     *
+     * Day cursors are seeded with a realistic start time so time entries are
+     * spread across the morning rather than always clustering at 09:00.
+     * Diligent staff start anywhere from 07:55 to 09:10 (most people: 08:00-08:45).
+     * Lazy staff drift in later: 08:20-09:30.
      */
     private function capacityFor(string $userName, string $date): int
     {
         if (!isset($this->capRemaining[$userName][$date])) {
             if (in_array($userName, $this->lazyUsers, true)) {
                 $this->capRemaining[$userName][$date] = rand(360, 430); // ~6-7h
-                $this->dayCursor[$userName][$date] = sprintf('08:%02d:%02d', rand(3, 28), rand(0, 59));
+                // Lazy: arrive 08:20–09:30, random seconds
+                $startMin = rand(20, 90);
+                $this->dayCursor[$userName][$date] = sprintf(
+                    '%02d:%02d:%02d',
+                    8 + intdiv($startMin, 60),
+                    $startMin % 60,
+                    rand(0, 59)
+                );
             } else {
                 $this->capRemaining[$userName][$date] = 480; // full 8h
-                $this->dayCursor[$userName][$date] = sprintf('08:00:%02d', rand(0, 45));
+                // Diligent: arrive 07:55–09:10, weighted toward 08:00-08:45
+                $startMin = rand(-5, 70);
+                $this->dayCursor[$userName][$date] = sprintf(
+                    '%02d:%02d:%02d',
+                    8 + intdiv($startMin, 60),
+                    (($startMin % 60) + 60) % 60,
+                    rand(0, 59)
+                );
             }
         }
         return $this->capRemaining[$userName][$date];
@@ -1218,18 +1281,28 @@ class RealisticDemoSeeder extends Seeder
         $entries = [];
         $secs = $minutes * 60;
 
+        // Add a small human jitter (1–59 s) to the block start so timestamps
+        // never land on a whole-minute boundary (e.g. 09:00:00 → 09:00:37).
+        $jitter = rand(1, 59);
+        $cursor += $jitter;
+        // Re-check lunch boundary after jitter.
+        if ($cursor >= $noon && $cursor < $afternoon) {
+            $cursor = $afternoon + rand(1, 59);
+        }
+
         if ($cursor < $noon) {
             $morningAvail = $noon - $cursor;
             if ($secs <= $morningAvail) {
                 $end = $cursor + $secs;
                 $entries[] = [date('Y-m-d H:i:s', $cursor), date('Y-m-d H:i:s', $end), $minutes];
-                $cursor = ($end >= $noon) ? $afternoon : $end;
+                $cursor = ($end >= $noon) ? $afternoon + rand(1, 59) : $end;
             } else {
                 // Split across lunch: morning part, then continue after 13:00.
                 $entries[] = [date('Y-m-d H:i:s', $cursor), date('Y-m-d H:i:s', $noon), (int) ($morningAvail / 60)];
                 $rest = $secs - $morningAvail;
-                $end = min($afternoon + $rest, $hardStop);
-                $entries[] = [date('Y-m-d H:i:s', $afternoon), date('Y-m-d H:i:s', $end), (int) (($end - $afternoon) / 60)];
+                $resumeAfterLunch = $afternoon + rand(1, 59);
+                $end = min($resumeAfterLunch + $rest, $hardStop);
+                $entries[] = [date('Y-m-d H:i:s', $resumeAfterLunch), date('Y-m-d H:i:s', $end), (int) (($end - $resumeAfterLunch) / 60)];
                 $cursor = $end;
             }
         } else {
