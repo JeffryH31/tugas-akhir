@@ -2,14 +2,12 @@
 
 use App\Models\Activity;
 use App\Models\Comment;
-use App\Models\User;
 use App\Services\CommentService;
-use Tests\Traits\CreatesWorkspaceHierarchy;
 
 uses(Tests\Traits\CreatesWorkspaceHierarchy::class);
 
 beforeEach(function () {
-    $this->service = new CommentService();
+    $this->service = new CommentService;
     $this->owner = $this->createUser();
     $this->hierarchy = $this->createFullHierarchy($this->owner);
 });

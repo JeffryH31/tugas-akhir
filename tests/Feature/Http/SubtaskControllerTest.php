@@ -1,8 +1,8 @@
 <?php
 
 use App\Models\Subtask;
-use App\Models\User;
 use Tests\Traits\CreatesWorkspaceHierarchy;
+
 use function Pest\Laravel\actingAs;
 
 uses(CreatesWorkspaceHierarchy::class);
@@ -10,12 +10,12 @@ uses(CreatesWorkspaceHierarchy::class);
 // Shared setup
 
 beforeEach(function () {
-    $this->owner    = $this->createUser();
-    $this->h        = $this->createFullHierarchy($this->owner);
-    $this->subtask  = $this->createSubtask($this->h['task']);
+    $this->owner = $this->createUser();
+    $this->h = $this->createFullHierarchy($this->owner);
+    $this->subtask = $this->createSubtask($this->h['task']);
 
     // Use auto-created statuses from Space::created observer
-    $this->openStatus   = $this->h['statuses']->firstWhere('type', 'open')
+    $this->openStatus = $this->h['statuses']->firstWhere('type', 'open')
         ?? $this->h['statuses']->first();
     $this->closedStatus = $this->h['statuses']->firstWhere('type', 'closed')
         ?? $this->h['statuses']->last();
@@ -34,14 +34,14 @@ test('owner can create a subtask', function () {
 
     $this->assertDatabaseHas('subtasks', [
         'task_id' => $this->h['task']->id,
-        'name'    => 'New Subtask',
+        'name' => 'New Subtask',
     ]);
 });
 
 test('unauthenticated user is redirected when creating a subtask', function () {
     $this->post(route('tasks.subtasks.store', [$this->h['workspace'], $this->h['space'], $this->h['list'], $this->h['task']]), [
         'task_id' => $this->h['task']->id,
-        'name'    => 'Ghost Subtask',
+        'name' => 'Ghost Subtask',
     ])
         ->assertRedirectToRoute('login');
 });
@@ -60,8 +60,8 @@ test('creating a subtask with more than one assignee returns a validation error'
     actingAs($this->owner)
         ->from(route('projects.show', [$this->h['workspace'], $this->h['space'], $this->h['list']]))
         ->post(route('tasks.subtasks.store', [$this->h['workspace'], $this->h['space'], $this->h['list'], $this->h['task']]), [
-            'task_id'      => $this->h['task']->id,
-            'name'         => 'Multi Assignee',
+            'task_id' => $this->h['task']->id,
+            'name' => 'Multi Assignee',
             'assignee_ids' => [$userA->id, $userB->id],
         ])
         ->assertSessionHasErrors(['assignee_ids']);
@@ -73,8 +73,8 @@ test('creating a subtask with exactly one assignee succeeds', function () {
     actingAs($this->owner)
         ->from(route('projects.show', [$this->h['workspace'], $this->h['space'], $this->h['list']]))
         ->post(route('tasks.subtasks.store', [$this->h['workspace'], $this->h['space'], $this->h['list'], $this->h['task']]), [
-            'task_id'      => $this->h['task']->id,
-            'name'         => 'Single Assignee',
+            'task_id' => $this->h['task']->id,
+            'name' => 'Single Assignee',
             'assignee_ids' => [$assignee->id],
         ])
         ->assertRedirect();
@@ -87,10 +87,10 @@ test('creating subtask with due date before start date fails validation', functi
     actingAs($this->owner)
         ->from(route('projects.show', [$this->h['workspace'], $this->h['space'], $this->h['list']]))
         ->post(route('tasks.subtasks.store', [$this->h['workspace'], $this->h['space'], $this->h['list'], $this->h['task']]), [
-            'task_id'    => $this->h['task']->id,
-            'name'       => 'Bad Dates',
+            'task_id' => $this->h['task']->id,
+            'name' => 'Bad Dates',
             'start_date' => '2026-05-10',
-            'due_date'   => '2026-05-01',
+            'due_date' => '2026-05-01',
         ])
         ->assertSessionHasErrors();
 });
@@ -101,14 +101,14 @@ test('owner can update a subtask name and description', function () {
     actingAs($this->owner)
         ->from(route('projects.show', [$this->h['workspace'], $this->h['space'], $this->h['list']]))
         ->patch(route('tasks.subtasks.update', [$this->h['workspace'], $this->h['space'], $this->h['list'], $this->h['task'], $this->subtask]), [
-            'name'        => 'Renamed Subtask',
+            'name' => 'Renamed Subtask',
             'description' => 'Some detail',
         ])
         ->assertRedirect();
 
     $this->assertDatabaseHas('subtasks', [
-        'id'          => $this->subtask->id,
-        'name'        => 'Renamed Subtask',
+        'id' => $this->subtask->id,
+        'name' => 'Renamed Subtask',
         'description' => 'Some detail',
     ]);
 });
@@ -149,7 +149,7 @@ test('owner can complete a subtask', function () {
         ->assertRedirect();
 
     $this->assertDatabaseHas('subtasks', [
-        'id'           => $this->subtask->id,
+        'id' => $this->subtask->id,
         'completed_at' => now()->toDateTimeString(),
     ]);
 });
@@ -163,7 +163,7 @@ test('completing a subtask sets its status to the provided closed status', funct
         ->assertRedirect();
 
     $this->assertDatabaseHas('subtasks', [
-        'id'        => $this->subtask->id,
+        'id' => $this->subtask->id,
         'status_id' => $this->closedStatus->id,
     ]);
 });
@@ -179,7 +179,7 @@ test('owner can reopen a completed subtask', function () {
         ->assertRedirect();
 
     $this->assertDatabaseHas('subtasks', [
-        'id'           => $this->subtask->id,
+        'id' => $this->subtask->id,
         'completed_at' => null,
     ]);
 });

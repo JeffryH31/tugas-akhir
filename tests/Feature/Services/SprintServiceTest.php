@@ -1,17 +1,16 @@
 <?php
 
-use App\Models\Task;
+use App\Models\Project;
 use App\Models\Sprint;
 use App\Models\Subtask;
-use App\Models\Project;
+use App\Models\Task;
 use App\Services\SprintService;
 use Illuminate\Validation\ValidationException;
-use Tests\Traits\CreatesWorkspaceHierarchy;
 
 uses(Tests\Traits\CreatesWorkspaceHierarchy::class);
 
 beforeEach(function () {
-    $this->service = new SprintService();
+    $this->service = new SprintService;
     $this->owner = $this->createUser();
     $this->hierarchy = $this->createFullHierarchy($this->owner);
 });
@@ -330,7 +329,7 @@ test('addSubtaskToSprint throws for subtask not in product', function () {
     $otherHierarchy = $this->createFullHierarchy($this->owner, 'B');
     $otherSubtask = $this->createSubtask($otherHierarchy['task']);
 
-    expect(fn() => $this->service->addSubtaskToSprint($sprint, $otherSubtask->id))
+    expect(fn () => $this->service->addSubtaskToSprint($sprint, $otherSubtask->id))
         ->toThrow(ValidationException::class);
 });
 

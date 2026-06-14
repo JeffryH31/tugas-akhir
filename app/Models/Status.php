@@ -39,7 +39,6 @@ class Status extends Model
         });
     }
 
-
     public function space(): BelongsTo
     {
         return $this->belongsTo(Space::class);
@@ -54,7 +53,6 @@ class Status extends Model
     {
         return $this->hasMany(Subtask::class);
     }
-
 
     public function scopeOpen($query)
     {

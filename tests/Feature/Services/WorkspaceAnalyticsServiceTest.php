@@ -1,14 +1,12 @@
 <?php
 
 use App\Models\Subtask;
-use App\Models\TimeEntry;
 use App\Services\WorkspaceAnalyticsService;
-use Tests\Traits\CreatesWorkspaceHierarchy;
 
 uses(Tests\Traits\CreatesWorkspaceHierarchy::class);
 
 beforeEach(function () {
-    $this->service = new WorkspaceAnalyticsService();
+    $this->service = new WorkspaceAnalyticsService;
     $this->owner = $this->createUser();
     $this->hierarchy = $this->createFullHierarchy($this->owner);
 });

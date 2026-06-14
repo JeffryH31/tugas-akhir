@@ -40,6 +40,6 @@ enum PriorityLevel: int
 
     public static function allToArray(): array
     {
-        return array_map(fn(self $p) => $p->toArray(), self::cases());
+        return array_map(fn (self $p) => $p->toArray(), self::cases());
     }
 }

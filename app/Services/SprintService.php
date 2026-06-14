@@ -2,9 +2,9 @@
 
 namespace App\Services;
 
+use App\Models\Project;
 use App\Models\Sprint;
 use App\Models\Subtask;
-use App\Models\Project;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\ValidationException;
 
@@ -96,9 +96,9 @@ class SprintService
     {
         $query = Subtask::where('id', $subtaskId);
         if ($sprint->project_id) {
-            $query->whereHas('task', fn($q) => $q->where('project_id', $sprint->project_id));
+            $query->whereHas('task', fn ($q) => $q->where('project_id', $sprint->project_id));
         } else {
-            $query->whereHas('task.project', fn($q) => $q->where('space_id', $sprint->space_id));
+            $query->whereHas('task.project', fn ($q) => $q->where('space_id', $sprint->space_id));
         }
 
         $updated = $query->update(['sprint_id' => $sprint->id]);
@@ -134,10 +134,9 @@ class SprintService
         $subtasks = $sprint->subtasks()->with('status')->get();
 
         $totalSubtasks = $subtasks->count();
-        $completedSubtasks = $subtasks->filter(fn($subtask) => $subtask->completed_at !== null)->count();
+        $completedSubtasks = $subtasks->filter(fn ($subtask) => $subtask->completed_at !== null)->count();
         $inProgressSubtasks = $subtasks->filter(
-            fn($subtask) =>
-            $subtask->completed_at === null &&
+            fn ($subtask) => $subtask->completed_at === null &&
                 in_array($subtask->status?->type, ['in_progress', 'review'])
         )->count();
 
@@ -165,7 +164,7 @@ class SprintService
     public function getBacklogSubtasks(Project $list): \Illuminate\Support\Collection
     {
         return Subtask::whereNull('sprint_id')
-            ->whereHas('task', fn($q) => $q->where('project_id', $list->id))
+            ->whereHas('task', fn ($q) => $q->where('project_id', $list->id))
             ->with(['status', 'assignees', 'task'])
             ->get();
     }

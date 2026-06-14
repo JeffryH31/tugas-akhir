@@ -14,7 +14,7 @@ class StoreChecklistItemRequest extends FormRequest
     public function rules(): array
     {
         return [
-            'name'      => ['required', 'string', 'max:500'],
+            'name' => ['required', 'string', 'max:500'],
             'parent_id' => ['nullable', 'exists:checklist_items,id'],
         ];
     }
@@ -23,7 +23,7 @@ class StoreChecklistItemRequest extends FormRequest
     {
         return [
             'name.required' => 'Checklist item name is required.',
-            'name.max'      => 'Checklist item name must not exceed 500 characters.',
+            'name.max' => 'Checklist item name must not exceed 500 characters.',
             'parent_id.exists' => 'Parent checklist item does not exist.',
         ];
     }

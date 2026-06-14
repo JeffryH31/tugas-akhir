@@ -4,10 +4,10 @@ namespace App\Services;
 
 use App\Models\Activity;
 use App\Models\Folder;
+use App\Models\Project;
 use App\Models\Space;
 use App\Models\Status;
 use App\Models\Task;
-use App\Models\Project;
 use App\Models\User;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
@@ -17,12 +17,11 @@ class ProjectService
 {
     /**
      * Get lists for a space, optionally scoped to a specific folder.
-     *
      */
     public function getListsForSpace(Space $space, ?Folder $folder = null): Collection
     {
         $query = $space->projects()
-            ->with(['tasks' => fn($q) => $q->with(['status', 'assignees'])])
+            ->with(['tasks' => fn ($q) => $q->with(['status', 'assignees'])])
             ->withCount('tasks');
 
         if ($folder) {
@@ -58,7 +57,7 @@ class ProjectService
                 'subtasks.dependents',
                 'subtasks.timeEntries.user',
                 'subtasks.comments.user', // Include comments
-                'subtasks.activities' => fn($q) => $q->with('user')->latest()->limit(50),
+                'subtasks.activities' => fn ($q) => $q->with('user')->latest()->limit(50),
                 'subtasks.checklistItems', // For checklist UI & auto-progress
                 'subtasks.children.status', // Direct children (depth+1 subtasks)
                 'subtasks.children.assignees',
@@ -76,7 +75,7 @@ class ProjectService
                     'labels',
                     'subtasks.assignees', // For subtask count & assignee aggregation
                     'comments.user', // Include comments
-                    'activities' => fn($q) => $q->with('user')->latest()->limit(50),
+                    'activities' => fn ($q) => $q->with('user')->latest()->limit(50),
                 ])
                 ->orderBy('position')
                 ->get();
@@ -84,7 +83,7 @@ class ProjectService
             // Task-level assignees are derived from subtask assignees.
             $items->each(function ($task) {
                 $aggregatedAssignees = $task->subtasks
-                    ->flatMap(fn($subtask) => $subtask->assignees ?? collect())
+                    ->flatMap(fn ($subtask) => $subtask->assignees ?? collect())
                     ->unique('id')
                     ->values();
 
@@ -103,9 +102,15 @@ class ProjectService
                 $aDate = $a->due_date ?? null;
                 $bDate = $b->due_date ?? null;
 
-                if ($aDate === null && $bDate === null) return $a->position <=> $b->position;
-                if ($aDate === null) return 1;
-                if ($bDate === null) return -1;
+                if ($aDate === null && $bDate === null) {
+                    return $a->position <=> $b->position;
+                }
+                if ($aDate === null) {
+                    return 1;
+                }
+                if ($bDate === null) {
+                    return -1;
+                }
 
                 return $aDate <=> $bDate;
             });
@@ -119,7 +124,7 @@ class ProjectService
     /**
      * Create a new list/product inside a space.
      *
-     * @param array<string, mixed> $data Validated list payload.
+     * @param  array<string, mixed>  $data  Validated list payload.
      */
     public function create(array $data, Space $space, User $user, ?Folder $folder = null): Project
     {
@@ -152,7 +157,6 @@ class ProjectService
 
     /**
      * Ensure canonical task statuses exist for the space.
-     *
      */
     private function ensureDefaultTaskStatuses(Space $space): void
     {
@@ -204,7 +208,7 @@ class ProjectService
 
         foreach ($defaults as $default) {
             $status = $space->statuses()
-                ->where(fn($q) => $q->where('type', $default['type'])->orWhere('slug', $default['slug']))
+                ->where(fn ($q) => $q->where('type', $default['type'])->orWhere('slug', $default['slug']))
                 ->first();
 
             if ($status) {
@@ -214,22 +218,22 @@ class ProjectService
                     $updates['type'] = $default['type'];
                 }
 
-                if (!in_array($status->applies_to, ['tasks', 'both'], true)) {
+                if (! in_array($status->applies_to, ['tasks', 'both'], true)) {
                     $updates['applies_to'] = 'both';
                 }
 
-                if ($default['is_closed'] && !$status->is_closed) {
+                if ($default['is_closed'] && ! $status->is_closed) {
                     $updates['is_closed'] = true;
                 }
 
                 if ($default['is_default']) {
                     $hasDefaultTaskStatus = $space->statuses()->forTasks()->where('is_default', true)->exists();
-                    if (!$hasDefaultTaskStatus && !$status->is_default) {
+                    if (! $hasDefaultTaskStatus && ! $status->is_default) {
                         $updates['is_default'] = true;
                     }
                 }
 
-                if (!empty($updates)) {
+                if (! empty($updates)) {
                     $status->update($updates);
                 }
 
@@ -255,7 +259,6 @@ class ProjectService
 
     /**
      * Add a member to a list with a role.
-     *
      */
     public function addMember(Project $project, User $user, string $role, User $addedBy): void
     {
@@ -270,7 +273,6 @@ class ProjectService
 
     /**
      * Update an existing list member role.
-     *
      */
     public function updateMemberRole(Project $project, User $user, string $role, User $updatedBy): void
     {
@@ -285,7 +287,6 @@ class ProjectService
 
     /**
      * Remove a member from a list.
-     *
      */
     public function removeMember(Project $project, User $user, User $removedBy): void
     {
@@ -300,7 +301,7 @@ class ProjectService
     /**
      * Update list metadata.
      *
-     * @param array<string, mixed> $data Validated update payload.
+     * @param  array<string, mixed>  $data  Validated update payload.
      */
     public function update(Project $project, array $data, User $user): Project
     {
@@ -320,7 +321,7 @@ class ProjectService
             }
         }
 
-        if (!empty($changes)) {
+        if (! empty($changes)) {
             Activity::log($project->space->workspace, $user, $project, 'updated', [
                 'name' => $project->name,
             ], $changes);
@@ -331,7 +332,6 @@ class ProjectService
 
     /**
      * Soft-delete a list.
-     *
      */
     public function delete(Project $project, User $user): void
     {
@@ -344,11 +344,8 @@ class ProjectService
         });
     }
 
-
-
     /**
      * Move a list to another folder (or root when null).
-     *
      */
     public function moveToFolder(Project $project, ?Folder $folder, User $user): Project
     {
@@ -374,7 +371,7 @@ class ProjectService
     /**
      * Reorder list positions within a space.
      *
-     * @param array<int, int|string> $order Ordered list ids.
+     * @param  array<int, int|string>  $order  Ordered list ids.
      */
     public function reorder(Space $space, array $order): void
     {
@@ -389,13 +386,12 @@ class ProjectService
 
     /**
      * Duplicate a list and clone all tasks/subtasks and their assignments/labels.
-     *
      */
     public function duplicate(Project $project, User $user): Project
     {
         return DB::transaction(function () use ($project, $user) {
             $newProject = $project->replicate();
-            $newProject->name = $project->name . ' (Copy)';
+            $newProject->name = $project->name.' (Copy)';
             $newProject->slug = Str::slug($newProject->name);
             $newProject->position = Project::where('space_id', $project->space_id)
                 ->where('folder_id', $project->folder_id)

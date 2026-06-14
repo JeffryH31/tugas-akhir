@@ -1,5 +1,7 @@
 <?php
 
+declare(strict_types=1);
+
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Factories\HasFactory;
@@ -11,21 +13,31 @@ use Laravel\Fortify\TwoFactorAuthenticatable;
 use Laravel\Jetstream\HasProfilePhoto;
 use Laravel\Sanctum\HasApiTokens;
 
+/**
+ * User Model
+ *
+ * Represents a user in the project management system.
+ *
+ * @property int $id
+ * @property string $name
+ * @property string $email
+ * @property string $password
+ * @property string|null $role
+ * @property \Illuminate\Support\Carbon|null $email_verified_at
+ * @property \Illuminate\Support\Carbon|null $created_at
+ * @property \Illuminate\Support\Carbon|null $updated_at
+ */
 class User extends Authenticatable
 {
     use HasApiTokens;
 
     /** @use HasFactory<\Database\Factories\UserFactory> */
     use HasFactory;
+
     use HasProfilePhoto;
     use Notifiable;
     use TwoFactorAuthenticatable;
 
-    /**
-     * The attributes that are mass assignable.
-     *
-     * @var array<int, string>
-     */
     protected $fillable = [
         'name',
         'email',
@@ -34,11 +46,6 @@ class User extends Authenticatable
         'last_notifications_read_at',
     ];
 
-    /**
-     * The attributes that should be hidden for serialization.
-     *
-     * @var array<int, string>
-     */
     protected $hidden = [
         'password',
         'remember_token',
@@ -46,22 +53,12 @@ class User extends Authenticatable
         'two_factor_secret',
     ];
 
-    /**
-     * The accessors to append to the model's array form.
-     *
-     * @var array<int, string>
-     */
     protected $appends = [
         'profile_photo_url',
         'initials',
         'avatar_color',
     ];
 
-    /**
-     * Get the attributes that should be cast.
-     *
-     * @return array<string, string>
-     */
     protected function casts(): array
     {
         return [
@@ -71,7 +68,6 @@ class User extends Authenticatable
             'password' => 'hashed',
         ];
     }
-
 
     public function workspaces(): BelongsToMany
     {
@@ -121,16 +117,15 @@ class User extends Authenticatable
         return $this->hasMany(Activity::class);
     }
 
-
     public function getInitialsAttribute(): string
     {
         $words = explode(' ', $this->name);
         $initials = '';
-        
+
         foreach (array_slice($words, 0, 2) as $word) {
             $initials .= strtoupper(substr($word, 0, 1));
         }
-        
+
         return $initials ?: strtoupper(substr($this->name, 0, 2));
     }
 
@@ -140,10 +135,9 @@ class User extends Authenticatable
             '#6366F1', '#8B5CF6', '#EC4899', '#EF4444',
             '#F59E0B', '#10B981', '#0EA5E9', '#06B6D4',
         ];
-        
+
         return $colors[$this->id % count($colors)];
     }
-
 
     public function getActiveWorkspace(): ?Workspace
     {
@@ -163,10 +157,10 @@ class User extends Authenticatable
         // Tasks don't have due dates - only subtasks do
         // Return tasks that have overdue subtasks
         return $this->assignedTasks()
-            ->whereHas('subtasks', function($q) {
+            ->whereHas('subtasks', function ($q) {
                 $q->whereNull('completed_at')
-                  ->whereNotNull('due_date')
-                  ->where('due_date', '<', now());
+                    ->whereNotNull('due_date')
+                    ->where('due_date', '<', now());
             })
             ->get();
     }

@@ -4,12 +4,12 @@ namespace Database\Seeders\Concerns;
 
 use App\Models\Folder;
 use App\Models\Label;
+use App\Models\Project;
 use App\Models\Space;
 use App\Models\Sprint;
 use App\Models\Status;
 use App\Models\Subtask;
 use App\Models\Task;
-use App\Models\Project;
 use App\Models\User;
 use App\Models\Workspace;
 
@@ -41,7 +41,7 @@ trait InteractsWithMisDepartmentDemo
 
     protected function demoSprint(string $name): Sprint
     {
-        return Sprint::where('name', $name)->first() ?? new Sprint();
+        return Sprint::where('name', $name)->first() ?? new Sprint;
     }
 
     protected function demoFolder(string $name): Folder

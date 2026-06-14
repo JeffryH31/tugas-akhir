@@ -2,6 +2,7 @@
 
 use App\Models\TimeEntry;
 use Tests\Traits\CreatesWorkspaceHierarchy;
+
 use function Pest\Laravel\actingAs;
 
 uses(CreatesWorkspaceHierarchy::class);
@@ -9,8 +10,8 @@ uses(CreatesWorkspaceHierarchy::class);
 // Shared setup
 
 beforeEach(function () {
-    $this->owner   = $this->createUser();
-    $this->h       = $this->createFullHierarchy($this->owner);
+    $this->owner = $this->createUser();
+    $this->h = $this->createFullHierarchy($this->owner);
     $this->subtask = $this->createSubtask($this->h['task']);
 });
 
@@ -33,8 +34,8 @@ test('owner can log time to a subtask', function () {
 
     $this->assertDatabaseHas('time_entries', [
         'subtask_id' => $this->subtask->id,
-        'user_id'    => $this->owner->id,
-        'duration'   => 90,
+        'user_id' => $this->owner->id,
+        'duration' => 90,
     ]);
 });
 
@@ -120,7 +121,7 @@ test('owner can start a timer', function () {
 
     $this->assertDatabaseHas('time_entries', [
         'subtask_id' => $this->subtask->id,
-        'user_id'    => $this->owner->id,
+        'user_id' => $this->owner->id,
         'is_running' => true,
     ]);
 });
@@ -150,7 +151,7 @@ test('starting a second timer stops the first', function () {
 
     // First timer is no longer running
     $this->assertDatabaseHas('time_entries', [
-        'id'         => $firstEntry->id,
+        'id' => $firstEntry->id,
         'is_running' => false,
     ]);
     // New timer is running
@@ -165,10 +166,10 @@ test('starting a second timer stops the first', function () {
 test('owner can stop their own running timer', function () {
     $entry = TimeEntry::create([
         'subtask_id' => $this->subtask->id,
-        'user_id'    => $this->owner->id,
+        'user_id' => $this->owner->id,
         'started_at' => now()->subMinutes(30),
         'is_running' => true,
-        'duration'   => 0,
+        'duration' => 0,
     ]);
 
     actingAs($this->owner)
@@ -183,7 +184,7 @@ test('owner can stop their own running timer', function () {
         ->assertRedirect();
 
     $this->assertDatabaseHas('time_entries', [
-        'id'         => $entry->id,
+        'id' => $entry->id,
         'is_running' => false,
     ]);
 });
@@ -191,10 +192,10 @@ test('owner can stop their own running timer', function () {
 test('another user cannot stop someone else timer', function () {
     $entry = TimeEntry::create([
         'subtask_id' => $this->subtask->id,
-        'user_id'    => $this->owner->id,
+        'user_id' => $this->owner->id,
         'started_at' => now()->subMinutes(10),
         'is_running' => true,
-        'duration'   => 0,
+        'duration' => 0,
     ]);
 
     $other = $this->createUser();

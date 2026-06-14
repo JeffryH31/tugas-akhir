@@ -23,7 +23,7 @@ class TimeTrackingService
             $endedAt = isset($data['ended_at']) ? \Carbon\Carbon::parse($data['ended_at']) : null;
 
             $duration = $data['duration'] ?? null;
-            if (!is_null($endedAt)) {
+            if (! is_null($endedAt)) {
                 $duration = max(1, (int) $startedAt->diffInMinutes($endedAt));
             }
             if (is_null($duration)) {
@@ -186,15 +186,15 @@ class TimeTrackingService
         return Subtask::query()
             ->whereNull('completed_at')
             ->whereNull('deleted_at')
-            ->whereHas('task.project', fn($q) => $q
-                ->whereHas('space', fn($sq) => $sq->where('workspace_id', $workspace->id))
+            ->whereHas('task.project', fn ($q) => $q
+                ->whereHas('space', fn ($sq) => $sq->where('workspace_id', $workspace->id))
                 ->accessibleBy($user)
             )
             ->with(['task.project.space'])
             ->orderByDesc('updated_at')
             ->limit(200)
             ->get()
-            ->map(fn($s) => [
+            ->map(fn ($s) => [
                 'id' => $s->id,
                 'name' => $s->name,
                 'task_id' => $s->task->id,
@@ -246,13 +246,13 @@ class TimeTrackingService
             ->with('subtask.task')
             ->get();
 
-        $byTask = $entries->groupBy('subtask_id')->map(fn($taskEntries) => [
+        $byTask = $entries->groupBy('subtask_id')->map(fn ($taskEntries) => [
             'subtask' => $taskEntries->first()->subtask,
             'total_minutes' => $taskEntries->sum('duration'),
         ])->sortByDesc('total_minutes')->values();
 
-        $byDay = $entries->groupBy(fn($e) => $e->started_at->format('Y-m-d'))
-            ->map(fn($dayEntries) => [
+        $byDay = $entries->groupBy(fn ($e) => $e->started_at->format('Y-m-d'))
+            ->map(fn ($dayEntries) => [
                 'date' => $dayEntries->first()->started_at->format('Y-m-d'),
                 'total_minutes' => $dayEntries->sum('duration'),
             ])->values();
@@ -272,7 +272,8 @@ class TimeTrackingService
      */
     public function getWorkspaceTimeReport(Workspace $workspace,
         ?string $startDate = null,
-        ?string $endDate = null): array {
+        ?string $endDate = null): array
+    {
         $query = TimeEntry::query()
             ->join('subtasks', 'time_entries.subtask_id', '=', 'subtasks.id')
             ->join('tasks', 'subtasks.task_id', '=', 'tasks.id')
@@ -295,8 +296,8 @@ class TimeTrackingService
             ->join('spaces', 'projects.space_id', '=', 'spaces.id')
             ->join('users', 'time_entries.user_id', '=', 'users.id')
             ->where('spaces.workspace_id', $workspace->id)
-            ->when($startDate, fn($q) => $q->where('time_entries.started_at', '>=', $startDate))
-            ->when($endDate, fn($q) => $q->where('time_entries.started_at', '<=', $endDate))
+            ->when($startDate, fn ($q) => $q->where('time_entries.started_at', '>=', $startDate))
+            ->when($endDate, fn ($q) => $q->where('time_entries.started_at', '<=', $endDate))
             ->select('users.id', 'users.name', DB::raw('SUM(time_entries.duration) as total_minutes'))
             ->groupBy('users.id', 'users.name')
             ->orderByDesc('total_minutes')
@@ -308,8 +309,8 @@ class TimeTrackingService
             ->join('projects', 'tasks.project_id', '=', 'projects.id')
             ->join('spaces', 'projects.space_id', '=', 'spaces.id')
             ->where('spaces.workspace_id', $workspace->id)
-            ->when($startDate, fn($q) => $q->where('time_entries.started_at', '>=', $startDate))
-            ->when($endDate, fn($q) => $q->where('time_entries.started_at', '<=', $endDate))
+            ->when($startDate, fn ($q) => $q->where('time_entries.started_at', '>=', $startDate))
+            ->when($endDate, fn ($q) => $q->where('time_entries.started_at', '<=', $endDate))
             ->select('spaces.id', 'spaces.name', DB::raw('SUM(time_entries.duration) as total_minutes'))
             ->groupBy('spaces.id', 'spaces.name')
             ->orderByDesc('total_minutes')
@@ -334,9 +335,9 @@ class TimeTrackingService
         $mins = $minutes % 60;
 
         if ($hours > 0) {
-            return $hours . 'h ' . $mins . 'm';
+            return $hours.'h '.$mins.'m';
         }
 
-        return $mins . 'm';
+        return $mins.'m';
     }
 }

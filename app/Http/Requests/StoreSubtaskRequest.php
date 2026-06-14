@@ -15,7 +15,7 @@ class StoreSubtaskRequest extends FormRequest
     public function rules(): array
     {
         return [
-            'name'      => ['required', 'string', 'max:255'],
+            'name' => ['required', 'string', 'max:255'],
             'parent_id' => ['nullable', 'exists:subtasks,id'],
             'status_id' => [
                 'nullable',

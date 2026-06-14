@@ -1,9 +1,10 @@
-﻿<?php
+<?php
 
 use App\Models\Space;
 use App\Models\Status;
 use App\Models\Workspace;
 use Tests\Traits\CreatesWorkspaceHierarchy;
+
 use function Pest\Laravel\actingAs;
 
 uses(CreatesWorkspaceHierarchy::class);

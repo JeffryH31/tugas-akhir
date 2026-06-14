@@ -24,9 +24,9 @@ class UsersSeeder extends Seeder
             User::updateOrCreate(
                 ['email' => $data['email']],
                 [
-                    'name'              => $data['name'],
-                    'password'          => $password,
-                    'hourly_rate'       => $data['hourly_rate'],
+                    'name' => $data['name'],
+                    'password' => $password,
+                    'hourly_rate' => $data['hourly_rate'],
                     'email_verified_at' => now(),
                 ]
             );

@@ -22,8 +22,8 @@ class ChecklistItem extends Model
 
     protected $casts = [
         'is_checked' => 'boolean',
-        'position'   => 'integer',
-        'depth'      => 'integer',
+        'position' => 'integer',
+        'depth' => 'integer',
     ];
 
     protected static function boot(): void
@@ -33,7 +33,7 @@ class ChecklistItem extends Model
         static::creating(function ($item) {
             // Resolve depth from parent
             if ($item->parent_id) {
-                $parent    = static::find($item->parent_id);
+                $parent = static::find($item->parent_id);
                 $item->depth = $parent ? $parent->depth + 1 : 0;
             } else {
                 $item->depth = 0;
@@ -41,7 +41,7 @@ class ChecklistItem extends Model
 
             // Auto-position within siblings
             if (is_null($item->position)) {
-                $max           = static::where('subtask_id', $item->subtask_id)
+                $max = static::where('subtask_id', $item->subtask_id)
                     ->where('parent_id', $item->parent_id)
                     ->max('position');
                 $item->position = $max !== null ? $max + 1 : 0;
@@ -58,7 +58,7 @@ class ChecklistItem extends Model
         });
     }
 
-    // ─── Relations ────────────────────────────────────────────────────────────
+    //  Relations
 
     public function subtask(): BelongsTo
     {
@@ -80,7 +80,7 @@ class ChecklistItem extends Model
         return $this->belongsTo(User::class, 'created_by');
     }
 
-    // ─── Helpers ──────────────────────────────────────────────────────────────
+    //  Helpers
 
     public function canAddChildren(): bool
     {

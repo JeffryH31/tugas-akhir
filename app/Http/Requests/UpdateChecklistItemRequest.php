@@ -22,7 +22,7 @@ class UpdateChecklistItemRequest extends FormRequest
     {
         return [
             'name.required' => 'Checklist item name is required.',
-            'name.max'      => 'Checklist item name must not exceed 500 characters.',
+            'name.max' => 'Checklist item name must not exceed 500 characters.',
         ];
     }
 }

@@ -6,10 +6,10 @@ use App\Http\Requests\StoreSubtaskRequest;
 use App\Http\Requests\UpdateSubtaskRequest;
 use App\Http\Resources\SubtaskResource;
 use App\Models\Label;
+use App\Models\Project;
 use App\Models\Space;
 use App\Models\Subtask;
 use App\Models\Task;
-use App\Models\Project;
 use App\Models\Workspace;
 use App\Services\AccessService;
 use App\Services\SubtaskService;
@@ -42,10 +42,10 @@ class SubtaskController extends Controller
 
             return redirect()->back()->with([
                 'success' => 'Subtask created successfully.',
-                'subtask' => new SubtaskResource($subtask->load(['status', 'assignees', 'labels']))
+                'subtask' => new SubtaskResource($subtask->load(['status', 'assignees', 'labels'])),
             ]);
         } catch (\Exception $e) {
-            return redirect()->back()->withErrors(['error' => 'Failed to create subtask: ' . $e->getMessage()]);
+            return redirect()->back()->withErrors(['error' => 'Failed to create subtask: '.$e->getMessage()]);
         }
     }
 
@@ -80,11 +80,13 @@ class SubtaskController extends Controller
         abort_unless($this->accessService->canManageTaskStructure($request->user(), $project), 403);
         try {
             $this->subtaskService->delete($subtask, $request->user());
+
             return redirect()->back()->with('success', 'Subtask deleted successfully.');
         } catch (\Exception $e) {
             return redirect()->back()->withErrors(['error' => $e->getMessage()]);
         }
     }
+
     /**
      * Duplicate the specified subtask.
      */
@@ -97,11 +99,13 @@ class SubtaskController extends Controller
         abort_unless($this->accessService->canManageTaskStructure($request->user(), $project), 403);
         try {
             $this->subtaskService->duplicate($subtask, $request->user());
+
             return redirect()->back()->with('success', 'Subtask duplicated successfully.');
         } catch (\Exception $e) {
-            return redirect()->back()->withErrors(['error' => 'Failed to duplicate subtask: ' . $e->getMessage()]);
+            return redirect()->back()->withErrors(['error' => 'Failed to duplicate subtask: '.$e->getMessage()]);
         }
     }
+
     /**
      * Mark subtask as completed.
      */
@@ -160,15 +164,16 @@ class SubtaskController extends Controller
             'subtask_ids' => ['required', 'array'],
             'subtask_ids.*' => [
                 'integer',
-                Rule::exists('subtasks', 'id')->where(fn($query) => $query->where('task_id', $task->id)),
+                Rule::exists('subtasks', 'id')->where(fn ($query) => $query->where('task_id', $task->id)),
             ],
         ]);
 
         try {
             $this->subtaskService->reorder($task, $request->subtask_ids);
+
             return redirect()->back()->with('success', 'Subtasks reordered successfully.');
         } catch (\Exception $e) {
-            return redirect()->back()->withErrors(['error' => 'Failed to reorder subtasks: ' . $e->getMessage()]);
+            return redirect()->back()->withErrors(['error' => 'Failed to reorder subtasks: '.$e->getMessage()]);
         }
     }
 
@@ -185,7 +190,7 @@ class SubtaskController extends Controller
         $validated = $request->validate([
             'label_id' => [
                 'required',
-                Rule::exists('labels', 'id')->where(fn($query) => $query->where('workspace_id', $workspace->id)),
+                Rule::exists('labels', 'id')->where(fn ($query) => $query->where('workspace_id', $workspace->id)),
             ],
         ]);
 
@@ -195,7 +200,7 @@ class SubtaskController extends Controller
 
             return redirect()->back()->with('success', 'Label added successfully.');
         } catch (\Exception $e) {
-            return redirect()->back()->withErrors(['error' => 'Failed to add label: ' . $e->getMessage()]);
+            return redirect()->back()->withErrors(['error' => 'Failed to add label: '.$e->getMessage()]);
         }
     }
 
@@ -212,7 +217,7 @@ class SubtaskController extends Controller
         $validated = $request->validate([
             'label_id' => [
                 'required',
-                Rule::exists('labels', 'id')->where(fn($query) => $query->where('workspace_id', $workspace->id)),
+                Rule::exists('labels', 'id')->where(fn ($query) => $query->where('workspace_id', $workspace->id)),
             ],
         ]);
 
@@ -222,7 +227,7 @@ class SubtaskController extends Controller
 
             return redirect()->back()->with('success', 'Label removed successfully.');
         } catch (\Exception $e) {
-            return redirect()->back()->withErrors(['error' => 'Failed to remove label: ' . $e->getMessage()]);
+            return redirect()->back()->withErrors(['error' => 'Failed to remove label: '.$e->getMessage()]);
         }
     }
 }

@@ -13,12 +13,11 @@ class WorkspaceService
 {
     /**
      * Get all workspaces the user is a member of, with spaces eager-loaded.
-     *
      */
     public function getWorkspacesForUser(User $user): Collection
     {
         return $user->workspaces()
-            ->with(['spaces' => fn($q) => $q->orderBy('position')])
+            ->with(['spaces' => fn ($q) => $q->orderBy('position')])
             ->withCount('members')
             ->orderBy('name')
             ->get();
@@ -77,7 +76,6 @@ class WorkspaceService
 
     /**
      * Permanently delete a workspace and all its nested data.
-     *
      */
     public function delete(Workspace $workspace, User $user): void
     {
@@ -93,7 +91,6 @@ class WorkspaceService
 
     /**
      * Add a user as a member of the workspace with the given role.
-     *
      */
     public function addMember(Workspace $workspace, User $user, string $role = AccessService::WORKSPACE_MEMBER, ?User $addedBy = null): void
     {
@@ -111,7 +108,6 @@ class WorkspaceService
 
     /**
      * Remove a user from the workspace membership.
-     *
      */
     public function removeMember(Workspace $workspace, User $user, ?User $removedBy = null): void
     {
@@ -128,7 +124,6 @@ class WorkspaceService
 
     /**
      * Change a workspace member's role.
-     *
      */
     public function updateMemberRole(Workspace $workspace, User $user, string $role, ?User $updatedBy = null): void
     {

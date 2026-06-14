@@ -19,7 +19,7 @@ class TimeEntryResource extends JsonResource
             'is_billable' => $this->is_billable ?? false,
             'created_at' => $this->created_at?->format('Y-m-d H:i:s'),
             'user' => new UserResource($this->whenLoaded('user')),
-            'subtask' => $this->whenLoaded('subtask', fn() => [
+            'subtask' => $this->whenLoaded('subtask', fn () => [
                 'id' => $this->subtask->id,
                 'name' => $this->subtask->name,
                 'task_id' => $this->subtask->task_id,

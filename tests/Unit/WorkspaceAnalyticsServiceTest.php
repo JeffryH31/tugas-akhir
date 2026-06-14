@@ -1,7 +1,7 @@
 <?php
 
-use App\Services\WorkspaceAnalyticsService;
 use App\Models\Subtask;
+use App\Services\WorkspaceAnalyticsService;
 use Carbon\Carbon;
 
 // Use Mockery with shouldIgnoreMissing to avoid setAttribute() issues
@@ -31,10 +31,10 @@ function makeSubtaskMock(array $attrs = []): Subtask
 }
 
 test('getScheduledProgressRatio returns 0 when asOf is before start date', function () {
-    $service = new WorkspaceAnalyticsService();
+    $service = new WorkspaceAnalyticsService;
     $method = new ReflectionMethod($service, 'getScheduledProgressRatio');
 
-    $subtask = new Subtask();
+    $subtask = new Subtask;
     $subtask->forceFill([
         'baseline_start_date' => '2026-03-10',
         'baseline_due_date' => '2026-03-20',
@@ -44,10 +44,10 @@ test('getScheduledProgressRatio returns 0 when asOf is before start date', funct
 });
 
 test('getScheduledProgressRatio returns 1.0 when asOf is after end date', function () {
-    $service = new WorkspaceAnalyticsService();
+    $service = new WorkspaceAnalyticsService;
     $method = new ReflectionMethod($service, 'getScheduledProgressRatio');
 
-    $subtask = new Subtask();
+    $subtask = new Subtask;
     $subtask->forceFill([
         'baseline_start_date' => '2026-03-10',
         'baseline_due_date' => '2026-03-20',
@@ -57,10 +57,10 @@ test('getScheduledProgressRatio returns 1.0 when asOf is after end date', functi
 });
 
 test('getScheduledProgressRatio returns ~0.5 when asOf is midpoint', function () {
-    $service = new WorkspaceAnalyticsService();
+    $service = new WorkspaceAnalyticsService;
     $method = new ReflectionMethod($service, 'getScheduledProgressRatio');
 
-    $subtask = new Subtask();
+    $subtask = new Subtask;
     $subtask->forceFill([
         'baseline_start_date' => '2026-03-10',
         'baseline_due_date' => '2026-03-20',
@@ -71,10 +71,10 @@ test('getScheduledProgressRatio returns ~0.5 when asOf is midpoint', function ()
 });
 
 test('getScheduledProgressRatio returns 1.0 when start equals end', function () {
-    $service = new WorkspaceAnalyticsService();
+    $service = new WorkspaceAnalyticsService;
     $method = new ReflectionMethod($service, 'getScheduledProgressRatio');
 
-    $subtask = new Subtask();
+    $subtask = new Subtask;
     $subtask->forceFill([
         'baseline_start_date' => '2026-03-10 00:00:00',
         'baseline_due_date' => '2026-03-10 00:00:00',
@@ -85,29 +85,29 @@ test('getScheduledProgressRatio returns 1.0 when start equals end', function () 
 });
 
 test('getScheduledProgressRatio returns 0 when no dates and not completed', function () {
-    $service = new WorkspaceAnalyticsService();
+    $service = new WorkspaceAnalyticsService;
     $method = new ReflectionMethod($service, 'getScheduledProgressRatio');
 
-    $subtask = new Subtask();
+    $subtask = new Subtask;
 
     expect($method->invoke($service, $subtask, Carbon::parse('2026-03-15')))->toBe(0.0);
 });
 
 test('getScheduledProgressRatio returns 1.0 when no dates but completed', function () {
-    $service = new WorkspaceAnalyticsService();
+    $service = new WorkspaceAnalyticsService;
     $method = new ReflectionMethod($service, 'getScheduledProgressRatio');
 
-    $subtask = new Subtask();
+    $subtask = new Subtask;
     $subtask->forceFill(['completed_at' => '2026-03-12']);
 
     expect($method->invoke($service, $subtask, Carbon::parse('2026-03-15')))->toBe(1.0);
 });
 
 test('getScheduledProgressRatio falls back to start_date/due_date when baseline is null', function () {
-    $service = new WorkspaceAnalyticsService();
+    $service = new WorkspaceAnalyticsService;
     $method = new ReflectionMethod($service, 'getScheduledProgressRatio');
 
-    $subtask = new Subtask();
+    $subtask = new Subtask;
     $subtask->forceFill([
         'start_date' => '2026-03-10',
         'due_date' => '2026-03-20',
@@ -118,10 +118,10 @@ test('getScheduledProgressRatio falls back to start_date/due_date when baseline 
 });
 
 test('getScheduledProgressRatio never exceeds 1.0', function () {
-    $service = new WorkspaceAnalyticsService();
+    $service = new WorkspaceAnalyticsService;
     $method = new ReflectionMethod($service, 'getScheduledProgressRatio');
 
-    $subtask = new Subtask();
+    $subtask = new Subtask;
     $subtask->forceFill([
         'baseline_start_date' => '2026-01-01',
         'baseline_due_date' => '2026-01-02',
@@ -131,10 +131,10 @@ test('getScheduledProgressRatio never exceeds 1.0', function () {
 });
 
 test('getScheduledProgressRatio never goes below 0.0', function () {
-    $service = new WorkspaceAnalyticsService();
+    $service = new WorkspaceAnalyticsService;
     $method = new ReflectionMethod($service, 'getScheduledProgressRatio');
 
-    $subtask = new Subtask();
+    $subtask = new Subtask;
     $subtask->forceFill([
         'baseline_start_date' => '2026-12-01',
         'baseline_due_date' => '2026-12-31',

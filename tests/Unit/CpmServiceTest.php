@@ -5,10 +5,10 @@ use App\Services\CpmService;
 // Helper: build a minimal subtask-like stdClass for CPM tests
 function makeCpmSubtask(int $id, int $timeEstimateMinutes = 60, array $deps = []): object
 {
-    $obj = new stdClass();
+    $obj = new stdClass;
     $obj->id = $id;
-    $obj->subtask_id = 'ST-' . $id;
-    $obj->name = 'Subtask ' . $id;
+    $obj->subtask_id = 'ST-'.$id;
+    $obj->name = 'Subtask '.$id;
     $obj->time_estimate = $timeEstimateMinutes;
     $obj->planned_estimate = $timeEstimateMinutes;
     $obj->pert_expected_estimate = null;
@@ -25,9 +25,9 @@ function makeCpmSubtask(int $id, int $timeEstimateMinutes = 60, array $deps = []
 
     $depCollection = collect();
     foreach ($deps as $depId) {
-        $dep = new stdClass();
+        $dep = new stdClass;
         $dep->id = $depId;
-        $dep->pivot = new stdClass();
+        $dep->pivot = new stdClass;
         $dep->pivot->dependency_type = 'blocks';
         $depCollection->push($dep);
     }
@@ -40,14 +40,14 @@ function makeCpmSubtask(int $id, int $timeEstimateMinutes = 60, array $deps = []
 // isSchedulingDependency
 
 test('isSchedulingDependency returns true for blocks type', function () {
-    $service = new CpmService();
+    $service = new CpmService;
     $method = new ReflectionMethod($service, 'isSchedulingDependency');
 
     expect($method->invoke($service, 'blocks'))->toBeTrue();
 });
 
 test('isSchedulingDependency returns false for non-blocks types', function () {
-    $service = new CpmService();
+    $service = new CpmService;
     $method = new ReflectionMethod($service, 'isSchedulingDependency');
 
     expect($method->invoke($service, 'relates_to'))->toBeFalse();
@@ -60,7 +60,7 @@ test('isSchedulingDependency returns false for non-blocks types', function () {
 test('buildDependencyGraph creates empty adjacency lists for isolated nodes', function () {
     $subtasks = collect([makeCpmSubtask(1), makeCpmSubtask(2)]);
 
-    $service = new CpmService();
+    $service = new CpmService;
     $method = new ReflectionMethod($service, 'buildDependencyGraph');
     $graph = $method->invoke($service, $subtasks);
 
@@ -73,7 +73,7 @@ test('buildDependencyGraph creates empty adjacency lists for isolated nodes', fu
 test('buildDependencyGraph maps a single dependency edge', function () {
     $subtasks = collect([makeCpmSubtask(1), makeCpmSubtask(2, 60, [1])]);
 
-    $service = new CpmService();
+    $service = new CpmService;
     $method = new ReflectionMethod($service, 'buildDependencyGraph');
     $graph = $method->invoke($service, $subtasks);
 
@@ -86,7 +86,7 @@ test('buildDependencyGraph maps a single dependency edge', function () {
 test('hasCycle returns false for acyclic linear chain', function () {
     $subtasks = collect([makeCpmSubtask(1), makeCpmSubtask(2, 60, [1]), makeCpmSubtask(3, 60, [2])]);
 
-    $service = new CpmService();
+    $service = new CpmService;
     $graphMethod = new ReflectionMethod($service, 'buildDependencyGraph');
     $graph = $graphMethod->invoke($service, $subtasks);
 
@@ -98,7 +98,7 @@ test('hasCycle returns true for direct cycle', function () {
     $graph = ['forward' => [1 => [2], 2 => [1]], 'reverse' => [1 => [2], 2 => [1]]];
     $subtasks = collect([makeCpmSubtask(1), makeCpmSubtask(2)]);
 
-    $service = new CpmService();
+    $service = new CpmService;
     $method = new ReflectionMethod($service, 'hasCycle');
     expect($method->invoke($service, $graph, $subtasks))->toBeTrue();
 });
@@ -108,7 +108,7 @@ test('hasCycle returns true for direct cycle', function () {
 test('topologicalSort returns all nodes', function () {
     $subtasks = collect([makeCpmSubtask(1), makeCpmSubtask(2), makeCpmSubtask(3)]);
 
-    $service = new CpmService();
+    $service = new CpmService;
     $graphMethod = new ReflectionMethod($service, 'buildDependencyGraph');
     $graph = $graphMethod->invoke($service, $subtasks);
 
@@ -121,7 +121,7 @@ test('topologicalSort returns all nodes', function () {
 test('topologicalSort respects dependency order', function () {
     $subtasks = collect([makeCpmSubtask(1), makeCpmSubtask(2, 60, [1]), makeCpmSubtask(3, 60, [2])]);
 
-    $service = new CpmService();
+    $service = new CpmService;
     $graphMethod = new ReflectionMethod($service, 'buildDependencyGraph');
     $graph = $graphMethod->invoke($service, $subtasks);
 
@@ -137,7 +137,7 @@ test('topologicalSort respects dependency order', function () {
 test('forwardPass sets ES=0 EF=duration for isolated node', function () {
     $subtasks = collect([makeCpmSubtask(1, 120)]); // 2h
 
-    $service = new CpmService();
+    $service = new CpmService;
     $graphMethod = new ReflectionMethod($service, 'buildDependencyGraph');
     $graph = $graphMethod->invoke($service, $subtasks);
     $sortMethod = new ReflectionMethod($service, 'topologicalSort');
@@ -153,7 +153,7 @@ test('forwardPass calculates sequential chain correctly', function () {
     // 1(2h) → 2(3h) → 3(1h)
     $subtasks = collect([makeCpmSubtask(1, 120), makeCpmSubtask(2, 180, [1]), makeCpmSubtask(3, 60, [2])]);
 
-    $service = new CpmService();
+    $service = new CpmService;
     $graphMethod = new ReflectionMethod($service, 'buildDependencyGraph');
     $graph = $graphMethod->invoke($service, $subtasks);
     $sortMethod = new ReflectionMethod($service, 'topologicalSort');
@@ -171,7 +171,7 @@ test('forwardPass takes max EF of predecessors for merge node', function () {
     // 1(2h)→3, 2(4h)→3, 3(1h)
     $subtasks = collect([makeCpmSubtask(1, 120), makeCpmSubtask(2, 240), makeCpmSubtask(3, 60, [1, 2])]);
 
-    $service = new CpmService();
+    $service = new CpmService;
     $graphMethod = new ReflectionMethod($service, 'buildDependencyGraph');
     $graph = $graphMethod->invoke($service, $subtasks);
     $sortMethod = new ReflectionMethod($service, 'topologicalSort');
@@ -189,7 +189,7 @@ test('calculateSlackAndCriticalPath identifies critical and non-critical nodes',
     // 1(2h)→3, 2(4h)→3, 3(1h) — node 1 has slack=2h
     $subtasks = collect([makeCpmSubtask(1, 120), makeCpmSubtask(2, 240), makeCpmSubtask(3, 60, [1, 2])]);
 
-    $service = new CpmService();
+    $service = new CpmService;
     $graphMethod = new ReflectionMethod($service, 'buildDependencyGraph');
     $graph = $graphMethod->invoke($service, $subtasks);
     $sortMethod = new ReflectionMethod($service, 'topologicalSort');
@@ -217,7 +217,7 @@ test('getCriticalPathSubtasks returns only critical nodes sorted by earlyStart',
         3 => ['earlyStart' => 4, 'isCritical' => true, 'name' => 'C'],
     ];
 
-    $service = new CpmService();
+    $service = new CpmService;
     $method = new ReflectionMethod($service, 'getCriticalPathSubtasks');
     $result = $method->invoke($service, $cpmData);
 

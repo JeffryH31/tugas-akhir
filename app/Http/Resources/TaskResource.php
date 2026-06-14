@@ -14,7 +14,7 @@ class TaskResource extends JsonResource
 
         if ($this->relationLoaded('subtasks')) {
             $earliestDueDate = $this->subtasks
-                ->filter(fn($subtask) => !empty($subtask->due_date))
+                ->filter(fn($subtask) => ! empty($subtask->due_date))
                 ->sortBy('due_date')
                 ->first()?->due_date;
 

@@ -1,4 +1,4 @@
-<script setup>
+﻿<script setup>
 import { computed, ref } from 'vue';
 import { router, usePage } from '@inertiajs/vue3';
 import MainLayout from '@/Layouts/MainLayout.vue';
@@ -816,14 +816,14 @@ const deleteWorkspace = () => {
 </template>
 
 <style scoped>
-/* ─── Page Layout ─── */
+/*  Page Layout  */
 .settings-page {
     padding: 24px;
     max-width: 1040px;
     margin: 0 auto;
 }
 
-/* ─── Page Header ─── */
+/*  Page Header  */
 .page-header {
     padding: 20px 24px;
     background: rgba(255, 255, 255, 0.02);
@@ -842,7 +842,7 @@ const deleteWorkspace = () => {
     flex-shrink: 0;
 }
 
-/* ─── Section shared ─── */
+/*  Section shared  */
 .settings-section {
     background: rgba(255, 255, 255, 0.02);
     border: 1px solid rgba(255, 255, 255, 0.06);
@@ -869,7 +869,7 @@ const deleteWorkspace = () => {
     border-bottom: 1px solid rgba(255, 255, 255, 0.05);
 }
 
-/* ─── Access Layers ─── */
+/*  Access Layers  */
 .access-layers-grid {
     display: grid;
     grid-template-columns: repeat(4, 1fr);
@@ -926,7 +926,7 @@ const deleteWorkspace = () => {
     z-index: 1;
 }
 
-/* ─── Member List ─── */
+/*  Member List  */
 .member-list {
     display: flex;
     flex-direction: column;
@@ -975,7 +975,7 @@ const deleteWorkspace = () => {
     padding: 48px 20px;
 }
 
-/* ─── Scope Settings ─── */
+/*  Scope Settings  */
 .scope-grid {
     display: grid;
     grid-template-columns: 1fr 1fr;
@@ -1041,7 +1041,7 @@ const deleteWorkspace = () => {
     font-size: 12px !important;
 }
 
-/* ─── Danger Zone ─── */
+/*  Danger Zone  */
 .danger-zone {
     border: 1px solid rgba(255, 107, 107, 0.25);
     border-radius: 14px;
@@ -1069,7 +1069,7 @@ const deleteWorkspace = () => {
     padding: 16px;
 }
 
-/* ─── Dialogs ─── */
+/*  Dialogs  */
 .dialog-header {
     display: flex;
     align-items: center;
@@ -1093,7 +1093,7 @@ const deleteWorkspace = () => {
     gap: 12px;
 }
 
-/* ─── Responsive ─── */
+/*  Responsive  */
 @media (max-width: 768px) {
     .access-layers-grid {
         grid-template-columns: 1fr 1fr;

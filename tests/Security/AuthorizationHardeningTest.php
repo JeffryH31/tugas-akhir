@@ -2,12 +2,13 @@
 
 use App\Models\Folder;
 use App\Models\Label;
+use App\Models\Project;
 use App\Models\Space;
 use App\Models\Task;
-use App\Models\Project;
 use App\Models\User;
 use App\Models\Workspace;
 use Tests\Traits\CreatesWorkspaceHierarchy;
+
 use function Pest\Laravel\actingAs;
 
 uses(CreatesWorkspaceHierarchy::class);

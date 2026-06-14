@@ -4,12 +4,11 @@ use App\Models\Activity;
 use App\Models\Space;
 use App\Models\Status;
 use App\Services\SpaceService;
-use Tests\Traits\CreatesWorkspaceHierarchy;
 
 uses(Tests\Traits\CreatesWorkspaceHierarchy::class);
 
 beforeEach(function () {
-    $this->service = new SpaceService();
+    $this->service = new SpaceService;
     $this->owner = $this->createUser();
     $this->hierarchy = $this->createFullHierarchy($this->owner);
 });

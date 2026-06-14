@@ -1,13 +1,14 @@
-﻿<?php
+<?php
 
 use App\Models\Comment;
+use App\Models\Project;
 use App\Models\Space;
 use App\Models\Subtask;
 use App\Models\Task;
-use App\Models\Project;
 use App\Models\TimeEntry;
 use App\Models\Workspace;
 use Tests\Traits\CreatesWorkspaceHierarchy;
+
 use function Pest\Laravel\actingAs;
 
 uses(CreatesWorkspaceHierarchy::class);
