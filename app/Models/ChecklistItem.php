@@ -59,7 +59,6 @@ class ChecklistItem extends Model
     }
 
     //  Relations
-
     public function subtask(): BelongsTo
     {
         return $this->belongsTo(Subtask::class);
@@ -81,7 +80,6 @@ class ChecklistItem extends Model
     }
 
     //  Helpers
-
     public function canAddChildren(): bool
     {
         return $this->depth < self::MAX_DEPTH;

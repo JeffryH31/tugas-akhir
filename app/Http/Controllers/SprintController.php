@@ -29,23 +29,23 @@ class SprintController extends Controller
     {
         abort_unless($this->accessService->canViewSpace($request->user(), $space), 403);
 
-        $products = $space->projects()
+        $projects = $space->projects()
             ->select('id', 'name', 'space_id')
             ->orderBy('position')
             ->get();
 
         $selectedList = null;
-        if ($products->isNotEmpty()) {
+        if ($projects->isNotEmpty()) {
             $requestedListId = (int) $request->integer('list_id');
             $selectedList = $requestedListId
-                ? $products->firstWhere('id', $requestedListId)
-                : $products->first();
+                ? $projects->firstWhere('id', $requestedListId)
+                : $projects->first();
         }
 
         if (! $selectedList) {
             return redirect()
                 ->route('spaces.show', [$workspace, $space])
-                ->with('error', 'No product available for sprint view.');
+                ->with('error', 'No project available for sprint view.');
         }
 
         return redirect()->route('projects.show', [
@@ -76,7 +76,7 @@ class SprintController extends Controller
             'subtasks.task',
         ]);
 
-        // Get backlog subtasks (subtasks without sprint in this product/list)
+        // Get backlog subtasks (subtasks without sprint in this project)
         $backlogSubtasks = $list ? $this->sprintService->getBacklogSubtasks($list) : collect();
 
         $statistics = $this->sprintService->getSprintStatistics($sprint);

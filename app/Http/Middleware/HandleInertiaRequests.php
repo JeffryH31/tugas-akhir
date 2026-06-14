@@ -168,6 +168,7 @@ class HandleInertiaRequests extends Middleware
             ...parent::share($request),
             'activeWorkspace' => $activeWorkspace,
             'workspaces' => $workspaces,
+            'isSuperAdmin' => (bool) $request->user()?->is_super_admin,
             'flash' => [
                 'success' => fn () => $request->session()->get('success'),
                 'error' => fn () => $request->session()->get('error'),

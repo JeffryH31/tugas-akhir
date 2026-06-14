@@ -90,7 +90,7 @@ class SprintsSeeder extends Seeder
             //  B2C sprints
             [
                 'space' => 'B2C',
-                'list' => 'Product Catalog',
+                'list' => 'Project Catalog',
                 'name' => 'Sprint 1 - Catalog Core',
                 'goal' => 'API produk, halaman listing, dan filter',
                 'start_date' => now()->subWeeks(5)->startOfWeek()->toDateString(),

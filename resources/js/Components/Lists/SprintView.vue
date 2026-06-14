@@ -275,7 +275,7 @@ const saveSprint = () => {
         return;
     }
     if (!sprintForm.value.list_id) {
-        showSnackbar('No active product selected.', 'error');
+        showSnackbar('No active project selected.', 'error');
         return;
     }
 
@@ -480,7 +480,7 @@ const openSprint = (sprint) => emit('sprint-open', sprint);
                 <v-card-title>{{ editingSprintId ? 'Edit Sprint' : 'Create Sprint' }}</v-card-title>
                 <v-card-text>
                     <v-alert type="info" variant="tonal" density="compact" class="mb-4">
-                        Product: {{ list?.name || 'Unknown' }}
+                        Project: {{ list?.name || 'Unknown' }}
                     </v-alert>
 
                     <v-text-field v-model="sprintForm.name" label="Sprint Name" variant="outlined" density="compact"

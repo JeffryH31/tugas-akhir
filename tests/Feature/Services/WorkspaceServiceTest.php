@@ -160,7 +160,6 @@ test('getStatistics returns workspace metrics', function () {
 // ============================================================
 // Merged from Unit/Services/WorkspaceServiceTest.php
 // ============================================================
-
 test('create workspace with name', function () {
     $workspace = $this->service->create(['name' => 'My Workspace'], $this->owner);
 

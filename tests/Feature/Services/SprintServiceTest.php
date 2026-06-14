@@ -250,7 +250,6 @@ test('getBurndownData returns empty for sprint with no subtasks', function () {
 // ============================================================
 // Merged from Unit/Services/SprintServiceTest.php
 // ============================================================
-
 test('createSprint creates sprint for list', function () {
     $sprint = $this->service->createSprint($this->hierarchy['list'], [
         'name' => 'Sprint 1',
@@ -322,10 +321,10 @@ test('addSubtaskToSprint links subtask to sprint', function () {
     expect($subtask->fresh()->sprint_id)->toBe($sprint->id);
 });
 
-test('addSubtaskToSprint throws for subtask not in product', function () {
+test('addSubtaskToSprint throws for subtask not in project', function () {
     $sprint = $this->createSprint($this->hierarchy['list']);
 
-    // Create subtask in different product
+    // Create subtask in different project
     $otherHierarchy = $this->createFullHierarchy($this->owner, 'B');
     $otherSubtask = $this->createSubtask($otherHierarchy['task']);
 

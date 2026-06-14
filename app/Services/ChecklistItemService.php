@@ -27,6 +27,7 @@ class ChecklistItemService
             }
         }
 
+        // progress recalculation triggered by ChecklistItem::saved boot hook
         return ChecklistItem::create([
             'subtask_id' => $subtask->id,
             'parent_id' => $parentId,
@@ -34,7 +35,6 @@ class ChecklistItemService
             'is_checked' => $data['is_checked'] ?? false,
             'created_by' => $user->id,
         ]);
-        // progress recalculation triggered by ChecklistItem::saved boot hook
     }
 
     /**
@@ -82,7 +82,6 @@ class ChecklistItemService
     /**
      * Reorder checklist items within the same parent.
      *
-     * @param  int[]  $itemIds  Ordered list of checklist_item ids
      */
     public function reorder(Subtask $subtask, array $itemIds, ?int $parentId = null): void
     {
@@ -97,7 +96,6 @@ class ChecklistItemService
     }
 
     //  Private helpers
-
     private function cascadeCheckedState(ChecklistItem $item, bool $state): void
     {
         foreach ($item->children as $child) {

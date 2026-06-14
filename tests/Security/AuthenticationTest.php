@@ -7,7 +7,6 @@ use Tests\Traits\CreatesWorkspaceHierarchy;
 uses(CreatesWorkspaceHierarchy::class);
 
 // Dashboard & Core Endpoints
-
 test('unauthenticated user is redirected to login when accessing dashboard', function () {
     $this->get(route('dashboard'))
         ->assertRedirect(route('login'));
@@ -24,7 +23,6 @@ test('unauthenticated user cannot access search endpoint', function () {
 });
 
 // Workspace Endpoints
-
 test('unauthenticated user cannot list workspaces', function () {
     $this->get(route('workspaces.index'))
         ->assertRedirect(route('login'));
@@ -52,7 +50,6 @@ test('unauthenticated user cannot delete workspace', function () {
 });
 
 // Space Endpoints
-
 test('unauthenticated user cannot view space', function () {
     $owner = $this->createUser();
     $hierarchy = $this->createFullHierarchy($owner);
@@ -70,7 +67,6 @@ test('unauthenticated user cannot create space', function () {
 });
 
 // Task Endpoints
-
 test('unauthenticated user cannot create task', function () {
     $owner = $this->createUser();
     $hierarchy = $this->createFullHierarchy($owner);
@@ -109,14 +105,12 @@ test('unauthenticated user cannot delete task', function () {
 });
 
 // Notification Endpoints
-
 test('unauthenticated user cannot mark notifications as read', function () {
     $this->post(route('notifications.read'))
         ->assertRedirect(route('login'));
 });
 
 // Time Tracking Endpoints
-
 test('unauthenticated user cannot view time tracking', function () {
     $this->get(route('time-tracking.index'))
         ->assertRedirect(route('login'));

@@ -42,6 +42,8 @@ class WorkspaceController extends Controller
      */
     public function store(StoreWorkspaceRequest $request): RedirectResponse
     {
+        abort_unless($this->accessService->canCreateWorkspace($request->user()), 403);
+
         $workspace = $this->workspaceService->create(
             $request->validated(),
             $request->user()
@@ -72,11 +74,9 @@ class WorkspaceController extends Controller
 
         $members = $workspace->members;
 
-        // Limit available users to prevent exposing all system users
-        $availableUsers = User::whereNotIn('id', $members->pluck('id'))
-            ->orderBy('name')
-            ->limit(100)
-            ->get();
+        // Return ALL users so the autocomplete can show everyone (members included —
+        // selecting an existing member will just update their role, not duplicate them).
+        $availableUsers = User::orderBy('name')->limit(200)->get();
 
         $projects = $workspace->spaces
             ->flatMap(function ($space) {
@@ -192,6 +192,7 @@ class WorkspaceController extends Controller
 
     /**
      * Add member to workspace.
+     * Accepts either user_id (existing user) or email (find-or-create flow).
      */
     public function addMember(AddMemberRequest $request, Workspace $workspace): RedirectResponse
     {
@@ -200,7 +201,28 @@ class WorkspaceController extends Controller
         abort_unless($this->accessService->canManageWorkspace($request->user(), $workspace), 403);
 
         try {
-            $user = User::findOrFail($validated['user_id']);
+            // Resolve user: by ID if provided, otherwise by email
+            if (! empty($validated['user_id'])) {
+                $user = User::findOrFail($validated['user_id']);
+            } else {
+                $user = User::where('email', $validated['email'])->first();
+                if (! $user) {
+                    return redirect()->back()->withErrors([
+                        'email' => 'No account found with that email. Use "Create User" to create a new account.',
+                    ]);
+                }
+            }
+
+            // Already a member? Just update role if one is supplied.
+            $existingRole = $workspace->members()->where('user_id', $user->id)->value('role');
+            if ($existingRole !== null) {
+                $newRole = $validated['role'] ?? $existingRole;
+                if ($newRole !== $existingRole) {
+                    $this->workspaceService->updateMemberRole($workspace, $user, $newRole, $request->user());
+                    return redirect()->back()->with('success', "{$user->name}'s role updated to {$newRole}.");
+                }
+                return redirect()->back()->with('info', "{$user->name} is already a member of this workspace.");
+            }
 
             $this->workspaceService->addMember(
                 $workspace,

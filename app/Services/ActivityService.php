@@ -38,7 +38,6 @@ class ActivityService
     // ==========================================
     // Task Activity Logs
     // ==========================================
-
     /**
      * Log task created activity.
      */
@@ -136,7 +135,6 @@ class ActivityService
     // ==========================================
     // Timer Activity Logs
     // ==========================================
-
     /**
      * Log timer started activity.
      */
@@ -174,7 +172,6 @@ class ActivityService
     // ==========================================
     // Space Activity Logs
     // ==========================================
-
     /**
      * Log space created activity.
      */
@@ -200,7 +197,6 @@ class ActivityService
     // ==========================================
     // List Activity Logs
     // ==========================================
-
     /**
      * Log list created activity.
      */
@@ -227,7 +223,6 @@ class ActivityService
     // ==========================================
     // Workspace Activity Logs
     // ==========================================
-
     /**
      * Log member added to workspace activity.
      */
@@ -243,14 +238,13 @@ class ActivityService
     // ==========================================
     // Retrieval Methods
     // ==========================================
-
     /**
      * Get activities for a specific space.
      */
     public function getActivitiesForSpace(Space $space, int $perPage = 20): LengthAwarePaginator
     {
-        $listIds = $space->lists()->pluck('id')->toArray();
-        $taskIds = Task::whereIn('list_id', $listIds)->pluck('id')->toArray();
+        $listIds = $space->projects()->pluck('id')->toArray();
+        $taskIds = Task::whereIn('project_id', $listIds)->pluck('id')->toArray();
 
         return Activity::with('user')
             ->where(function ($query) use ($space, $listIds, $taskIds) {
@@ -353,7 +347,6 @@ class ActivityService
     // ==========================================
     // Helper Methods
     // ==========================================
-
     /**
      * Format duration in minutes to human readable string.
      */

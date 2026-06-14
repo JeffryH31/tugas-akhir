@@ -13,7 +13,6 @@ use function Pest\Laravel\post;
 uses(CreatesWorkspaceHierarchy::class);
 
 // Shared setup
-
 beforeEach(function () {
     $this->owner = $this->createUser();
     $this->h = $this->createFullHierarchy($this->owner);
@@ -24,7 +23,6 @@ beforeEach(function () {
 });
 
 // store
-
 test('owner can create a task', function () {
     actingAs($this->owner)
         ->from(route('projects.show', [$this->h['workspace'], $this->h['space'], $this->h['list']]))
@@ -49,7 +47,7 @@ test('unauthenticated user is redirected when creating a task', function () {
 test('non-member gets 403 when creating a task', function () {
     $stranger = $this->createUser();
 
-    // Give workspace membership but no product role — list has an owner, so open-by-default does not apply
+    // Give workspace membership but no project role — list has an owner, so open-by-default does not apply
     $this->h['workspace']->addMember($stranger, 'member');
     $this->h['list']->addMember($this->owner, 'project_owner'); // lock the list
 
@@ -92,7 +90,6 @@ test('creating a task with equal start and due date passes validation', function
 });
 
 // update
-
 test('owner can update a task', function () {
     actingAs($this->owner)
         ->from(route('projects.show', [$this->h['workspace'], $this->h['space'], $this->h['list']]))
@@ -127,7 +124,6 @@ test('updating a task with a task from another list returns 404', function () {
 });
 
 // destroy
-
 test('owner can delete a task', function () {
     actingAs($this->owner)
         ->delete(route('tasks.destroy', [$this->h['workspace'], $this->h['space'], $this->h['list'], $this->h['task']]))
@@ -147,7 +143,6 @@ test('non-member gets 403 when deleting a task', function () {
 });
 
 // changeStatus
-
 test('owner can change task status', function () {
     actingAs($this->owner)
         ->from(route('projects.show', [$this->h['workspace'], $this->h['space'], $this->h['list']]))
@@ -172,7 +167,6 @@ test('changing task status with invalid status_id returns validation error', fun
 });
 
 // changePriority
-
 test('owner can change task priority', function () {
     actingAs($this->owner)
         ->from(route('projects.show', [$this->h['workspace'], $this->h['space'], $this->h['list']]))
@@ -197,7 +191,6 @@ test('invalid priority level returns validation error', function () {
 });
 
 // addLabel / removeLabel
-
 test('owner can add a label to a task', function () {
     $label = $this->createLabel($this->h['workspace']);
 
@@ -244,7 +237,6 @@ test('owner can remove a label from a task', function () {
 });
 
 // duplicate
-
 test('owner can duplicate a task', function () {
     actingAs($this->owner)
         ->from(route('projects.show', [$this->h['workspace'], $this->h['space'], $this->h['list']]))

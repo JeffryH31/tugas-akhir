@@ -22,6 +22,7 @@ return new class extends Migration
             $table->text('description')->nullable();
             $table->date('start_date')->nullable();
             $table->date('due_date')->nullable();
+            $table->timestamp('completed_at')->nullable();
             $table->unsignedInteger('time_estimate')->nullable()->comment('Estimated duration in minutes');
 
             $table->integer('position')->default(0);
@@ -29,6 +30,7 @@ return new class extends Migration
             $table->boolean('is_archived')->default(false);
 
             $table->foreignId('created_by')->nullable()->constrained('users')->nullOnDelete();
+            $table->foreignId('completed_by')->nullable()->constrained('users')->nullOnDelete();
 
             $table->timestamps();
             $table->softDeletes();
@@ -38,6 +40,7 @@ return new class extends Migration
             $table->index('is_archived');
             $table->index('start_date');
             $table->index('due_date');
+            $table->index('completed_at');
         });
 
         Schema::create('task_assignees', function (Blueprint $table) {

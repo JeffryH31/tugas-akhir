@@ -89,11 +89,11 @@ const getSlackStyle = (subtask) => {
 
 // Get color for subtask bar
 const getBarColor = (subtask) => {
-    if (subtask.isCritical) {
-        return 'bg-red-500'; // Critical path
-    }
     if (subtask.completedAt) {
-        return 'bg-green-500'; // Completed
+        return 'bg-green-500'; // Completed takes priority over critical
+    }
+    if (subtask.isCritical) {
+        return 'bg-red-500'; // Critical path (not yet completed)
     }
     return 'bg-blue-500'; // Normal
 };
@@ -376,9 +376,9 @@ const scrollContainer = ref(null);
                     <foreignObject x="10" :y="headerHeight + (index * rowHeight) + 8" :width="chartPadding - 20"
                         :height="rowHeight - 16">
                         <div class="flex items-center gap-2 h-full">
-                            <v-icon v-if="subtask.isCritical" size="16" color="error">mdi-alert-circle</v-icon>
-                            <v-icon v-else-if="subtask.completedAt" size="16" color="success">mdi-check-circle</v-icon>
-                            <span class="text-sm truncate" :class="{ 'text-red-400 font-medium': subtask.isCritical }">
+                            <v-icon v-if="subtask.completedAt" size="16" color="success">mdi-check-circle</v-icon>
+                            <v-icon v-else-if="subtask.isCritical" size="16" color="error">mdi-alert-circle</v-icon>
+                            <span class="text-sm truncate" :class="{ 'text-red-400 font-medium': subtask.isCritical && !subtask.completedAt }">
                                 {{ subtask.name }}
                             </span>
                         </div>

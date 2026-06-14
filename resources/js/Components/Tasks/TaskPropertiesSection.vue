@@ -6,7 +6,7 @@ import { useConfirmDialog } from "@/composables/useConfirmDialog";
 import { useSnackbar } from "@/composables/useSnackbar";
 import ColorPicker from "@/Components/ColorPicker.vue";
 import { formatSeconds as formatDuration } from "@/utils/duration";
-import { formatDate as formatDateUtil } from "@/utils/date";
+import { formatDate as formatDateUtil, toLocalDateInput } from "@/utils/date";
 import { normalizeHexColor } from "@/utils/color";
 import {
   getFallbackCompletionTarget,
@@ -82,6 +82,27 @@ const getSpentPercentage = (spentMinutes, estimateMinutes) => {
   if (!estimateMinutes) return null;
   return Math.round(((spentMinutes || 0) / estimateMinutes) * 100);
 };
+
+// PERT breakdown for the subtask details row.
+const formatHoursValue = (minutes) => {
+  if (minutes == null) return "—";
+  const h = minutes / 60;
+  return (h % 1 === 0 ? h : h.toFixed(1)) + "h";
+};
+const pertDisplay = computed(() => {
+  const t = props.localTask;
+  if (!t?.pert_expected_estimate) return null;
+  // Standard deviation (√variance) is in the same unit as the estimates and
+  // is far more intuitive than the raw variance (minutes²).
+  const sd = t.pert_variance != null ? Math.sqrt(t.pert_variance) / 60 : null;
+  return {
+    optimistic: formatHoursValue(t.optimistic_estimate),
+    mostLikely: formatHoursValue(t.most_likely_estimate),
+    pessimistic: formatHoursValue(t.pessimistic_estimate),
+    expected: formatHoursValue(t.pert_expected_estimate),
+    stdDev: sd != null ? (sd % 1 === 0 ? sd : sd.toFixed(1)) + "h" : null,
+  };
+});
 
 // Priority
 const currentPriority = computed(() => {
@@ -214,14 +235,10 @@ const tempDueDate = ref(null);
 
 watch(showStartDatePicker, (isOpen) => {
   if (isOpen)
-    tempStartDate.value = props.task.start_date
-      ? String(props.task.start_date).substring(0, 10)
-      : null;
+    tempStartDate.value = toLocalDateInput(props.task.start_date);
 });
 const updateStartDate = () => {
-  const dueDay = props.task.due_date
-    ? String(props.task.due_date).substring(0, 10)
-    : null;
+  const dueDay = toLocalDateInput(props.task.due_date);
   if (tempStartDate.value && dueDay && tempStartDate.value > dueDay) {
     showSnackbar("Start date cannot be after due date.", "error");
     return;
@@ -246,14 +263,10 @@ const updateStartDate = () => {
 };
 watch(showDueDatePicker, (isOpen) => {
   if (isOpen)
-    tempDueDate.value = props.task.due_date
-      ? String(props.task.due_date).substring(0, 10)
-      : null;
+    tempDueDate.value = toLocalDateInput(props.task.due_date);
 });
 const updateDueDate = () => {
-  const startDay = props.task.start_date
-    ? String(props.task.start_date).substring(0, 10)
-    : null;
+  const startDay = toLocalDateInput(props.task.start_date);
   if (tempDueDate.value && startDay && tempDueDate.value < startDay) {
     showSnackbar("Due date cannot be before start date.", "error");
     return;
@@ -399,11 +412,14 @@ const setBaselineFromCurrent = () => {
     );
     return;
   }
+  // props.task.start_date is a UTC ISO string. Convert to the browser-local
+  // YYYY-MM-DD so the baseline matches the displayed/actual dates (mirrors
+  // exactly what the date picker sends).
   router.patch(
     getUpdateRoute(),
     {
-      baseline_start_date: props.task.start_date || null,
-      baseline_due_date: props.task.due_date || null,
+      baseline_start_date: toLocalDateInput(props.task.start_date),
+      baseline_due_date: toLocalDateInput(props.task.due_date),
     },
     {
       preserveScroll: true,
@@ -1154,7 +1170,11 @@ const removeSuccessor = (suc) =>
             <template v-slot:activator="{ props: menuProps }">
               <v-btn v-bind="menuProps" variant="text" size="small" class="text-none"
                 :color="localTask.pert_expected_estimate ? 'primary' : 'grey'">
-                {{ formatTimeEstimate(localTask.pert_expected_estimate) }}
+                <template v-if="pertDisplay">
+                  {{ pertDisplay.expected }}
+                  <span v-if="pertDisplay.stdDev" class="pert-sd">± {{ pertDisplay.stdDev }}</span>
+                </template>
+                <template v-else>Not set</template>
               </v-btn>
             </template>
             <v-card color="surface" min-width="320">
@@ -1165,6 +1185,10 @@ const removeSuccessor = (suc) =>
                   density="compact" hide-details step="0.5" min="0" />
                 <v-text-field v-model="tempPessimistic" type="number" label="Pessimistic (hours)" variant="outlined"
                   density="compact" hide-details step="0.5" min="0" />
+                <p v-if="pertDisplay" class="text-caption text-medium-emphasis mb-0">
+                  Expected = (O + 4M + P) / 6 = <strong>{{ pertDisplay.expected }}</strong>
+                  <span v-if="pertDisplay.stdDev"> &middot; uncertainty ± {{ pertDisplay.stdDev }}</span>
+                </p>
               </v-card-text>
               <v-card-actions>
                 <v-spacer />
@@ -1173,6 +1197,9 @@ const removeSuccessor = (suc) =>
               </v-card-actions>
             </v-card>
           </v-menu>
+          <div v-if="pertDisplay" class="pert-breakdown">
+            O {{ pertDisplay.optimistic }} &middot; M {{ pertDisplay.mostLikely }} &middot; P {{ pertDisplay.pessimistic }}
+          </div>
         </div>
       </div>
 
@@ -1465,6 +1492,21 @@ const removeSuccessor = (suc) =>
 .prop-value {
   flex: 1;
   min-width: 0;
+}
+
+.pert-sd {
+  margin-left: 4px;
+  font-size: 11px;
+  font-weight: 500;
+  opacity: 0.7;
+}
+
+.pert-breakdown {
+  font-size: 11px;
+  color: rgba(255, 255, 255, 0.45);
+  margin-top: 2px;
+  padding-left: 12px;
+  white-space: nowrap;
 }
 
 .automation-preview-dot {

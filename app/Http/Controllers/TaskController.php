@@ -2,8 +2,12 @@
 
 namespace App\Http\Controllers;
 
+use App\Http\Requests\ChangeTaskPriorityRequest;
+use App\Http\Requests\ChangeTaskStatusRequest;
+use App\Http\Requests\MoveTaskRequest;
 use App\Http\Requests\ReorderRequest;
 use App\Http\Requests\StoreTaskRequest;
+use App\Http\Requests\TaskLabelRequest;
 use App\Http\Requests\UpdateTaskRequest;
 use App\Http\Resources\TaskResource;
 use App\Models\Label;
@@ -16,7 +20,6 @@ use App\Services\AccessService;
 use App\Services\TaskService;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
-use Illuminate\Validation\Rule;
 use Inertia\Inertia;
 use Inertia\Response;
 
@@ -94,21 +97,13 @@ class TaskController extends Controller
     /**
      * Change task status.
      */
-    public function changeStatus(Request $request, Workspace $workspace, Space $space, Project $project, Task $task): RedirectResponse
+    public function changeStatus(ChangeTaskStatusRequest $request, Workspace $workspace, Space $space, Project $project, Task $task): RedirectResponse
     {
         abort_unless((int) $space->workspace_id === (int) $workspace->id, 404);
         abort_unless((int) $project->space_id === (int) $space->id, 404);
         abort_unless((int) $task->project_id === (int) $project->id, 404);
         abort_unless($this->accessService->canOperateTasks($request->user(), $project), 403);
-        $validated = $request->validate([
-            'status_id' => [
-                'required',
-                Rule::exists('statuses', 'id')->where(function ($query) use ($space) {
-                    $query->where('space_id', $space->id)
-                        ->whereIn('applies_to', ['tasks', 'both']);
-                }),
-            ],
-        ]);
+        $validated = $request->validated();
 
         try {
             $status = Status::where('space_id', $space->id)->findOrFail($validated['status_id']);
@@ -126,15 +121,13 @@ class TaskController extends Controller
     /**
      * Change task priority.
      */
-    public function changePriority(Request $request, Workspace $workspace, Space $space, Project $project, Task $task): RedirectResponse
+    public function changePriority(ChangeTaskPriorityRequest $request, Workspace $workspace, Space $space, Project $project, Task $task): RedirectResponse
     {
         abort_unless((int) $space->workspace_id === (int) $workspace->id, 404);
         abort_unless((int) $project->space_id === (int) $space->id, 404);
         abort_unless((int) $task->project_id === (int) $project->id, 404);
         abort_unless($this->accessService->canOperateTasks($request->user(), $project), 403);
-        $validated = $request->validate([
-            'priority_level' => 'nullable|integer|in:1,2,3,4',
-        ]);
+        $validated = $request->validated();
 
         try {
             $updatedTask = $this->taskService->changePriority($task, $validated['priority_level'] ?? null, $request->user());
@@ -185,19 +178,13 @@ class TaskController extends Controller
     /**
      * Move task to different list.
      */
-    public function move(Request $request, Workspace $workspace, Space $space, Project $project, Task $task): RedirectResponse
+    public function move(MoveTaskRequest $request, Workspace $workspace, Space $space, Project $project, Task $task): RedirectResponse
     {
         abort_unless((int) $space->workspace_id === (int) $workspace->id, 404);
         abort_unless((int) $project->space_id === (int) $space->id, 404);
         abort_unless((int) $task->project_id === (int) $project->id, 404);
         abort_unless($this->accessService->canManageTaskStructure($request->user(), $project), 403);
-        $validated = $request->validate([
-            'list_id' => [
-                'required',
-                Rule::exists('projects', 'id')->where(fn ($query) => $query->where('space_id', $space->id)),
-            ],
-            'position' => 'nullable|integer|min:0',
-        ]);
+        $validated = $request->validated();
 
         try {
             $newList = Project::where('space_id', $space->id)->findOrFail($validated['list_id']);
@@ -233,18 +220,13 @@ class TaskController extends Controller
     /**
      * Add label to task.
      */
-    public function addLabel(Request $request, Workspace $workspace, Space $space, Project $project, Task $task): RedirectResponse
+    public function addLabel(TaskLabelRequest $request, Workspace $workspace, Space $space, Project $project, Task $task): RedirectResponse
     {
         abort_unless((int) $space->workspace_id === (int) $workspace->id, 404);
         abort_unless((int) $project->space_id === (int) $space->id, 404);
         abort_unless((int) $task->project_id === (int) $project->id, 404);
         abort_unless($this->accessService->canManageLabels($request->user(), $project), 403);
-        $validated = $request->validate([
-            'label_id' => [
-                'required',
-                Rule::exists('labels', 'id')->where(fn ($query) => $query->where('workspace_id', $workspace->id)),
-            ],
-        ]);
+        $validated = $request->validated();
 
         try {
             $label = Label::where('workspace_id', $workspace->id)->findOrFail($validated['label_id']);
@@ -262,18 +244,13 @@ class TaskController extends Controller
     /**
      * Remove label from task.
      */
-    public function removeLabel(Request $request, Workspace $workspace, Space $space, Project $project, Task $task): RedirectResponse
+    public function removeLabel(TaskLabelRequest $request, Workspace $workspace, Space $space, Project $project, Task $task): RedirectResponse
     {
         abort_unless((int) $space->workspace_id === (int) $workspace->id, 404);
         abort_unless((int) $project->space_id === (int) $space->id, 404);
         abort_unless((int) $task->project_id === (int) $project->id, 404);
         abort_unless($this->accessService->canManageLabels($request->user(), $project), 403);
-        $validated = $request->validate([
-            'label_id' => [
-                'required',
-                Rule::exists('labels', 'id')->where(fn ($query) => $query->where('workspace_id', $workspace->id)),
-            ],
-        ]);
+        $validated = $request->validated();
 
         try {
             $label = Label::where('workspace_id', $workspace->id)->findOrFail($validated['label_id']);

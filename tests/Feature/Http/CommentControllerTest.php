@@ -8,7 +8,6 @@ use function Pest\Laravel\actingAs;
 uses(CreatesWorkspaceHierarchy::class);
 
 // Shared setup
-
 beforeEach(function () {
     $this->owner = $this->createUser();
     $this->h = $this->createFullHierarchy($this->owner);
@@ -26,7 +25,6 @@ function commentRoute(array $h, string $name, ?Comment $comment = null): string
 }
 
 // store
-
 test('owner can create a comment on a task', function () {
     actingAs($this->owner)
         ->from(commentRoute($this->h, 'projects.show'))
@@ -49,9 +47,9 @@ test('unauthenticated user cannot create a comment', function () {
         ->assertRedirectToRoute('login');
 });
 
-test('non-member (no product view access) gets 403 when commenting', function () {
+test('non-member (no project view access) gets 403 when commenting', function () {
     $stranger = $this->createUser();
-    // workspace member but no space/product membership; list has members → product is locked
+    // workspace member but no space/project membership; list has members → project is locked
     $this->h['workspace']->addMember($stranger, 'member');
     $this->h['list']->addMember($this->owner, 'project_owner');
 
@@ -78,7 +76,7 @@ test('comment content cannot exceed 10000 characters', function () {
         ->assertSessionHasErrors(['content']);
 });
 
-test('developer (product member) can comment', function () {
+test('developer (project member) can comment', function () {
     $dev = $this->createUser();
     $this->h['workspace']->addMember($dev, 'member');
     $this->h['list']->addMember($dev, 'development_team');
@@ -98,7 +96,6 @@ test('developer (product member) can comment', function () {
 });
 
 // update
-
 test('comment author can update their own comment', function () {
     $comment = Comment::create([
         'task_id' => $this->h['task']->id,
@@ -140,7 +137,6 @@ test('another user cannot update someone else comment', function () {
 });
 
 // destroy
-
 test('comment author can delete their own comment', function () {
     $comment = Comment::create([
         'task_id' => $this->h['task']->id,
@@ -192,7 +188,6 @@ test('workspace admin (owner) can delete any comment', function () {
 });
 
 // resolve / unresolve
-
 test('comment author can resolve their own comment', function () {
     $comment = Comment::create([
         'task_id' => $this->h['task']->id,
@@ -246,7 +241,7 @@ test('developer cannot resolve another user comment', function () {
         ->assertForbidden();
 });
 
-test('project manager can resolve any comment in their product', function () {
+test('project manager can resolve any comment in their project', function () {
     $pm = $this->createUser();
     $this->h['workspace']->addMember($pm, 'member');
     $this->h['list']->addMember($pm, 'project_manager');

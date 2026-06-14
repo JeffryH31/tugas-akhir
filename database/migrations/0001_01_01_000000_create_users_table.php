@@ -18,6 +18,7 @@ return new class extends Migration
             $table->timestamp('email_verified_at')->nullable();
             $table->string('password');
             $table->decimal('hourly_rate', 12, 2)->default(44000.00);
+            $table->boolean('is_super_admin')->default(false);
             $table->timestamp('last_notifications_read_at')->nullable();
             $table->rememberToken();
             $table->string('profile_photo_path', 2048)->nullable();

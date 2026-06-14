@@ -143,7 +143,7 @@ class Project extends Model
     }
 
     /**
-     * Scope: only products the user can access (member of, or workspace admin).
+     * Scope: only projects the user can access (member of, or workspace admin).
      */
     public function scopeAccessibleBy($query, User $user)
     {
@@ -155,7 +155,7 @@ class Project extends Model
         return $query->where(function ($q) use ($user, $wsAdminIds) {
             // Workspace admins see everything in their workspaces
             $q->whereHas('space', fn ($sq) => $sq->whereIn('workspace_id', $wsAdminIds))
-              // Or user is an explicit product member
+              // Or user is an explicit project member
                 ->orWhereHas('members', fn ($mq) => $mq->where('user_id', $user->id));
         });
     }

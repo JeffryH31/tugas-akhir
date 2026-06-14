@@ -2,6 +2,7 @@
 import { computed, ref } from 'vue';
 import { router, usePage } from '@inertiajs/vue3';
 import MainLayout from '@/Layouts/MainLayout.vue';
+import DeleteConfirmDialog from '@/Components/DeleteConfirmDialog.vue';
 import { useConfirmDialog } from '@/composables/useConfirmDialog';
 import { useSnackbar } from '@/composables/useSnackbar';
 
@@ -23,13 +24,22 @@ const isAdmin = computed(() => {
     const currentMember = props.members?.find((member) => member.id === currentUserId);
     const role = currentMember?.pivot?.role || currentMember?.role;
 
-    return role === 'admin';
+    return role === 'admin' || role === 'owner';
+});
+
+const isOwner = computed(() => {
+    const currentUserId = page.props?.auth?.user?.id;
+    const currentMember = props.members?.find((member) => member.id === currentUserId);
+    const role = currentMember?.pivot?.role || currentMember?.role;
+
+    return role === 'owner';
 });
 
 // Add member dialog
 const showAddMember = ref(false);
 const selectedUser = ref(null);
 const selectedRole = ref('member');
+const inviteEmail = ref('');
 const showCreateUser = ref(false);
 const showEditUser = ref(false);
 const editingUser = ref(null);
@@ -51,19 +61,22 @@ const editUserForm = ref({
 });
 
 const addMember = () => {
-    if (!selectedUser.value) return;
+    // Support both: pick from dropdown (user_id) OR type an email directly
+    const payload = selectedUser.value
+        ? { user_id: selectedUser.value, role: selectedRole.value }
+        : { email: inviteEmail.value.trim(), role: selectedRole.value };
+
+    if (!payload.user_id && !payload.email) return;
 
     router.post(
         route('workspaces.members.add', props.workspace.id),
-        {
-            user_id: selectedUser.value,
-            role: selectedRole.value,
-        },
+        payload,
         {
             preserveScroll: true,
             onSuccess: () => {
                 showAddMember.value = false;
                 selectedUser.value = null;
+                inviteEmail.value = '';
                 selectedRole.value = 'member';
             },
         }
@@ -419,29 +432,26 @@ const removeProjectMember = async (project, member) => {
 
 // Delete workspace
 const showDeleteWorkspace = ref(false);
-const confirmationName = ref('');
+const isDeletingWorkspace = ref(false);
 
 const accessLayers = [
     { title: 'General Website', desc: 'Global account access — login, profile, and security settings.', icon: 'mdi-web', color: 'primary', hex: '#7B68EE' },
     { title: 'Workspace Access', desc: 'Admin / Member roles for workspace-wide capabilities.', icon: 'mdi-view-dashboard-outline', color: 'info', hex: '#49CCF9' },
     { title: 'Space Access', desc: 'Space-level membership control — manage who can access each space.', icon: 'mdi-layers-outline', color: 'warning', hex: '#FFB84D' },
-    { title: 'Product Access', desc: 'Product-level roles: owner, manager, developer, guest.', icon: 'mdi-view-list-outline', color: 'success', hex: '#6BC950' },
+    { title: 'Project Access', desc: 'Project-level roles: owner, manager, developer, guest.', icon: 'mdi-view-list-outline', color: 'success', hex: '#6BC950' },
 ];
 
 const deleteWorkspace = () => {
-    if (confirmationName.value !== props.workspace.name) {
-        return;
-    }
-
+    isDeletingWorkspace.value = true;
     router.delete(
         route('workspaces.destroy', props.workspace.id),
         {
-            onSuccess: () => {
-                confirmationName.value = '';
-            },
             onError: () => {
                 showSnackbar('Failed to delete workspace', 'error');
-            }
+            },
+            onFinish: () => {
+                isDeletingWorkspace.value = false;
+            },
         }
     );
 };
@@ -601,7 +611,7 @@ const deleteWorkspace = () => {
                             </div>
                             <div>
                                 <div class="text-body-2 font-weight-bold">Products</div>
-                                <div class="text-caption text-medium-emphasis">Manage product member roles</div>
+                                <div class="text-caption text-medium-emphasis">Manage project member roles</div>
                             </div>
                         </div>
                         <div class="scope-links">
@@ -619,7 +629,7 @@ const deleteWorkspace = () => {
             </div>
 
             <!-- Danger Zone -->
-            <div v-if="isAdmin" class="danger-zone">
+            <div v-if="isOwner" class="danger-zone">
                 <div class="danger-zone-header">
                     <v-icon size="16" color="error" class="mr-1">mdi-alert-circle-outline</v-icon>
                     <span>Danger Zone</span>
@@ -650,7 +660,7 @@ const deleteWorkspace = () => {
                     </div>
                     <div>
                         <div class="text-subtitle-2 font-weight-bold">Add Member</div>
-                        <div class="text-caption text-medium-emphasis">Add existing user to this workspace</div>
+                        <div class="text-caption text-medium-emphasis">Add user by email or select from list</div>
                     </div>
                     <v-spacer />
                     <v-btn icon variant="text" size="x-small" @click="showAddMember = false">
@@ -659,8 +669,19 @@ const deleteWorkspace = () => {
                 </div>
                 <v-divider />
                 <v-card-text class="pt-4">
-                    <v-select v-model="selectedUser" :items="availableUsers" item-title="name" item-value="id"
-                        label="Select User" variant="outlined" density="comfortable" class="mb-3">
+                    <!-- Autocomplete from known users (including already-members for role update) -->
+                    <v-autocomplete
+                        v-model="selectedUser"
+                        :items="availableUsers"
+                        item-title="name"
+                        item-value="id"
+                        label="Search by name"
+                        variant="outlined"
+                        density="comfortable"
+                        clearable
+                        class="mb-3"
+                        placeholder="Start typing a name…"
+                    >
                         <template #item="{ props: itemProps, item }">
                             <v-list-item v-bind="itemProps">
                                 <template #prepend>
@@ -671,7 +692,27 @@ const deleteWorkspace = () => {
                                 <v-list-item-subtitle>{{ item.raw.email }}</v-list-item-subtitle>
                             </v-list-item>
                         </template>
-                    </v-select>
+                    </v-autocomplete>
+
+                    <div class="d-flex align-center ga-2 mb-3">
+                        <v-divider />
+                        <span class="text-caption text-medium-emphasis px-1">or by email</span>
+                        <v-divider />
+                    </div>
+
+                    <!-- Direct email input as fallback -->
+                    <v-text-field
+                        v-model="inviteEmail"
+                        :disabled="!!selectedUser"
+                        label="Email address"
+                        type="email"
+                        variant="outlined"
+                        density="comfortable"
+                        placeholder="user@example.com"
+                        class="mb-3"
+                        hide-details
+                    />
+
                     <v-select v-model="selectedRole"
                         :items="[{ title: 'Admin', value: 'admin' }, { title: 'Member', value: 'member' }]"
                         label="Role" variant="outlined" density="comfortable" />
@@ -679,8 +720,11 @@ const deleteWorkspace = () => {
                 <v-card-actions class="px-4 pb-4">
                     <v-spacer />
                     <v-btn variant="text" rounded="lg" @click="showAddMember = false">Cancel</v-btn>
-                    <v-btn color="primary" variant="flat" rounded="lg" :disabled="!selectedUser" @click="addMember">Add
-                        Member</v-btn>
+                    <v-btn color="primary" variant="flat" rounded="lg"
+                        :disabled="!selectedUser && !inviteEmail.trim()"
+                        @click="addMember">
+                        Add Member
+                    </v-btn>
                 </v-card-actions>
             </v-card>
         </v-dialog>
@@ -771,47 +815,13 @@ const deleteWorkspace = () => {
         </v-dialog>
 
         <!-- Delete Workspace Dialog -->
-        <v-dialog v-model="showDeleteWorkspace" max-width="460" rounded="xl">
-            <v-card rounded="xl">
-                <div class="dialog-header dialog-header--danger">
-                    <div class="dialog-header-icon bg-error-subtle">
-                        <v-icon color="error" size="20">mdi-alert-circle-outline</v-icon>
-                    </div>
-                    <div>
-                        <div class="text-subtitle-2 font-weight-bold text-error">Delete Workspace</div>
-                        <div class="text-caption text-medium-emphasis">This action cannot be undone</div>
-                    </div>
-                    <v-spacer />
-                    <v-btn icon variant="text" size="x-small"
-                        @click="showDeleteWorkspace = false; confirmationName = ''">
-                        <v-icon size="18">mdi-close</v-icon>
-                    </v-btn>
-                </div>
-                <v-divider />
-                <v-card-text class="pt-4">
-                    <v-alert type="error" variant="tonal" density="compact" rounded="lg" class="mb-4">
-                        Deleting <strong>{{ workspace?.name }}</strong> will permanently remove all spaces, folders,
-                        lists,
-                        tasks, and time tracking data.
-                    </v-alert>
-                    <div class="text-caption text-medium-emphasis mb-2">
-                        Type <strong class="text-on-surface">{{ workspace?.name }}</strong> to confirm:
-                    </div>
-                    <v-text-field v-model="confirmationName" variant="outlined" density="comfortable" hide-details
-                        :placeholder="workspace?.name" autofocus />
-                </v-card-text>
-                <v-card-actions class="px-4 pb-4">
-                    <v-spacer />
-                    <v-btn variant="text" rounded="lg"
-                        @click="showDeleteWorkspace = false; confirmationName = ''">Cancel</v-btn>
-                    <v-btn color="error" variant="flat" rounded="lg" :disabled="confirmationName !== workspace?.name"
-                        @click="deleteWorkspace">
-                        <v-icon start size="16">mdi-delete-outline</v-icon>
-                        Delete Permanently
-                    </v-btn>
-                </v-card-actions>
-            </v-card>
-        </v-dialog>
+        <DeleteConfirmDialog
+            v-model="showDeleteWorkspace"
+            item-type="workspace"
+            :item-name="workspace?.name"
+            :loading="isDeletingWorkspace"
+            @confirm="deleteWorkspace"
+        />
     </MainLayout>
 </template>
 

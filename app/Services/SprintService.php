@@ -105,7 +105,7 @@ class SprintService
 
         if ($updated === 0) {
             throw ValidationException::withMessages([
-                'subtask_id' => ['Subtask is not part of this product.'],
+                'subtask_id' => ['Subtask is not part of this project.'],
             ]);
         }
     }

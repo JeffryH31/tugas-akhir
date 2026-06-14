@@ -16,7 +16,6 @@ beforeEach(function () {
 });
 
 // Comment Content Sanitization (strip_tags with allowlist)
-
 test('comment strips script tags from content', function () {
     $malicious = '<p>Hello</p><script>alert("xss")</script><p>World</p>';
 
@@ -120,7 +119,6 @@ test('comment strips event handlers from allowed tags', function () {
 });
 
 // Task Name/Description — Stored as-is, XSS prevented by Vue auto-escape
-
 test('task name with script tag is stored as plain text', function () {
     $malicious = '<script>alert("xss")</script>My Task';
 
@@ -156,7 +154,6 @@ test('task description with HTML is stored as plain text', function () {
 });
 
 // Comment via HTTP endpoint (full integration)
-
 test('comment creation via endpoint sanitizes script injection', function () {
     actingAs($this->owner)
         ->post(route('tasks.comments.store', [
@@ -192,7 +189,6 @@ test('comment update via endpoint sanitizes injected tags', function () {
 });
 
 // Workspace/Space name — plain text fields, no HTML allowed
-
 test('workspace name with HTML is stored as plain text', function () {
     $malicious = '<script>alert(1)</script>Workspace';
 

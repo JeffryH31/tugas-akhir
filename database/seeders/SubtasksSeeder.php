@@ -337,9 +337,9 @@ class SubtasksSeeder extends Seeder
         $ord3->dependencies()->attach($ord1->id, ['dependency_type' => 'blocks']);
 
         // ═══════════════════════════════════════════════════════════════════
-        // B2C: Product Catalog & Listing
+        // B2C: Project Catalog & Listing
         // ═══════════════════════════════════════════════════════════════════
-        $catTask = $this->demoTask('Product Catalog & Listing');
+        $catTask = $this->demoTask('Project Catalog & Listing');
 
         $cat1 = $this->createSubtask([
             'name' => 'API produk & kategori',
@@ -361,7 +361,7 @@ class SubtasksSeeder extends Seeder
         ], [$devin->id], ['Feature']);
 
         $cat2 = $this->createSubtask([
-            'name' => 'Halaman product listing (grid + lazy load)',
+            'name' => 'Halaman project listing (grid + lazy load)',
             'task_id' => $catTask->id,
             'status_id' => $b2cDone->id,
             'priority_level' => 2,

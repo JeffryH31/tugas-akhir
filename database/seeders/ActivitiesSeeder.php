@@ -41,7 +41,7 @@ class ActivitiesSeeder extends Seeder
         $invTask = $this->demoTask('Sistem Manajemen Inventory');
         $authTask = $this->demoTask('Portal Login & Autentikasi');
         $orderTask = $this->demoTask('Order Management Portal');
-        $catTask = $this->demoTask('Product Catalog & Listing');
+        $catTask = $this->demoTask('Project Catalog & Listing');
         $checkTask = $this->demoTask('Checkout & Payment Gateway');
 
         // Task creation activities

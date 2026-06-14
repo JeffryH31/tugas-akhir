@@ -39,11 +39,11 @@ beforeEach(function () {
 
     $this->list = Project::create([
         'space_id' => $this->space->id,
-        'name' => 'Product',
+        'name' => 'Project',
         'created_by' => $this->wsOwner->id,
     ]);
 
-    // Assign product-level roles
+    // Assign project-level roles
     $this->list->addMember($this->projectOwner, 'project_owner');
     $this->list->addMember($this->projectManager, 'project_manager');
     $this->list->addMember($this->developer, 'development_team');
@@ -57,7 +57,6 @@ beforeEach(function () {
 });
 
 // Create Task (canManageTaskStructure: project_owner & project_manager)
-
 test('guest cannot create task', function () {
     actingAs($this->guest)
         ->post(route('tasks.store', [$this->workspace->id, $this->space->id, $this->list->id]), [
@@ -90,7 +89,7 @@ test('project_owner can create task', function () {
         ->assertRedirect();
 });
 
-test('workspace owner can create task without product role', function () {
+test('workspace owner can create task without project role', function () {
     actingAs($this->wsOwner)
         ->post(route('tasks.store', [$this->workspace->id, $this->space->id, $this->list->id]), [
             'name' => 'WS Owner Task',
@@ -99,7 +98,6 @@ test('workspace owner can create task without product role', function () {
 });
 
 // Delete Task
-
 test('developer cannot delete task', function () {
     actingAs($this->developer)
         ->delete(route('tasks.destroy', [
@@ -123,7 +121,6 @@ test('guest cannot delete task', function () {
 });
 
 // Change Status (canOperateTasks: developer & up)
-
 test('guest cannot change task status', function () {
     $status = $this->space->statuses()->first();
 
@@ -151,7 +148,6 @@ test('developer can change task status', function () {
 });
 
 // Assign Tasks (canAssignTasks: project_owner & project_manager only)
-
 test('developer cannot assign tasks', function () {
     $assignee = $this->createUser();
     $this->workspace->addMember($assignee, 'member');
@@ -167,7 +163,6 @@ test('developer cannot assign tasks', function () {
 });
 
 // Manage Labels (canManageLabels = canManageTaskStructure)
-
 test('developer cannot add label to task', function () {
     $label = Label::create([
         'workspace_id' => $this->workspace->id,
@@ -203,7 +198,6 @@ test('project_manager can add label to task', function () {
 });
 
 // Subtasks (canOperateTasks)
-
 test('guest cannot create subtask', function () {
     actingAs($this->guest)
         ->post(route('tasks.subtasks.store', [

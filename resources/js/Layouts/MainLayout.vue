@@ -38,6 +38,7 @@ const notificationMenuOpen = ref(false);
 const user = computed(() => page.props.auth?.user);
 const workspaces = computed(() => page.props.workspaces || []);
 const activeWorkspace = computed(() => page.props.activeWorkspace);
+const isSuperAdmin = computed(() => page.props.isSuperAdmin || false);
 const notifications = computed(() => page.props.notifications || []);
 const unreadNotificationsCount = computed(() => page.props.unreadNotificationsCount || 0);
 const notificationsLastReadAt = computed(() => page.props.notificationsLastReadAt || null);
@@ -375,7 +376,7 @@ watch(searchDialog, (open) => {
                     <v-list density="compact" nav>
                         <v-list-item prepend-icon="mdi-layers-plus" title="New Space" subtitle="Create a new space"
                             @click="showCreateSpace = true" rounded="lg" />
-                        <v-list-item prepend-icon="mdi-briefcase-plus-outline" title="New Workspace"
+                        <v-list-item v-if="isSuperAdmin" prepend-icon="mdi-briefcase-plus-outline" title="New Workspace"
                             subtitle="Start a new workspace" @click="openCreateWorkspaceDialog" rounded="lg" />
                     </v-list>
                 </v-card>
@@ -695,7 +696,7 @@ watch(searchDialog, (open) => {
             <v-card rounded="xl">
                 <div class="search-header">
                     <v-icon size="18" color="grey">mdi-magnify</v-icon>
-                    <input v-model="searchQuery" class="search-input" placeholder="Search tasks, products, spaces..."
+                    <input v-model="searchQuery" class="search-input" placeholder="Search tasks, projects, spaces..."
                         autofocus />
                     <v-progress-circular v-if="isSearching" size="16" width="2" indeterminate color="primary" />
                     <kbd class="search-kbd" v-if="!isSearching">ESC</kbd>
@@ -826,7 +827,7 @@ watch(searchDialog, (open) => {
                 <v-divider />
                 <v-card-text class="pt-4 d-flex flex-column ga-3">
                     <v-text-field v-model="newWorkspaceName" label="Workspace Name"
-                        placeholder="e.g., Product Team, Acme Client" variant="outlined" density="comfortable"
+                        placeholder="e.g., Project Team, Acme Client" variant="outlined" density="comfortable"
                         hide-details autofocus @keydown.enter="createWorkspace" />
                     <ColorPicker v-model="newWorkspaceColor" />
                 </v-card-text>

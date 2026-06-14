@@ -49,9 +49,9 @@ class SpaceService
     }
 
     /**
-     * Get products (Projects) grouped by status for kanban board, filtered by user access.
+     * Get projects (Projects) grouped by status for kanban board, filtered by user access.
      */
-    public function getProductsByStatus(Space $space, ?User $user = null): array
+    public function getProjectsByStatus(Space $space, ?User $user = null): array
     {
         $query = $space->projects();
 

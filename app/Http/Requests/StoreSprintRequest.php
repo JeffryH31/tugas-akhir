@@ -25,7 +25,7 @@ class StoreSprintRequest extends FormRequest
     public function messages(): array
     {
         return [
-            'list_id.required' => 'Product is required.',
+            'list_id.required' => 'Project is required.',
             'name.required' => 'Sprint name is required.',
             'name.max' => 'Sprint name must not exceed 255 characters.',
             'start_date.required' => 'Start date is required.',

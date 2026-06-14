@@ -40,7 +40,6 @@ beforeEach(function () {
 });
 
 // View Space
-
 test('non-workspace member cannot view space', function () {
     actingAs($this->stranger)
         ->get(route('spaces.show', [$this->workspace->id, $this->space->id]))
@@ -66,7 +65,6 @@ test('workspace admin can view any space', function () {
 });
 
 // Update Space
-
 test('space member cannot update space', function () {
     actingAs($this->spaceMember)
         ->patch(route('spaces.update', [$this->workspace->id, $this->space->id]), ['name' => 'Hacked'])
@@ -82,7 +80,6 @@ test('workspace admin can update space', function () {
 });
 
 // Delete Space
-
 test('space member cannot delete space', function () {
     actingAs($this->spaceMember)
         ->delete(route('spaces.destroy', [$this->workspace->id, $this->space->id]))

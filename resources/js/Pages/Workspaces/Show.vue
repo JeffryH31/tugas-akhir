@@ -70,7 +70,7 @@ const createSpace = () => {
                                 <div class="flex items-center gap-4 mt-3 text-sm text-gray-400">
                                     <div class="flex items-center gap-1">
                                         <v-icon size="16">mdi-package-variant-closed</v-icon>
-                                        <span>{{ space.projects_count || 0 }} products</span>
+                                        <span>{{ space.projects_count || 0 }} projects</span>
                                     </div>
                                     <div class="flex items-center gap-1">
                                         <v-icon size="16">mdi-checkbox-marked-circle-outline</v-icon>

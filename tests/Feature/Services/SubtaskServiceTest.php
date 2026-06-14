@@ -225,7 +225,6 @@ test('reorder updates subtask positions', function () {
 // ============================================================
 // Merged from Unit/Services/SubtaskServiceTest.php
 // ============================================================
-
 test('create subtask with name only', function () {
     $subtask = $this->service->create(
         ['name' => 'Write tests'],

@@ -14,7 +14,6 @@ beforeEach(function () {
 });
 
 // create
-
 test('create checklist item', function () {
     $item = $this->service->create(['name' => 'Buy milk'], $this->subtask, $this->owner);
 
@@ -55,7 +54,6 @@ test('create checklist item throws at max depth', function () {
 });
 
 // update
-
 test('update checklist item name', function () {
     $item = $this->service->create(['name' => 'Old'], $this->subtask, $this->owner);
 
@@ -65,7 +63,6 @@ test('update checklist item name', function () {
 });
 
 // toggle
-
 test('toggle flips checked state', function () {
     $item = $this->service->create(['name' => 'Toggle Me'], $this->subtask, $this->owner);
 
@@ -86,7 +83,6 @@ test('toggle with cascade updates children', function () {
 });
 
 // delete
-
 test('delete checklist item', function () {
     $item = $this->service->create(['name' => 'Delete Me'], $this->subtask, $this->owner);
 
@@ -96,7 +92,6 @@ test('delete checklist item', function () {
 });
 
 // reorder
-
 test('reorder updates positions', function () {
     $i1 = $this->service->create(['name' => 'First'], $this->subtask, $this->owner);
     $i2 = $this->service->create(['name' => 'Second'], $this->subtask, $this->owner);

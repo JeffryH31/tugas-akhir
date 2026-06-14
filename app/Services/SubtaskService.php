@@ -137,7 +137,7 @@ class SubtaskService
 
                         if ($sprintListId > 0 && $sprintListId !== $subtaskListId) {
                             throw ValidationException::withMessages([
-                                'sprint_id' => ['Selected sprint is not in this product.'],
+                                'sprint_id' => ['Selected sprint is not in this project.'],
                             ]);
                         }
                     }
