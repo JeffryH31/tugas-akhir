@@ -1,4 +1,4 @@
-<?php
+﻿<?php
 
 namespace App\Models;
 
@@ -58,7 +58,7 @@ class ChecklistItem extends Model
         });
     }
 
-    // ─── Relations ────────────────────────────────────────────────────────────
+    //  Relations 
 
     public function subtask(): BelongsTo
     {
@@ -80,7 +80,7 @@ class ChecklistItem extends Model
         return $this->belongsTo(User::class, 'created_by');
     }
 
-    // ─── Helpers ──────────────────────────────────────────────────────────────
+    //  Helpers 
 
     public function canAddChildren(): bool
     {

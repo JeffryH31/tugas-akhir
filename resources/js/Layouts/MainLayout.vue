@@ -1,4 +1,4 @@
-<script setup>
+﻿<script setup>
 import { ref, computed, onMounted, onUnmounted, provide, watch } from 'vue';
 import { Head, router, usePage } from '@inertiajs/vue3';
 import { useDisplay } from 'vuetify';
@@ -889,14 +889,14 @@ watch(searchDialog, (open) => {
 </template>
 
 <style scoped>
-/* ─── App ─── */
+/*  App  */
 .clickup-app {
     --v-theme-surface: #1e1e1e;
     --v-theme-surface-light: #2d2d30;
     --v-theme-background: #121212;
 }
 
-/* ─── Topbar ─── */
+/*  Topbar  */
 .topbar {
     border-bottom: 1px solid rgba(255, 255, 255, 0.06) !important;
 }
@@ -983,7 +983,7 @@ watch(searchDialog, (open) => {
     box-shadow: 0 0 0 2px rgba(255, 255, 255, 0.1);
 }
 
-/* ─── Notification panel ─── */
+/*  Notification panel  */
 .notification-header {
     display: flex;
     align-items: center;
@@ -1034,7 +1034,7 @@ watch(searchDialog, (open) => {
     padding: 32px 20px;
 }
 
-/* ─── User Menu ─── */
+/*  User Menu  */
 .user-menu-header {
     display: flex;
     align-items: center;
@@ -1042,7 +1042,7 @@ watch(searchDialog, (open) => {
     padding: 14px 16px;
 }
 
-/* ─── Sidebar ─── */
+/*  Sidebar  */
 .sidebar-drawer {
     border-right: 1px solid rgba(255, 255, 255, 0.06) !important;
 }
@@ -1437,7 +1437,7 @@ watch(searchDialog, (open) => {
     padding: 7px;
 }
 
-/* ─── Search Dialog ─── */
+/*  Search Dialog  */
 .search-header {
     display: flex;
     align-items: center;
@@ -1504,7 +1504,7 @@ watch(searchDialog, (open) => {
     margin-right: 8px;
 }
 
-/* ─── Dialogs (shared) ─── */
+/*  Dialogs (shared)  */
 .dialog-header {
     display: flex;
     align-items: center;

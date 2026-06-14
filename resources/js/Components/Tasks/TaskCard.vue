@@ -1,4 +1,4 @@
-<script setup>
+﻿<script setup>
 import { computed, inject, ref } from 'vue';
 import { PRIORITY_MAP } from '@/constants/priorities';
 
@@ -542,7 +542,7 @@ const openDetail = () => {
     padding-left: 0;
 }
 
-/* ── Inline subtask rows ─────────────────────────────────── */
+/*  Inline subtask rows  */
 .task-card__subtask-section {
     margin-top: 2px;
     border-top: 1px solid rgba(255, 255, 255, 0.04);

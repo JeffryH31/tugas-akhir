@@ -1,4 +1,4 @@
-<?php
+﻿<?php
 
 namespace Database\Seeders;
 
@@ -13,7 +13,7 @@ class SprintsSeeder extends Seeder
     public function run(): void
     {
         $sprints = [
-            // ── Manufacturing sprints ────────────────────────────────────────
+            //  Manufacturing sprints 
             [
                 'space'      => 'Manufacturing',
                 'list'       => 'Inventory Management',
@@ -55,7 +55,7 @@ class SprintsSeeder extends Seeder
                 'position'   => 0,
             ],
 
-            // ── B2B sprints ──────────────────────────────────────────────────
+            //  B2B sprints 
             [
                 'space'      => 'B2B',
                 'list'       => 'Client Portal',
@@ -87,7 +87,7 @@ class SprintsSeeder extends Seeder
                 'position'   => 2,
             ],
 
-            // ── B2C sprints ──────────────────────────────────────────────────
+            //  B2C sprints 
             [
                 'space'      => 'B2C',
                 'list'       => 'Product Catalog',

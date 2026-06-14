@@ -1,4 +1,4 @@
-<?php
+﻿<?php
 
 namespace App\Services;
 
@@ -96,7 +96,7 @@ class ChecklistItemService
         });
     }
 
-    // ─── Private helpers ──────────────────────────────────────────────────────
+    //  Private helpers 
 
     private function cascadeCheckedState(ChecklistItem $item, bool $state): void
     {

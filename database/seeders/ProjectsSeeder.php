@@ -1,4 +1,4 @@
-<?php
+﻿<?php
 
 namespace Database\Seeders;
 
@@ -19,7 +19,7 @@ class ProjectsSeeder extends Seeder
         $devin       = $this->demoUser('devin@example.com');
 
         $lists = [
-            // ── Manufacturing / ERP System ──────────────────────────────
+            //  Manufacturing / ERP System 
             [
                 'name'       => 'Inventory Management',
                 'space'      => 'Manufacturing',
@@ -62,7 +62,7 @@ class ProjectsSeeder extends Seeder
                     [$devin,       'development_team'],
                 ],
             ],
-            // ── Manufacturing / IoT & Monitoring ────────────────────────
+            //  Manufacturing / IoT & Monitoring 
             [
                 'name'       => 'Sensor Dashboard',
                 'space'      => 'Manufacturing',
@@ -77,7 +77,7 @@ class ProjectsSeeder extends Seeder
                     [$marvel,      'development_team'],
                 ],
             ],
-            // ── B2B / Client Portal ─────────────────────────────────────
+            //  B2B / Client Portal 
             [
                 'name'       => 'Client Portal',
                 'space'      => 'B2B',
@@ -107,7 +107,7 @@ class ProjectsSeeder extends Seeder
                     [$devin,       'development_team'],
                 ],
             ],
-            // ── B2C / E-Commerce ────────────────────────────────────────
+            //  B2C / E-Commerce 
             [
                 'name'       => 'Product Catalog',
                 'space'      => 'B2C',
@@ -137,7 +137,7 @@ class ProjectsSeeder extends Seeder
                     [$marvel,      'development_team'],
                 ],
             ],
-            // ── B2C / Mobile App ────────────────────────────────────────
+            //  B2C / Mobile App 
             [
                 'name'       => 'Android App',
                 'space'      => 'B2C',

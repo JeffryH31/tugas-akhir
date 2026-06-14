@@ -1,4 +1,4 @@
-<?php
+﻿<?php
 
 namespace App\Console\Commands;
 
@@ -99,7 +99,7 @@ class SeedFromExcel extends Command
         return self::SUCCESS;
     }
 
-    // ─── Importers ────────────────────────────────────────────────────────────
+    //  Importers 
 
     private function importUsers(Spreadsheet $s): void
     {
@@ -580,7 +580,7 @@ class SeedFromExcel extends Command
         $this->info("    TimeEntries: {$count}");
     }
 
-    // ─── Utility ─────────────────────────────────────────────────────────────
+    //  Utility 
 
     /**
      * Iterate data rows (skip header row 1, skip blank rows).

@@ -1,4 +1,4 @@
-<?php
+﻿<?php
 
 namespace Database\Seeders;
 
@@ -24,7 +24,7 @@ class CommentsSeeder extends Seeder
         $catTask   = $this->demoTask('Product Catalog & Listing');
         $checkTask = $this->demoTask('Checkout & Payment Gateway');
 
-        // ── Inventory comments ──────────────────────────────────────────
+        //  Inventory comments 
         $c1 = Comment::create([
             'task_id'    => $invTask->id,
             'user_id'    => $jeff->id,
@@ -68,7 +68,7 @@ class CommentsSeeder extends Seeder
             'updated_at' => now()->subWeeks(5)->startOfWeek()->setTime(10, 0),
         ]);
 
-        // ── Auth comments ───────────────────────────────────────────────
+        //  Auth comments 
         $c3 = Comment::create([
             'task_id'    => $authTask->id,
             'user_id'    => $jeff->id,
@@ -86,7 +86,7 @@ class CommentsSeeder extends Seeder
             'updated_at' => now()->subWeeks(5)->endOfWeek()->setTime(17, 0),
         ]);
 
-        // ── Order Management comments ───────────────────────────────────
+        //  Order Management comments 
         Comment::create([
             'task_id'    => $orderTask->id,
             'user_id'    => $christopher->id,
@@ -103,7 +103,7 @@ class CommentsSeeder extends Seeder
             'updated_at' => now()->subWeeks(4)->startOfWeek()->addDays(2)->setTime(16, 45),
         ]);
 
-        // ── Catalog comments ────────────────────────────────────────────
+        //  Catalog comments 
         $c4 = Comment::create([
             'task_id'    => $catTask->id,
             'user_id'    => $kevin->id,
@@ -121,7 +121,7 @@ class CommentsSeeder extends Seeder
             'updated_at' => now()->subWeeks(4)->startOfWeek()->setTime(10, 45),
         ]);
 
-        // ── Checkout comments ───────────────────────────────────────────
+        //  Checkout comments 
         $c5 = Comment::create([
             'task_id'    => $checkTask->id,
             'user_id'    => $christopher->id,

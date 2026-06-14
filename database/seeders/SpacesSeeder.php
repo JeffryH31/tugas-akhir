@@ -1,4 +1,4 @@
-<?php
+﻿<?php
 
 namespace Database\Seeders;
 
@@ -19,7 +19,7 @@ class SpacesSeeder extends Seeder
         $marvel      = $this->demoUser('marvel@example.com');
         $devin       = $this->demoUser('devin@example.com');
 
-        // ── Space 1: Manufacturing ──────────────────────────────────────────
+        //  Space 1: Manufacturing 
         $manufacturing = Space::create([
             'workspace_id' => $workspace->id,
             'name'         => 'Manufacturing',
@@ -35,7 +35,7 @@ class SpacesSeeder extends Seeder
             $devin->id       => ['role' => 'member'],
         ]);
 
-        // ── Space 2: B2B ────────────────────────────────────────────────────
+        //  Space 2: B2B 
         $b2b = Space::create([
             'workspace_id' => $workspace->id,
             'name'         => 'B2B',
@@ -51,7 +51,7 @@ class SpacesSeeder extends Seeder
             $devin->id       => ['role' => 'member'],
         ]);
 
-        // ── Space 3: B2C ────────────────────────────────────────────────────
+        //  Space 3: B2C 
         $b2c = Space::create([
             'workspace_id' => $workspace->id,
             'name'         => 'B2C',

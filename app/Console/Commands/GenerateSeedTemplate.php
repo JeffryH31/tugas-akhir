@@ -1,4 +1,4 @@
-<?php
+﻿<?php
 
 namespace App\Console\Commands;
 
@@ -61,7 +61,7 @@ class GenerateSeedTemplate extends Command
         return self::SUCCESS;
     }
 
-    // ─── Sheet builders ──────────────────────────────────────────────────────
+    //  Sheet builders 
 
     private function addLegendSheet(Spreadsheet $s): void
     {
@@ -421,7 +421,7 @@ class GenerateSeedTemplate extends Command
         $this->addNote($sheet, 'F1', 'started_at: format YYYY-MM-DD HH:MM:SS. is_billable: TRUE atau FALSE. subtask harus ada di sheet Subtasks.');
     }
 
-    // ─── Helpers ─────────────────────────────────────────────────────────────
+    //  Helpers 
 
     /**
      * Write headers + example rows with styled header row.

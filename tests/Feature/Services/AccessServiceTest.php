@@ -1,4 +1,4 @@
-<?php
+﻿<?php
 
 use App\Models\Comment;
 use App\Models\Space;
@@ -371,9 +371,8 @@ test('project member can view activity', function () {
     expect($this->access->canViewActivity($dev, $this->hierarchy['list']))->toBeTrue();
 });
 
-// ─────────────────────────────────────────────────────────────────────
 // CRITICAL: Workspace admin vs workspace owner on task operations
-// ─────────────────────────────────────────────────────────────────────
+// 
 
 test('workspace admin CANNOT edit tasks on products without a product role', function () {
     $admin = $this->createUser();

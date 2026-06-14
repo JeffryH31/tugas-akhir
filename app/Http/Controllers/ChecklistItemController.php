@@ -1,4 +1,4 @@
-<?php
+﻿<?php
 
 namespace App\Http\Controllers;
 
@@ -153,7 +153,7 @@ class ChecklistItemController extends Controller
         }
     }
 
-    // ─── Private ──────────────────────────────────────────────────────────────
+    //  Private 
 
     private function authorizeScope(
         Workspace $workspace,
