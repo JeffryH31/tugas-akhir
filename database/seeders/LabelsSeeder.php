@@ -26,8 +26,8 @@ class LabelsSeeder extends Seeder
         ] as $label) {
             Label::create([
                 'workspace_id' => $workspace->id,
-                'name'         => $label['name'],
-                'color'        => $label['color'],
+                'name' => $label['name'],
+                'color' => $label['color'],
             ]);
         }
     }

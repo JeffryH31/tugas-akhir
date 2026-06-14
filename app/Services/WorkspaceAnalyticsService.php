@@ -24,14 +24,14 @@ class WorkspaceAnalyticsService
         $end = $endDate ? Carbon::parse($endDate)->endOfDay() : now()->endOfDay();
 
         $tasksQuery = Task::query()
-            ->whereHas('project.space', fn($q) => $q->where('workspace_id', $workspace->id))
+            ->whereHas('project.space', fn ($q) => $q->where('workspace_id', $workspace->id))
             ->whereBetween('created_at', [$start, $end]);
 
         $subtasksQuery = Subtask::query()
-            ->whereHas('task.project.space', fn($q) => $q->where('workspace_id', $workspace->id));
+            ->whereHas('task.project.space', fn ($q) => $q->where('workspace_id', $workspace->id));
 
         $timeQuery = TimeEntry::query()
-            ->whereHas('subtask.task.project.space', fn($q) => $q->where('workspace_id', $workspace->id))
+            ->whereHas('subtask.task.project.space', fn ($q) => $q->where('workspace_id', $workspace->id))
             ->whereBetween('started_at', [$start, $end]);
 
         $evm = $this->calculateEvm($workspace, $end);
@@ -53,10 +53,10 @@ class WorkspaceAnalyticsService
                     ->whereBetween('due_date', [$start, $end])
                     ->where('due_date', '<', now())
                     ->count(),
-                'active_sprints' => Sprint::whereHas('project.space', fn($q) => $q->where('workspace_id', $workspace->id))
+                'active_sprints' => Sprint::whereHas('project.space', fn ($q) => $q->where('workspace_id', $workspace->id))
                     ->where('is_active', true)
                     ->where('start_date', '<=', $end)
-                    ->where(fn($q) => $q->whereNull('end_date')->orWhere('end_date', '>=', $start))
+                    ->where(fn ($q) => $q->whereNull('end_date')->orWhere('end_date', '>=', $start))
                     ->count(),
                 'time_logged_minutes' => (clone $timeQuery)->sum('duration'),
             ],
@@ -66,7 +66,6 @@ class WorkspaceAnalyticsService
 
     /**
      * Get flat rows suitable for CSV export.
-     *
      */
     public function getCsvRows(Workspace $workspace, ?string $startDate = null, ?string $endDate = null): Collection
     {
@@ -79,7 +78,7 @@ class WorkspaceAnalyticsService
         }
 
         foreach ($overview['evm'] as $metric => $value) {
-            $rows->push(['metric' => 'evm_' . $metric, 'value' => $value]);
+            $rows->push(['metric' => 'evm_'.$metric, 'value' => $value]);
         }
 
         return $rows;
@@ -151,7 +150,7 @@ class WorkspaceAnalyticsService
 
         return [
             'members' => $members,
-            'spaces' => $spaces->map(fn($s) => ['id' => $s->id, 'name' => $s->name])->values(),
+            'spaces' => $spaces->map(fn ($s) => ['id' => $s->id, 'name' => $s->name])->values(),
         ];
     }
 
@@ -163,7 +162,7 @@ class WorkspaceAnalyticsService
     protected function calculateEvm(Workspace $workspace, Carbon $asOf): array
     {
         $subtasks = Subtask::query()
-            ->whereHas('task.project.space', fn($q) => $q->where('workspace_id', $workspace->id))
+            ->whereHas('task.project.space', fn ($q) => $q->where('workspace_id', $workspace->id))
             ->with(['assignees'])
             ->get();
 
@@ -207,7 +206,7 @@ class WorkspaceAnalyticsService
         $start = $subtask->baseline_start_date ?? $subtask->start_date;
         $end = $subtask->baseline_due_date ?? $subtask->due_date;
 
-        if (!$start || !$end) {
+        if (! $start || ! $end) {
             return $subtask->completed_at ? 1.0 : 0.0;
         }
 

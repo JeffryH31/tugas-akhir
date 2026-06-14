@@ -3,12 +3,11 @@
 use App\Models\Activity;
 use App\Models\Workspace;
 use App\Services\WorkspaceService;
-use Tests\Traits\CreatesWorkspaceHierarchy;
 
 uses(Tests\Traits\CreatesWorkspaceHierarchy::class);
 
 beforeEach(function () {
-    $this->service = new WorkspaceService();
+    $this->service = new WorkspaceService;
     $this->owner = $this->createUser();
 });
 

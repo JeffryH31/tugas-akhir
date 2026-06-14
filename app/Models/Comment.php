@@ -41,7 +41,6 @@ class Comment extends Model
         });
     }
 
-
     public function task(): BelongsTo
     {
         return $this->belongsTo(Task::class);
@@ -66,7 +65,6 @@ class Comment extends Model
     {
         return $this->hasMany(Comment::class, 'parent_id')->latest();
     }
-
 
     public function edit(string $content): void
     {

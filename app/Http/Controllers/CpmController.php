@@ -4,10 +4,10 @@ namespace App\Http\Controllers;
 
 use App\Http\Requests\AddDependencyRequest;
 use App\Http\Requests\RemoveDependencyRequest;
+use App\Models\Project;
 use App\Models\Space;
 use App\Models\Subtask;
 use App\Models\Task;
-use App\Models\Project;
 use App\Models\Workspace;
 use App\Services\AccessService;
 use App\Services\CpmService;
@@ -29,7 +29,8 @@ class CpmController extends Controller
         Workspace $workspace,
         Space $space,
         Project $project,
-        Task $task): \Illuminate\Http\JsonResponse|\Illuminate\Http\RedirectResponse {
+        Task $task): \Illuminate\Http\JsonResponse|\Illuminate\Http\RedirectResponse
+    {
         abort_unless($this->accessService->canViewProject($request->user(), $project), 403);
         if ($task->project_id !== $project->id) {
             abort(404);
@@ -51,7 +52,8 @@ class CpmController extends Controller
         Workspace $workspace,
         Space $space,
         Project $project,
-        Task $task): Response {
+        Task $task): Response
+    {
         abort_unless($this->accessService->canViewProject($request->user(), $project), 403);
         if ($task->project_id !== $project->id) {
             abort(404);
@@ -62,13 +64,13 @@ class CpmController extends Controller
         $user = $request->user();
         $isWsAdmin = $this->accessService->canManageWorkspace($user, $workspace);
         $listFilter = function ($q) use ($user, $isWsAdmin) {
-            return $isWsAdmin ? $q : $q->whereHas('members', fn($mq) => $mq->where('user_id', $user->id));
+            return $isWsAdmin ? $q : $q->whereHas('members', fn ($mq) => $mq->where('user_id', $user->id));
         };
 
         $workspace->load([
             'spaces' => function ($q) use ($user, $isWsAdmin, $listFilter) {
-                if (!$isWsAdmin) {
-                    $q->whereHas('members', fn($mq) => $mq->where('user_id', $user->id));
+                if (! $isWsAdmin) {
+                    $q->whereHas('members', fn ($mq) => $mq->where('user_id', $user->id));
                 }
                 $q->with([
                     'folders.projects' => $listFilter,
@@ -101,7 +103,8 @@ class CpmController extends Controller
         Workspace $workspace,
         Space $space,
         Project $project,
-        Task $task): \Illuminate\Http\JsonResponse|\Illuminate\Http\RedirectResponse {
+        Task $task): \Illuminate\Http\JsonResponse|\Illuminate\Http\RedirectResponse
+    {
         abort_unless($this->accessService->canManageDependencies($request->user(), $project), 403);
         $validated = $request->validated();
 
@@ -139,7 +142,8 @@ class CpmController extends Controller
         Workspace $workspace,
         Space $space,
         Project $project,
-        Task $task): \Illuminate\Http\JsonResponse|\Illuminate\Http\RedirectResponse {
+        Task $task): \Illuminate\Http\JsonResponse|\Illuminate\Http\RedirectResponse
+    {
         abort_unless($this->accessService->canManageDependencies($request->user(), $project), 403);
         $validated = $request->validated();
 

@@ -1008,6 +1008,32 @@ const removeSuccessor = (suc) =>
       </div>
     </div>
 
+    <!-- Completed At (task only, read-only) -->
+    <template v-if="!isSubtask && localTask.completed_at">
+      <v-divider class="my-1" />
+      <div class="prop-row">
+        <div class="prop-label">
+          <v-icon size="16" class="prop-icon">mdi-calendar-check</v-icon>
+          Completed
+        </div>
+        <div class="prop-value">
+          <div class="d-flex align-center ga-2">
+            <span class="text-body-2" :class="localTask.is_completed_late ? 'text-error' : 'text-success'">
+              {{ formatDate(localTask.completed_at) }}
+            </span>
+            <v-chip v-if="localTask.is_completed_late" color="error" size="x-small" variant="flat">
+              <v-icon start size="12">mdi-clock-alert-outline</v-icon>
+              Late
+            </v-chip>
+            <v-chip v-else color="success" size="x-small" variant="flat">
+              <v-icon start size="12">mdi-check</v-icon>
+              On time
+            </v-chip>
+          </div>
+        </div>
+      </div>
+    </template>
+
     <!-- Subtask-only: Automation -->
     <template v-if="isSubtask">
       <v-divider class="my-1" />

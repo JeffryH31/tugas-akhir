@@ -1,9 +1,9 @@
 
 <?php
 
-use App\Models\User;
 use App\Models\Workspace;
 use Tests\Traits\CreatesWorkspaceHierarchy;
+
 use function Pest\Laravel\actingAs;
 
 uses(CreatesWorkspaceHierarchy::class);

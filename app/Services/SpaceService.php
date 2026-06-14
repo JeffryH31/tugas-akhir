@@ -38,12 +38,12 @@ class SpaceService
 
         return $space->load([
             'workspace',
-            'folders' => fn($q) => $q->with([
+            'folders' => fn ($q) => $q->with([
                 'children',
-                'projects' => fn($lq) => $listFilter($lq)->with('status')->withCount('tasks')->orderBy('position'),
+                'projects' => fn ($lq) => $listFilter($lq)->with('status')->withCount('tasks')->orderBy('position'),
             ])->orderBy('position'),
-            'projectsWithoutFolder' => fn($q) => $listFilter($q)->with('status')->withCount('tasks')->orderBy('position'),
-            'statuses' => fn($q) => $q->orderBy('position'),
+            'projectsWithoutFolder' => fn ($q) => $listFilter($q)->with('status')->withCount('tasks')->orderBy('position'),
+            'statuses' => fn ($q) => $q->orderBy('position'),
             'labels',
         ]);
     }
@@ -80,13 +80,11 @@ class SpaceService
 
     /**
      * Build a closure that filters a Project query by user access.
-     *
-    
      */
     private function buildListAccessFilter(?User $user, Space $space): \Closure
     {
         return function ($query) use ($user, $space) {
-            if (!$user) {
+            if (! $user) {
                 return $query;
             }
 
@@ -98,7 +96,7 @@ class SpaceService
                 return $query;
             }
 
-            return $query->whereHas('members', fn($mq) => $mq->where('user_id', $user->id));
+            return $query->whereHas('members', fn ($mq) => $mq->where('user_id', $user->id));
         };
     }
 
@@ -115,7 +113,6 @@ class SpaceService
                 'color' => $data['color'] ?? '#6366F1',
                 'created_by' => $user->id,
             ]);
-
 
             Activity::log($workspace, $user, $space, 'created', [
                 'name' => $space->name,
@@ -144,7 +141,7 @@ class SpaceService
             }
         }
 
-        if (!empty($changes)) {
+        if (! empty($changes)) {
             Activity::log($space->workspace, $user, $space, 'updated', [
                 'name' => $space->name,
             ], $changes);
@@ -176,9 +173,11 @@ class SpaceService
 
         if ($isStarred) {
             $space->starredBy()->detach($user->id);
+
             return false;
         } else {
             $space->starredBy()->attach($user->id, ['workspace_id' => $space->workspace_id]);
+
             return true;
         }
     }
@@ -309,7 +308,7 @@ class SpaceService
     /**
      * Delete status
      */
-    public function deleteStatus(Status $status, int $moveToStatusId = null): void
+    public function deleteStatus(Status $status, ?int $moveToStatusId = null): void
     {
         DB::transaction(function () use ($status, $moveToStatusId) {
             if ($moveToStatusId) {

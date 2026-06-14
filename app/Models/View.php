@@ -34,7 +34,6 @@ class View extends Model
         'is_private' => 'boolean',
     ];
 
-
     public function project(): BelongsTo
     {
         return $this->belongsTo(Project::class);
@@ -49,7 +48,6 @@ class View extends Model
     {
         return $this->belongsTo(User::class);
     }
-
 
     public function scopeForUser($query, User $user)
     {

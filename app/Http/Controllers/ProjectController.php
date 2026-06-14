@@ -9,8 +9,8 @@ use App\Http\Requests\StoreProjectRequest;
 use App\Http\Requests\UpdateMemberRoleRequest;
 use App\Http\Requests\UpdateProjectRequest;
 use App\Models\Folder;
-use App\Models\Space;
 use App\Models\Project;
+use App\Models\Space;
 use App\Models\User;
 use App\Models\Workspace;
 use App\Services\AccessService;
@@ -74,13 +74,13 @@ class ProjectController extends Controller
         $user = $request->user();
         $isWsAdmin = $this->accessService->canManageWorkspace($user, $workspace);
         $projectFilter = function ($q) use ($user, $isWsAdmin) {
-            return $isWsAdmin ? $q : $q->whereHas('members', fn($mq) => $mq->where('user_id', $user->id));
+            return $isWsAdmin ? $q : $q->whereHas('members', fn ($mq) => $mq->where('user_id', $user->id));
         };
 
         $workspace->load([
             'spaces' => function ($q) use ($user, $isWsAdmin, $projectFilter) {
-                if (!$isWsAdmin) {
-                    $q->whereHas('members', fn($mq) => $mq->where('user_id', $user->id));
+                if (! $isWsAdmin) {
+                    $q->whereHas('members', fn ($mq) => $mq->where('user_id', $user->id));
                 }
                 $q->with([
                     'folders.projects' => $projectFilter,
@@ -130,7 +130,7 @@ class ProjectController extends Controller
 
         $projectMemberIds = $project->members->pluck('id');
 
-        $mapUser = fn($member, ?string $role = null) => [
+        $mapUser = fn ($member, ?string $role = null) => [
             'id' => $member->id,
             'name' => $member->name,
             'email' => $member->email,
@@ -153,11 +153,11 @@ class ProjectController extends Controller
                 'is_archived' => (bool) $project->is_archived,
             ],
             'members' => $project->members
-                ->map(fn($member) => $mapUser($member, $member->pivot?->role))
+                ->map(fn ($member) => $mapUser($member, $member->pivot?->role))
                 ->values(),
             'availableUsers' => $workspace->members
-                ->filter(fn($member) => !$projectMemberIds->contains($member->id))
-                ->map(fn($member) => $mapUser($member))
+                ->filter(fn ($member) => ! $projectMemberIds->contains($member->id))
+                ->map(fn ($member) => $mapUser($member))
                 ->values(),
             'canManageMembers' => $this->accessService->canManageProjectMembers($request->user(), $project),
         ]);
@@ -191,8 +191,6 @@ class ProjectController extends Controller
             ->with('success', 'List deleted successfully.');
     }
 
-
-
     /**
      * Move list to folder.
      */
@@ -204,7 +202,7 @@ class ProjectController extends Controller
         $request->validate([
             'folder_id' => [
                 'nullable',
-                Rule::exists('folders', 'id')->where(fn($query) => $query->where('space_id', $space->id)),
+                Rule::exists('folders', 'id')->where(fn ($query) => $query->where('space_id', $space->id)),
             ],
         ]);
 
@@ -253,7 +251,7 @@ class ProjectController extends Controller
         $request->validate([
             'status_id' => [
                 'required',
-                Rule::exists('statuses', 'id')->where(fn($query) => $query->where('space_id', $space->id)),
+                Rule::exists('statuses', 'id')->where(fn ($query) => $query->where('space_id', $space->id)),
             ],
         ]);
 

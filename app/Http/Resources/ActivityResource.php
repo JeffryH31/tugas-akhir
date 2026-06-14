@@ -3,14 +3,13 @@
 namespace App\Http\Resources;
 
 use App\Models\Folder;
+use App\Models\Project;
 use App\Models\Space;
 use App\Models\Subtask;
 use App\Models\Task;
-use App\Models\Project;
 use App\Models\Workspace;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\JsonResource;
-use App\Http\Resources\UserResource;
 
 class ActivityResource extends JsonResource
 {
@@ -42,29 +41,23 @@ class ActivityResource extends JsonResource
         $workspaceId = $this->workspace_id;
 
         return match (true) {
-            $subject instanceof Workspace =>
-            route('workspaces.show', $workspaceId),
+            $subject instanceof Workspace => route('workspaces.show', $workspaceId),
 
-            $subject instanceof Space =>
-            route('spaces.show', [$workspaceId, $subject->id]),
+            $subject instanceof Space => route('spaces.show', [$workspaceId, $subject->id]),
 
-            $subject instanceof Folder =>
-            $subject->space_id
+            $subject instanceof Folder => $subject->space_id
                 ? route('spaces.show', [$workspaceId, $subject->space_id])
                 : null,
 
-            $subject instanceof Project =>
-            $subject->space_id
+            $subject instanceof Project => $subject->space_id
                 ? route('projects.show', [$workspaceId, $subject->space_id, $subject->id])
                 : null,
 
-            $subject instanceof Task =>
-            $subject->project?->space_id
+            $subject instanceof Task => $subject->project?->space_id
                 ? route('projects.show', [$workspaceId, $subject->project->space_id, $subject->project_id])
                 : null,
 
-            $subject instanceof Subtask =>
-            $subject->task?->project?->space_id
+            $subject instanceof Subtask => $subject->task?->project?->space_id
                 ? route('projects.show', [$workspaceId, $subject->task->project->space_id, $subject->task->project_id])
                 : null,
 
@@ -80,21 +73,17 @@ class ActivityResource extends JsonResource
         }
 
         return match (true) {
-            $subject instanceof Task =>
-            $subject->project?->space
-                ? $subject->project->space->name . ' / ' . $subject->project->name
+            $subject instanceof Task => $subject->project?->space
+                ? $subject->project->space->name.' / '.$subject->project->name
                 : null,
 
-            $subject instanceof Subtask =>
-            $subject->task?->project?->space
-                ? $subject->task->project->space->name . ' / ' . $subject->task->project->name
+            $subject instanceof Subtask => $subject->task?->project?->space
+                ? $subject->task->project->space->name.' / '.$subject->task->project->name
                 : null,
 
-            $subject instanceof Project =>
-            $subject->space?->name,
+            $subject instanceof Project => $subject->space?->name,
 
-            $subject instanceof Folder =>
-            $subject->space?->name,
+            $subject instanceof Folder => $subject->space?->name,
 
             default => null,
         };

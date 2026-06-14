@@ -4,9 +4,9 @@ namespace App\Services;
 
 use App\Enums\PriorityLevel;
 use App\Models\Activity;
+use App\Models\Label;
 use App\Models\Sprint;
 use App\Models\Status;
-use App\Models\Label;
 use App\Models\Subtask;
 use App\Models\Task;
 use App\Models\User;
@@ -24,39 +24,40 @@ class SubtaskService
      * within a single database transaction.
      *
      * @param  array<string, mixed>  $data  Validated subtask attributes (name, description, status_id, etc.)
+     *
      * @throws \Illuminate\Validation\ValidationException If nesting depth exceeds MAX_DEPTH.
      */
     public function create(array $data, Task $task, User $user): Subtask
     {
         return DB::transaction(function () use ($data, $task, $user) {
             // Validate nesting depth before creating
-            if (!empty($data['parent_id'])) {
+            if (! empty($data['parent_id'])) {
                 $parent = Subtask::where('task_id', $task->id)->findOrFail((int) $data['parent_id']);
 
                 if ($parent->depth >= Subtask::MAX_DEPTH) {
                     throw ValidationException::withMessages([
-                        'parent_id' => ['Maximum nesting depth (' . (Subtask::MAX_DEPTH + 1) . ' levels) reached. Cannot create deeper subtasks.'],
+                        'parent_id' => ['Maximum nesting depth ('.(Subtask::MAX_DEPTH + 1).' levels) reached. Cannot create deeper subtasks.'],
                     ]);
                 }
             }
 
             $subtask = Subtask::create([
-                'task_id'              => $task->id,
-                'parent_id'            => $data['parent_id'] ?? null,
-                'name'                 => $data['name'],
-                'description'          => $data['description'] ?? null,
-                'status_id'            => $data['status_id'] ?? null,
-                'priority_level'       => $data['priority_level'] ?? null,
-                'start_date'           => $data['start_date'] ?? null,
-                'due_date'             => $data['due_date'] ?? null,
-                'baseline_start_date'  => $data['start_date'] ?? null,
-                'baseline_due_date'    => $data['due_date'] ?? null,
-                'time_estimate'        => $data['time_estimate'] ?? null,
-                'created_by'           => $user->id,
+                'task_id' => $task->id,
+                'parent_id' => $data['parent_id'] ?? null,
+                'name' => $data['name'],
+                'description' => $data['description'] ?? null,
+                'status_id' => $data['status_id'] ?? null,
+                'priority_level' => $data['priority_level'] ?? null,
+                'start_date' => $data['start_date'] ?? null,
+                'due_date' => $data['due_date'] ?? null,
+                'baseline_start_date' => $data['start_date'] ?? null,
+                'baseline_due_date' => $data['due_date'] ?? null,
+                'time_estimate' => $data['time_estimate'] ?? null,
+                'created_by' => $user->id,
             ]);
 
             // Sync assignees if provided
-            if (!empty($data['assignee_ids'])) {
+            if (! empty($data['assignee_ids'])) {
                 $pivotData = [];
                 foreach ($data['assignee_ids'] as $assigneeId) {
                     $pivotData[$assigneeId] = ['assigned_by' => $user->id];
@@ -65,7 +66,7 @@ class SubtaskService
             }
 
             // Sync labels if provided
-            if (!empty($data['label_ids'])) {
+            if (! empty($data['label_ids'])) {
                 $subtask->labels()->sync($data['label_ids']);
             }
 
@@ -114,8 +115,8 @@ class SubtaskService
             ];
 
             // Capture status/priority before update for readable activity descriptions
-            $oldStatusId     = $subtask->status_id;
-            $oldStatusName   = $subtask->status?->name;
+            $oldStatusId = $subtask->status_id;
+            $oldStatusName = $subtask->status?->name;
             $oldPriorityEnum = $subtask->priority_level; // PriorityLevel enum|null
 
             // Capture old values for change tracking (status/priority logged separately below)
@@ -125,7 +126,7 @@ class SubtaskService
                 if (array_key_exists($field, $data)) {
                     if ($field === 'sprint_id' && $data[$field]) {
                         $sprint = Sprint::find((int) $data[$field]);
-                        if (!$sprint) {
+                        if (! $sprint) {
                             throw ValidationException::withMessages([
                                 'sprint_id' => ['Selected sprint does not exist.'],
                             ]);
@@ -145,7 +146,7 @@ class SubtaskService
                 }
             }
 
-            if (!empty($updateData)) {
+            if (! empty($updateData)) {
                 $subtask->update($updateData);
             }
 
@@ -179,7 +180,7 @@ class SubtaskService
             // Update assignees if provided
             if (isset($data['assignee_ids'])) {
                 $oldAssigneeIds = $subtask->assignees->pluck('id')->toArray();
-                $newAssigneeIds  = $data['assignee_ids'];
+                $newAssigneeIds = $data['assignee_ids'];
 
                 $pivotData = [];
                 foreach ($newAssigneeIds as $assigneeId) {
@@ -187,12 +188,12 @@ class SubtaskService
                 }
                 $subtask->assignees()->sync($pivotData);
 
-                $addedIds   = array_diff($newAssigneeIds, $oldAssigneeIds);
+                $addedIds = array_diff($newAssigneeIds, $oldAssigneeIds);
                 $removedIds = array_diff($oldAssigneeIds, $newAssigneeIds);
 
                 // Batch load all changed assignees to avoid N+1
                 $changedIds = array_merge($addedIds, $removedIds);
-                $assignees = !empty($changedIds)
+                $assignees = ! empty($changedIds)
                     ? User::whereIn('id', $changedIds)->get()->keyBy('id')
                     : collect();
 
@@ -201,9 +202,9 @@ class SubtaskService
                     $assignee = $assignees->get($id);
                     if ($assignee) {
                         Activity::log($workspace, $user, $subtask, 'assigned', [
-                            'name'          => $subtask->name,
+                            'name' => $subtask->name,
                             'assignee_name' => $assignee->name,
-                            'assignee_id'   => $assignee->id,
+                            'assignee_id' => $assignee->id,
                         ]);
                     }
                 }
@@ -212,9 +213,9 @@ class SubtaskService
                     $assignee = $assignees->get($id);
                     if ($assignee) {
                         Activity::log($workspace, $user, $subtask, 'unassigned', [
-                            'name'          => $subtask->name,
+                            'name' => $subtask->name,
                             'assignee_name' => $assignee->name,
-                            'assignee_id'   => $assignee->id,
+                            'assignee_id' => $assignee->id,
                         ]);
                     }
                 }
@@ -227,7 +228,7 @@ class SubtaskService
             }
 
             // Log activity with changes
-            if (!empty($changes)) {
+            if (! empty($changes)) {
                 Activity::log(
                     $subtask->task->project->space->workspace,
                     $user,
@@ -294,14 +295,13 @@ class SubtaskService
 
     /**
      * Soft-delete a subtask and log the deletion activity.
-     *
      */
     public function delete(Subtask $subtask, User $user): void
     {
         DB::transaction(function () use ($subtask, $user) {
             $subtaskName = $subtask->name;
-            $task        = $subtask->task;
-            $workspace   = $task->project->space->workspace;
+            $task = $subtask->task;
+            $workspace = $task->project->space->workspace;
 
             $subtask->delete();
 
@@ -318,7 +318,7 @@ class SubtaskService
     /**
      * Reorder subtasks within the same parent by updating their position column.
      *
-     * @param  array<int> $subtaskIds  Ordered list of subtask IDs (index = new position).
+     * @param  array<int>  $subtaskIds  Ordered list of subtask IDs (index = new position).
      */
     public function reorder(Task $task, array $subtaskIds, ?int $parentId = null): void
     {
@@ -386,7 +386,7 @@ class SubtaskService
     public function addLabel(Subtask $subtask, Label $label, User $user): void
     {
         $alreadyAttached = $subtask->labels()->whereKey($label->id)->exists();
-        if (!$alreadyAttached) {
+        if (! $alreadyAttached) {
             $subtask->labels()->syncWithoutDetaching([$label->id]);
 
             Activity::log(
@@ -427,7 +427,6 @@ class SubtaskService
      *
      * Creates a copy with " (Copy)" appended to the name, resets completion
      * state, and logs the duplication activity.
-     *
      */
     public function duplicate(Subtask $subtask, User $user): Subtask
     {
@@ -440,7 +439,7 @@ class SubtaskService
                 'sprint_id',
                 'position',
             ]);
-            $newSubtask->name = $subtask->name . ' (Copy)';
+            $newSubtask->name = $subtask->name.' (Copy)';
             // Reset operational fields — dates and assignees are not part of the template
             $newSubtask->start_date = null;
             $newSubtask->due_date = null;

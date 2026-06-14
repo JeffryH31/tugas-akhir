@@ -22,15 +22,15 @@ class ChecklistItemService
 
             if ($parent->depth >= ChecklistItem::MAX_DEPTH) {
                 throw ValidationException::withMessages([
-                    'parent_id' => ['Maximum checklist nesting depth (' . (ChecklistItem::MAX_DEPTH + 1) . ' levels) reached.'],
+                    'parent_id' => ['Maximum checklist nesting depth ('.(ChecklistItem::MAX_DEPTH + 1).' levels) reached.'],
                 ]);
             }
         }
 
         return ChecklistItem::create([
             'subtask_id' => $subtask->id,
-            'parent_id'  => $parentId,
-            'name'       => $data['name'],
+            'parent_id' => $parentId,
+            'name' => $data['name'],
             'is_checked' => $data['is_checked'] ?? false,
             'created_by' => $user->id,
         ]);
@@ -44,7 +44,7 @@ class ChecklistItemService
     {
         $item->update(array_filter([
             'name' => $data['name'] ?? null,
-        ], fn($v) => $v !== null));
+        ], fn ($v) => $v !== null));
 
         return $item->fresh();
     }
@@ -55,7 +55,7 @@ class ChecklistItemService
      */
     public function toggle(ChecklistItem $item, bool $cascade = false): ChecklistItem
     {
-        $newState = !$item->is_checked;
+        $newState = ! $item->is_checked;
 
         DB::transaction(function () use ($item, $newState, $cascade) {
             $item->update(['is_checked' => $newState]);
@@ -96,7 +96,7 @@ class ChecklistItemService
         });
     }
 
-    // ─── Private helpers ──────────────────────────────────────────────────────
+    //  Private helpers
 
     private function cascadeCheckedState(ChecklistItem $item, bool $state): void
     {

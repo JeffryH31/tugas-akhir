@@ -1,15 +1,13 @@
 <?php
 
 use App\Models\ChecklistItem;
-use App\Models\Subtask;
 use App\Services\ChecklistItemService;
 use Illuminate\Validation\ValidationException;
-use Tests\Traits\CreatesWorkspaceHierarchy;
 
 uses(Tests\Traits\CreatesWorkspaceHierarchy::class);
 
 beforeEach(function () {
-    $this->service = new ChecklistItemService();
+    $this->service = new ChecklistItemService;
     $this->owner = $this->createUser();
     $this->hierarchy = $this->createFullHierarchy($this->owner);
     $this->subtask = $this->createSubtask($this->hierarchy['task']);
@@ -49,7 +47,7 @@ test('create checklist item throws at max depth', function () {
     }
 
     // Now at MAX_DEPTH — one more should throw
-    expect(fn() => $this->service->create(
+    expect(fn () => $this->service->create(
         ['name' => 'Too Deep', 'parent_id' => $item->id],
         $this->subtask,
         $this->owner

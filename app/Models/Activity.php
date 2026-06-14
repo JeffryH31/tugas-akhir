@@ -63,7 +63,6 @@ class Activity extends Model
             ->where('subject_id', $subject->id);
     }
 
-
     public static function log(
         Workspace $workspace,
         User $user,
@@ -88,36 +87,36 @@ class Activity extends Model
         $subjectName = $this->properties['name'] ?? 'item';
 
         return match ($this->action) {
-            'created'              => "created {$subjectName}",
-            'updated'              => $this->buildUpdateDescription(),
-            'deleted'              => "deleted {$subjectName}",
-            'completed'            => "completed {$subjectName}",
-            'reopened'             => "reopened {$subjectName}",
-            'assigned'             => $this->buildAssignDescription(),
-            'unassigned'           => $this->buildUnassignDescription(),
-            'moved'                => $this->buildMovedDescription(),
-            'commented'            => $this->buildCommentDescription(),
-            'comment_deleted'      => "deleted a comment",
-            'comment_resolved'     => "resolved a comment",
-            'time_logged'          => $this->buildTimeLoggedDescription(),
-            'status_changed'       => $this->buildStatusChangedDescription(),
-            'priority_changed'     => $this->buildPriorityChangedDescription(),
-            'member_added'         => "added a member",
-            'member_removed'       => "removed a member",
-            'member_role_updated'  => "updated a member role",
-            'dependency_added'     => "added a dependency",
-            'dependency_removed'   => "removed a dependency",
-            'archived'             => "archived",
-            'unarchived'           => "unarchived",
-            'label_added'          => $this->buildLabelDescription('added'),
-            'label_removed'        => $this->buildLabelDescription('removed'),
-            'timer_started'        => "started timer",
-            'timer_stopped'        => $this->buildTimerStoppedDescription(),
-            'time_updated'         => $this->buildTimeUpdatedDescription(),
-            'time_deleted'         => $this->buildTimeDeletedDescription(),
-            'deleted_subtask'      => "deleted subtask {$subjectName}",
-            'duplicated'           => "duplicated",
-            default                => "performed {$this->action}",
+            'created' => "created {$subjectName}",
+            'updated' => $this->buildUpdateDescription(),
+            'deleted' => "deleted {$subjectName}",
+            'completed' => "completed {$subjectName}",
+            'reopened' => "reopened {$subjectName}",
+            'assigned' => $this->buildAssignDescription(),
+            'unassigned' => $this->buildUnassignDescription(),
+            'moved' => $this->buildMovedDescription(),
+            'commented' => $this->buildCommentDescription(),
+            'comment_deleted' => 'deleted a comment',
+            'comment_resolved' => 'resolved a comment',
+            'time_logged' => $this->buildTimeLoggedDescription(),
+            'status_changed' => $this->buildStatusChangedDescription(),
+            'priority_changed' => $this->buildPriorityChangedDescription(),
+            'member_added' => 'added a member',
+            'member_removed' => 'removed a member',
+            'member_role_updated' => 'updated a member role',
+            'dependency_added' => 'added a dependency',
+            'dependency_removed' => 'removed a dependency',
+            'archived' => 'archived',
+            'unarchived' => 'unarchived',
+            'label_added' => $this->buildLabelDescription('added'),
+            'label_removed' => $this->buildLabelDescription('removed'),
+            'timer_started' => 'started timer',
+            'timer_stopped' => $this->buildTimerStoppedDescription(),
+            'time_updated' => $this->buildTimeUpdatedDescription(),
+            'time_deleted' => $this->buildTimeDeletedDescription(),
+            'deleted_subtask' => "deleted subtask {$subjectName}",
+            'duplicated' => 'duplicated',
+            default => "performed {$this->action}",
         };
     }
 
@@ -125,7 +124,7 @@ class Activity extends Model
     {
         $changes = $this->getAttribute('changes') ?? [];
         if (empty($changes)) {
-            return "updated";
+            return 'updated';
         }
 
         $changeList = [];
@@ -164,7 +163,7 @@ class Activity extends Model
         }
 
         if (empty($changeList)) {
-            return "updated";
+            return 'updated';
         }
 
         $remaining = count($changes) - 3;
@@ -234,7 +233,7 @@ class Activity extends Model
 
         // Truncate very long text values
         if (is_string($value) && mb_strlen($value) > 50) {
-            return mb_substr($value, 0, 47) . '...';
+            return mb_substr($value, 0, 47).'...';
         }
 
         return is_scalar($value) ? (string) $value : null;
@@ -244,37 +243,38 @@ class Activity extends Model
     {
         $changes = $this->getAttribute('changes') ?? [];
 
-        if (!empty($this->properties['assignee_name'])) {
+        if (! empty($this->properties['assignee_name'])) {
             return "assigned {$this->properties['assignee_name']}";
         }
 
         $assignees = $changes['assignees']['new'] ?? [];
-        if (is_array($assignees) && !empty($assignees)) {
-            return 'assigned ' . implode(', ', $assignees);
+        if (is_array($assignees) && ! empty($assignees)) {
+            return 'assigned '.implode(', ', $assignees);
         }
 
-        return "assigned";
+        return 'assigned';
     }
 
     private function buildUnassignDescription(): string
     {
         $changes = $this->getAttribute('changes') ?? [];
 
-        if (!empty($this->properties['assignee_name'])) {
+        if (! empty($this->properties['assignee_name'])) {
             return "unassigned {$this->properties['assignee_name']}";
         }
 
         $assignees = $changes['assignees']['old'] ?? [];
-        if (is_array($assignees) && !empty($assignees)) {
-            return 'unassigned ' . implode(', ', $assignees);
+        if (is_array($assignees) && ! empty($assignees)) {
+            return 'unassigned '.implode(', ', $assignees);
         }
 
-        return "unassigned";
+        return 'unassigned';
     }
 
     private function buildLabelDescription(string $action): string
     {
         $labelName = $this->properties['label_name'] ?? 'a label';
+
         return "{$action} label '{$labelName}'";
     }
 
@@ -285,10 +285,10 @@ class Activity extends Model
         $new = $changes['status']['new'] ?? null;
 
         if ($old || $new) {
-            return "changed status from " . ($old ?? 'none') . " to " . ($new ?? 'none');
+            return 'changed status from '.($old ?? 'none').' to '.($new ?? 'none');
         }
 
-        return "changed status";
+        return 'changed status';
     }
 
     private function buildPriorityChangedDescription(): string
@@ -306,10 +306,10 @@ class Activity extends Model
         }
 
         if ($old !== null) {
-            return "cleared priority";
+            return 'cleared priority';
         }
 
-        return "changed priority";
+        return 'changed priority';
     }
 
     private function buildMovedDescription(): string
@@ -319,10 +319,10 @@ class Activity extends Model
         $new = $changes['list']['new'] ?? null;
 
         if ($old || $new) {
-            return "moved from " . ($old ?? 'unknown list') . " to " . ($new ?? 'unknown list');
+            return 'moved from '.($old ?? 'unknown list').' to '.($new ?? 'unknown list');
         }
 
-        return "moved";
+        return 'moved';
     }
 
     private function buildCommentDescription(): string
@@ -333,7 +333,7 @@ class Activity extends Model
             return "commented: \"{$preview}\"";
         }
 
-        return "commented";
+        return 'commented';
     }
 
     private function buildTimeLoggedDescription(): string
@@ -344,7 +344,7 @@ class Activity extends Model
             return "logged {$duration}";
         }
 
-        return "logged time";
+        return 'logged time';
     }
 
     private function buildTimerStoppedDescription(): string
@@ -355,7 +355,7 @@ class Activity extends Model
             return "stopped timer after {$duration}";
         }
 
-        return "stopped timer";
+        return 'stopped timer';
     }
 
     private function buildTimeUpdatedDescription(): string
@@ -365,10 +365,10 @@ class Activity extends Model
         $new = $changes['duration']['new'] ?? null;
 
         if ($old !== null || $new !== null) {
-            return "updated time entry from " . $this->formatMinutes($old) . " to " . $this->formatMinutes($new);
+            return 'updated time entry from '.$this->formatMinutes($old).' to '.$this->formatMinutes($new);
         }
 
-        return "updated time entry";
+        return 'updated time entry';
     }
 
     private function buildTimeDeletedDescription(): string
@@ -376,10 +376,10 @@ class Activity extends Model
         $duration = $this->properties['duration'] ?? null;
 
         if ($duration !== null) {
-            return "deleted " . $this->formatMinutes($duration) . " time entry";
+            return 'deleted '.$this->formatMinutes($duration).' time entry';
         }
 
-        return "deleted time entry";
+        return 'deleted time entry';
     }
 
     /**
@@ -393,6 +393,7 @@ class Activity extends Model
         }
         $h = intdiv($m, 60);
         $rem = $m % 60;
+
         return $rem > 0 ? "{$h}h {$rem}m" : "{$h}h";
     }
 }

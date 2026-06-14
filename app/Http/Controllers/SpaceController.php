@@ -44,10 +44,10 @@ class SpaceController extends Controller
 
             return redirect()->back()->with([
                 'success' => 'Space created successfully.',
-                'space' => $space
+                'space' => $space,
             ]);
         } catch (\Exception $e) {
-            return redirect()->back()->withErrors(['error' => 'Failed to create space: ' . $e->getMessage()]);
+            return redirect()->back()->withErrors(['error' => 'Failed to create space: '.$e->getMessage()]);
         }
     }
 
@@ -70,13 +70,13 @@ class SpaceController extends Controller
         $user = $request->user();
         $isWsAdmin = $this->accessService->canManageWorkspace($user, $workspace);
         $listFilter = function ($q) use ($user, $isWsAdmin) {
-            return $isWsAdmin ? $q : $q->whereHas('members', fn($mq) => $mq->where('user_id', $user->id));
+            return $isWsAdmin ? $q : $q->whereHas('members', fn ($mq) => $mq->where('user_id', $user->id));
         };
 
         $workspace->load([
             'spaces' => function ($q) use ($user, $isWsAdmin, $listFilter) {
-                if (!$isWsAdmin) {
-                    $q->whereHas('members', fn($mq) => $mq->where('user_id', $user->id));
+                if (! $isWsAdmin) {
+                    $q->whereHas('members', fn ($mq) => $mq->where('user_id', $user->id));
                 }
                 $q->with([
                     'folders.projects' => $listFilter,
@@ -110,7 +110,7 @@ class SpaceController extends Controller
 
         $spaceMemberIds = $space->members->pluck('id');
 
-        $mapUser = fn($member, ?string $role = null) => [
+        $mapUser = fn ($member, ?string $role = null) => [
             'id' => $member->id,
             'name' => $member->name,
             'email' => $member->email,
@@ -127,18 +127,18 @@ class SpaceController extends Controller
                 'name' => $space->name,
             ],
             'products' => $space->lists
-                ->map(fn($list) => [
+                ->map(fn ($list) => [
                     'id' => $list->id,
                     'name' => $list->name,
                     'is_archived' => (bool) $list->is_archived,
                 ])
                 ->values(),
             'members' => $space->members
-                ->map(fn($member) => $mapUser($member, $member->pivot?->role))
+                ->map(fn ($member) => $mapUser($member, $member->pivot?->role))
                 ->values(),
             'availableUsers' => $workspace->members
-                ->filter(fn($member) => !$spaceMemberIds->contains($member->id))
-                ->map(fn($member) => $mapUser($member))
+                ->filter(fn ($member) => ! $spaceMemberIds->contains($member->id))
+                ->map(fn ($member) => $mapUser($member))
                 ->values(),
             'canManageMembers' => $this->accessService->canManageSpace($request->user(), $space),
         ]);
@@ -156,10 +156,10 @@ class SpaceController extends Controller
 
             return redirect()->back()->with([
                 'success' => 'Space updated successfully.',
-                'space' => $updatedSpace
+                'space' => $updatedSpace,
             ]);
         } catch (\Exception $e) {
-            return redirect()->back()->withErrors(['error' => 'Failed to update space: ' . $e->getMessage()]);
+            return redirect()->back()->withErrors(['error' => 'Failed to update space: '.$e->getMessage()]);
         }
     }
 
@@ -177,7 +177,7 @@ class SpaceController extends Controller
                 ->route('workspaces.show', $workspace)
                 ->with('success', 'Space deleted successfully.');
         } catch (\Exception $e) {
-            return redirect()->back()->withErrors(['error' => 'Failed to delete space: ' . $e->getMessage()]);
+            return redirect()->back()->withErrors(['error' => 'Failed to delete space: '.$e->getMessage()]);
         }
     }
 
@@ -194,7 +194,7 @@ class SpaceController extends Controller
 
             return redirect()->back()->with('success', 'Space starred status updated.');
         } catch (\Exception $e) {
-            return redirect()->back()->withErrors(['error' => 'Failed to update space: ' . $e->getMessage()]);
+            return redirect()->back()->withErrors(['error' => 'Failed to update space: '.$e->getMessage()]);
         }
     }
 
@@ -210,7 +210,7 @@ class SpaceController extends Controller
 
             return redirect()->back()->with('success', 'Spaces reordered successfully.');
         } catch (\Exception $e) {
-            return redirect()->back()->withErrors(['error' => 'Failed to reorder spaces: ' . $e->getMessage()]);
+            return redirect()->back()->withErrors(['error' => 'Failed to reorder spaces: '.$e->getMessage()]);
         }
     }
 
@@ -227,10 +227,10 @@ class SpaceController extends Controller
 
             return redirect()->back()->with([
                 'success' => 'Status added successfully.',
-                'status' => $status
+                'status' => $status,
             ]);
         } catch (\Exception $e) {
-            return redirect()->back()->withErrors(['error' => 'Failed to add status: ' . $e->getMessage()]);
+            return redirect()->back()->withErrors(['error' => 'Failed to add status: '.$e->getMessage()]);
         }
     }
 
@@ -248,7 +248,7 @@ class SpaceController extends Controller
 
             return redirect()->back()->with('success', 'Status updated successfully.');
         } catch (\Exception $e) {
-            return redirect()->back()->withErrors(['error' => 'Failed to update status: ' . $e->getMessage()]);
+            return redirect()->back()->withErrors(['error' => 'Failed to update status: '.$e->getMessage()]);
         }
     }
 
@@ -264,7 +264,7 @@ class SpaceController extends Controller
         $validated = $request->validate([
             'move_to_status_id' => [
                 'nullable',
-                Rule::exists('statuses', 'id')->where(fn($query) => $query->where('space_id', $space->id)),
+                Rule::exists('statuses', 'id')->where(fn ($query) => $query->where('space_id', $space->id)),
             ],
         ]);
 
@@ -273,7 +273,7 @@ class SpaceController extends Controller
 
             return redirect()->back()->with('success', 'Status deleted successfully.');
         } catch (\Exception $e) {
-            return redirect()->back()->withErrors(['error' => 'Failed to delete status: ' . $e->getMessage()]);
+            return redirect()->back()->withErrors(['error' => 'Failed to delete status: '.$e->getMessage()]);
         }
     }
 
@@ -290,7 +290,7 @@ class SpaceController extends Controller
 
             return redirect()->back()->with('success', 'Statuses reordered successfully.');
         } catch (\Exception $e) {
-            return redirect()->back()->withErrors(['error' => 'Failed to reorder statuses: ' . $e->getMessage()]);
+            return redirect()->back()->withErrors(['error' => 'Failed to reorder statuses: '.$e->getMessage()]);
         }
     }
 
@@ -302,7 +302,7 @@ class SpaceController extends Controller
         $validated = $request->validated();
 
         $user = User::findOrFail($validated['user_id']);
-        if (!$workspace->isMember($user)) {
+        if (! $workspace->isMember($user)) {
             return redirect()->back()->withErrors(['error' => 'User must be a workspace member first.']);
         }
 

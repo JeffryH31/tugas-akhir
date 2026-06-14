@@ -3,12 +3,11 @@
 use App\Models\Activity;
 use App\Models\Folder;
 use App\Services\FolderService;
-use Tests\Traits\CreatesWorkspaceHierarchy;
 
 uses(Tests\Traits\CreatesWorkspaceHierarchy::class);
 
 beforeEach(function () {
-    $this->service = new FolderService();
+    $this->service = new FolderService;
     $this->owner = $this->createUser();
     $this->hierarchy = $this->createFullHierarchy($this->owner);
 });

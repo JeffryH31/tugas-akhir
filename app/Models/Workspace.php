@@ -32,15 +32,14 @@ class Workspace extends Model
             if (empty($workspace->slug)) {
                 $workspace->slug = Str::slug($workspace->name);
             }
-            
+
             $originalSlug = $workspace->slug;
             $count = 1;
             while (static::where('slug', $workspace->slug)->exists()) {
-                $workspace->slug = $originalSlug . '-' . $count++;
+                $workspace->slug = $originalSlug.'-'.$count++;
             }
         });
     }
-
 
     public function members(): BelongsToMany
     {
@@ -64,23 +63,20 @@ class Workspace extends Model
         return $this->hasMany(Activity::class)->latest();
     }
 
-
     public function getInitialsAttribute(): string
     {
         return strtoupper(substr($this->name, 0, 2));
     }
 
-
     public function scopeForUser($query, User $user)
     {
-        return $query->whereHas('members', fn($q) => $q->where('user_id', $user->id));
+        return $query->whereHas('members', fn ($q) => $q->where('user_id', $user->id));
     }
-
 
     public function addMember(User $user, string $role = 'member'): void
     {
         $this->members()->syncWithoutDetaching([
-            $user->id => ['role' => $role]
+            $user->id => ['role' => $role],
         ]);
     }
 
@@ -97,6 +93,7 @@ class Workspace extends Model
     public function getMemberRole(User $user): ?string
     {
         $member = $this->members()->where('user_id', $user->id)->first();
+
         return $member?->pivot->role;
     }
 }

@@ -2,18 +2,16 @@
 
 use App\Enums\PriorityLevel;
 use App\Models\Activity;
-use App\Models\Status;
+use App\Models\Project;
 use App\Models\Subtask;
 use App\Models\Task;
-use App\Models\User;
 use App\Services\SubtaskService;
 use Illuminate\Validation\ValidationException;
-use Tests\Traits\CreatesWorkspaceHierarchy;
 
 uses(Tests\Traits\CreatesWorkspaceHierarchy::class);
 
 beforeEach(function () {
-    $this->service = new SubtaskService();
+    $this->service = new SubtaskService;
     $this->owner = $this->createUser();
     $this->hierarchy = $this->createFullHierarchy($this->owner);
 });
@@ -245,7 +243,7 @@ test('create subtask with status_id', function () {
     $status = $this->hierarchy['statuses']->first();
 
     $subtask = $this->service->create([
-        'name'      => 'Subtask With Status',
+        'name' => 'Subtask With Status',
         'status_id' => $status->id,
     ], $this->hierarchy['task'], $this->owner);
 
@@ -260,7 +258,7 @@ test('create subtask with parent_id (nested)', function () {
     );
 
     $child = $this->service->create([
-        'name'      => 'Child Subtask',
+        'name' => 'Child Subtask',
         'parent_id' => $parent->id,
     ], $this->hierarchy['task'], $this->owner);
 
@@ -333,8 +331,8 @@ test('update subtask dates and time estimate', function () {
     $subtask = $this->createSubtask($this->hierarchy['task']);
 
     $updated = $this->service->update($subtask, [
-        'start_date'    => '2026-07-01',
-        'due_date'      => '2026-07-15',
+        'start_date' => '2026-07-01',
+        'due_date' => '2026-07-15',
         'time_estimate' => 180,
     ], $this->owner);
 
@@ -359,7 +357,7 @@ test('update subtask logs activity with changes', function () {
 });
 
 test('update subtask status logs status_changed activity', function () {
-    $subtask    = $this->createSubtask($this->hierarchy['task']);
+    $subtask = $this->createSubtask($this->hierarchy['task']);
     $inProgress = $this->hierarchy['statuses']->firstWhere('type', 'in_progress');
 
     $this->service->update($subtask, ['status_id' => $inProgress->id], $this->owner);
@@ -394,7 +392,7 @@ test('update subtask assignees logs assigned and unassigned activities', functio
 
     $this->service->update($subtask, ['assignee_ids' => [$user2->id]], $this->owner);
 
-    $assigned   = Activity::where('action', 'assigned')->where('subject_id', $subtask->id)->first();
+    $assigned = Activity::where('action', 'assigned')->where('subject_id', $subtask->id)->first();
     $unassigned = Activity::where('action', 'unassigned')->where('subject_id', $subtask->id)->first();
 
     expect($assigned)->not->toBeNull();
@@ -404,7 +402,7 @@ test('update subtask assignees logs assigned and unassigned activities', functio
 });
 
 test('update subtask syncs labels', function () {
-    $label   = $this->createLabel($this->hierarchy['workspace']);
+    $label = $this->createLabel($this->hierarchy['workspace']);
     $subtask = $this->createSubtask($this->hierarchy['task']);
 
     $this->service->update($subtask, ['label_ids' => [$label->id]], $this->owner);
@@ -487,9 +485,9 @@ test('duplicate subtask creates copy with "(Copy)" suffix', function () {
 });
 
 test('duplicate subtask copies labels but NOT assignees', function () {
-    $subtask  = $this->createSubtask($this->hierarchy['task'], ['name' => 'With Relations']);
+    $subtask = $this->createSubtask($this->hierarchy['task'], ['name' => 'With Relations']);
     $assignee = $this->createUser();
-    $label    = $this->createLabel($this->hierarchy['workspace']);
+    $label = $this->createLabel($this->hierarchy['workspace']);
 
     $subtask->assignees()->attach($assignee->id, ['assigned_by' => $this->owner->id]);
     $subtask->labels()->attach($label->id);
@@ -504,9 +502,9 @@ test('duplicate subtask copies labels but NOT assignees', function () {
 
 test('duplicate subtask does not copy completed_at or time_spent', function () {
     $subtask = $this->createSubtask($this->hierarchy['task'], [
-        'name'         => 'Completed',
+        'name' => 'Completed',
         'completed_at' => now(),
-        'time_spent'   => 120,
+        'time_spent' => 120,
     ]);
     $subtask = $subtask->fresh(['assignees', 'labels']);
 
@@ -518,9 +516,9 @@ test('duplicate subtask does not copy completed_at or time_spent', function () {
 
 test('duplicate subtask does not copy dates or sprint', function () {
     $subtask = $this->createSubtask($this->hierarchy['task'], [
-        'name'       => 'With Dates',
+        'name' => 'With Dates',
         'start_date' => now()->subDays(5),
-        'due_date'   => now()->addDays(5),
+        'due_date' => now()->addDays(5),
     ]);
     $subtask = $subtask->fresh(['assignees', 'labels']);
 

@@ -43,7 +43,7 @@ class StatusesSeeder extends Seeder
             foreach ($statuses as $status) {
                 Status::create(array_merge([
                     'is_default' => false,
-                    'is_closed'  => false,
+                    'is_closed' => false,
                 ], $status, ['space_id' => $space->id]));
             }
         }

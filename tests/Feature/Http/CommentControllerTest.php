@@ -2,6 +2,7 @@
 
 use App\Models\Comment;
 use Tests\Traits\CreatesWorkspaceHierarchy;
+
 use function Pest\Laravel\actingAs;
 
 uses(CreatesWorkspaceHierarchy::class);
@@ -10,7 +11,7 @@ uses(CreatesWorkspaceHierarchy::class);
 
 beforeEach(function () {
     $this->owner = $this->createUser();
-    $this->h     = $this->createFullHierarchy($this->owner);
+    $this->h = $this->createFullHierarchy($this->owner);
 });
 
 // Route helper — comment store is scoped to workspace/space/list/task
@@ -20,6 +21,7 @@ function commentRoute(array $h, string $name, ?Comment $comment = null): string
     if ($comment) {
         $params[] = $comment;
     }
+
     return route($name, $params);
 }
 
@@ -112,7 +114,7 @@ test('comment author can update their own comment', function () {
         ->assertRedirect();
 
     $this->assertDatabaseHas('comments', [
-        'id'      => $comment->id,
+        'id' => $comment->id,
         'content' => 'Edited content',
     ]);
 });
@@ -204,16 +206,16 @@ test('comment author can resolve their own comment', function () {
         ->assertRedirect();
 
     $this->assertDatabaseHas('comments', [
-        'id'          => $comment->id,
+        'id' => $comment->id,
         'is_resolved' => true,
     ]);
 });
 
 test('comment author can unresolve their own comment', function () {
     $comment = Comment::create([
-        'task_id'     => $this->h['task']->id,
-        'user_id'     => $this->owner->id,
-        'content'     => 'Unresolve me',
+        'task_id' => $this->h['task']->id,
+        'user_id' => $this->owner->id,
+        'content' => 'Unresolve me',
         'is_resolved' => true,
     ]);
 
@@ -223,7 +225,7 @@ test('comment author can unresolve their own comment', function () {
         ->assertRedirect();
 
     $this->assertDatabaseHas('comments', [
-        'id'          => $comment->id,
+        'id' => $comment->id,
         'is_resolved' => false,
     ]);
 });
@@ -261,7 +263,7 @@ test('project manager can resolve any comment in their product', function () {
         ->assertRedirect();
 
     $this->assertDatabaseHas('comments', [
-        'id'          => $comment->id,
+        'id' => $comment->id,
         'is_resolved' => true,
     ]);
 });

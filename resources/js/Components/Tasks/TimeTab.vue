@@ -1,4 +1,4 @@
-<script setup>
+﻿<script setup>
 import { computed, ref } from 'vue';
 import { router } from '@inertiajs/vue3';
 import { useConfirmDialog } from '@/composables/useConfirmDialog';
@@ -374,7 +374,7 @@ const deleteEntry = async (entryId) => {
 </template>
 
 <style scoped>
-/* ─── Summary Cards ─── */
+/*  Summary Cards  */
 .time-summary {
     display: grid;
     grid-template-columns: 1fr 1fr;
@@ -428,7 +428,7 @@ const deleteEntry = async (entryId) => {
     background: rgba(255, 183, 77, 0.12);
 }
 
-/* ─── Section Card ─── */
+/*  Section Card  */
 .section-card {
     background: rgba(255, 255, 255, 0.025);
     border: 1px solid rgba(255, 255, 255, 0.06);
@@ -448,7 +448,7 @@ const deleteEntry = async (entryId) => {
     padding: 16px;
 }
 
-/* ─── Log Time Grid ─── */
+/*  Log Time Grid  */
 .log-time-grid {
     display: flex;
     flex-direction: column;
@@ -518,7 +518,7 @@ const deleteEntry = async (entryId) => {
     border-top: 1px solid rgba(255, 255, 255, 0.04);
 }
 
-/* ─── Picker Fields ─── */
+/*  Picker Fields  */
 .picker-field {
     min-width: 0;
 }
@@ -531,7 +531,7 @@ const deleteEntry = async (entryId) => {
     font-size: 12px !important;
 }
 
-/* ─── Empty State ─── */
+/*  Empty State  */
 .empty-state {
     display: flex;
     flex-direction: column;
@@ -550,7 +550,7 @@ const deleteEntry = async (entryId) => {
     border: 1px dashed rgba(255, 255, 255, 0.08);
 }
 
-/* ─── Time Entry List ─── */
+/*  Time Entry List  */
 .time-entry-list {
     display: flex;
     flex-direction: column;
@@ -610,7 +610,7 @@ const deleteEntry = async (entryId) => {
     }
 }
 
-/* ─── List Transitions ─── */
+/*  List Transitions  */
 .entry-list-enter-active {
     transition: all 0.25s ease-out;
 }
@@ -633,7 +633,7 @@ const deleteEntry = async (entryId) => {
     transition: transform 0.25s ease;
 }
 
-/* ─── Responsive ─── */
+/*  Responsive  */
 @media (max-width: 480px) {
     .time-summary {
         grid-template-columns: 1fr;

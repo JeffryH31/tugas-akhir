@@ -4,12 +4,11 @@ use App\Models\Activity;
 use App\Models\Folder;
 use App\Models\Project;
 use App\Services\ProjectService;
-use Tests\Traits\CreatesWorkspaceHierarchy;
 
 uses(Tests\Traits\CreatesWorkspaceHierarchy::class);
 
 beforeEach(function () {
-    $this->service = new ProjectService();
+    $this->service = new ProjectService;
     $this->owner = $this->createUser();
     $this->hierarchy = $this->createFullHierarchy($this->owner);
 });

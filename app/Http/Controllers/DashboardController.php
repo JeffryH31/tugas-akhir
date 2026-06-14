@@ -6,8 +6,8 @@ use App\Models\Workspace;
 use App\Services\AccessService;
 use App\Services\DashboardService;
 use App\Services\WorkspaceService;
-use Illuminate\Http\Request;
 use Illuminate\Http\RedirectResponse;
+use Illuminate\Http\Request;
 use Inertia\Inertia;
 use Inertia\Response;
 

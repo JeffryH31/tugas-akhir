@@ -25,17 +25,20 @@ class Task extends Model
         'description',
         'start_date',
         'due_date',
+        'completed_at',
         'time_estimate',
         'position',
         'is_archived',
         'created_by',
+        'completed_by',
     ];
 
     protected $casts = [
-        'is_archived'           => 'boolean',
-        'priority_level'        => PriorityLevel::class,
+        'is_archived' => 'boolean',
+        'priority_level' => PriorityLevel::class,
         'start_date' => 'date:Y-m-d',
-        'due_date'   => 'date:Y-m-d',
+        'due_date' => 'date:Y-m-d',
+        'completed_at' => 'datetime',
     ];
 
     protected $appends = [
@@ -59,12 +62,12 @@ class Task extends Model
                 $count = Task::withTrashed()->whereHas('project.space', function ($q) use ($list) {
                     $q->where('workspace_id', $list->space->workspace_id);
                 })->count() + 1;
-                $task->task_id = $prefix . '-' . $count;
+                $task->task_id = $prefix.'-'.$count;
 
                 // Ensure uniqueness
                 while (Task::withTrashed()->where('task_id', $task->task_id)->exists()) {
                     $count++;
-                    $task->task_id = $prefix . '-' . $count;
+                    $task->task_id = $prefix.'-'.$count;
                 }
             }
 
@@ -80,19 +83,37 @@ class Task extends Model
             }
         });
 
-        static::saved(function ($task) {
+        static::saved(function ($task) {});
+
+        // Keep completed_at in sync with the task's status: set it when the task
+        // moves into a closed status, clear it when it moves back to an open one.
+        static::saving(function ($task) {
+            if ($task->isDirty('status_id') && $task->status_id) {
+                $status = Status::find($task->status_id);
+                if ($status) {
+                    if ($status->is_closed) {
+                        if (is_null($task->completed_at)) {
+                            $task->completed_at = now();
+                        }
+                    } else {
+                        $task->completed_at = null;
+                        $task->completed_by = null;
+                    }
+                }
+            }
         });
 
         static::deleting(function ($task) {
-            if ($task->isForceDeleting()) return;
-            $task->subtasks()->each(fn($subtask) => $subtask->delete());
+            if ($task->isForceDeleting()) {
+                return;
+            }
+            $task->subtasks()->each(fn ($subtask) => $subtask->delete());
         });
 
         static::restoring(function ($task) {
-            $task->subtasks()->onlyTrashed()->each(fn($subtask) => $subtask->restore());
+            $task->subtasks()->onlyTrashed()->each(fn ($subtask) => $subtask->restore());
         });
     }
-
 
     public function project(): BelongsTo
     {
@@ -119,7 +140,10 @@ class Task extends Model
         return $this->belongsTo(User::class, 'created_by');
     }
 
-
+    public function completer(): BelongsTo
+    {
+        return $this->belongsTo(User::class, 'completed_by');
+    }
 
     public function assignees(): BelongsToMany
     {
@@ -171,27 +195,72 @@ class Task extends Model
         // Use loaded subtasks if available, otherwise use count queries to avoid N+1
         if ($this->relationLoaded('subtasks')) {
             $subtasks = $this->subtasks;
-            if ($subtasks->isEmpty()) return 0;
-            $completed = $subtasks->filter(fn($t) => $t->isCompleted())->count();
+            if ($subtasks->isEmpty()) {
+                return 0;
+            }
+            $completed = $subtasks->filter(fn ($t) => $t->isCompleted())->count();
+
             return round(($completed / $subtasks->count()) * 100, 1);
         }
 
         $total = $this->subtasks()->count();
-        if ($total === 0) return 0;
+        if ($total === 0) {
+            return 0;
+        }
         $completed = $this->subtasks()->whereNotNull('completed_at')->count();
+
         return round(($completed / $total) * 100, 1);
     }
-
 
     public function scopeActive($query)
     {
         return $query->where('is_archived', false);
     }
 
-
-    public function updateProgress(): void
+    /**
+     * Scope: tasks that have been completed (have a completion timestamp).
+     */
+    public function scopeCompleted($query)
     {
+        return $query->whereNotNull('completed_at');
     }
+
+    /**
+     * Scope: tasks completed after their due date (finished late).
+     * Compared by calendar date — finishing on the due day itself counts as on time.
+     */
+    public function scopeCompletedLate($query)
+    {
+        return $query->whereNotNull('completed_at')
+            ->whereNotNull('due_date')
+            ->whereRaw('DATE(completed_at) > due_date');
+    }
+
+    /**
+     * Scope: tasks not yet completed and already past their due date.
+     */
+    public function scopeOverdue($query)
+    {
+        return $query->whereNull('completed_at')
+            ->whereNotNull('due_date')
+            ->where('due_date', '<', now());
+    }
+
+    public function isCompleted(): bool
+    {
+        return ! is_null($this->completed_at);
+    }
+
+    /**
+     * Whether the task was finished after its due date (compared by date).
+     */
+    public function isCompletedLate(): bool
+    {
+        return $this->completed_at && $this->due_date
+            && $this->completed_at->startOfDay()->gt($this->due_date->startOfDay());
+    }
+
+    public function updateProgress(): void {}
 
     /**
      * Get total time spent across all subtasks (in minutes).
@@ -211,7 +280,7 @@ class Task extends Model
         $this->assignees()->syncWithoutDetaching([
             $user->id => [
                 'assigned_by' => $assignedBy?->id,
-            ]
+            ],
         ]);
     }
 

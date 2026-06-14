@@ -1,4 +1,4 @@
-<script setup>
+﻿<script setup>
 import { ref, computed, watch } from 'vue';
 import { router } from '@inertiajs/vue3';
 import MainLayout from '@/Layouts/MainLayout.vue';
@@ -1049,7 +1049,7 @@ const boardDrop = (event, toStatusId) => {
     justify-content: center;
 }
 
-/* ─── Product Kanban Board ─── */
+/*  Product Kanban Board  */
 .product-board {
     overflow-x: auto;
     padding-bottom: 16px;

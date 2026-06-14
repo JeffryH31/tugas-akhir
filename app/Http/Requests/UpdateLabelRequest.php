@@ -23,7 +23,7 @@ class UpdateLabelRequest extends FormRequest
                 'string',
                 'max:50',
                 Rule::unique('labels', 'name')
-                    ->where(fn($query) => $query->where('workspace_id', $workspace->id))
+                    ->where(fn ($query) => $query->where('workspace_id', $workspace->id))
                     ->ignore($label->id),
             ],
             'color' => ['required', 'string', 'max:7', 'regex:/^#[0-9A-Fa-f]{6}$/'],

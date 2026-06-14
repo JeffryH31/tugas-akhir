@@ -4,9 +4,9 @@ namespace App\Http\Controllers;
 
 use App\Http\Requests\StoreSprintRequest;
 use App\Http\Requests\UpdateSprintRequest;
+use App\Models\Project;
 use App\Models\Space;
 use App\Models\Sprint;
-use App\Models\Project;
 use App\Models\Workspace;
 use App\Services\AccessService;
 use App\Services\SprintService;
@@ -42,7 +42,7 @@ class SprintController extends Controller
                 : $products->first();
         }
 
-        if (!$selectedList) {
+        if (! $selectedList) {
             return redirect()
                 ->route('spaces.show', [$workspace, $space])
                 ->with('error', 'No product available for sprint view.');
@@ -65,7 +65,7 @@ class SprintController extends Controller
         $this->ensureSprintBelongsToSpace($sprint, $space);
 
         $list = $sprint->project;
-        if (!$list) {
+        if (! $list) {
             $list = Project::where('space_id', $space->id)->orderBy('position')->first();
         }
 
@@ -73,7 +73,7 @@ class SprintController extends Controller
             'subtasks.status',
             'subtasks.assignees',
             'subtasks.labels',
-            'subtasks.task'
+            'subtasks.task',
         ]);
 
         // Get backlog subtasks (subtasks without sprint in this product/list)
@@ -210,6 +210,7 @@ class SprintController extends Controller
                 ->where('space_id', $space->id)
                 ->exists();
             abort_unless($belongs, 404);
+
             return;
         }
 
