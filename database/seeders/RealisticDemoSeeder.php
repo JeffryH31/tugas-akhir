@@ -304,14 +304,14 @@ class RealisticDemoSeeder extends Seeder
         $weeks = $this->sprintWeeks();
 
         // Kickoff plan: which sprint each project starts in, and how many tasks
-        // it carries. Totals to 149 tasks (23 late => exactly 15.4%). Projects
+        // it carries. Totals to 136 tasks (21 late => exactly 15.4%). Projects
         // are staggered: most start at Sprint 1, others are kicked off later in
         // the month (and were created during the preceding sprint).
         $plan = [];
-        for ($i = 0; $i < 12; $i++) $plan[] = ['k' => 0, 'count' => 7];
+        for ($i = 0; $i < 12; $i++) $plan[] = ['k' => 0, 'count' => 6];
         for ($i = 0; $i < 6; $i++)  $plan[] = ['k' => 1, 'count' => 6];
         for ($i = 0; $i < 4; $i++)  $plan[] = ['k' => 2, 'count' => 6];
-        $plan[] = ['k' => 3, 'count' => 5];
+        $plan[] = ['k' => 3, 'count' => 4];
         shuffle($plan);
 
         // Running cursor for the Sprint-1 cohort so they spread across 24 Apr.
@@ -408,7 +408,7 @@ class RealisticDemoSeeder extends Seeder
         $supplementary = $this->getSupplementaryTasks();
         $weeks = $this->sprintWeeks();
 
-        // Task counts come from the kickoff plan (sums to 149 => 23 late = 15.4%).
+        // Task counts come from the kickoff plan (sums to 136 => 21 late = 15.4%).
         $projectTasks = [];
         $grandTotal = 0;
         foreach ($templates as $projectName => $curated) {
@@ -735,20 +735,18 @@ class RealisticDemoSeeder extends Seeder
                 $prevSubtask = $subtask;
                 $createdSubtasks[] = $subtask;
 
-                // Checklist (30% of subtasks) — all checked since the subtask is done.
-                if (rand(1, 10) <= 3) {
-                    $items = ['Setup environment', 'Write tests', 'Code review', 'Deploy staging', 'QA sign-off'];
-                    shuffle($items);
-                    foreach (array_slice($items, 0, rand(3, 5)) as $cPos => $itemName) {
-                        $checklist = ChecklistItem::create([
-                            'subtask_id' => $subtask->id,
-                            'name' => $itemName,
-                            'is_checked' => true,
-                            'position' => $cPos,
-                            'created_by' => $this->userMap[$assignee]->id,
-                        ]);
-                        $this->stamp($checklist, $createdAtSub);
-                    }
+                // Checklist — all subtasks get one, all items checked since the subtask is done.
+                $items = ['Setup environment', 'Write tests', 'Code review', 'Deploy staging', 'QA sign-off'];
+                shuffle($items);
+                foreach (array_slice($items, 0, rand(3, 5)) as $cPos => $itemName) {
+                    $checklist = ChecklistItem::create([
+                        'subtask_id' => $subtask->id,
+                        'name' => $itemName,
+                        'is_checked' => true,
+                        'position' => $cPos,
+                        'created_by' => $this->userMap[$assignee]->id,
+                    ]);
+                    $this->stamp($checklist, $createdAtSub);
                 }
             }
 

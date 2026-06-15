@@ -24,6 +24,7 @@ const props = defineProps({
     statuses: { type: Array, default: () => [] },
     sprints: { type: Array, default: () => [] },
     parentTask: { type: Object, default: null },
+    spaceMembers: { type: Array, default: () => [] },
     canManageProject: { type: Boolean, default: false },
     canDeleteProject: { type: Boolean, default: false },
     canManageTaskStructure: { type: Boolean, default: false },
@@ -105,7 +106,7 @@ const filterLabel = ref([]);
 const filterSprint = ref(null);
 const searchQuery = ref('');
 
-const members = computed(() => props.workspace?.members || []);
+const members = computed(() => props.spaceMembers || []);
 const labels = computed(() => props.workspace?.labels || []);
 
 const activeFilterCount = computed(() => {

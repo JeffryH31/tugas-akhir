@@ -108,6 +108,17 @@ class ProjectController extends Controller
             'sprints' => $project->sprints()->withCount('subtasks')->orderBy('position')->get(),
             'parentTask' => $parentTask,
             'projectMembers' => $project->members()->get(['users.id', 'users.name', 'users.email']),
+            'spaceMembers' => $space->members()
+                ->get()
+                ->map(fn ($member) => [
+                    'id' => $member->id,
+                    'name' => $member->name,
+                    'email' => $member->email,
+                    'initials' => $member->initials,
+                    'avatar_color' => $member->avatar_color,
+                    'profile_photo_url' => $member->profile_photo_url,
+                ])
+                ->values(),
             'canManageProject' => $this->accessService->canManageProject($request->user(), $project),
             'canDeleteProject' => $this->accessService->canDeleteProject($request->user(), $project),
             'canManageTaskStructure' => $this->accessService->canManageTaskStructure($request->user(), $project),
