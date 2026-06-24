@@ -80,24 +80,13 @@ class SpaceService
 
     /**
      * Build a closure that filters a Project query by user access.
+     *
+     * Space membership is already enforced when loading the space itself, so
+     * any user who can view the space can see every project within it.
      */
     private function buildListAccessFilter(?User $user, Space $space): \Closure
     {
-        return function ($query) use ($user, $space) {
-            if (! $user) {
-                return $query;
-            }
-
-            $wsRole = $space->workspace
-                ? $space->workspace->members()->where('user_id', $user->id)->first()?->pivot?->role
-                : null;
-
-            if (in_array($wsRole, [AccessService::WORKSPACE_ADMIN, AccessService::WORKSPACE_OWNER], true)) {
-                return $query;
-            }
-
-            return $query->whereHas('members', fn ($mq) => $mq->where('user_id', $user->id));
-        };
+        return fn ($query) => $query;
     }
 
     /**

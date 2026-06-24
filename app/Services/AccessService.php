@@ -217,6 +217,10 @@ class AccessService
     /**
      * Determine whether a user can view a project.
      *
+     * Access is granted to workspace admins/owners, to any member of the
+     * project's parent space (space members can see every project in their
+     * space), to explicit project members, and — when a project has no members
+     * configured — to any workspace member (open by default).
      */
     public function canViewProject(User $user, Project $list): bool
     {
@@ -230,6 +234,16 @@ class AccessService
             return true;
         }
 
+        // Space members can view every project within the space.
+        if (in_array($this->getSpaceRole($user, $list->space), [
+            self::SPACE_ADMIN,
+            self::SPACE_MEMBER,
+            self::SPACE_GUEST,
+        ], true)) {
+            return true;
+        }
+
+        // Explicit project members retain access even without space membership.
         if (! is_null($this->getProjectRole($user, $list))) {
             return true;
         }
@@ -305,10 +319,14 @@ class AccessService
 
     /**
      * Determine whether a user can perform task operations
-     * (create/edit subtasks, change status & priority).
+     * (drag kanban cards, change status & priority, toggle subtask completion).
      *
      * Workspace owner → always allowed.
-     * Others → must have project_owner, project_manager, or development_team role.
+     * Explicit project role (owner / manager / developer) → allowed.
+     * Explicit project role (guest) → denied (project guest cannot operate).
+     * Assignee of any task/subtask in the project → allowed (standard PM behaviour).
+     * No project role + space member (admin/member) → allowed.
+     * Others → denied.
      */
     public function canOperateTasks(User $user, Project $list): bool
     {
@@ -316,10 +334,45 @@ class AccessService
             return true;
         }
 
-        return in_array($this->getProjectRole($user, $list), [
-            self::PROJECT_OWNER,
-            self::PROJECT_MANAGER,
-            self::PROJECT_DEVELOPER,
+        $projectRole = $this->getProjectRole($user, $list);
+
+        // If the user has an explicit project role, use it to decide.
+        if (! is_null($projectRole)) {
+            return in_array($projectRole, [
+                self::PROJECT_OWNER,
+                self::PROJECT_MANAGER,
+                self::PROJECT_DEVELOPER,
+            ], true);
+        }
+
+        // Assignees of any task or subtask in this project can operate tasks —
+        // consistent with how mainstream PM tools (Jira, ClickUp, etc.) behave.
+        $isTaskAssignee = \Illuminate\Support\Facades\DB::table('task_assignees')
+            ->join('tasks', 'tasks.id', '=', 'task_assignees.task_id')
+            ->where('tasks.project_id', $list->id)
+            ->where('task_assignees.user_id', $user->id)
+            ->exists();
+
+        if ($isTaskAssignee) {
+            return true;
+        }
+
+        $isSubtaskAssignee = \Illuminate\Support\Facades\DB::table('subtask_assignees')
+            ->join('subtasks', 'subtasks.id', '=', 'subtask_assignees.subtask_id')
+            ->join('tasks', 'tasks.id', '=', 'subtasks.task_id')
+            ->where('tasks.project_id', $list->id)
+            ->where('subtask_assignees.user_id', $user->id)
+            ->exists();
+
+        if ($isSubtaskAssignee) {
+            return true;
+        }
+
+        // No explicit project role → fall back to space membership.
+        // Space admin and member can operate tasks on every project in their space.
+        return in_array($this->getSpaceRole($user, $list->space), [
+            self::SPACE_ADMIN,
+            self::SPACE_MEMBER,
         ], true);
     }
 

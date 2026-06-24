@@ -69,9 +69,8 @@ class SpaceController extends Controller
 
         $user = $request->user();
         $isWsAdmin = $this->accessService->canManageWorkspace($user, $workspace);
-        $listFilter = function ($q) use ($user, $isWsAdmin) {
-            return $isWsAdmin ? $q : $q->whereHas('members', fn ($mq) => $mq->where('user_id', $user->id));
-        };
+        // Space members can see every project in spaces they belong to.
+        $listFilter = fn ($q) => $q;
 
         $workspace->load([
             'spaces' => function ($q) use ($user, $isWsAdmin, $listFilter) {

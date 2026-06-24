@@ -169,14 +169,14 @@ class User extends Authenticatable
 
     public function getTodayTimeSpent(): int
     {
-        return $this->timeEntries()
+        return (int) $this->timeEntries()
             ->whereDate('started_at', today())
             ->sum('duration');
     }
 
     public function getWeekTimeSpent(): int
     {
-        return $this->timeEntries()
+        return (int) $this->timeEntries()
             ->whereBetween('started_at', [now()->startOfWeek(), now()->endOfWeek()])
             ->sum('duration');
     }

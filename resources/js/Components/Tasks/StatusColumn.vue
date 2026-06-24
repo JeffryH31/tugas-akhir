@@ -237,6 +237,7 @@ const handleSubtaskToggle = (task, subtask) => {
             <!-- Draggable Tasks -->
             <draggable :list="tasks" group="tasks" item-key="id" :animation="200" ghost-class="task-ghost"
                 drag-class="task-dragging" class="tasks-list" :class="{ 'tasks-list--dragging': isDragging }"
+                :disabled="!canAddTask"
                 @change="onDragChange" @start="isDragging = true" @end="isDragging = false">
                 <template #item="{ element }">
                     <div class="task-wrapper">

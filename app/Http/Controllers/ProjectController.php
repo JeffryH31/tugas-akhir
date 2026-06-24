@@ -73,9 +73,7 @@ class ProjectController extends Controller
 
         $user = $request->user();
         $isWsAdmin = $this->accessService->canManageWorkspace($user, $workspace);
-        $projectFilter = function ($q) use ($user, $isWsAdmin) {
-            return $isWsAdmin ? $q : $q->whereHas('members', fn ($mq) => $mq->where('user_id', $user->id));
-        };
+        $projectFilter = fn ($q) => $q;
 
         $workspace->load([
             'spaces' => function ($q) use ($user, $isWsAdmin, $projectFilter) {

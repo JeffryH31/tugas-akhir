@@ -143,20 +143,29 @@ class Project extends Model
     }
 
     /**
-     * Scope: only projects the user can access (member of, or workspace admin).
+     * Scope: only projects the user can access.
+     *
+     * Accessible when the user is a workspace admin/owner, a member of the
+     * project's parent space (space members see every project in their space),
+     * an explicit project member, or when the project has no members at all
+     * (open by default).
      */
     public function scopeAccessibleBy($query, User $user)
     {
         $wsAdminIds = \Illuminate\Support\Facades\DB::table('workspace_members')
             ->where('user_id', $user->id)
-            ->where('role', 'admin')
+            ->whereIn('role', ['owner', 'admin'])
             ->pluck('workspace_id');
 
         return $query->where(function ($q) use ($user, $wsAdminIds) {
-            // Workspace admins see everything in their workspaces
+            // Workspace admins/owners see everything in their workspaces
             $q->whereHas('space', fn ($sq) => $sq->whereIn('workspace_id', $wsAdminIds))
+              // Or user is a member of the project's parent space
+                ->orWhereHas('space.members', fn ($mq) => $mq->where('user_id', $user->id))
               // Or user is an explicit project member
-                ->orWhereHas('members', fn ($mq) => $mq->where('user_id', $user->id));
+                ->orWhereHas('members', fn ($mq) => $mq->where('user_id', $user->id))
+              // Or the project has no members configured (open by default)
+                ->orWhereDoesntHave('members');
         });
     }
 

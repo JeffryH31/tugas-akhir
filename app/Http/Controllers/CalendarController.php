@@ -47,10 +47,8 @@ class CalendarController extends Controller
                     }
                 });
 
-                // Workspace admin can see all; others only see projects they belong to
-                if (! in_array($workspaceRole, [AccessService::WORKSPACE_OWNER, AccessService::WORKSPACE_ADMIN], true)) {
-                    $query->whereHas('members', fn ($m) => $m->where('user_id', $user->id));
-                }
+                // Space members can see every project within spaces they belong to,
+                // so no project-level membership filter is applied here.
             })
             ->where(function ($query) use ($startDate, $endDate) {
                 $query->whereBetween('due_date', [$startDate, $endDate])
