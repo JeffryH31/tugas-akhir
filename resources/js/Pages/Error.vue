@@ -10,12 +10,6 @@ const props = defineProps({
 const page = usePage();
 
 const descriptions = {
-    403: {
-        title: 'Access Denied',
-        message: 'You don\'t have permission to access this resource.',
-        icon: 'mdi-shield-lock-outline',
-        color: 'warning',
-    },
     404: {
         title: 'Page Not Found',
         message: 'The page you\'re looking for doesn\'t exist or has been moved.',
