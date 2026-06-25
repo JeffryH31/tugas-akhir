@@ -70,6 +70,7 @@ class CalendarController extends Controller
             'startDate' => $startDate,
             'endDate' => $endDate,
             'viewMode' => $viewMode,
+            'canEditTasks' => $this->accessService->canManageWorkspace($request->user(), $workspace),
         ]);
     }
 }

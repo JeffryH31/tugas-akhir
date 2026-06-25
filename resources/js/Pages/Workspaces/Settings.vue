@@ -15,25 +15,15 @@ const props = defineProps({
     availableUsers: { type: Array, default: () => [] },
     projectLists: { type: Array, default: () => [] },
     spaces: { type: Array, default: () => [] },
+    canManageWorkspace: { type: Boolean, default: false },
+    canDeleteWorkspace: { type: Boolean, default: false },
 });
 
 const page = usePage();
 
-const isAdmin = computed(() => {
-    const currentUserId = page.props?.auth?.user?.id;
-    const currentMember = props.members?.find((member) => member.id === currentUserId);
-    const role = currentMember?.pivot?.role || currentMember?.role;
+const isAdmin = computed(() => props.canManageWorkspace);
 
-    return role === 'admin' || role === 'owner';
-});
-
-const isOwner = computed(() => {
-    const currentUserId = page.props?.auth?.user?.id;
-    const currentMember = props.members?.find((member) => member.id === currentUserId);
-    const role = currentMember?.pivot?.role || currentMember?.role;
-
-    return role === 'owner';
-});
+const isOwner = computed(() => props.canDeleteWorkspace);
 
 // Add member dialog
 const showAddMember = ref(false);

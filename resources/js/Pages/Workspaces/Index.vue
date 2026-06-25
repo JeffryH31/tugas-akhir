@@ -101,10 +101,13 @@ const createWorkspace = () => {
                     <p class="empty-state-subtitle">
                         Create your first workspace to start managing projects and your team.
                     </p>
-                    <v-btn color="primary" size="large" @click="openDialog">
+                    <v-btn v-if="isSuperAdmin" color="primary" size="large" @click="openDialog">
                         <v-icon start>mdi-plus</v-icon>
                         Create Workspace
                     </v-btn>
+                    <p v-else class="text-gray-500 text-sm mt-2">
+                        Contact an administrator to get added to a workspace.
+                    </p>
                 </div>
             </template>
         </div>

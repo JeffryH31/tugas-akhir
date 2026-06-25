@@ -806,7 +806,8 @@ onMounted(() => {
                 <div class="board-columns">
                     <StatusColumn v-for="status in statuses" :key="status.id" :status="status" :statuses="statuses"
                         :tasks="filteredTasksByStatus[status.id] || []" :workspace="workspace" :space="space"
-                        :list="list" :parent-task="parentTask" :can-add-task="canOperateTasks"
+                        :list="list" :parent-task="parentTask" :can-add-task="canManageTaskStructure"
+                        :can-drag-tasks="canOperateTasks"
                         :can-manage-space="canManageSpace" @task-moved="handleTaskMoved"
                         @task-complete="handleTaskComplete" @task-open="handleTaskOpen" @add-task="handleAddTask"
                         @task-open-subtask="handleOpenSubtaskFromCard"

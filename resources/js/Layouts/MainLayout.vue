@@ -374,7 +374,7 @@ watch(searchDialog, (open) => {
                 </template>
                 <v-card rounded="xl" elevation="8" min-width="200">
                     <v-list density="compact" nav>
-                        <v-list-item prepend-icon="mdi-layers-plus" title="New Space" subtitle="Create a new space"
+                        <v-list-item v-if="activeWorkspace" prepend-icon="mdi-layers-plus" title="New Space" subtitle="Create a new space"
                             @click="showCreateSpace = true" rounded="lg" />
                         <v-list-item v-if="isSuperAdmin" prepend-icon="mdi-briefcase-plus-outline" title="New Workspace"
                             subtitle="Start a new workspace" @click="openCreateWorkspaceDialog" rounded="lg" />
@@ -477,7 +477,7 @@ watch(searchDialog, (open) => {
                             </v-list>
                             <v-divider />
                             <v-list density="compact" nav>
-                                <v-list-item prepend-icon="mdi-plus-circle-outline" title="Create Workspace"
+                                <v-list-item v-if="isSuperAdmin" prepend-icon="mdi-plus-circle-outline" title="Create Workspace"
                                     rounded="lg" @click="openCreateWorkspaceDialog" />
                             </v-list>
                         </v-card>
@@ -560,7 +560,7 @@ watch(searchDialog, (open) => {
                 <div class="flex-1 overflow-y-auto sidebar-spaces-section">
                     <div v-if="!isSidebarMini" class="sidebar-section-label sidebar-section-label--with-action">
                         <span>SPACES</span>
-                        <v-btn icon variant="text" size="x-small" class="section-add-btn"
+                        <v-btn v-if="activeWorkspace" icon variant="text" size="x-small" class="section-add-btn"
                             @click="showCreateSpace = true">
                             <v-icon size="14">mdi-plus</v-icon>
                         </v-btn>

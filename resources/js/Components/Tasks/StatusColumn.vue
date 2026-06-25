@@ -44,6 +44,10 @@ const props = defineProps({
         type: Boolean,
         default: true,
     },
+    canDragTasks: {
+        type: Boolean,
+        default: true,
+    },
     canManageSpace: {
         type: Boolean,
         default: false,
@@ -237,11 +241,11 @@ const handleSubtaskToggle = (task, subtask) => {
             <!-- Draggable Tasks -->
             <draggable :list="tasks" group="tasks" item-key="id" :animation="200" ghost-class="task-ghost"
                 drag-class="task-dragging" class="tasks-list" :class="{ 'tasks-list--dragging': isDragging }"
-                :disabled="!canAddTask"
+                :disabled="!canDragTasks"
                 @change="onDragChange" @start="isDragging = true" @end="isDragging = false">
                 <template #item="{ element }">
                     <div class="task-wrapper">
-                        <TaskCard :task="element" @complete="handleTaskComplete" @open-detail="handleTaskOpen"
+                        <TaskCard :task="element" :can-operate="canDragTasks" @complete="handleTaskComplete" @open-detail="handleTaskOpen"
                             @open-subtask="(subtask) => handleOpenSubtask(element, subtask)"
                             @toggle-subtask="(subtask) => handleSubtaskToggle(element, subtask)" />
                     </div>

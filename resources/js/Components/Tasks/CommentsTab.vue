@@ -13,6 +13,7 @@ const props = defineProps({
     list: { type: Object, default: null },
     mainTaskId: { type: [Number, String], default: null },   // parent task ID (for comments route)
     subtaskId: { type: [Number, String], default: null },    // subtask ID (if isSubtask)
+    canComment: { type: Boolean, default: true },
 });
 
 const emit = defineEmits(['updated']);
@@ -50,7 +51,7 @@ const submitComment = () => {
 <template>
     <div class="pa-5">
         <!-- Comment Input -->
-        <div class="section-card mb-4">
+        <div v-if="canComment" class="section-card mb-4">
             <div class="pa-3">
                 <v-textarea v-model="newComment" placeholder="Write a comment..." variant="outlined" rows="3"
                     hide-details auto-grow :disabled="isSubmitting" />

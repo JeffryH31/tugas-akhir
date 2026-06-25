@@ -17,6 +17,7 @@ const props = defineProps({
         type: String,
         default: "month",
     },
+    canEditTasks: { type: Boolean, default: false },
 });
 
 // State
@@ -457,6 +458,8 @@ const handleDragStart = (subtask, event) => {
 
 const handleDrop = (date, event) => {
     event.preventDefault();
+    if (!props.canEditTasks) return;
+
     const subtaskData = event.dataTransfer.getData("subtask");
     if (!subtaskData) return;
 
@@ -1036,7 +1039,7 @@ const formatScheduleRange = (startDate, dueDate) => {
                                                 )"
                                                 :key="subtask.id"
                                                 class="calendar-task"
-                                                draggable
+                                                :draggable="canEditTasks"
                                                 @dragstart="
                                                     handleDragStart(
                                                         subtask,
@@ -1327,6 +1330,8 @@ const formatScheduleRange = (startDate, dueDate) => {
             :statuses="workspace.spaces?.flatMap((s) => s.statuses) || []"
             :members="workspace.members || []"
             :labels="workspace.labels || []"
+            :can-operate-tasks="canEditTasks"
+            :can-manage-task-structure="canEditTasks"
             @open-subtask="openSubtaskFromPanel"
         />
     </MainLayout>

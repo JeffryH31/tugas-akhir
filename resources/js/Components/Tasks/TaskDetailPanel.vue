@@ -385,11 +385,13 @@ onUnmounted(() => stopTimerInterval());
           <v-tabs-window-item value="comments">
             <CommentsTab :comments="localTask.comments || []" :is-subtask="isSubtask" :workspace="workspace"
               :space="space" :list="list" :main-task-id="mainTaskId" :subtask-id="isSubtask ? task?.id : null"
+              :can-comment="canOperateTasks"
               @updated="emit('updated')" />
           </v-tabs-window-item>
 
           <v-tabs-window-item v-if="isSubtask" value="time">
-            <TimeTab :task="localTask" :workspace="workspace" :space="space" :list="list" :parent-task="parentTask" />
+            <TimeTab :task="localTask" :workspace="workspace" :space="space" :list="list" :parent-task="parentTask"
+              :can-track-time="canOperateTasks" />
           </v-tabs-window-item>
 
           <v-tabs-window-item value="activity">

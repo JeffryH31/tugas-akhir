@@ -14,6 +14,7 @@ const props = defineProps({
     space: { type: Object, default: null },
     list: { type: Object, default: null },
     parentTask: { type: Object, default: null },
+    canTrackTime: { type: Boolean, default: false },
 });
 
 
@@ -245,7 +246,7 @@ const deleteEntry = async (entryId) => {
         </div>
 
         <!-- Log Time -->
-        <div class="section-card mb-5">
+        <div v-if="canTrackTime" class="section-card mb-5">
             <div class="section-card-header">
                 <div class="d-flex align-center ga-2">
                     <v-icon size="18" color="primary">mdi-clock-plus-outline</v-icon>
@@ -364,7 +365,7 @@ const deleteEntry = async (entryId) => {
                         </span>
                     </div>
                 </div>
-                <v-btn icon size="x-small" variant="text" color="grey" class="delete-btn"
+                <v-btn v-if="canTrackTime" icon size="x-small" variant="text" color="grey" class="delete-btn"
                     @click="deleteEntry(entry.id)">
                     <v-icon size="14" color="red">mdi-delete-outline</v-icon>
                 </v-btn>

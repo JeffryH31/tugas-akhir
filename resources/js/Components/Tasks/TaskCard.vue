@@ -27,6 +27,10 @@ const props = defineProps({
         type: String,
         default: null,
     },
+    canOperate: {
+        type: Boolean,
+        default: true,
+    },
 });
 
 const emit = defineEmits(['click', 'complete', 'open-detail', 'toggle-subtask', 'open-subtask']);
@@ -152,6 +156,7 @@ const topLevelSubtasks = computed(() => {
 // Handle complete toggle
 const toggleComplete = (e) => {
     e.stopPropagation();
+    if (!props.canOperate) return;
     emit('complete', props.task);
 };
 
@@ -291,7 +296,7 @@ const openDetail = () => {
                             class="task-card__subtask-check"
                             :class="{ 'task-card__subtask-check--done': subtask.completed_at }"
                             :style="!subtask.completed_at ? { borderColor: subtask.status?.color || '#6b7280' } : {}"
-                            @click.stop="emit('toggle-subtask', subtask)">
+                            @click.stop="canOperate && emit('toggle-subtask', subtask)">
                             <v-icon v-if="subtask.completed_at" size="9" color="white">mdi-check</v-icon>
                         </button>
                         <span class="task-card__subtask-row-name"

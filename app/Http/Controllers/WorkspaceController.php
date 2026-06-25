@@ -131,6 +131,8 @@ class WorkspaceController extends Controller
             'availableUsers' => $availableUsers,
             'projects' => $projects,
             'spaces' => $spaces,
+            'canManageWorkspace' => $this->accessService->canManageWorkspace($request->user(), $workspace),
+            'canDeleteWorkspace' => $this->accessService->canDeleteWorkspace($request->user(), $workspace),
         ]);
     }
 
