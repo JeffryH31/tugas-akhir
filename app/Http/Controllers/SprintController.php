@@ -74,6 +74,7 @@ class SprintController extends Controller
             'subtasks.assignees',
             'subtasks.labels',
             'subtasks.task',
+            'subtasks.sprint',
         ]);
 
         // Get backlog subtasks (subtasks without sprint in this project)

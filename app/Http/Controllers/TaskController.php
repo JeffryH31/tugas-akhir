@@ -142,12 +142,69 @@ class TaskController extends Controller
     }
 
     /**
-     * Assign user to task — intentionally disabled.
-     *
-     * Task-level assignment is not supported; assignees are managed at the
-     * subtask level. This endpoint exists to return a helpful error message
-     * if the route is ever hit.
+     * Mark task as complete (moves to first closed status).
      */
+    public function complete(Request $request, Workspace $workspace, Space $space, Project $project, Task $task): RedirectResponse
+    {
+        abort_unless((int) $space->workspace_id === (int) $workspace->id, 404);
+        abort_unless((int) $project->space_id === (int) $space->id, 404);
+        abort_unless((int) $task->project_id === (int) $project->id, 404);
+        abort_unless($this->accessService->canOperateTasks($request->user(), $project), 403);
+
+        try {
+            $closedStatus = Status::where('space_id', $space->id)
+                ->where('is_closed', true)
+                ->orderBy('position')
+                ->first();
+
+            if (! $closedStatus) {
+                return redirect()->back()->withErrors(['error' => 'No closed status configured for this space.']);
+            }
+
+            $updatedTask = $this->taskService->changeStatus($task, $closedStatus, $request->user());
+
+            return redirect()->back()->with([
+                'success' => 'Task marked as complete.',
+                'task' => new TaskResource($updatedTask->load(['status', 'assignees', 'labels'])),
+            ]);
+        } catch (\Exception $e) {
+            return redirect()->back()->withErrors(['error' => 'Failed to complete task: '.$e->getMessage()]);
+        }
+    }
+
+    /**
+     * Reopen a completed task (moves to first open status).
+     */
+    public function reopen(Request $request, Workspace $workspace, Space $space, Project $project, Task $task): RedirectResponse
+    {
+        abort_unless((int) $space->workspace_id === (int) $workspace->id, 404);
+        abort_unless((int) $project->space_id === (int) $space->id, 404);
+        abort_unless((int) $task->project_id === (int) $project->id, 404);
+        abort_unless($this->accessService->canOperateTasks($request->user(), $project), 403);
+
+        try {
+            $openStatus = Status::where('space_id', $space->id)
+                ->where('is_closed', false)
+                ->orderBy('position')
+                ->first();
+
+            if (! $openStatus) {
+                return redirect()->back()->withErrors(['error' => 'No open status configured for this space.']);
+            }
+
+            $updatedTask = $this->taskService->changeStatus($task, $openStatus, $request->user());
+
+            return redirect()->back()->with([
+                'success' => 'Task reopened.',
+                'task' => new TaskResource($updatedTask->load(['status', 'assignees', 'labels'])),
+            ]);
+        } catch (\Exception $e) {
+            return redirect()->back()->withErrors(['error' => 'Failed to reopen task: '.$e->getMessage()]);
+        }
+    }
+
+    /**
+     * Assign user to task — intentionally disabled.
     public function assign(Request $request, Workspace $workspace, Space $space, Project $project, Task $task): RedirectResponse
     {
         abort_unless((int) $space->workspace_id === (int) $workspace->id, 404);

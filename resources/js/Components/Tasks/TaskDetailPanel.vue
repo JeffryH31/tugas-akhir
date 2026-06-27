@@ -167,41 +167,65 @@ const changeStatus = (statusId) => {
   );
 };
 
-// Toggle complete (subtask only)
+// Toggle complete (task or subtask)
 const toggleComplete = () => {
-  if (!isSubtask.value) return;
   const wasCompleted = isCompleted.value;
-  const targetStatusId = getStoredSubtaskCompletionTarget(
-    props.space?.id,
-    props.statuses
-  );
-  const payload =
-    !wasCompleted && targetStatusId ? { target_status_id: targetStatusId } : {};
 
-  router.post(
-    route(wasCompleted ? "tasks.subtasks.reopen" : "tasks.subtasks.complete", [
-      props.workspace.id,
-      props.space.id,
-      props.list.id,
-      props.parentTask.id,
-      props.task.id,
-    ]),
-    payload,
-    {
-      preserveScroll: true,
-      onSuccess: () => {
-        showSnackbar(
-          wasCompleted ? "Subtask reopened!" : "Subtask completed!",
-          "success"
-        );
-        router.reload({ only: ["tasksByStatus"] });
-      },
-      onError: (errors) => {
-        if (errors.dependency)
-          showSnackbar(errors.dependency, "error");
-      },
-    }
-  );
+  if (isSubtask.value) {
+    const targetStatusId = getStoredSubtaskCompletionTarget(
+      props.space?.id,
+      props.statuses
+    );
+    const payload =
+      !wasCompleted && targetStatusId ? { target_status_id: targetStatusId } : {};
+
+    router.post(
+      route(wasCompleted ? "tasks.subtasks.reopen" : "tasks.subtasks.complete", [
+        props.workspace.id,
+        props.space.id,
+        props.list.id,
+        props.parentTask.id,
+        props.task.id,
+      ]),
+      payload,
+      {
+        preserveScroll: true,
+        onSuccess: () => {
+          showSnackbar(
+            wasCompleted ? "Subtask reopened!" : "Subtask completed!",
+            "success"
+          );
+          router.reload({ only: ["tasksByStatus"] });
+        },
+        onError: (errors) => {
+          if (errors.dependency) showSnackbar(errors.dependency, "error");
+        },
+      }
+    );
+  } else {
+    router.post(
+      route(wasCompleted ? "tasks.reopen" : "tasks.complete", [
+        props.workspace.id,
+        props.space.id,
+        props.list.id,
+        props.task.id,
+      ]),
+      {},
+      {
+        preserveScroll: true,
+        onSuccess: () => {
+          showSnackbar(
+            wasCompleted ? "Task reopened!" : "Task completed!",
+            "success"
+          );
+          router.reload({ only: ["tasksByStatus"] });
+        },
+        onError: (errors) => {
+          if (errors.dependency) showSnackbar(errors.dependency, "error");
+        },
+      }
+    );
+  }
 };
 
 // Delete task
@@ -288,8 +312,8 @@ onUnmounted(() => stopTimerInterval());
       <!-- Header -->
       <div class="panel-header">
         <div class="d-flex align-center ga-2">
-          <!-- Complete Button (subtask only) -->
-          <v-btn v-if="isSubtask && canOperateTasks" :icon="isCompleted
+          <!-- Complete Button (task and subtask) -->
+          <v-btn v-if="canOperateTasks" :icon="isCompleted
             ? 'mdi-checkbox-marked-circle'
             : 'mdi-checkbox-blank-circle-outline'
             " :color="isCompleted ? 'success' : 'grey'" variant="text" size="small" @click="toggleComplete" />

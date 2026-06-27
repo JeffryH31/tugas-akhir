@@ -147,6 +147,8 @@ Route::middleware(['auth:sanctum', config('jetstream.auth_session'), 'verified']
                                     Route::delete('/assign', [TaskController::class, 'unassign'])->name('tasks.unassign');
                                     Route::post('/move', [TaskController::class, 'move'])->name('tasks.move');
                                     Route::post('/duplicate', [TaskController::class, 'duplicate'])->name('tasks.duplicate');
+                                    Route::post('/complete', [TaskController::class, 'complete'])->name('tasks.complete');
+                                    Route::post('/reopen', [TaskController::class, 'reopen'])->name('tasks.reopen');
 
                                     Route::prefix('labels')->group(function () {
                                         Route::post('/', [TaskController::class, 'addLabel'])->name('tasks.labels.add');

@@ -51,6 +51,36 @@ const validBacklogSubtasks = computed(() => (props.backlogSubtasks || []).filter
 const validSprintSubtasks = computed(() => (props.sprint?.subtasks || []).filter((s) => !!s.task));
 const activeListId = computed(() => props.list?.id || props.sprint?.project_id || null);
 
+// Burndown chart SVG helpers
+const burndownWidth = 600;
+const burndownHeight = 200;
+const burndownPad = 40;
+
+const burndownMaxVal = computed(() => {
+    if (!props.burndown?.ideal?.length) return 10;
+    return Math.max(...props.burndown.ideal.map((p) => p.remaining), 1);
+});
+
+const burndownYTicks = computed(() => {
+    const max = burndownMaxVal.value;
+    const step = Math.ceil(max / 4);
+    const ticks = [];
+    for (let v = 0; v <= max; v += step) ticks.push(v);
+    if (!ticks.includes(max)) ticks.push(max);
+    return ticks.sort((a, b) => a - b);
+});
+
+const burndownX = (index, total) => {
+    const usable = burndownWidth - burndownPad * 2;
+    return burndownPad + (index / Math.max(total - 1, 1)) * usable;
+};
+
+const burndownY = (val) => {
+    const usable = burndownHeight - burndownPad * 1.5;
+    const max = burndownMaxVal.value;
+    return burndownPad / 2 + usable - (val / max) * usable;
+};
+
 const goToSprintIndex = () => {
     if (!activeListId.value) {
         router.visit(route('spaces.show', [props.workspace.id, props.space.id]));
@@ -305,28 +335,67 @@ const onDropToBacklog = () => {
                 <!-- Burndown Chart -->
                 <div v-if="burndown && burndown.actual && burndown.actual.length > 0"
                     class="mt-6 sm:mt-8 bg-[#2D2D2D] rounded-lg p-4 sm:p-6">
-                    <h3 class="text-lg font-semibold text-white mb-4">Burndown Chart</h3>
-                    <div class="h-64 flex items-end gap-2">
-                        <div v-for="(point, index) in burndown.actual" :key="point.day"
-                            class="flex-1 flex flex-col items-center">
-                            <div class="w-full flex items-end justify-center gap-1 h-48">
-                                <!-- Ideal line -->
-                                <div class="w-2 bg-gray-600 rounded-t"
-                                    :style="{ height: `${(burndown.ideal[index]?.remaining / statistics.total_subtasks) * 100}%` }" />
-                                <!-- Actual line -->
-                                <div class="w-2 bg-primary rounded-t"
-                                    :style="{ height: `${(point.remaining / statistics.total_subtasks) * 100}%` }" />
-                            </div>
-                            <div class="text-xs text-gray-400 mt-2">Day {{ point.day }}</div>
-                        </div>
+                    <h3 class="text-lg font-semibold text-white mb-1">Burndown Chart</h3>
+                    <p class="text-xs text-gray-500 mb-4">Remaining tasks over sprint duration. Ideal vs actual progress.</p>
+
+                    <div class="w-full overflow-x-auto">
+                        <svg :viewBox="`0 0 ${burndownWidth} ${burndownHeight}`" class="w-full" style="min-width:320px; height:220px">
+                            <!-- Grid lines -->
+                            <line v-for="tick in burndownYTicks" :key="`gy-${tick}`"
+                                :x1="burndownPad" :y1="burndownY(tick)"
+                                :x2="burndownWidth - burndownPad" :y2="burndownY(tick)"
+                                stroke="#444" stroke-width="1" stroke-dasharray="4,4" />
+
+                            <!-- Y axis labels -->
+                            <text v-for="tick in burndownYTicks" :key="`ty-${tick}`"
+                                :x="burndownPad - 8" :y="burndownY(tick) + 4"
+                                text-anchor="end" font-size="11" fill="#888">{{ tick }}</text>
+
+                            <!-- X axis labels -->
+                            <text v-for="(pt, i) in burndown.ideal" :key="`tx-${i}`"
+                                :x="burndownX(i, burndown.ideal.length)"
+                                :y="burndownHeight - burndownPad + 18"
+                                text-anchor="middle" font-size="11" fill="#888">Day {{ pt.day }}</text>
+
+                            <!-- Ideal line -->
+                            <polyline
+                                :points="burndown.ideal.map((pt, i) =>
+                                    `${burndownX(i, burndown.ideal.length)},${burndownY(pt.remaining)}`
+                                ).join(' ')"
+                                fill="none" stroke="#6b7280" stroke-width="2" stroke-dasharray="6,3" />
+
+                            <!-- Actual line -->
+                            <polyline
+                                :points="burndown.actual.map((pt, i) =>
+                                    `${burndownX(i, burndown.ideal.length)},${burndownY(pt.remaining)}`
+                                ).join(' ')"
+                                fill="none" stroke="#7c3aed" stroke-width="2.5" />
+
+                            <!-- Actual data points -->
+                            <circle v-for="(pt, i) in burndown.actual" :key="`dot-${i}`"
+                                :cx="burndownX(i, burndown.ideal.length)"
+                                :cy="burndownY(pt.remaining)"
+                                r="4" fill="#7c3aed" stroke="#2D2D2D" stroke-width="2">
+                                <title>Day {{ pt.day }}: {{ pt.remaining }} remaining</title>
+                            </circle>
+
+                            <!-- Axes -->
+                            <line :x1="burndownPad" :y1="burndownPad / 2"
+                                  :x2="burndownPad" :y2="burndownHeight - burndownPad"
+                                  stroke="#555" stroke-width="1.5" />
+                            <line :x1="burndownPad" :y1="burndownHeight - burndownPad"
+                                  :x2="burndownWidth - burndownPad" :y2="burndownHeight - burndownPad"
+                                  stroke="#555" stroke-width="1.5" />
+                        </svg>
                     </div>
-                    <div class="flex justify-center gap-6 mt-4 text-sm">
+
+                    <div class="flex justify-center gap-6 mt-2 text-sm">
                         <div class="flex items-center gap-2">
-                            <div class="w-3 h-3 bg-gray-600 rounded" />
+                            <svg width="24" height="10"><line x1="0" y1="5" x2="24" y2="5" stroke="#6b7280" stroke-width="2" stroke-dasharray="6,3"/></svg>
                             <span class="text-gray-400">Ideal</span>
                         </div>
                         <div class="flex items-center gap-2">
-                            <div class="w-3 h-3 bg-primary rounded" />
+                            <svg width="24" height="10"><line x1="0" y1="5" x2="24" y2="5" stroke="#7c3aed" stroke-width="2.5"/></svg>
                             <span class="text-gray-400">Actual</span>
                         </div>
                     </div>
@@ -343,6 +412,7 @@ const onDropToBacklog = () => {
             :statuses="statuses"
             :members="members"
             :labels="labels"
+            :sprints="sprint ? [sprint] : []"
             :can-operate-tasks="canOperateTasks"
             :can-manage-task-structure="canManageTaskStructure"
             @open-subtask="openSubtaskFromPanel"

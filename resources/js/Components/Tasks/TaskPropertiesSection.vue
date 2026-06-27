@@ -198,8 +198,8 @@ const sprintDisplayName = (item) => {
   const sprint = resolveTaskSprint(item);
   if (sprint?.name) return sprint.name;
 
-  const sprintId = Number(item?.sprint_id || 0);
-  if (sprintId) return `Sprint #${sprintId}`;
+  // Try the directly loaded sprint relation on the item
+  if (item?.sprint?.name) return item.sprint.name;
 
   return "Backlog";
 };

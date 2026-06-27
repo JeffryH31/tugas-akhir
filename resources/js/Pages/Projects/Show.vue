@@ -261,9 +261,29 @@ const handleTaskMoved = ({ task, statusId, changeType }) => {
 };
 
 const handleTaskComplete = (task) => {
-    if (!props.parentTask) return;
-
     const wasCompleted = !!task.completed_at;
+
+    if (!props.parentTask) {
+        // Top-level task
+        if (!props.canOperateTasks) return;
+        router.post(
+            route(wasCompleted ? 'tasks.reopen' : 'tasks.complete', [
+                props.workspace.id,
+                props.space.id,
+                props.list.id,
+                task.id,
+            ]),
+            {},
+            {
+                preserveScroll: true,
+                onSuccess: () => router.reload({ only: ['tasksByStatus'] }),
+                onError: () => router.reload({ only: ['tasksByStatus'] }),
+            }
+        );
+        return;
+    }
+
+    // Subtask (viewing inside a parent task)
     const routeName = wasCompleted ? 'tasks.subtasks.reopen' : 'tasks.subtasks.complete';
     const targetStatusId = getStoredSubtaskCompletionTarget(props.space?.id, props.statuses);
     const payload = !wasCompleted && targetStatusId ? { target_status_id: targetStatusId } : {};
