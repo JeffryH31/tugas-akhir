@@ -35,7 +35,6 @@ const tableHeaders = [
     { title: 'Start', key: 'started_at', sortable: true },
     { title: 'End', key: 'ended_at', sortable: true },
     { title: 'Duration', key: 'duration', sortable: true, align: 'end' },
-    { title: 'Billable', key: 'is_billable', sortable: true, align: 'center' },
     { title: '', key: 'actions', sortable: false, align: 'end', width: 80 },
 ];
 
@@ -44,7 +43,7 @@ const showAddEntry = ref(false);
 const editingEntry = ref(null);
 const selectedSubtask = ref(null);
 const subtaskSearch = ref('');
-const entryForm = ref({ started_at: '', ended_at: '', is_billable: false });
+const entryForm = ref({ started_at: '', ended_at: '' });
 
 // Computed
 const formatRunningTime = computed(() => {
@@ -71,8 +70,7 @@ const periodLabel = computed(() => {
 const periodStats = computed(() => {
     const completed = props.entries.filter(e => !e.is_running);
     const total = completed.reduce((sum, e) => sum + (e.duration || 0), 0);
-    const billable = completed.filter(e => e.is_billable).reduce((sum, e) => sum + (e.duration || 0), 0);
-    return { total, billable, count: completed.length };
+    return { total, count: completed.length };
 });
 
 // Flat table rows with searchable fields
@@ -156,7 +154,6 @@ const editEntry = (entry) => {
     entryForm.value = {
         started_at: entry.started_at ? new Date(entry.started_at).toISOString().slice(0, 16) : '',
         ended_at: entry.ended_at ? new Date(entry.ended_at).toISOString().slice(0, 16) : '',
-        is_billable: entry.is_billable,
     };
     showAddEntry.value = true;
 };
@@ -185,7 +182,6 @@ const saveEntry = () => {
             {
                 started_at: entryForm.value.started_at,
                 ended_at: entryForm.value.ended_at,
-                is_billable: entryForm.value.is_billable,
             },
             {
                 preserveScroll: true,
@@ -197,7 +193,7 @@ const saveEntry = () => {
 };
 
 const resetForm = () => {
-    entryForm.value = { started_at: '', ended_at: '', is_billable: false };
+    entryForm.value = { started_at: '', ended_at: '' };
     selectedSubtask.value = null;
     subtaskSearch.value = '';
 };
@@ -326,19 +322,6 @@ watch(() => props.runningTimer, (newTimer) => {
                     <v-card class="pa-4" rounded="lg">
                         <div class="flex items-start justify-between">
                             <div>
-                                <div class="text-xs text-gray-400">Billable</div>
-                                <div class="text-2xl font-semibold mt-1 text-green-400">{{
-                                    formatDuration(periodStats.billable) }}
-                                </div>
-                            </div>
-                            <v-avatar size="36" color="success" variant="tonal" rounded="lg">
-                                <v-icon size="18">mdi-cash</v-icon>
-                            </v-avatar>
-                        </div>
-                    </v-card>
-                    <v-card class="pa-4" rounded="lg">
-                        <div class="flex items-start justify-between">
-                            <div>
                                 <div class="text-xs text-gray-400">Entries</div>
                                 <div class="text-2xl font-semibold mt-1">{{ periodStats.count }}</div>
                             </div>
@@ -421,14 +404,6 @@ watch(() => props.runningTimer, (newTimer) => {
                             </span>
                         </template>
 
-                        <!-- Billable -->
-                        <template #item.is_billable="{ item }">
-                            <v-chip :color="item.is_billable ? 'success' : 'default'"
-                                :variant="item.is_billable ? 'tonal' : 'text'" size="small">
-                                {{ item.is_billable ? 'Yes' : 'No' }}
-                            </v-chip>
-                        </template>
-
                         <!-- Actions -->
                         <template #item.actions="{ item }">
                             <v-btn v-if="item.is_running" icon="mdi-stop" size="x-small" color="error" variant="text"
@@ -484,9 +459,6 @@ watch(() => props.runningTimer, (newTimer) => {
                             <v-text-field v-model="entryForm.ended_at" label="End" type="datetime-local"
                                 variant="outlined" density="compact" hide-details />
                         </div>
-
-                        <v-checkbox v-model="entryForm.is_billable" label="Billable" hide-details density="compact"
-                            color="success" />
                     </v-card-text>
 
                     <v-divider />

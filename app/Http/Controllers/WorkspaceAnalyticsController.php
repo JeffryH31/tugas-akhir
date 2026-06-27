@@ -26,9 +26,15 @@ class WorkspaceAnalyticsController extends Controller
 
         $canManage = $this->accessService->canManageWorkspace($request->user(), $workspace);
 
-        $membersPayload = $canManage
-            ? $this->analyticsService->getMembersPayload($workspace)
-            : ['members' => collect(), 'spaces' => collect()];
+        $membersPayload = $this->analyticsService->getMembersPayload($workspace);
+
+        // Non-admin members should not see hourly_rate
+        if (! $canManage) {
+            $membersPayload['members'] = $membersPayload['members']->map(function ($member) {
+                unset($member['hourly_rate']);
+                return $member;
+            });
+        }
 
         return Inertia::render('Workspaces/Analytics', [
             'workspace' => $workspace,
@@ -44,27 +50,4 @@ class WorkspaceAnalyticsController extends Controller
         ]);
     }
 
-    public function export(Request $request, Workspace $workspace): \Symfony\Component\HttpFoundation\StreamedResponse
-    {
-        abort_unless($this->accessService->canViewAnalytics($request->user(), $workspace), 403);
-        $validated = $request->validate([
-            'start_date' => ['nullable', 'date'],
-            'end_date' => ['nullable', 'date'],
-        ]);
-
-        $rows = $this->analyticsService->getCsvRows(
-            $workspace,
-            $validated['start_date'] ?? null,
-            $validated['end_date'] ?? null,
-        );
-
-        return response()->streamDownload(function () use ($rows) {
-            $output = fopen('php://output', 'w');
-            fputcsv($output, ['metric', 'value']);
-            foreach ($rows as $row) {
-                fputcsv($output, [$row['metric'], $row['value']]);
-            }
-            fclose($output);
-        }, 'workspace-analytics.csv');
-    }
 }

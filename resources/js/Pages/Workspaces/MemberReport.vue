@@ -6,6 +6,7 @@ const props = defineProps({
     workspace: { type: Object, default: null },
     member: { type: Object, default: null },
     report: { type: Object, default: null },
+    canManage: { type: Boolean, default: false },
 });
 
 // Helpers
@@ -102,14 +103,6 @@ const activityColor = (action) => {
     };
     return colors[action] ?? 'grey';
 };
-
-// Billable pct
-const billablePct = computed(() => {
-    const m = stats.value.month_minutes;
-    const b = stats.value.billable_minutes;
-    if (!m) return 0;
-    return Math.round((b / m) * 100);
-});
 </script>
 
 <template>
@@ -143,7 +136,7 @@ const billablePct = computed(() => {
                             </v-chip>
                         </div>
                         <div class="text-sm text-gray-400 mt-1">{{ member.email }}</div>
-                        <div class="text-sm text-gray-500 mt-1">
+                        <div v-if="canManage && member.hourly_rate" class="text-sm text-gray-500 mt-1">
                             Rate: <span class="font-medium">Rp {{ Number(member.hourly_rate).toLocaleString('id-ID') }}/hr</span>
                         </div>
                     </div>
@@ -179,14 +172,6 @@ const billablePct = computed(() => {
                     <div class="text-xs text-gray-400 mb-1">This Month</div>
                     <div class="text-2xl font-bold">{{ fmtMinutes(stats.month_minutes) }}</div>
                     <div class="text-xs text-gray-500 mt-1">time tracked</div>
-                </v-card>
-                <v-card class="pa-4">
-                    <div class="text-xs text-gray-400 mb-1">Billable (this month)</div>
-                    <div class="text-2xl font-bold">{{ fmtMinutes(stats.billable_minutes) }}</div>
-                    <div class="flex items-center gap-2 mt-1">
-                        <v-progress-linear :model-value="billablePct" color="success" rounded height="4" class="flex-1" />
-                        <span class="text-xs text-gray-400">{{ billablePct }}%</span>
-                    </div>
                 </v-card>
             </div>
 
@@ -368,7 +353,6 @@ const billablePct = computed(() => {
                                     <th>Subtask</th>
                                     <th>Task / Project</th>
                                     <th>Duration</th>
-                                    <th>Billable</th>
                                     <th>Status</th>
                                 </tr>
                             </thead>
@@ -383,10 +367,6 @@ const billablePct = computed(() => {
                                     </td>
                                     <td class="text-xs text-gray-400">{{ e.task }} · {{ e.list }}</td>
                                     <td class="text-sm font-medium">{{ fmtDuration(e.duration) }}</td>
-                                    <td>
-                                        <v-icon v-if="e.is_billable" size="16" color="success">mdi-check-circle</v-icon>
-                                        <v-icon v-else size="16" color="grey">mdi-minus-circle-outline</v-icon>
-                                    </td>
                                     <td>
                                         <v-chip v-if="e.is_running" color="success" size="x-small">Running</v-chip>
                                         <v-chip v-else color="grey" size="x-small" variant="tonal">Done</v-chip>

@@ -46,7 +46,6 @@ test('getReport stats reflect logged time entries', function () {
     expect($report['stats']['today_minutes'])->toBe(90);
     expect($report['stats']['week_minutes'])->toBeGreaterThanOrEqual(90);
     expect($report['stats']['month_minutes'])->toBeGreaterThanOrEqual(90);
-    expect($report['stats']['billable_minutes'])->toBe(90);
     expect($report['stats']['all_time_minutes'])->toBe(90);
 });
 

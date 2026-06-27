@@ -355,7 +355,7 @@ const toggleChildSubtask = (child) => {
     </div>
 
     <!-- Description Section -->
-    <TaskDescriptionSection v-model="editedDescription" :can-edit="canOperateTasks" class="mt-4"
+    <TaskDescriptionSection v-model="editedDescription" :can-edit="isSubtask ? canOperateTasks : canManageTaskStructure" class="mt-4"
       @save="saveDescription" />
   </div>
 </template>

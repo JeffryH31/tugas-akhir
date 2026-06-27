@@ -40,12 +40,17 @@ const roleColor = (r) => ({ admin: 'primary', manager: 'teal', member: 'default'
 const memberSearch = ref('');
 const memberSpaceFilter = ref(null);
 
-const memberHeaders = [
-    { title: 'Member', key: 'name', sortable: true },
-    { title: 'Working On', key: 'running_on', sortable: false },
-    { title: 'Hourly Rate', key: 'hourly_rate', sortable: true },
-    { title: '', key: 'actions', sortable: false, align: 'end' },
-];
+const memberHeaders = computed(() => {
+    const headers = [
+        { title: 'Member', key: 'name', sortable: true },
+        { title: 'Working On', key: 'running_on', sortable: false },
+    ];
+    if (props.canManage) {
+        headers.push({ title: 'Hourly Rate', key: 'hourly_rate', sortable: true });
+    }
+    headers.push({ title: '', key: 'actions', sortable: false, align: 'end' });
+    return headers;
+});
 
 const filteredMembers = computed(() => {
     let list = props.members;
@@ -69,13 +74,6 @@ const applyFilter = () => {
         preserveScroll: true,
     });
 };
-
-const exportCsvUrl = computed(() => {
-    const params = new URLSearchParams();
-    if (startDate.value) params.set('start_date', startDate.value);
-    if (endDate.value) params.set('end_date', endDate.value);
-    return `${route('workspaces.analytics.export', props.workspace.id)}?${params.toString()}`;
-});
 </script>
 
 <template>
@@ -92,7 +90,6 @@ const exportCsvUrl = computed(() => {
                     <v-text-field v-model="endDate" type="date" label="End" density="compact" hide-details
                         variant="outlined" />
                     <v-btn color="primary" @click="applyFilter">Apply</v-btn>
-                    <v-btn variant="outlined" :href="exportCsvUrl" download>Export CSV</v-btn>
                 </div>
             </div>
 
@@ -103,8 +100,8 @@ const exportCsvUrl = computed(() => {
                 </v-card>
 
             </div>
-            <!-- Team Section — only for owner/admin -->
-            <div v-if="canManage && members.length" class="my-5">
+            <!-- Team Section — visible for all workspace members -->
+            <div v-if="members.length" class="my-5">
                 <div class="text-lg font-semibold mb-4">
                     <v-icon size="20" class="mr-2">mdi-account-group-outline</v-icon>
                     Team Member Reports
@@ -148,7 +145,7 @@ const exportCsvUrl = computed(() => {
                             </div>
                             <span v-else class="text-xs text-gray-400">—</span>
                         </template>
-                        <template #item.hourly_rate="{ item }">
+                        <template v-if="canManage" #item.hourly_rate="{ item }">
                             Rp {{ Number(item.hourly_rate).toLocaleString('id-ID') }}
                         </template>
                         <template #item.actions="{ item }">
@@ -162,8 +159,8 @@ const exportCsvUrl = computed(() => {
                 </v-card>
             </div>
 
-            <!-- EVM KPI Cards -->
-            <div class="grid grid-cols-1 sm:grid-cols-3 gap-3 mb-5">
+            <!-- EVM KPI Cards — only for admin/owner -->
+            <div v-if="canManage" class="grid grid-cols-1 sm:grid-cols-3 gap-3 mb-5">
                 <v-card v-for="card in evmCards" :key="card.label" class="pa-4">
                     <div class="text-xs text-gray-400">{{ card.label }}</div>
                     <div class="text-2xl font-semibold mt-1">Rp {{ card.value }}</div>
@@ -171,8 +168,8 @@ const exportCsvUrl = computed(() => {
                 </v-card>
             </div>
 
-            <!-- EVM Summary -->
-            <v-card class="mb-5">
+            <!-- EVM Summary — only for admin/owner -->
+            <v-card v-if="canManage" class="mb-5">
                 <v-card-title>Earned Value Management Summary</v-card-title>
                 <v-divider />
                 <v-card-text>

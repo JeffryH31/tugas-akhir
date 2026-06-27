@@ -33,19 +33,10 @@ test('logTime logs time_logged activity', function () {
     expect($activity->properties['duration'])->toBe(30);
 });
 
-test('logTime defaults to billable false', function () {
+test('logTime creates entry without billable field', function () {
     $entry = $this->service->logTime($this->subtask, $this->owner, ['duration' => 10]);
 
-    expect($entry->is_billable)->toBeFalse();
-});
-
-test('logTime with billable flag', function () {
-    $entry = $this->service->logTime($this->subtask, $this->owner, [
-        'duration' => 60,
-        'is_billable' => true,
-    ]);
-
-    expect($entry->is_billable)->toBeTrue();
+    expect($entry->duration)->toBe(10);
 });
 
 test('startTimer creates running entry and stops previous', function () {
@@ -174,17 +165,13 @@ test('getEntriesForUser filters by date range', function () {
 
 test('getTaskTimeSummary returns correct summary', function () {
     $this->service->logTime($this->subtask, $this->owner, ['duration' => 60]);
-    $this->service->logTime($this->subtask, $this->owner, [
-        'duration' => 30,
-        'is_billable' => true,
-    ]);
+    $this->service->logTime($this->subtask, $this->owner, ['duration' => 30]);
 
     $summary = $this->service->getTaskTimeSummary($this->hierarchy['task']->fresh());
 
     expect($summary['total_minutes'])->toBe(90);
     expect($summary['total_formatted'])->toBe('1h 30m');
     expect($summary['entries_count'])->toBe(2);
-    expect($summary['billable_minutes'])->toBe(30);
 });
 
 test('getUserTimeSummary returns grouped data for current week', function () {

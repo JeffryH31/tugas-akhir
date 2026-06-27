@@ -70,7 +70,6 @@ Route::middleware(['auth:sanctum', config('jetstream.auth_session'), 'verified']
 
             Route::get('/time-report', [TimeEntryController::class, 'workspaceReport'])->name('workspaces.time-report');
             Route::get('/analytics', [WorkspaceAnalyticsController::class, 'index'])->name('workspaces.analytics');
-            Route::get('/analytics/export', [WorkspaceAnalyticsController::class, 'export'])->name('workspaces.analytics.export');
             Route::get('/recycle-bin', [RecycleBinController::class, 'index'])->name('workspaces.recycle-bin.index');
             Route::post('/recycle-bin/restore', [RecycleBinController::class, 'restore'])->name('workspaces.recycle-bin.restore');
 

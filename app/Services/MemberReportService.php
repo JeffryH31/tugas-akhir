@@ -26,7 +26,6 @@ class MemberReportService
             'today_minutes' => (clone $base())->where('started_at', '>=', $todayStart)->sum('duration'),
             'week_minutes' => (clone $base())->where('started_at', '>=', $weekStart)->sum('duration'),
             'month_minutes' => (clone $base())->where('started_at', '>=', $monthStart)->sum('duration'),
-            'billable_minutes' => (clone $base())->where('is_billable', true)->where('started_at', '>=', $monthStart)->sum('duration'),
             'all_time_minutes' => (clone $base())->sum('duration'),
         ];
 
@@ -141,7 +140,6 @@ class MemberReportService
             ->map(fn ($e) => [
                 'id' => $e->id,
                 'duration' => $e->duration,
-                'is_billable' => $e->is_billable,
                 'is_running' => $e->is_running,
                 'started_at' => $e->started_at->toDateTimeString(),
                 'ended_at' => $e->ended_at?->toDateTimeString(),

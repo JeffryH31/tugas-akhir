@@ -424,13 +424,6 @@ const removeProjectMember = async (project, member) => {
 const showDeleteWorkspace = ref(false);
 const isDeletingWorkspace = ref(false);
 
-const accessLayers = [
-    { title: 'General Website', desc: 'Global account access — login, profile, and security settings.', icon: 'mdi-web', color: 'primary', hex: '#7B68EE' },
-    { title: 'Workspace Access', desc: 'Admin / Member roles for workspace-wide capabilities.', icon: 'mdi-view-dashboard-outline', color: 'info', hex: '#49CCF9' },
-    { title: 'Space Access', desc: 'Space-level membership control — manage who can access each space.', icon: 'mdi-layers-outline', color: 'warning', hex: '#FFB84D' },
-    { title: 'Project Access', desc: 'Project-level roles: owner, manager, developer, guest.', icon: 'mdi-view-list-outline', color: 'success', hex: '#6BC950' },
-];
-
 const deleteWorkspace = () => {
     isDeletingWorkspace.value = true;
     router.delete(
@@ -462,28 +455,6 @@ const deleteWorkspace = () => {
                         <div class="text-caption text-medium-emphasis mt-1">
                             Manage <span class="text-primary font-weight-medium">{{ workspace?.name }}</span> — access
                             layers, members, and configuration
-                        </div>
-                    </div>
-                </div>
-            </div>
-
-            <!-- Access Layers -->
-            <div class="settings-section mb-5">
-                <div class="section-label mb-3">
-                    <v-icon size="14" color="primary" class="mr-1">mdi-shield-account-outline</v-icon>
-                    Access Hierarchy
-                </div>
-                <div class="access-layers-grid">
-                    <div class="access-layer-card" v-for="(layer, i) in accessLayers" :key="i"
-                        :style="`--layer-color: ${layer.hex}`">
-                        <div class="layer-badge" :style="`background: ${layer.hex}18; color: ${layer.hex}`">
-                            <v-icon size="16" :color="layer.color">{{ layer.icon }}</v-icon>
-                        </div>
-                        <div class="layer-step">{{ String(i + 1).padStart(2, '0') }}</div>
-                        <div class="layer-title">{{ layer.title }}</div>
-                        <div class="layer-desc text-caption text-medium-emphasis">{{ layer.desc }}</div>
-                        <div class="layer-connector" v-if="i < accessLayers.length - 1">
-                            <v-icon size="14" color="grey-darken-1">mdi-chevron-right</v-icon>
                         </div>
                     </div>
                 </div>
@@ -548,11 +519,6 @@ const deleteWorkspace = () => {
                             {{ (member.pivot?.role || member.role || 'member').toUpperCase() }}
                         </v-chip>
                         <div v-if="isAdmin" class="member-actions">
-                            <v-btn icon variant="text" size="x-small" color="info"
-                                :href="route('workspaces.members.report', [workspace.id, member.id])"
-                                title="View Report">
-                                <v-icon size="15">mdi-chart-box-outline</v-icon>
-                            </v-btn>
                             <v-btn icon variant="text" size="x-small" color="grey" @click="openEditUserDialog(member)">
                                 <v-icon size="15">mdi-pencil-outline</v-icon>
                             </v-btn>
@@ -560,59 +526,6 @@ const deleteWorkspace = () => {
                                 :disabled="!canModifyWorkspaceMember(member)" @click="removeMember(member)">
                                 <v-icon size="15">mdi-delete-outline</v-icon>
                             </v-btn>
-                        </div>
-                    </div>
-                </div>
-            </div>
-
-            <!-- Scope Settings Navigation -->
-            <div class="settings-section mb-5">
-                <div class="section-label mb-3">
-                    <v-icon size="14" color="warning" class="mr-1">mdi-sitemap-outline</v-icon>
-                    Scope Access Management
-                </div>
-                <div class="scope-grid">
-                    <div class="scope-card">
-                        <div class="scope-card-header">
-                            <div class="scope-card-icon bg-warning-subtle">
-                                <v-icon size="18" color="warning">mdi-layers-outline</v-icon>
-                            </div>
-                            <div>
-                                <div class="text-body-2 font-weight-bold">Spaces</div>
-                                <div class="text-caption text-medium-emphasis">Manage space-level roles</div>
-                            </div>
-                        </div>
-                        <div class="scope-links">
-                            <v-btn v-for="space in spaces" :key="`space-${space.id}`" size="small" variant="tonal"
-                                color="warning" rounded="lg" class="scope-link-btn"
-                                @click="router.visit(route('spaces.settings', [workspace.id, space.id]))">
-                                <v-icon start size="13">mdi-layers</v-icon>
-                                {{ space.name }}
-                            </v-btn>
-                            <span v-if="!spaces?.length" class="text-caption text-medium-emphasis">No spaces
-                                found.</span>
-                        </div>
-                    </div>
-
-                    <div class="scope-card">
-                        <div class="scope-card-header">
-                            <div class="scope-card-icon bg-success-subtle">
-                                <v-icon size="18" color="success">mdi-view-list-outline</v-icon>
-                            </div>
-                            <div>
-                                <div class="text-body-2 font-weight-bold">Products</div>
-                                <div class="text-caption text-medium-emphasis">Manage project member roles</div>
-                            </div>
-                        </div>
-                        <div class="scope-links">
-                            <v-btn v-for="project in projectLists" :key="`project-${project.id}`" size="small"
-                                variant="tonal" color="success" rounded="lg" class="scope-link-btn"
-                                @click="router.visit(route('projects.settings', [workspace.id, project.space.id, project.id]))">
-                                <v-icon start size="13">mdi-view-list</v-icon>
-                                {{ project.name }}
-                            </v-btn>
-                            <span v-if="!projectLists?.length" class="text-caption text-medium-emphasis">No products
-                                found.</span>
                         </div>
                     </div>
                 </div>

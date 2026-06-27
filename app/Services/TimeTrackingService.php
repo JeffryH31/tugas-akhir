@@ -36,7 +36,6 @@ class TimeTrackingService
                 'duration' => $duration, // in minutes
                 'started_at' => $startedAt,
                 'ended_at' => $endedAt ?? $startedAt->copy()->addMinutes($duration),
-                'is_billable' => $data['is_billable'] ?? false,
             ]);
 
             $workspace = $subtask->task->project->space->workspace;
@@ -106,7 +105,6 @@ class TimeTrackingService
         $updateData = [
             'started_at' => $data['started_at'] ?? $entry->started_at,
             'ended_at' => $data['ended_at'] ?? $entry->ended_at,
-            'is_billable' => $data['is_billable'] ?? $entry->is_billable,
         ];
 
         if (isset($data['started_at']) && isset($data['ended_at'])) {
@@ -225,7 +223,6 @@ class TimeTrackingService
                 ? min(100, round(($totalMinutes / $estimatedMinutes) * 100, 1))
                 : 0,
             'entries_count' => $entries->count(),
-            'billable_minutes' => $entries->where('is_billable', true)->sum('duration'),
         ];
     }
 
@@ -260,7 +257,6 @@ class TimeTrackingService
         return [
             'total_minutes' => $entries->sum('duration'),
             'total_formatted' => $this->formatMinutes($entries->sum('duration')),
-            'billable_minutes' => $entries->where('is_billable', true)->sum('duration'),
             'entries_count' => $entries->count(),
             'by_task' => $byTask->take(10),
             'by_day' => $byDay,
