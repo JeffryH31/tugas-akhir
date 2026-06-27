@@ -1,6 +1,6 @@
 <script setup>
 import { ref, computed, watch, nextTick, onMounted, onUnmounted } from "vue";
-import { router } from "@inertiajs/vue3";
+import { router, usePage } from "@inertiajs/vue3";
 import { useSnackbar } from "@/composables/useSnackbar";
 import { useTaskTimer } from "@/composables/useTaskTimer";
 import { getStoredSubtaskCompletionTarget } from "@/utils/subtaskCompletionAutomation";
@@ -76,6 +76,15 @@ watch(
 
 // Determine if we're viewing a subtask
 const isSubtask = computed(() => !!props.parentTask);
+
+// Check if current user is the assignee of this subtask
+const pageData = usePage();
+const isAssignee = computed(() => {
+  const userId = pageData.props?.auth?.user?.id;
+  if (!userId) return false;
+  const assignees = localTask.value?.assignees || [];
+  return assignees.some((a) => a.id === userId);
+});
 
 // Route helpers (used in header: status chip, delete)
 const getUpdateRoute = () => {
@@ -391,7 +400,7 @@ onUnmounted(() => stopTimerInterval());
 
           <v-tabs-window-item v-if="isSubtask" value="time">
             <TimeTab :task="localTask" :workspace="workspace" :space="space" :list="list" :parent-task="parentTask"
-              :can-track-time="canOperateTasks" />
+              :can-track-time="isAssignee" />
           </v-tabs-window-item>
 
           <v-tabs-window-item value="activity">

@@ -208,7 +208,9 @@ const persistBoardOrder = () => {
 
 const handleTaskMoved = ({ task, statusId, changeType }) => {
     if (changeType === 'moved') {
-        persistBoardOrder();
+        if (props.canManageTaskStructure) {
+            persistBoardOrder();
+        }
         return;
     }
 
@@ -229,7 +231,10 @@ const handleTaskMoved = ({ task, statusId, changeType }) => {
             { status_id: statusId },
             {
                 preserveScroll: true,
-                onSuccess: () => persistBoardOrder(),
+                onSuccess: () => {
+                    if (props.canManageTaskStructure) persistBoardOrder();
+                    else router.reload({ only: ['tasksByStatus'] });
+                },
                 onError: () => onError('Failed to move subtask'),
             }
         );
@@ -246,7 +251,10 @@ const handleTaskMoved = ({ task, statusId, changeType }) => {
         { status_id: statusId },
         {
             preserveScroll: true,
-            onSuccess: () => persistBoardOrder(),
+            onSuccess: () => {
+                if (props.canManageTaskStructure) persistBoardOrder();
+                else router.reload({ only: ['tasksByStatus'] });
+            },
             onError: () => onError('Failed to move task'),
         }
     );

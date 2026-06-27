@@ -12,6 +12,8 @@ beforeEach(function () {
     $this->owner = $this->createUser();
     $this->h = $this->createFullHierarchy($this->owner);
     $this->subtask = $this->createSubtask($this->h['task']);
+    // Assign owner to subtask so they can track time
+    $this->subtask->assignees()->attach($this->owner->id);
 });
 
 // store (log time)
@@ -138,6 +140,7 @@ test('starting a second timer stops the first', function () {
 
     // Second timer on different subtask
     $subtask2 = $this->createSubtask($this->h['task']);
+    $subtask2->assignees()->attach($this->owner->id);
     actingAs($this->owner)
         ->post(route('tasks.timer.start', [
             $this->h['workspace'],

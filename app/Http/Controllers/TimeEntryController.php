@@ -78,6 +78,12 @@ class TimeEntryController extends Controller
     public function store(StoreTimeEntryRequest $request, Workspace $workspace, Space $space, Project $project, Task $task, Subtask $subtask): RedirectResponse
     {
         abort_unless($this->accessService->canTrackTime($request->user(), $project), 403);
+
+        // Only the assignee of this subtask can log time
+        if (! $subtask->assignees()->where('user_id', $request->user()->id)->exists()) {
+            return redirect()->back()->withErrors(['error' => 'You can only track time on subtasks assigned to you.']);
+        }
+
         try {
             $entry = $this->timeTrackingService->logTime(
                 $subtask,
@@ -108,6 +114,15 @@ class TimeEntryController extends Controller
             $subtask = ! empty($validated['subtask_id'])
                 ? Subtask::where('id', $validated['subtask_id'])->where('task_id', $task->id)->firstOrFail()
                 : Subtask::where('task_id', $task->id)->firstOrFail();
+
+            // Only the assignee of this subtask can start timer
+            if (! $subtask->assignees()->where('user_id', $request->user()->id)->exists()) {
+                $msg = 'You can only track time on subtasks assigned to you.';
+                if ($request->wantsJson()) {
+                    return response()->json(['success' => false, 'message' => $msg], 403);
+                }
+                return redirect()->back()->withErrors(['error' => $msg]);
+            }
 
             $entry = $this->timeTrackingService->startTimer(
                 $subtask,

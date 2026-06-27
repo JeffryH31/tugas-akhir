@@ -1,6 +1,6 @@
 <script setup>
 import { ref, computed, watch } from "vue";
-import { router } from "@inertiajs/vue3";
+import { router, usePage } from "@inertiajs/vue3";
 import { PRIORITIES, PRIORITY_MAP } from "@/constants/priorities";
 import { useConfirmDialog } from "@/composables/useConfirmDialog";
 import { useSnackbar } from "@/composables/useSnackbar";
@@ -39,6 +39,14 @@ const props = defineProps({
 });
 
 const emit = defineEmits(["start-tracking", "stop-tracking", "updated"]);
+
+const page = usePage();
+const isAssignee = computed(() => {
+  const userId = page.props?.auth?.user?.id;
+  if (!userId) return false;
+  const assignees = props.localTask?.assignees || props.task?.assignees || [];
+  return assignees.some((a) => a.id === userId);
+});
 
 // Route helper
 const getUpdateRoute = () => {
@@ -1248,7 +1256,7 @@ const removeSuccessor = (suc) =>
             <code class="timer-display" :class="{ 'timer-display--active': isTracking }">
         {{ formatTrackingDuration }}
       </code>
-            <v-btn v-if="!isTracking && canOperateTasks" icon="mdi-play" color="success" variant="tonal" size="x-small"
+            <v-btn v-if="!isTracking && canOperateTasks && isAssignee" icon="mdi-play" color="success" variant="tonal" size="x-small"
               :loading="isTimerLoading" @click="$emit('start-tracking')" />
             <v-btn v-else-if="isTracking" icon="mdi-stop" color="error" variant="tonal" size="x-small"
               :loading="isTimerLoading" @click="$emit('stop-tracking')" />
