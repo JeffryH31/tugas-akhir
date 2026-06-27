@@ -59,10 +59,24 @@ export function useIdleDetector({ onIdle, onActive, idleThresholdSeconds = 300 }
             window.addEventListener(evt, handleActivity, { passive: true })
         );
 
-        // tab disembunyikan dianggap idle, kembali ditampilkan dianggap aktif
+        // tab disembunyikan dianggap idle hanya jika cukup lama (≥60 detik)
+        let hiddenAt = null;
+        const VISIBILITY_IDLE_SECONDS = 60;
+
         const handleVisibility = () => {
-            if (document.hidden) goIdle();
-            else resetTimer();
+            if (document.hidden) {
+                hiddenAt = Date.now();
+            } else {
+                // Tab kembali aktif — cek apakah sudah cukup lama di-hide
+                if (hiddenAt && (Date.now() - hiddenAt) >= VISIBILITY_IDLE_SECONDS * 1000) {
+                    // Sudah lama tersembunyi, pasti idle
+                    if (!isIdle.value) {
+                        isIdle.value = true;
+                    }
+                }
+                hiddenAt = null;
+                resetTimer();
+            }
         };
         document.addEventListener('visibilitychange', handleVisibility);
 
