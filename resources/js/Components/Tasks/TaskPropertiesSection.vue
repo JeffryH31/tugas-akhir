@@ -1194,7 +1194,7 @@ const removeSuccessor = (suc) =>
                 <v-text-field v-model="tempPessimistic" type="number" label="Pessimistic (hours)" variant="outlined"
                   density="compact" hide-details step="0.5" min="0" />
                 <p v-if="pertDisplay" class="text-caption text-medium-emphasis mb-0">
-                  Expected = (O + 4M + P) / 6 = <strong>{{ pertDisplay.expected }}</strong>
+                  Expected = <strong>{{ pertDisplay.expected }}</strong>
                   <span v-if="pertDisplay.stdDev"> &middot; uncertainty ± {{ pertDisplay.stdDev }}</span>
                 </p>
               </v-card-text>

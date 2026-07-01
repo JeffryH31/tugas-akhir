@@ -1,32 +1,38 @@
 <mxfile host="app.diagrams.net" agent="draw.io">
   <diagram id="project-level" name="Use Case - Project Level">
-    <mxGraphModel dx="1373" dy="748" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="2400" pageHeight="1800" math="0" shadow="0">
+    <mxGraphModel dx="1717" dy="935" grid="0" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="2400" pageHeight="1800" math="0" shadow="0">
       <root>
         <mxCell id="0" />
         <mxCell id="1" parent="0" />
-        <mxCell id="sys" parent="1" style="shape=umlFrame;whiteSpace=wrap;html=1;width=1400;height=1600;fontSize=14;fontStyle=1;align=left;verticalAlign=top;spacingTop=10;spacingLeft=15;fillColor=none;strokeColor=#333333;" value="Project Level — Project Management System" vertex="1">
-          <mxGeometry height="1600" width="190" x="1590" y="50" as="geometry" />
+        <mxCell id="sys" parent="1" style="shape=umlFrame;whiteSpace=wrap;html=1;width=1400;height=1600;fontSize=14;fontStyle=1;align=left;verticalAlign=top;spacingTop=10;spacingLeft=15;fillColor=none;strokeColor=#333333;" value="Project Level&amp;nbsp;" vertex="1">
+          <mxGeometry height="1411" width="770" x="182" y="82" as="geometry" />
         </mxCell>
         <mxCell id="a_owner" parent="1" style="shape=umlActor;verticalLabelPosition=bottom;verticalAlign=top;html=1;outlineConnect=0;fontSize=12;" value="Project&#xa;Owner" vertex="1">
-          <mxGeometry height="60" width="40" x="120" y="170" as="geometry" />
+          <mxGeometry height="60" width="40" x="60" y="170" as="geometry" />
         </mxCell>
         <mxCell id="a_manager" parent="1" style="shape=umlActor;verticalLabelPosition=bottom;verticalAlign=top;html=1;outlineConnect=0;fontSize=12;" value="Project&#xa;Manager" vertex="1">
-          <mxGeometry height="60" width="40" x="120" y="530" as="geometry" />
+          <mxGeometry height="60" width="40" x="60" y="530" as="geometry" />
         </mxCell>
         <mxCell id="a_dev" parent="1" style="shape=umlActor;verticalLabelPosition=bottom;verticalAlign=top;html=1;outlineConnect=0;fontSize=12;" value="Development&#xa;Team" vertex="1">
-          <mxGeometry height="60" width="40" x="120" y="980" as="geometry" />
+          <mxGeometry height="60" width="40" x="60" y="980" as="geometry" />
         </mxCell>
         <mxCell id="a_guest" parent="1" style="shape=umlActor;verticalLabelPosition=bottom;verticalAlign=top;html=1;outlineConnect=0;fontSize=12;" value="Project&#xa;Guest" vertex="1">
-          <mxGeometry height="60" width="40" x="120" y="1400" as="geometry" />
+          <mxGeometry height="60" width="40" x="60" y="1400" as="geometry" />
         </mxCell>
-        <mxCell id="g1" edge="1" parent="1" source="a_manager" style="endArrow=block;endFill=0;endSize=16;html=1;" target="a_owner">
-          <mxGeometry relative="1" as="geometry" />
+        <mxCell id="g1" edge="1" parent="1" source="a_owner" style="endArrow=block;endFill=0;endSize=16;html=1;entryX=0.5;entryY=0;entryDx=0;entryDy=0;entryPerimeter=0;" target="a_manager">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint x="49" y="296" as="sourcePoint" />
+          </mxGeometry>
         </mxCell>
-        <mxCell id="g2" edge="1" parent="1" source="a_dev" style="endArrow=block;endFill=0;endSize=16;html=1;" target="a_manager">
-          <mxGeometry relative="1" as="geometry" />
+        <mxCell id="g2" edge="1" parent="1" source="a_manager" style="endArrow=block;endFill=0;endSize=16;html=1;entryX=0.5;entryY=0;entryDx=0;entryDy=0;entryPerimeter=0;" target="a_dev">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint x="120" y="887" as="targetPoint" />
+          </mxGeometry>
         </mxCell>
-        <mxCell id="g3" edge="1" parent="1" source="a_guest" style="endArrow=block;endFill=0;endSize=16;html=1;" target="a_dev">
-          <mxGeometry relative="1" as="geometry" />
+        <mxCell id="g3" edge="1" parent="1" source="a_dev" style="endArrow=block;endFill=0;endSize=16;html=1;entryX=0.5;entryY=0;entryDx=0;entryDy=0;entryPerimeter=0;" target="a_guest">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint x="121" y="1282" as="sourcePoint" />
+          </mxGeometry>
         </mxCell>
         <mxCell id="uc01" parent="1" style="ellipse;whiteSpace=wrap;html=1;fontSize=12;fillColor=#f5f5f5;strokeColor=#666666;" value="Delete Project" vertex="1">
           <mxGeometry height="65" width="180" x="380" y="130" as="geometry" />
@@ -44,7 +50,7 @@
           <mxGeometry height="55" width="155" x="720" y="247.5" as="geometry" />
         </mxCell>
         <mxCell id="uc03" parent="1" style="ellipse;whiteSpace=wrap;html=1;fontSize=12;fillColor=#f5f5f5;strokeColor=#666666;" value="Manage Subtask" vertex="1">
-          <mxGeometry height="65" width="180" x="190" y="400" as="geometry" />
+          <mxGeometry height="65" width="180" x="230" y="390" as="geometry" />
         </mxCell>
         <mxCell id="uc04" parent="1" style="ellipse;whiteSpace=wrap;html=1;fontSize=12;fillColor=#f5f5f5;strokeColor=#666666;" value="Manage Project" vertex="1">
           <mxGeometry height="65" width="180" x="410" y="410" as="geometry" />
@@ -53,19 +59,19 @@
           <mxGeometry height="65" width="180" x="630" y="430" as="geometry" />
         </mxCell>
         <mxCell id="uc06" parent="1" style="ellipse;whiteSpace=wrap;html=1;fontSize=12;fillColor=#f5f5f5;strokeColor=#666666;" value="Change Project&#xa;Status" vertex="1">
-          <mxGeometry height="65" width="180" x="740" y="495" as="geometry" />
+          <mxGeometry height="65" width="180" x="718" y="506" as="geometry" />
         </mxCell>
         <mxCell id="uc07" parent="1" style="ellipse;whiteSpace=wrap;html=1;fontSize=12;fillColor=#f5f5f5;strokeColor=#666666;" value="Manage Task" vertex="1">
           <mxGeometry height="70" width="190" x="540" y="560" as="geometry" />
         </mxCell>
         <mxCell id="uc08" parent="1" style="ellipse;whiteSpace=wrap;html=1;fontSize=12;fillColor=#f5f5f5;strokeColor=#666666;" value="Manage Sprints" vertex="1">
-          <mxGeometry height="65" width="180" x="160" y="710" as="geometry" />
+          <mxGeometry height="65" width="180" x="230" y="730" as="geometry" />
         </mxCell>
         <mxCell id="uc10" parent="1" style="ellipse;whiteSpace=wrap;html=1;fontSize=12;fillColor=#f5f5f5;strokeColor=#666666;" value="Manage&#xa;Dependencies" vertex="1">
           <mxGeometry height="65" width="180" x="527.5" y="645" as="geometry" />
         </mxCell>
         <mxCell id="uc11" parent="1" style="ellipse;whiteSpace=wrap;html=1;fontSize=12;fillColor=#f5f5f5;strokeColor=#666666;" value="Assign Tasks" vertex="1">
-          <mxGeometry height="65" width="170" x="350" y="680" as="geometry" />
+          <mxGeometry height="65" width="170" x="320" y="650" as="geometry" />
         </mxCell>
         <mxCell id="uc12" parent="1" style="ellipse;whiteSpace=wrap;html=1;fontSize=12;fillColor=#f5f5f5;strokeColor=#666666;" value="Change Task&#xa;Status" vertex="1">
           <mxGeometry height="65" width="180" x="250" y="860" as="geometry" />
@@ -77,37 +83,31 @@
           <mxGeometry height="65" width="190" x="570" y="1130" as="geometry" />
         </mxCell>
         <mxCell id="uc17" parent="1" style="ellipse;whiteSpace=wrap;html=1;fontSize=12;fillColor=#f5f5f5;strokeColor=#666666;" value="Manage Time Tracker" vertex="1">
-          <mxGeometry height="65" width="170" x="780" y="1080" as="geometry" />
+          <mxGeometry height="65" width="170" x="275" y="960" as="geometry" />
         </mxCell>
         <mxCell id="uc17a" parent="1" style="ellipse;whiteSpace=wrap;html=1;fontSize=11;fillColor=#FFFDE7;strokeColor=#BDBDBD;" value="Log Time Entry" vertex="1">
-          <mxGeometry height="50" width="140" x="1400" y="1080" as="geometry" />
+          <mxGeometry height="50" width="140" x="545" y="890" as="geometry" />
         </mxCell>
         <mxCell id="uc17b" parent="1" style="ellipse;whiteSpace=wrap;html=1;fontSize=11;fillColor=#FFFDE7;strokeColor=#BDBDBD;" value="Start Timer" vertex="1">
-          <mxGeometry height="50" width="130" x="1400" y="1155" as="geometry" />
+          <mxGeometry height="50" width="130" x="550" y="960" as="geometry" />
         </mxCell>
         <mxCell id="uc17c" parent="1" style="ellipse;whiteSpace=wrap;html=1;fontSize=11;fillColor=#FFFDE7;strokeColor=#BDBDBD;" value="Stop Timer" vertex="1">
-          <mxGeometry height="50" width="130" x="1400" y="1230" as="geometry" />
+          <mxGeometry height="50" width="130" x="550" y="1030" as="geometry" />
         </mxCell>
         <mxCell id="uc18" parent="1" style="ellipse;whiteSpace=wrap;html=1;fontSize=12;fillColor=#f5f5f5;strokeColor=#666666;" value="View Project" vertex="1">
-          <mxGeometry height="65" width="170" x="520" y="1330" as="geometry" />
+          <mxGeometry height="65" width="170" x="230" y="1220" as="geometry" />
         </mxCell>
-        <mxCell id="uc19" parent="1" style="ellipse;whiteSpace=wrap;html=1;fontSize=12;fillColor=#f5f5f5;strokeColor=#666666;" value="Add Comment" vertex="1">
-          <mxGeometry height="65" width="170" x="790" y="1330" as="geometry" />
-        </mxCell>
-        <mxCell id="uc20" parent="1" style="ellipse;whiteSpace=wrap;html=1;fontSize=12;fillColor=#f5f5f5;strokeColor=#666666;" value="Manage Own&#xa;Comment" vertex="1">
-          <mxGeometry height="65" width="180" x="1060" y="1330" as="geometry" />
-        </mxCell>
-        <mxCell id="uc21" parent="1" style="ellipse;whiteSpace=wrap;html=1;fontSize=12;fillColor=#f5f5f5;strokeColor=#666666;" value="Resolve / Unresolve&#xa;Comment" vertex="1">
-          <mxGeometry height="65" width="200" x="520" y="1460" as="geometry" />
+        <mxCell id="uc20" parent="1" style="ellipse;whiteSpace=wrap;html=1;fontSize=12;fillColor=#f5f5f5;strokeColor=#666666;" value="Add Comment" vertex="1">
+          <mxGeometry height="65" width="180" x="405" y="1220" as="geometry" />
         </mxCell>
         <mxCell id="uc22" parent="1" style="ellipse;whiteSpace=wrap;html=1;fontSize=12;fillColor=#f5f5f5;strokeColor=#666666;" value="View CPM&#xa;Analysis" vertex="1">
-          <mxGeometry height="65" width="170" x="820" y="1460" as="geometry" />
+          <mxGeometry height="65" width="170" x="445" y="1405" as="geometry" />
         </mxCell>
         <mxCell id="uc23" parent="1" style="ellipse;whiteSpace=wrap;html=1;fontSize=12;fillColor=#f5f5f5;strokeColor=#666666;" value="View Gantt Chart" vertex="1">
-          <mxGeometry height="65" width="175" x="1035" y="1430" as="geometry" />
+          <mxGeometry height="65" width="175" x="605" y="1340" as="geometry" />
         </mxCell>
         <mxCell id="uc24" parent="1" style="ellipse;whiteSpace=wrap;html=1;fontSize=12;fillColor=#f5f5f5;strokeColor=#666666;" value="View Activity Log" vertex="1">
-          <mxGeometry height="65" width="175" x="1360" y="1330" as="geometry" />
+          <mxGeometry height="65" width="175" x="412.5" y="1300" as="geometry" />
         </mxCell>
         <mxCell id="as01" edge="1" parent="1" source="a_owner" style="endArrow=none;html=1;strokeWidth=1;" target="uc01">
           <mxGeometry relative="1" as="geometry" />
@@ -154,13 +154,7 @@
         <mxCell id="as18" edge="1" parent="1" source="a_guest" style="endArrow=none;html=1;strokeWidth=1;" target="uc18">
           <mxGeometry relative="1" as="geometry" />
         </mxCell>
-        <mxCell id="as19" edge="1" parent="1" source="a_guest" style="endArrow=none;html=1;strokeWidth=1;" target="uc19">
-          <mxGeometry relative="1" as="geometry" />
-        </mxCell>
         <mxCell id="as20" edge="1" parent="1" source="a_guest" style="endArrow=none;html=1;strokeWidth=1;" target="uc20">
-          <mxGeometry relative="1" as="geometry" />
-        </mxCell>
-        <mxCell id="as21" edge="1" parent="1" source="a_guest" style="endArrow=none;html=1;strokeWidth=1;" target="uc21">
           <mxGeometry relative="1" as="geometry" />
         </mxCell>
         <mxCell id="as22" edge="1" parent="1" source="a_guest" style="endArrow=none;html=1;strokeWidth=1;" target="uc22">
@@ -189,6 +183,22 @@
         </mxCell>
         <mxCell id="i18" edge="1" parent="1" source="uc17" style="html=1;dashed=1;dashPattern=8 4;endArrow=open;endSize=12;labelBackgroundColor=#FFFFFF;fontSize=10;fontStyle=2;strokeColor=#666666;" target="uc17c" value="«include»">
           <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="W5hveVOvvsuKPsEgwXvU-6" parent="1" style="ellipse;whiteSpace=wrap;html=1;fontSize=11;fillColor=#FFFDE7;strokeColor=#BDBDBD;" value="Move Task" vertex="1">
+          <mxGeometry height="50" width="140" x="543" y="743" as="geometry" />
+        </mxCell>
+        <mxCell id="W5hveVOvvsuKPsEgwXvU-7" parent="1" style="ellipse;whiteSpace=wrap;html=1;fontSize=11;fillColor=#FFFDE7;strokeColor=#BDBDBD;" value="Mark Task as Done" vertex="1">
+          <mxGeometry height="50" width="130" x="548" y="813" as="geometry" />
+        </mxCell>
+        <mxCell id="W5hveVOvvsuKPsEgwXvU-8" edge="1" parent="1" source="uc12" style="html=1;dashed=1;dashPattern=8 4;endArrow=open;endSize=12;labelBackgroundColor=#FFFFFF;fontSize=10;fontStyle=2;strokeColor=#666666;exitX=1;exitY=0;exitDx=0;exitDy=0;" target="W5hveVOvvsuKPsEgwXvU-6" value="«include»">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint x="425" y="826" as="sourcePoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="W5hveVOvvsuKPsEgwXvU-9" edge="1" parent="1" source="uc12" style="html=1;dashed=1;dashPattern=8 4;endArrow=open;endSize=12;labelBackgroundColor=#FFFFFF;fontSize=10;fontStyle=2;strokeColor=#666666;exitX=1;exitY=0.5;exitDx=0;exitDy=0;" target="W5hveVOvvsuKPsEgwXvU-7" value="«include»">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint x="443" y="843" as="sourcePoint" />
+          </mxGeometry>
         </mxCell>
       </root>
     </mxGraphModel>
