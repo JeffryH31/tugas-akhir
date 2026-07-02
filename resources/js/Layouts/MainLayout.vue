@@ -274,7 +274,6 @@ const logout = () => {
 
 // Idle detection — triggers OS desktop notification (falls back to snackbar if permission denied)
 useIdleDetector({
-    idleThresholdSeconds: 5, // TODO: remove before production
     onIdle: async () => {
         const timerRunning = !!runningTimer.value;
         const title = timerRunning ? '⚠️ Timer Still Running' : '💤 You Are Idle';
