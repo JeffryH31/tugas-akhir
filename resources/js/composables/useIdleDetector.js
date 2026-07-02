@@ -17,7 +17,7 @@ export function useIdleDetector({ onIdle, onActive, idleThresholdSeconds = 300 }
     };
 
     onMounted(() => {
-        // --- Mode Electron: idle level OS ---
+        // Use Electron's OS-level idle API if available
         if (window.electronAPI?.onIdleUpdate) {
             cleanup = window.electronAPI.onIdleUpdate(({ becameIdle, becameActive }) => {
                 if (becameIdle) goIdle();
@@ -26,32 +26,25 @@ export function useIdleDetector({ onIdle, onActive, idleThresholdSeconds = 300 }
             return;
         }
 
-        // --- Fallback browser: deteksi inaktivitas di halaman ---
+        // Browser fallback: track user activity via DOM events
         let idleTimer = null;
 
         const resetTimer = () => {
-            // aktivitas terdeteksi -> kalau tadinya idle, kembali aktif
             goActive();
-
             if (idleTimer) clearTimeout(idleTimer);
             idleTimer = setTimeout(goIdle, idleThresholdSeconds * 1000);
         };
 
-        const activityEvents = [
-            'mousemove',
-            'mousedown',
-            'keydown',
-            'scroll',
-            'touchstart',
-            'wheel',
-        ];
+        const activityEvents = ['mousemove', 'mousedown', 'keydown', 'scroll', 'touchstart', 'wheel'];
 
-        // throttle: cukup tandai aktivitas sekali per ~1 detik supaya hemat
+        // Throttle activity handling to once per second
         let throttled = false;
         const handleActivity = () => {
             if (throttled) return;
             throttled = true;
             resetTimer();
+            // Broadcast activity to other tabs on the same origin
+            channel.postMessage('activity');
             setTimeout(() => { throttled = false; }, 1000);
         };
 
@@ -59,28 +52,30 @@ export function useIdleDetector({ onIdle, onActive, idleThresholdSeconds = 300 }
             window.addEventListener(evt, handleActivity, { passive: true })
         );
 
-        // tab disembunyikan dianggap idle hanya jika cukup lama (≥60 detik)
-        let hiddenAt = null;
-        const VISIBILITY_IDLE_SECONDS = 60;
+        // BroadcastChannel: receive activity signals from other tabs/windows on the same origin.
+        // This ensures that interacting with another tab of this app resets the idle timer here too.
+        const channel = new BroadcastChannel('idle-detector');
+        channel.onmessage = () => {
+            // Another tab detected activity — reset our timer without re-broadcasting
+            goActive();
+            if (idleTimer) clearTimeout(idleTimer);
+            idleTimer = setTimeout(goIdle, idleThresholdSeconds * 1000);
+        };
 
+        // Pause timer when tab is hidden, resume when visible again.
+        // Tab switching is not considered idle — only inactivity within the app counts.
         const handleVisibility = () => {
             if (document.hidden) {
-                hiddenAt = Date.now();
-            } else {
-                // Tab kembali aktif — cek apakah sudah cukup lama di-hide
-                if (hiddenAt && (Date.now() - hiddenAt) >= VISIBILITY_IDLE_SECONDS * 1000) {
-                    // Sudah lama tersembunyi, pasti idle
-                    if (!isIdle.value) {
-                        isIdle.value = true;
-                    }
+                if (idleTimer) {
+                    clearTimeout(idleTimer);
+                    idleTimer = null;
                 }
-                hiddenAt = null;
+            } else {
                 resetTimer();
             }
         };
         document.addEventListener('visibilitychange', handleVisibility);
 
-        // mulai hitung mundur sejak komponen ter-mount
         resetTimer();
 
         cleanup = () => {
@@ -89,6 +84,7 @@ export function useIdleDetector({ onIdle, onActive, idleThresholdSeconds = 300 }
                 window.removeEventListener(evt, handleActivity)
             );
             document.removeEventListener('visibilitychange', handleVisibility);
+            channel.close();
         };
     });
 

@@ -1,6 +1,6 @@
 <mxfile host="app.diagrams.net" agent="draw.io">
   <diagram id="workspace-level" name="Use Case - Workspace Level">
-    <mxGraphModel dx="1471" dy="801" grid="0" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="2000" pageHeight="1400" math="0" shadow="0">
+    <mxGraphModel dx="2060" dy="1122" grid="0" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="2000" pageHeight="1400" math="0" shadow="0">
       <root>
         <mxCell id="0" />
         <mxCell id="1" parent="0" />
@@ -19,19 +19,22 @@
         <mxCell id="a_member" parent="1" style="shape=umlActor;verticalLabelPosition=bottom;verticalAlign=top;html=1;outlineConnect=0;fontSize=12;" value="Workspace&#xa;Member" vertex="1">
           <mxGeometry height="60" width="40" x="274" y="1013" as="geometry" />
         </mxCell>
-        <mxCell id="g1" edge="1" parent="1" source="a_super" style="endArrow=block;endFill=0;endSize=16;html=1;entryX=0.5;entryY=0;entryDx=0;entryDy=0;entryPerimeter=0;" target="a_owner">
+        <mxCell id="g1" edge="1" parent="1" source="a_owner" style="endArrow=block;endFill=0;endSize=16;html=1;exitX=0.5;exitY=0;exitDx=0;exitDy=0;exitPerimeter=0;">
           <mxGeometry relative="1" as="geometry">
             <mxPoint x="233" y="322" as="sourcePoint" />
+            <mxPoint x="294" y="284" as="targetPoint" />
           </mxGeometry>
         </mxCell>
-        <mxCell id="g2" edge="1" parent="1" source="a_owner" style="endArrow=block;endFill=0;endSize=16;html=1;entryX=0.5;entryY=0;entryDx=0;entryDy=0;entryPerimeter=0;" target="a_admin">
+        <mxCell id="g2" edge="1" parent="1" source="a_admin" style="endArrow=block;endFill=0;endSize=16;html=1;exitX=0.5;exitY=0;exitDx=0;exitDy=0;exitPerimeter=0;">
           <mxGeometry relative="1" as="geometry">
-            <mxPoint x="179" y="472" as="sourcePoint" />
+            <mxPoint x="214" y="567" as="sourcePoint" />
+            <mxPoint x="294" y="534" as="targetPoint" />
           </mxGeometry>
         </mxCell>
-        <mxCell id="g3" edge="1" parent="1" source="a_admin" style="endArrow=block;endFill=0;endSize=16;html=1;entryX=0.5;entryY=0;entryDx=0;entryDy=0;entryPerimeter=0;" target="a_member">
+        <mxCell id="g3" edge="1" parent="1" source="a_member" style="endArrow=block;endFill=0;endSize=16;html=1;exitX=0.5;exitY=0;exitDx=0;exitDy=0;exitPerimeter=0;">
           <mxGeometry relative="1" as="geometry">
-            <mxPoint x="141" y="849" as="sourcePoint" />
+            <mxPoint x="204" y="905" as="sourcePoint" />
+            <mxPoint x="294" y="793" as="targetPoint" />
           </mxGeometry>
         </mxCell>
         <mxCell id="uc01" parent="1" style="ellipse;whiteSpace=wrap;html=1;fontSize=12;fillColor=#f5f5f5;strokeColor=#666666;" value="Create Workspace" vertex="1">

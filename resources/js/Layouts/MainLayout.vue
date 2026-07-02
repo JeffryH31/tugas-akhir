@@ -5,6 +5,7 @@ import { useDisplay } from 'vuetify';
 import { useSnackbar } from '@/composables/useSnackbar';
 import { useConfirmDialog } from '@/composables/useConfirmDialog';
 import { useIdleDetector } from '@/composables/useIdleDetector';
+import { sendDesktopNotification, requestNotificationPermission, isNotificationGranted } from '@/utils/notification';
 import ColorPicker from '@/Components/ColorPicker.vue';
 import { normalizeHexColor } from '@/utils/color';
 import { formatHMS as formatDuration } from '@/utils/duration';
@@ -271,42 +272,69 @@ const logout = () => {
     router.post(route('logout'));
 };
 
-// Idle detection via Electron (OS-level)
+// Idle detection — triggers OS desktop notification (falls back to snackbar if permission denied)
 useIdleDetector({
-    onIdle: () => {
+    idleThresholdSeconds: 5, // TODO: remove before production
+    onIdle: async () => {
         const timerRunning = !!runningTimer.value;
+        const title = timerRunning ? '⚠️ Timer Still Running' : '💤 You Are Idle';
         const message = timerRunning
-            ? 'You are idle but a timer is still running! Please stop it if you are not working.'
+            ? 'You have been inactive but your timer is still running. Stop it if you are not working.'
             : 'You have been inactive for 5 minutes.';
         const color = timerRunning ? 'warning' : 'info';
 
-        // Browser notification (if permission has been granted)
-        if ('Notification' in window && Notification.permission === 'granted') {
-            new Notification(timerRunning ? '⚠️ Timer Still Running' : 'You Are Idle', {
-                body: message,
-                icon: '/favicon.ico',
-            });
-        } else {
-            showSnackbar(message, color);
-        }
+        const sent = await sendDesktopNotification(title, {
+            body: message,
+            icon: '/favicon.ico',
+            tag: 'idle-alert',
+            silent: !timerRunning,
+            fallback: () => showSnackbar(message, color),
+        });
+
+        // Also show snackbar as in-app reinforcement
+        if (sent) showSnackbar(message, color);
     },
     onActive: () => {
         showSnackbar('You are back.', 'success');
     },
 });
 
-// Expose functions to window for global access
 onMounted(() => {
     startGlobalTimerInterval();
 
-    // Request browser notification permission (for idle alerts)
-    if ('Notification' in window && Notification.permission === 'default') {
-        Notification.requestPermission();
+    // Register minimal service worker for reliable OS notifications
+    if ('serviceWorker' in navigator) {
+        navigator.serviceWorker.register('/sw.js').catch(() => {});
+    }
+
+    // Request OS notification permission on first load
+    requestNotificationPermission();
+
+    // Show permission banner if not yet granted
+    if ('Notification' in window && Notification.permission !== 'granted') {
+        showNotifBanner.value = true;
     }
 
     // Ctrl+K / Cmd+K to open search
     window.addEventListener('keydown', handleSearchShortcut);
 });
+
+// Notification permission banner
+const showNotifBanner = ref(false);
+
+const enableNotifications = async () => {
+    const result = await requestNotificationPermission();
+    showNotifBanner.value = false;
+    if (result === 'granted') {
+        // Send a test notification so user can confirm it works
+        new Notification('Notifications enabled ✓', {
+            body: 'You will now receive idle alerts on your desktop.',
+            icon: '/favicon.ico',
+        });
+    } else if (result === 'denied') {
+        showSnackbar('Notifications blocked. Enable them in browser site settings.', 'warning');
+    }
+};
 
 onUnmounted(() => {
     if (timerInterval) { clearInterval(timerInterval); timerInterval = null; }
@@ -839,6 +867,27 @@ watch(searchDialog, (open) => {
                 </v-card-actions>
             </v-card>
         </v-dialog>
+
+        <!-- Notification Permission Banner -->
+        <v-banner
+            v-if="showNotifBanner"
+            color="primary"
+            lines="one"
+            class="notif-banner"
+        >
+            <template #prepend>
+                <v-icon size="20">mdi-bell-outline</v-icon>
+            </template>
+            <v-banner-text>
+                Enable desktop notifications to get idle alerts even when you switch windows.
+            </v-banner-text>
+            <template #actions>
+                <v-btn variant="text" size="small" @click="showNotifBanner = false">Dismiss</v-btn>
+                <v-btn variant="flat" size="small" color="white" class="text-primary" @click="enableNotifications">
+                    Enable
+                </v-btn>
+            </template>
+        </v-banner>
 
         <!-- Global Snackbar -->
         <v-snackbar v-model="snackbar" :color="snackbarColor" :timeout="3000" location="bottom right" rounded="lg">

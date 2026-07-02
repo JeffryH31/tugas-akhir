@@ -1,6 +1,6 @@
 <mxfile host="app.diagrams.net" agent="draw.io">
   <diagram id="project-level" name="Use Case - Project Level">
-    <mxGraphModel dx="1717" dy="935" grid="0" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="2400" pageHeight="1800" math="0" shadow="0">
+    <mxGraphModel dx="1471" dy="801" grid="0" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="2400" pageHeight="1800" math="0" shadow="0">
       <root>
         <mxCell id="0" />
         <mxCell id="1" parent="0" />
@@ -19,19 +19,22 @@
         <mxCell id="a_guest" parent="1" style="shape=umlActor;verticalLabelPosition=bottom;verticalAlign=top;html=1;outlineConnect=0;fontSize=12;" value="Project&#xa;Guest" vertex="1">
           <mxGeometry height="60" width="40" x="60" y="1400" as="geometry" />
         </mxCell>
-        <mxCell id="g1" edge="1" parent="1" source="a_owner" style="endArrow=block;endFill=0;endSize=16;html=1;entryX=0.5;entryY=0;entryDx=0;entryDy=0;entryPerimeter=0;" target="a_manager">
+        <mxCell id="g1" edge="1" parent="1" source="a_manager" style="endArrow=block;endFill=0;endSize=16;html=1;exitX=0.5;exitY=0;exitDx=0;exitDy=0;exitPerimeter=0;">
           <mxGeometry relative="1" as="geometry">
             <mxPoint x="49" y="296" as="sourcePoint" />
+            <mxPoint x="80" y="274" as="targetPoint" />
           </mxGeometry>
         </mxCell>
-        <mxCell id="g2" edge="1" parent="1" source="a_manager" style="endArrow=block;endFill=0;endSize=16;html=1;entryX=0.5;entryY=0;entryDx=0;entryDy=0;entryPerimeter=0;" target="a_dev">
+        <mxCell id="g2" edge="1" parent="1" source="a_dev" style="endArrow=block;endFill=0;endSize=16;html=1;">
           <mxGeometry relative="1" as="geometry">
-            <mxPoint x="120" y="887" as="targetPoint" />
+            <mxPoint x="74" y="816" as="sourcePoint" />
+            <mxPoint x="80" y="632" as="targetPoint" />
           </mxGeometry>
         </mxCell>
-        <mxCell id="g3" edge="1" parent="1" source="a_dev" style="endArrow=block;endFill=0;endSize=16;html=1;entryX=0.5;entryY=0;entryDx=0;entryDy=0;entryPerimeter=0;" target="a_guest">
+        <mxCell id="g3" edge="1" parent="1" source="a_guest" style="endArrow=block;endFill=0;endSize=16;html=1;">
           <mxGeometry relative="1" as="geometry">
             <mxPoint x="121" y="1282" as="sourcePoint" />
+            <mxPoint x="80" y="1080" as="targetPoint" />
           </mxGeometry>
         </mxCell>
         <mxCell id="uc01" parent="1" style="ellipse;whiteSpace=wrap;html=1;fontSize=12;fillColor=#f5f5f5;strokeColor=#666666;" value="Delete Project" vertex="1">
